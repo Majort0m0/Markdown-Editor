@@ -10,13 +10,17 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 
 - **Mehrere Tabs** — beliebig viele Dokumente gleichzeitig offen, mit Autospeicherung im Browser (LocalStorage)
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau
+- **Inhaltsverzeichnis** — schwebender Button über der Vorschau, Klick auf eine Überschrift springt direkt dorthin
 - **5 Designs** — GitHub Light/Dark, Solarized Paper, Nord Dark, Academic Serif (inkl. farbiger Code-Hervorhebung)
 - **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
+- **Tabellen-Werkzeuge** — Zeilen/Spalten einfügen oder löschen, sobald der Cursor in einer Tabelle steht
 - **Bilder einfügen** per Copy-Paste oder Drag & Drop — mit Dialog, ob das Bild verkleinert oder im Original eingefügt werden soll
+- **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
 - **Suchen & Ersetzen**, **Rückgängig/Wiederherstellen**, optionale **Rechtschreibprüfung**
-- **Fokus-Modi** — Editor oder Vorschau einzeln ausblenden
-- **Export** als eigenständige HTML-Datei oder direkt **Drucken/als PDF speichern**
+- **Fokus-Modi** — Editor oder Vorschau einzeln ausblenden, plus echter **Vollbildmodus**
+- **Export** als eigenständige HTML-Datei, **RTF** (zum Einfügen in Word/E-Mail) oder direkt **Drucken/als PDF speichern**
 - **Speichern** in eine lokale Datei (inkl. Speichern unter, mit direktem Dateizugriff sofern der Browser das unterstützt)
+- **Responsiv** — Bedienleisten werden auf schmalen Bildschirmen (z. B. iPhone) horizontal scrollbar, Editor/Vorschau stapeln sich übereinander
 - **Tastenkürzel-Hilfe** über das ⌨️-Symbol in der Kopfzeile
 
 ## 🚀 Verwenden
