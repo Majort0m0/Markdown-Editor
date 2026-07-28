@@ -15,6 +15,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
 - **Tabellen-Werkzeuge** — Zeilen/Spalten einfügen oder löschen, sobald der Cursor in einer Tabelle steht
 - **Bilder einfügen** per Copy-Paste oder Drag & Drop — mit Dialog, ob das Bild verkleinert oder im Original eingefügt werden soll
+- **Zeichnungen** — eingebauter Excalidraw-Editor (Button "🖌️ Zeichnung"), Skizzen bleiben jederzeit bearbeitbar: Klick auf die Zeichnung öffnet sie erneut zum Weiterzeichnen
 - **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
 - **Suchen & Ersetzen**, **Rückgängig/Wiederherstellen**, optionale **Rechtschreibprüfung**
 - **Fokus-Modi** — Editor oder Vorschau einzeln ausblenden, plus echter **Vollbildmodus**
@@ -27,7 +28,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 
 **Im Browser:** Einfach den [Live-Link](https://majort0m0.github.io/Markdown-Editor/) öffnen.
 
-**Lokal:** `Markdown-Editor.html` herunterladen und im Browser öffnen (Doppelklick genügt) — funktioniert auch offline, da alle Bibliotheken bereits in der Datei enthalten sind.
+**Lokal:** `Markdown-Editor.html` herunterladen und im Browser öffnen (Doppelklick genügt) — funktioniert auch offline, da alle Bibliotheken (inklusive des eingebauten Zeichen-Editors) bereits in der Datei enthalten sind. Dadurch ist die Datei mit ca. 11 MB spürbar größer als ein gewöhnlicher Markdown-Editor, lässt sich aber weiterhin als einzelne Datei weitergeben.
 
 ## 🛠️ Entwicklung
 
