@@ -1572,6 +1572,22 @@ return He}()
       flex-wrap: wrap;
     }
 
+    .table-controls {
+      background-color: #eef2f7;
+      border-bottom: 1px solid var(--border-color);
+      padding: 5px 12px;
+      align-items: center;
+      gap: 2px;
+      flex-wrap: wrap;
+    }
+
+    .table-controls-label {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-right: 6px;
+    }
+
     .toolbar-btn {
       background: transparent;
       border: 1px solid transparent;
@@ -1690,7 +1706,8 @@ return He}()
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
+      flex-wrap: wrap;
+      gap: 4px 12px;
       font-size: 0.72rem;
       color: var(--text-muted);
     }
@@ -1711,6 +1728,85 @@ return He}()
 
     main.preview-hidden {
       grid-template-columns: 1fr 0;
+    }
+
+    /* Table of Contents (floats over the preview pane, stays put while it scrolls) */
+    .toc-toggle-btn {
+      position: absolute;
+      top: 16px;
+      right: 28px;
+      z-index: 10;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .toc-toggle-btn:hover {
+      background-color: #eceff2;
+    }
+
+    .toc-toggle-btn.active {
+      background-color: #e4ecf9;
+      border-color: var(--accent);
+    }
+
+    main.preview-hidden .toc-toggle-btn,
+    main.preview-hidden .toc-panel {
+      display: none;
+    }
+
+    .toc-panel {
+      position: absolute;
+      top: 56px;
+      right: 28px;
+      width: 260px;
+      max-height: 60%;
+      overflow-y: auto;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      padding: 6px 0;
+      z-index: 10;
+      display: none;
+    }
+
+    .toc-panel.active {
+      display: block;
+    }
+
+    .toc-panel .toc-empty {
+      padding: 10px 14px;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+    }
+
+    .toc-entry {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: transparent;
+      border: none;
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .toc-entry:hover {
+      background-color: #eceff2;
     }
 
     .editor-pane {
@@ -2139,6 +2235,68 @@ return He}()
         max-width: 100%;
       }
     }
+
+    /* Responsive layout (phones / narrow viewports) */
+    @media (max-width: 640px) {
+      .actions-group,
+      .formatting-toolbar,
+      .table-controls {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      .tab-bar-container {
+        flex-shrink: 0;
+      }
+
+      .app-title {
+        font-size: 0.9rem;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+      }
+
+      main.editor-hidden {
+        grid-template-columns: 1fr;
+        grid-template-rows: 0 1fr;
+      }
+
+      main.preview-hidden {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 0;
+      }
+
+      .editor-pane {
+        grid-column: 1;
+        grid-row: 1;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .preview-pane {
+        grid-column: 1;
+        grid-row: 2;
+        padding: 16px;
+      }
+
+      .search-input-group input {
+        width: 110px;
+      }
+
+      .toc-panel {
+        width: auto;
+        max-width: calc(100vw - 40px);
+        left: 20px;
+        right: 20px;
+      }
+
+      .toc-toggle-btn {
+        right: 16px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -2186,10 +2344,14 @@ return He}()
       <!-- Synchrones Scrollen Toggle Button -->
       <button id="syncScrollBtn" class="icon-btn active" onclick="toggleSyncScroll()" title="Synchrones Scrollen ein-/ausblenden">🔗</button>
 
+      <!-- Vollbildmodus -->
+      <button id="fullscreenBtn" class="icon-btn" onclick="toggleFullscreen()" title="Vollbildmodus ein-/ausschalten">⛶</button>
+
       <div class="action-divider"></div>
 
       <!-- Export Buttons -->
       <button id="exportHtmlBtn" class="icon-btn" onclick="exportAsHtml()" title="Als eigenständige HTML-Datei exportieren">🌐</button>
+      <button id="exportRtfBtn" class="icon-btn" onclick="exportAsRtf()" title="Als RTF exportieren (zum Einfügen in Word, E-Mail, ...)">📃</button>
       <button id="printBtn" class="icon-btn" onclick="window.print()" title="Drucken / Als PDF speichern">🖨️</button>
 
       <div class="action-divider"></div>
@@ -2269,6 +2431,18 @@ return He}()
     <button class="toolbar-btn fmt-btn" onclick="insertFormatting('table')" title="Tabelle">📊 Table</button>
   </div>
 
+  <!-- Table Controls (only shown while the cursor is inside a markdown table) -->
+  <div class="table-controls" id="tableControls" style="display: none;">
+    <span class="table-controls-label">📊 Tabelle:</span>
+    <button class="toolbar-btn" onclick="tableInsertRow('before')" title="Zeile davor einfügen">⬆ Zeile</button>
+    <button class="toolbar-btn" onclick="tableInsertRow('after')" title="Zeile danach einfügen">⬇ Zeile</button>
+    <button class="toolbar-btn" onclick="tableDeleteRow()" title="Zeile löschen">✕ Zeile</button>
+    <div class="toolbar-divider"></div>
+    <button class="toolbar-btn" onclick="tableInsertColumn('before')" title="Spalte davor einfügen">⬅ Spalte</button>
+    <button class="toolbar-btn" onclick="tableInsertColumn('after')" title="Spalte danach einfügen">➡ Spalte</button>
+    <button class="toolbar-btn" onclick="tableDeleteColumn()" title="Spalte löschen">✕ Spalte</button>
+  </div>
+
   <main id="mainContainer">
     <div class="editor-pane" id="editorPane">
       <textarea id="markdownInput" placeholder="Schreibe oder füge hier deinen Markdown-Text ein..." spellcheck="false"></textarea>
@@ -2276,6 +2450,9 @@ return He}()
     <div class="preview-pane" id="previewPane">
       <div id="markdownPreview" class="markdown-body theme-github-light"></div>
     </div>
+
+    <button id="tocToggleBtn" class="toc-toggle-btn" onclick="toggleToc()" title="Inhaltsverzeichnis anzeigen/ausblenden">📑</button>
+    <div class="toc-panel" id="tocPanel"></div>
   </main>
 
   <footer class="app-footer">
@@ -2352,6 +2529,7 @@ return He}()
     const saveBtn = document.getElementById('saveBtn');
     const saveAsBtn = document.getElementById('saveAsBtn');
     const exportHtmlBtn = document.getElementById('exportHtmlBtn');
+    const exportRtfBtn = document.getElementById('exportRtfBtn');
     const printBtn = document.getElementById('printBtn');
     const themeSelector = document.getElementById('themeSelector');
     const spellcheckBtn = document.getElementById('spellcheckBtn');
@@ -2453,7 +2631,8 @@ return He}()
           content: t.content,
           isModified: t.isModified,
           assets: t.assets || {},
-          assetCounter: t.assetCounter || 0
+          assetCounter: t.assetCounter || 0,
+          isDefaultName: !!t.isDefaultName
         })),
         activeTabId: activeTabId,
         currentTheme: currentTheme,
@@ -2480,7 +2659,8 @@ return He}()
           history: [t.content],
           historyIndex: 0,
           assets: t.assets || {},
-          assetCounter: t.assetCounter || 0
+          assetCounter: t.assetCounter || 0,
+          isDefaultName: t.isDefaultName !== undefined ? t.isDefaultName : /^Unbenannt \d+\.md$/.test(t.name)
         }));
 
         tabIdCounter = state.tabIdCounter || (tabs.length + 1);
@@ -2541,6 +2721,7 @@ return He}()
       undoBtn.disabled = true;
       redoBtn.disabled = true;
       exportHtmlBtn.disabled = true;
+      exportRtfBtn.disabled = true;
       printBtn.disabled = true;
       document.querySelectorAll('.fmt-btn').forEach(btn => btn.disabled = true);
 
@@ -2553,6 +2734,7 @@ return He}()
       saveBtn.disabled = false;
       saveAsBtn.disabled = false;
       exportHtmlBtn.disabled = false;
+      exportRtfBtn.disabled = false;
       printBtn.disabled = false;
       document.querySelectorAll('.fmt-btn').forEach(btn => btn.disabled = false);
     }
@@ -2607,7 +2789,8 @@ return He}()
         history: [tabContent],
         historyIndex: 0,
         assets: assets,
-        assetCounter: Object.keys(assets).length
+        assetCounter: Object.keys(assets).length,
+        isDefaultName: name === null
       };
 
       tabs.push(newTab);
@@ -2755,6 +2938,64 @@ return He}()
       if (e.key === 'Escape') {
         closeShortcutsModal();
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
+        closeToc();
+      }
+    });
+
+    // --- TABLE OF CONTENTS ---
+
+    function toggleToc() {
+      const panel = document.getElementById('tocPanel');
+      if (panel.classList.contains('active')) {
+        closeToc();
+      } else {
+        panel.classList.add('active');
+        document.getElementById('tocToggleBtn').classList.add('active');
+        updateTocPanel();
+      }
+    }
+
+    function closeToc() {
+      document.getElementById('tocPanel').classList.remove('active');
+      document.getElementById('tocToggleBtn').classList.remove('active');
+    }
+
+    function updateTocPanel() {
+      const panel = document.getElementById('tocPanel');
+      if (!panel.classList.contains('active')) return;
+
+      panel.innerHTML = '';
+      const headings = preview.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+      if (headings.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'toc-empty';
+        empty.textContent = 'Keine Überschriften gefunden.';
+        panel.appendChild(empty);
+        return;
+      }
+
+      headings.forEach(h => {
+        const level = parseInt(h.tagName.substring(1), 10);
+        const entry = document.createElement('button');
+        entry.type = 'button';
+        entry.className = 'toc-entry';
+        entry.textContent = h.textContent;
+        entry.title = h.textContent;
+        entry.style.paddingLeft = (12 + (level - 1) * 14) + 'px';
+        entry.onclick = () => {
+          h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          closeToc();
+        };
+        panel.appendChild(entry);
+      });
+    }
+
+    document.addEventListener('click', (e) => {
+      const panel = document.getElementById('tocPanel');
+      const btn = document.getElementById('tocToggleBtn');
+      if (panel.classList.contains('active') && !panel.contains(e.target) && e.target !== btn) {
+        closeToc();
       }
     });
 
@@ -2867,6 +3108,7 @@ return He}()
       toggleEditBtn.classList.toggle('active', showEditor);
       togglePreviewBtn.classList.toggle('active', showPreview);
       document.getElementById('formattingToolbar').style.display = showEditor ? 'flex' : 'none';
+      updateTableControlsVisibility();
     }
 
     function toggleSyncScroll() {
@@ -2874,6 +3116,20 @@ return He}()
       syncScrollBtn.classList.toggle('active', syncScrollEnabled);
       saveStateToLocalStorage();
     }
+
+    // --- FULLSCREEN MODE ---
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.warn('Vollbildmodus fehlgeschlagen:', err));
+      } else {
+        document.exitFullscreen();
+      }
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      document.getElementById('fullscreenBtn').classList.toggle('active', !!document.fullscreenElement);
+    });
 
     function syncScrollFrom(source) {
       if (!syncScrollEnabled || isSyncingScroll || !showEditor || !showPreview) return;
@@ -2914,6 +3170,30 @@ return He}()
       attachTaskCheckboxListeners();
       updateStats();
       updateFormatButtonStates();
+      updateTabNameFromFirstHeading();
+      updateTocPanel();
+      updateTableControlsVisibility();
+    }
+
+    // Adopts the first line as the tab's filename as long as the tab is still unnamed
+    // (never saved/renamed) — stops as soon as the user does Save As, so it never
+    // fights a name the user picked deliberately.
+    function updateTabNameFromFirstHeading() {
+      const tab = getCurrentTab();
+      if (!tab || !tab.isDefaultName) return;
+
+      const firstLine = editor.value.split('\n', 1)[0];
+      const match = firstLine.match(/^#{1,6}\s+(.+?)\s*$/);
+      if (!match) return;
+
+      const safeName = match[1].trim().replace(/[\\/:*?"<>|]/g, '');
+      if (!safeName) return;
+
+      const newName = safeName + '.md';
+      if (tab.name !== newName) {
+        tab.name = newName;
+        renderTabs();
+      }
     }
 
     function updateStats() {
@@ -3043,7 +3323,7 @@ return He}()
       if (currentFormat === type) {
         replacement = innerText;
       } else {
-        let targetText = innerText || (type === 'bold' ? 'fetter Text' : (type === 'italic' ? 'kursiver Text' : (type === 'strike' ? 'durchgestrichen' : 'code')));
+        let targetText = innerText;
         if (type === 'bold') replacement = '**' + targetText + '**';
         else if (type === 'italic') replacement = '*' + targetText + '*';
         else if (type === 'strike') replacement = '~~' + targetText + '~~';
@@ -3117,15 +3397,6 @@ return He}()
           else if (type === 'task') prefix = '- [ ] ';
           else if (type === 'quote') prefix = '> ';
 
-          if (pureText.length === 0 && lines.length === 1) {
-            const defaultPlaceholders = {
-              h1: 'Überschrift 1', h2: 'Überschrift 2', h3: 'Überschrift 3',
-              h4: 'Überschrift 4', h5: 'Überschrift 5', h6: 'Überschrift 6',
-              task: 'Neue Aufgabe', quote: 'Zitat', ul: 'Listenpunkt', ol: 'Listenpunkt'
-            };
-            return prefix + (defaultPlaceholders[type] || '');
-          }
-
           return prefix + pureText;
         });
 
@@ -3135,28 +3406,31 @@ return He}()
       }
       else {
         let replacement = '';
-        let cursorOffset = 0;
 
         switch(type) {
           case 'codeblock':
-            replacement = '\n```javascript\n' + (selection || '// Code hier') + '\n```\n';
+            replacement = '\n```javascript\n' + selection + '\n```\n';
+            newCursorPos = start + '\n```javascript\n'.length + selection.length;
             break;
           case 'link':
-            replacement = '[' + (selection || 'Link-Text') + '](https://example.com)';
+            replacement = '[' + selection + ']()';
+            newCursorPos = selection ? start + replacement.length - 1 : start + 1;
             break;
           case 'image':
-            replacement = '![' + (selection || 'Alt-Text') + '](https://example.com/bild.png)';
+            replacement = '![' + selection + ']()';
+            newCursorPos = selection ? start + replacement.length - 1 : start + 2;
             break;
           case 'hr':
             replacement = '\n\n---\n\n';
+            newCursorPos = start + replacement.length;
             break;
           case 'table':
-            replacement = '\n| Spalte 1 | Spalte 2 |\n| --- | --- |\n| Inhalt 1 | Inhalt 2 |\n';
+            replacement = '\n| | |\n| --- | --- |\n| | |\n';
+            newCursorPos = start + 3;
             break;
         }
 
         newText = text.substring(0, start) + replacement + text.substring(end);
-        newCursorPos = start + replacement.length + cursorOffset;
       }
 
       editor.value = newText;
@@ -3283,8 +3557,179 @@ return He}()
     }
 
     document.addEventListener('selectionchange', () => {
-      if (document.activeElement === editor) updateFormatButtonStates();
+      if (document.activeElement === editor) {
+        updateFormatButtonStates();
+        updateTableControlsVisibility();
+      }
     });
+
+    // --- TABLE CONTROLS (row/column insert & delete when the cursor is inside a table) ---
+
+    const TABLE_SEPARATOR_RE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
+
+    function isTableRowLine(line) {
+      return line.includes('|') && line.trim() !== '';
+    }
+
+    function lineStartOffset(lines, lineIndex) {
+      let offset = 0;
+      for (let i = 0; i < lineIndex; i++) offset += lines[i].length + 1;
+      return offset;
+    }
+
+    function findTableBlock() {
+      const lines = editor.value.split('\n');
+      const pos = editor.selectionStart;
+
+      let offset = 0, cursorLine = lines.length - 1;
+      for (let i = 0; i < lines.length; i++) {
+        const lineEnd = offset + lines[i].length;
+        if (pos <= lineEnd) { cursorLine = i; break; }
+        offset = lineEnd + 1;
+      }
+
+      if (!isTableRowLine(lines[cursorLine])) return null;
+
+      let start = cursorLine;
+      while (start > 0 && isTableRowLine(lines[start - 1])) start--;
+      let end = cursorLine;
+      while (end < lines.length - 1 && isTableRowLine(lines[end + 1])) end++;
+
+      if (end - start < 1 || !TABLE_SEPARATOR_RE.test(lines[start + 1])) return null;
+
+      return { lines, start, end, cursorLine, separatorLine: start + 1 };
+    }
+
+    // Cell boundaries as character ranges within a row's raw text — works whether the row
+    // has leading/trailing pipes or not (both are valid GFM table syntax).
+    function getCellRanges(lineText) {
+      const pipePositions = [];
+      for (let i = 0; i < lineText.length; i++) {
+        if (lineText[i] === '|' && lineText[i - 1] !== '\\') pipePositions.push(i);
+      }
+      const trimmed = lineText.trim();
+      const hasLeadingPipe = trimmed.startsWith('|');
+      const hasTrailingPipe = trimmed.length > 1 && trimmed.endsWith('|');
+
+      const boundaries = pipePositions.slice();
+      if (!hasLeadingPipe) boundaries.unshift(-1);
+      if (!hasTrailingPipe) boundaries.push(lineText.length);
+
+      const ranges = [];
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        ranges.push({ start: boundaries[i] + 1, end: boundaries[i + 1] });
+      }
+      return ranges;
+    }
+
+    function getRowCells(lineText) {
+      return getCellRanges(lineText).map(r => lineText.substring(r.start, r.end).trim());
+    }
+
+    function buildRowFromCells(cells) {
+      return '| ' + cells.join(' | ') + ' |';
+    }
+
+    function getColumnIndexAtCursor(lineText, colInLine) {
+      const ranges = getCellRanges(lineText);
+      for (let i = 0; i < ranges.length; i++) {
+        if (colInLine >= ranges[i].start && colInLine <= ranges[i].end) return i;
+      }
+      return Math.max(0, ranges.length - 1);
+    }
+
+    function offsetOfCellInRow(cells, cellIndex) {
+      let offset = 2; // '| '
+      for (let i = 0; i < cellIndex; i++) offset += cells[i].length + 3; // cell + ' | '
+      return offset;
+    }
+
+    function commitTableEdit(lines, newCursorOffset) {
+      editor.value = lines.join('\n');
+      editor.focus();
+      editor.setSelectionRange(newCursorOffset, newCursorOffset);
+      recordHistory();
+      markActiveTabModified();
+      updatePreview();
+    }
+
+    function tableInsertRow(direction) {
+      const table = findTableBlock();
+      if (!table) return;
+      const { lines, cursorLine, separatorLine } = table;
+
+      const colCount = getRowCells(lines[separatorLine - 1]).length;
+      const emptyRow = '|' + Array(colCount).fill(' ').join('|') + '|';
+
+      const targetLineIndex = cursorLine <= separatorLine
+        ? separatorLine + 1
+        : (direction === 'before' ? cursorLine : cursorLine + 1);
+
+      lines.splice(targetLineIndex, 0, emptyRow);
+      commitTableEdit(lines, lineStartOffset(lines, targetLineIndex) + 2);
+    }
+
+    function tableDeleteRow() {
+      const table = findTableBlock();
+      if (!table) return;
+      const { lines, cursorLine, separatorLine } = table;
+      if (cursorLine <= separatorLine) return; // header/separator can't be removed via this control
+
+      lines.splice(cursorLine, 1);
+      const newCursorLine = Math.min(cursorLine, lines.length - 1);
+      commitTableEdit(lines, lineStartOffset(lines, newCursorLine));
+    }
+
+    function tableInsertColumn(direction) {
+      const table = findTableBlock();
+      if (!table) return;
+      const { lines, start, end, cursorLine, separatorLine } = table;
+
+      const lineStart = lineStartOffset(lines, cursorLine);
+      const posInLine = editor.selectionStart - lineStart;
+      const colIndex = getColumnIndexAtCursor(lines[cursorLine], posInLine);
+      const insertAt = direction === 'before' ? colIndex : colIndex + 1;
+
+      let cursorRowCells = null;
+      for (let i = start; i <= end; i++) {
+        const cells = getRowCells(lines[i]);
+        cells.splice(insertAt, 0, i === separatorLine ? '---' : '');
+        lines[i] = buildRowFromCells(cells);
+        if (i === cursorLine) cursorRowCells = cells;
+      }
+
+      commitTableEdit(lines, lineStartOffset(lines, cursorLine) + offsetOfCellInRow(cursorRowCells, insertAt));
+    }
+
+    function tableDeleteColumn() {
+      const table = findTableBlock();
+      if (!table) return;
+      const { lines, start, end, cursorLine, separatorLine } = table;
+
+      const colCount = getRowCells(lines[separatorLine]).length;
+      if (colCount <= 1) return; // keep at least one column
+
+      const lineStart = lineStartOffset(lines, cursorLine);
+      const posInLine = editor.selectionStart - lineStart;
+      const colIndex = getColumnIndexAtCursor(lines[cursorLine], posInLine);
+
+      let cursorRowCells = null;
+      for (let i = start; i <= end; i++) {
+        const cells = getRowCells(lines[i]);
+        if (colIndex < cells.length) cells.splice(colIndex, 1);
+        lines[i] = buildRowFromCells(cells);
+        if (i === cursorLine) cursorRowCells = cells;
+      }
+
+      const targetIndex = Math.min(colIndex, cursorRowCells.length - 1);
+      commitTableEdit(lines, lineStartOffset(lines, cursorLine) + offsetOfCellInRow(cursorRowCells, targetIndex));
+    }
+
+    function updateTableControlsVisibility() {
+      const bar = document.getElementById('tableControls');
+      if (!bar) return;
+      bar.style.display = (showEditor && !editor.disabled && findTableBlock()) ? 'flex' : 'none';
+    }
 
     // --- SMART ENTER KEY FOR LIST CONTINUATION ---
 
@@ -3470,6 +3915,7 @@ return He}()
           currentTab.fileHandle = handle;
           currentTab.name = handle.name;
           currentTab.isModified = false;
+          currentTab.isDefaultName = false;
           const writable = await handle.createWritable();
           await writable.write(contentToSave);
           await writable.close();
@@ -3487,6 +3933,7 @@ return He}()
       URL.revokeObjectURL(link.href);
 
       currentTab.isModified = false;
+      currentTab.isDefaultName = false;
       renderTabs();
       saveStateToLocalStorage();
     }
@@ -3539,6 +3986,162 @@ return He}()
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = title + '.html';
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    // --- EXPORT AS RTF (for pasting into Word, email clients, etc.) ---
+    // Walks the already-rendered #markdownPreview DOM rather than re-parsing the markdown source,
+    // so images are already resolved to real data URIs (see hljsRenderer.image) and don't need any
+    // extra asset lookup here.
+
+    function escapeRtfText(text) {
+      let result = '';
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const code = text.charCodeAt(i);
+        if (ch === '\\') result += '\\\\';
+        else if (ch === '{') result += '\\{';
+        else if (ch === '}') result += '\\}';
+        else if (ch === '\n') result += '\\line ';
+        else if (code > 126) result += '\\u' + (code > 32767 ? code - 65536 : code) + '?';
+        else result += ch;
+      }
+      return result;
+    }
+
+    function imageElementToRtfPict(imgEl) {
+      const w = imgEl.naturalWidth || 1;
+      const h = imgEl.naturalHeight || 1;
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/png').split(',')[1] || '';
+      const binary = atob(base64);
+      let hex = '';
+      for (let i = 0; i < binary.length; i++) hex += binary.charCodeAt(i).toString(16).padStart(2, '0');
+
+      const widthTwips = Math.round(w / 96 * 1440);
+      const heightTwips = Math.round(h / 96 * 1440);
+      const maxWidthTwips = 8640; // ~6 inches
+      let goalW = widthTwips, goalH = heightTwips;
+      if (goalW > maxWidthTwips) {
+        const scale = maxWidthTwips / goalW;
+        goalW = maxWidthTwips;
+        goalH = Math.round(goalH * scale);
+      }
+      return '{\\pict\\pngblip\\picw' + w + '\\pich' + h + '\\picwgoal' + goalW + '\\pichgoal' + goalH + ' ' + hex + '}';
+    }
+
+    function rtfChildren(node) {
+      let rtf = '';
+      node.childNodes.forEach(child => { rtf += rtfFromNode(child); });
+      return rtf;
+    }
+
+    function rtfListToRtf(listEl, ordered, depth) {
+      let rtf = '';
+      let num = 1;
+      Array.from(listEl.children).filter(c => c.tagName === 'LI').forEach(li => {
+        const indent = 360 + depth * 360;
+        const checkbox = li.querySelector('input[type="checkbox"]');
+        const prefix = checkbox ? (checkbox.checked ? '\u2611 ' : '\u2610 ') : (ordered ? (num++ + '. ') : '\u2022 ');
+
+        const clone = li.cloneNode(true);
+        clone.querySelectorAll('ul, ol, input[type="checkbox"]').forEach(el => el.remove());
+        rtf += '\\pard\\li' + indent + '\\fs24 ' + prefix + rtfChildren(clone) + '\\par\n';
+
+        Array.from(li.children).filter(c => c.tagName === 'UL' || c.tagName === 'OL').forEach(nested => {
+          rtf += rtfListToRtf(nested, nested.tagName === 'OL', depth + 1);
+        });
+      });
+      return rtf;
+    }
+
+    function rtfTableToRtf(tableEl) {
+      const rows = Array.from(tableEl.querySelectorAll('tr'));
+      if (rows.length === 0) return '';
+      const colCount = rows[0].children.length;
+      const totalWidth = 9000;
+      const colWidth = Math.floor(totalWidth / colCount);
+
+      let rtf = '';
+      rows.forEach(row => {
+        let cellDefs = '';
+        for (let c = 1; c <= colCount; c++) cellDefs += '\\cellx' + (colWidth * c);
+        rtf += '\\trowd\\trgaph108' + cellDefs + '\n';
+        Array.from(row.children).forEach(cell => {
+          const isHeader = cell.tagName === 'TH';
+          rtf += '\\intbl\\fs22' + (isHeader ? '\\b ' : ' ') + rtfChildren(cell) + (isHeader ? '\\b0' : '') + '\\cell ';
+        });
+        rtf += '\\row\n';
+      });
+      return rtf;
+    }
+
+    function rtfFromNode(node, depth) {
+      depth = depth || 0;
+      if (node.nodeType === Node.TEXT_NODE) return escapeRtfText(node.textContent);
+      if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+      switch (node.tagName.toLowerCase()) {
+        case 'h1': return '\\pard\\sa200\\b\\fs48 ' + rtfChildren(node) + '\\b0\\par\n';
+        case 'h2': return '\\pard\\sa200\\b\\fs40 ' + rtfChildren(node) + '\\b0\\par\n';
+        case 'h3': return '\\pard\\sa200\\b\\fs34 ' + rtfChildren(node) + '\\b0\\par\n';
+        case 'h4': return '\\pard\\sa200\\b\\fs28 ' + rtfChildren(node) + '\\b0\\par\n';
+        case 'h5': return '\\pard\\sa200\\b\\fs26 ' + rtfChildren(node) + '\\b0\\par\n';
+        case 'h6': return '\\pard\\sa200\\b\\fs24 ' + rtfChildren(node) + '\\b0\\par\n';
+        case 'p': return '\\pard\\sa200\\fs24 ' + rtfChildren(node) + '\\par\n';
+        case 'strong': case 'b': return '\\b ' + rtfChildren(node) + '\\b0 ';
+        case 'em': case 'i': return '\\i ' + rtfChildren(node) + '\\i0 ';
+        case 'del': case 's': return '\\strike ' + rtfChildren(node) + '\\strike0 ';
+        case 'pre': {
+          const codeText = node.textContent.replace(/\n$/, '');
+          const lines = codeText.split('\n').map(l => escapeRtfText(l));
+          return '\\pard\\li360\\f1\\fs20 ' + lines.join('\\line ') + '\\f0\\fs24\\par\n';
+        }
+        case 'code':
+          return '\\f1 ' + rtfChildren(node) + '\\f0 ';
+        case 'blockquote':
+          return '\\pard\\li720\\i ' + rtfChildren(node) + '\\i0\\par\n';
+        case 'a': {
+          const href = node.getAttribute('href') || '';
+          return '{\\field{\\*\\fldinst HYPERLINK "' + escapeRtfText(href) + '"}{\\fldrslt \\ul\\cf1 ' + rtfChildren(node) + '\\ulnone\\cf0 }}';
+        }
+        case 'img':
+          return imageElementToRtfPict(node);
+        case 'hr':
+          return '\\pard\\brdrb\\brdrs\\brdrw10\\brsp20 \\par\\pard\n';
+        case 'br':
+          return '\\line ';
+        case 'ul':
+          return rtfListToRtf(node, false, depth);
+        case 'ol':
+          return rtfListToRtf(node, true, depth);
+        case 'table':
+          return rtfTableToRtf(node);
+        default:
+          return rtfChildren(node);
+      }
+    }
+
+    function exportAsRtf() {
+      const currentTab = getCurrentTab();
+      if (!currentTab) return;
+
+      let body = '';
+      preview.childNodes.forEach(node => { body += rtfFromNode(node); });
+
+      const rtf = '{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1031\n' +
+        '{\\fonttbl{\\f0\\fswiss Calibri;}{\\f1\\fmodern Courier New;}}\n' +
+        '{\\colortbl;\\red9\\green105\\blue218;}\n' +
+        '\\fs24\n' + body + '}';
+
+      const blob = new Blob([rtf], { type: 'application/rtf' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = currentTab.name.replace(/\.(md|markdown|txt)$/i, '') + '.rtf';
       link.click();
       URL.revokeObjectURL(link.href);
     }
