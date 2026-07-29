@@ -2495,16 +2495,24 @@ return He}()
         display: none !important;
       }
 
-      body, main {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      html, body, main {
         height: auto;
         overflow: visible;
         display: block;
+        background-color: var(--preview-bg);
       }
 
       .preview-pane {
         overflow: visible;
         height: auto;
         padding: 0;
+        background-color: var(--preview-bg);
       }
 
       .markdown-body {
@@ -2657,7 +2665,6 @@ return He}()
 		C327.987,257.323,324.216,253.19,318.253,253.19z"/><path class="st0" d="M389.36,320.645h-29.408c-0.489,0-0.726-0.244-0.726-0.734v-57.24c0-5.712-3.77-9.482-8.867-9.482
 		c-5.237,0-8.993,3.77-8.993,9.482v64.899c0,5.349,3.518,8.993,8.993,8.993h39.002c5.475,0,8.994-3.282,8.994-8.022
 		C398.354,323.926,394.835,320.645,389.36,320.645z"/></g></svg></button>
-      <button id="copyFormattedBtn" class="icon-btn" onclick="copyFormattedToClipboard()" title="Formatierte Notiz in die Zwischenablage kopieren (zum Einfügen in Word, E-Mail, ...)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Copy"><path id="Vector" d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
       <button id="printBtn" class="icon-btn" onclick="window.print()" title="Drucken / Als PDF speichern"><svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
 	 viewBox="0 0 512 512"  xml:space="preserve"><style type="text/css">
 	.st0{fill:currentColor;}
@@ -2675,6 +2682,7 @@ return He}()
 		c5.697,0,9.914-4.21,9.914-10.599v-26.351c0-0.538,0.265-0.81,0.81-0.81h26.086c5.837,0,9.23-3.532,9.23-8.56
 		c0-5.028-3.393-8.553-9.23-8.553h-26.086c-0.545,0-0.81-0.272-0.81-0.817v-19.425c0-0.545,0.265-0.816,0.81-0.816h32.733
 		c5.572,0,9.245-3.666,9.245-8.553C370.411,256.45,366.738,252.785,361.167,252.785z"/></g></svg></button>
+      <button id="copyFormattedBtn" class="icon-btn" onclick="copyFormattedToClipboard()" title="Formatierte Notiz in die Zwischenablage kopieren (zum Einfügen in Word, E-Mail, ...)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Copy"><path id="Vector" d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
 
       <div class="action-divider"></div>
 
@@ -4613,12 +4621,57 @@ Mit freundlichen Grüßen
       toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
     }
 
+    // Markdown collapses any run of blank lines into a single block separator, so normally
+    // "one blank line" and "three blank lines" between two paragraphs render identically. For the
+    // clipboard copy specifically (Word/Gmail/etc. have no other way to eyeball this), extra blank
+    // lines beyond the first are turned into empty paragraphs so a user can deliberately add visual
+    // breathing room between a heading and its content just by typing more blank lines in the
+    // source. Lines inside fenced code blocks are left untouched — a blank line there is literal
+    // code content, not a paragraph separator, and must not turn into stray "&nbsp;" text.
+    function expandBlankLinesForClipboard(markdown) {
+      const lines = markdown.split('\n');
+      const out = [];
+      let blankRun = 0;
+      let inFence = false;
+
+      const flushBlankRun = () => {
+        if (blankRun === 0) return;
+        out.push('');
+        for (let i = 1; i < blankRun; i++) {
+          out.push('&nbsp;');
+          out.push('');
+        }
+        blankRun = 0;
+      };
+
+      for (const line of lines) {
+        if (/^\s*(```|~~~)/.test(line)) {
+          flushBlankRun();
+          out.push(line);
+          inFence = !inFence;
+          continue;
+        }
+        if (inFence) {
+          out.push(line);
+          continue;
+        }
+        if (line.trim() === '') {
+          blankRun++;
+        } else {
+          flushBlankRun();
+          out.push(line);
+        }
+      }
+      flushBlankRun();
+      return out.join('\n');
+    }
+
     function copyFormattedToClipboard() {
       const currentTab = getCurrentTab();
       if (!currentTab) return;
 
       suppressDrawingControls = true;
-      const bodyHtml = marked.parse(editor.value);
+      const bodyHtml = marked.parse(expandBlankLinesForClipboard(editor.value));
       suppressDrawingControls = false;
 
       const container = document.createElement('div');
