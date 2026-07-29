@@ -1370,6 +1370,25 @@ return He}()
       z-index: 9999;
     }
 
+    /* Fullscreen doubles as a distraction-free mode: hide the app's own chrome (header, tab
+       bar, formatting/table toolbars, search bar, footer) so only the editor/preview pane(s)
+       the user currently has toggled on fill the screen. main is flex:1 inside body's flex
+       column, so it grows to fill the space these leave behind with no extra rule needed. */
+    :fullscreen header,
+    :fullscreen .tab-bar-container,
+    :fullscreen .formatting-toolbar,
+    :fullscreen .table-controls,
+    :fullscreen .search-bar,
+    :fullscreen .app-footer,
+    body.pseudo-fullscreen header,
+    body.pseudo-fullscreen .tab-bar-container,
+    body.pseudo-fullscreen .formatting-toolbar,
+    body.pseudo-fullscreen .table-controls,
+    body.pseudo-fullscreen .search-bar,
+    body.pseudo-fullscreen .app-footer {
+      display: none !important;
+    }
+
     /* Top Navigation / App Header */
     header {
       background-color: var(--bg-surface);
@@ -2501,6 +2520,67 @@ return He}()
       display: none;
     }
 
+    /* Presentation mode: full-viewport slideshow overlay. Distinct from the .modal-overlay/
+       .modal-card pattern above since it drives its own click/keyboard slide navigation
+       instead of being a static dismissable card. */
+    .presentation-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      cursor: pointer;
+    }
+
+    .presentation-overlay.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Carries the "markdown-body theme-xxx" classes too (set in JS) so a slide's headings/
+       code/tables/etc. reuse the exact same themed styling as the live preview; only layout
+       (sizing, padding, font-scale) is overridden here — same-specificity rules win by source
+       order, and this block comes after the base .markdown-body rule. */
+    .presentation-slide {
+      width: 100%;
+      height: 100%;
+      max-width: 1200px;
+      box-sizing: border-box;
+      margin: 0 auto;
+      padding: 6vh 8vw;
+      overflow-y: auto;
+      cursor: default;
+      font-size: clamp(1.1rem, 2.2vw, 2rem);
+      border-radius: 0;
+    }
+
+    .presentation-counter {
+      position: absolute;
+      bottom: 18px;
+      right: 22px;
+      font-size: 0.8rem;
+      color: var(--preview-text);
+      opacity: 0.45;
+      pointer-events: none;
+    }
+
+    .presentation-close-btn {
+      position: absolute;
+      top: 18px;
+      right: 22px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      opacity: 0.45;
+    }
+
+    .presentation-close-btn:hover {
+      opacity: 1;
+    }
+
     /* Print / PDF export */
     @media print {
       header, .tab-bar-container, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel {
@@ -2653,8 +2733,11 @@ return He}()
       <!-- Synchrones Scrollen Toggle Button -->
       <button id="syncScrollBtn" class="icon-btn active" onclick="toggleSyncScroll()" title="Synchrones Scrollen ein-/ausblenden"><svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7.293,8.707a1,1,0,0,1,0-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,1,1-1.414,1.414L12,5.414,8.707,8.707A1,1,0,0,1,7.293,8.707Zm0,8,4,4a1,1,0,0,0,1.414,0l4-4a1,1,0,0,0-1.414-1.414L12,18.586,8.707,15.293a1,1,0,1,0-1.414,1.414Z"/></svg></button>
 
-      <!-- Vollbildmodus -->
-      <button id="fullscreenBtn" class="icon-btn" onclick="toggleFullscreen()" title="Vollbildmodus ein-/ausschalten"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.00002 3.99998H4.00004L4 9M20 8.99999V4L15 3.99997M15 20H20L20 15M4 15L4 20L9.00002 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <!-- Vollbildmodus (Fokusmodus: blendet Menüs/Kopf-/Fußleiste/Tableiste aus) -->
+      <button id="fullscreenBtn" class="icon-btn" onclick="toggleFullscreen()" title="Fokus-/Vollbildmodus ein-/ausschalten (blendet Menüs, Kopf-, Fußleiste und Tableiste aus)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.00002 3.99998H4.00004L4 9M20 8.99999V4L15 3.99997M15 20H20L20 15M4 15L4 20L9.00002 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
+      <!-- Präsentationsmodus -->
+      <button id="presentationBtn" class="icon-btn" onclick="startPresentation()" title="Präsentationsmodus starten (Folien werden durch eine Trennlinie --- getrennt)"><svg fill="currentColor" viewBox="0 0 60 60" id="Capa_1" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><path d="M60,4H31V1c0-0.553-0.447-1-1-1s-1,0.447-1,1v3H0v42h27.586L15.293,58.293c-0.391,0.391-0.391,1.023,0,1.414   C15.488,59.902,15.744,60,16,60s0.512-0.098,0.707-0.293L29,47.414V57c0,0.553,0.447,1,1,1s1-0.447,1-1v-9.586l12.293,12.293   C43.488,59.902,43.744,60,44,60s0.512-0.098,0.707-0.293c0.391-0.391,0.391-1.023,0-1.414L32.414,46H60V4z M58,44H2V6h56V44z"/><path d="M36,42c0.553,0,1-0.447,1-1v-3c0-0.553-0.447-1-1-1s-1,0.447-1,1v3C35,41.553,35.447,42,36,42z"/><path d="M40,33c-0.553,0-1,0.447-1,1v7c0,0.553,0.447,1,1,1s1-0.447,1-1v-7C41,33.447,40.553,33,40,33z"/><path d="M44,35c-0.553,0-1,0.447-1,1v5c0,0.553,0.447,1,1,1s1-0.447,1-1v-5C45,35.447,44.553,35,44,35z"/><path d="M48,28c-0.553,0-1,0.447-1,1v12c0,0.553,0.447,1,1,1s1-0.447,1-1V29C49,28.447,48.553,28,48,28z"/><path d="M52,32c-0.553,0-1,0.447-1,1v8c0,0.553,0.447,1,1,1s1-0.447,1-1v-8C53,32.447,52.553,32,52,32z"/><path d="M8,38h10c0.553,0,1-0.447,1-1s-0.447-1-1-1H8c-0.553,0-1,0.447-1,1S7.447,38,8,38z"/><path d="M23,40H8c-0.553,0-1,0.447-1,1s0.447,1,1,1h15c0.553,0,1-0.447,1-1S23.553,40,23,40z"/><path d="M29.955,18.607c-0.018-0.239-0.047-0.474-0.08-0.708c-0.02-0.142-0.04-0.284-0.065-0.425   c-0.047-0.263-0.106-0.521-0.17-0.778c-0.029-0.115-0.056-0.231-0.089-0.345c-0.076-0.265-0.164-0.525-0.258-0.782   c-0.04-0.11-0.078-0.221-0.121-0.33c-0.096-0.241-0.205-0.475-0.317-0.707c-0.06-0.124-0.116-0.25-0.18-0.372   c-0.103-0.195-0.216-0.382-0.33-0.57c-0.091-0.152-0.178-0.306-0.276-0.454c-0.088-0.131-0.185-0.255-0.278-0.383   c-0.138-0.19-0.272-0.382-0.422-0.564c0-0.001-0.001-0.001-0.002-0.002c-0.233-0.283-0.476-0.558-0.737-0.819   c-0.25-0.25-0.514-0.481-0.784-0.705c-0.014-0.011-0.026-0.024-0.039-0.035c-0.173-0.142-0.355-0.269-0.535-0.4   C25.135,10.126,25,10.02,24.856,9.925c-0.136-0.09-0.278-0.17-0.417-0.254c-0.201-0.122-0.403-0.243-0.612-0.353   c-0.109-0.057-0.222-0.107-0.333-0.161C23.249,9.038,23,8.924,22.745,8.822c-0.098-0.039-0.197-0.072-0.295-0.108   c-0.267-0.098-0.537-0.189-0.813-0.268c-0.108-0.031-0.218-0.057-0.327-0.084c-0.26-0.066-0.522-0.125-0.789-0.173   c-0.141-0.026-0.284-0.045-0.426-0.065c-0.232-0.032-0.464-0.06-0.7-0.079c-0.18-0.014-0.361-0.022-0.542-0.027   C18.735,8.014,18.619,8,18.5,8c-0.09,0-0.178,0.011-0.268,0.014c-0.088,0.002-0.175-0.006-0.264-0.002l-0.395,0.024l-0.01,0.011   C11.66,8.527,7,13.475,7,19.5C7,25.841,12.159,31,18.5,31c2.879,0,5.508-1.071,7.528-2.827c0.028-0.022,0.062-0.032,0.088-0.058   c0.016-0.016,0.021-0.037,0.036-0.054c2.125-1.901,3.542-4.571,3.799-7.574l0.019-0.016l0.02-0.44   c0.004-0.088-0.004-0.174-0.002-0.262C29.988,19.679,30,19.591,30,19.5c0-0.122-0.015-0.241-0.018-0.362   C29.976,18.96,29.969,18.784,29.955,18.607z M19,10.025c0.099,0.005,0.199,0.007,0.298,0.015c0.104,0.008,0.208,0.018,0.311,0.03   c0.227,0.027,0.451,0.061,0.673,0.103c0.067,0.013,0.134,0.024,0.201,0.038c0.272,0.058,0.541,0.126,0.804,0.207   c0.016,0.005,0.033,0.009,0.049,0.014c2.962,0.928,5.304,3.27,6.232,6.232c0.005,0.016,0.009,0.033,0.014,0.049   c0.081,0.263,0.149,0.531,0.207,0.804c0.014,0.067,0.025,0.134,0.038,0.201c0.042,0.222,0.076,0.446,0.103,0.673   c0.012,0.103,0.021,0.207,0.03,0.311c0.008,0.098,0.01,0.199,0.015,0.298H19V10.025z M9,19.5c0-4.727,3.474-8.647,8-9.37v9.833   l0.001,0.031c0,0.005,0.001,0.009,0.001,0.014L17.037,21h0.549l6.31,6.31C22.362,28.373,20.504,29,18.5,29   C13.262,29,9,24.738,9,19.5z M25.411,25.997L20.414,21h7.456C27.564,22.917,26.686,24.643,25.411,25.997z"/><path d="M39,15h8c0.553,0,1-0.447,1-1s-0.447-1-1-1h-8c-0.553,0-1,0.447-1,1S38.447,15,39,15z"/><path d="M51.3,13.29C51.109,13.47,51,13.729,51,14c0,0.27,0.109,0.53,0.29,0.7C51.479,14.89,51.729,15,52,15   c0.26,0,0.52-0.11,0.71-0.29C52.89,14.52,53,14.26,53,14s-0.11-0.521-0.29-0.71C52.33,12.92,51.649,12.93,51.3,13.29z"/><path d="M49,10h3c0.553,0,1-0.447,1-1s-0.447-1-1-1h-3c-0.553,0-1,0.447-1,1S48.447,10,49,10z"/><path d="M39,10h2c0.553,0,1-0.447,1-1s-0.447-1-1-1h-2c-0.553,0-1,0.447-1,1S38.447,10,39,10z"/><path d="M45,10c0.27,0,0.52-0.11,0.71-0.29C45.89,9.52,46,9.27,46,9c0-0.271-0.11-0.521-0.29-0.71c-0.37-0.37-1.061-0.37-1.42,0   C44.109,8.479,44,8.729,44,9c0,0.27,0.109,0.52,0.29,0.71C44.479,9.89,44.729,10,45,10z"/></g></svg></button>
 
       <div class="action-divider"></div>
 
@@ -2896,6 +2979,13 @@ return He}()
   </div>
 
   <div id="appToast" class="toast"></div>
+
+  <!-- Presentation Mode: full-viewport slideshow, slides split on a lone "---" line -->
+  <div class="presentation-overlay" id="presentationOverlay" onclick="presentationNext()">
+    <div class="presentation-slide markdown-body" id="presentationSlide"></div>
+    <span class="presentation-counter" id="presentationCounter"></span>
+    <button class="presentation-close-btn" onclick="event.stopPropagation(); exitPresentation()" title="Präsentation beenden (Esc)" type="button">✕</button>
+  </div>
 
   <script>
     let tabs = [];
@@ -3513,6 +3603,20 @@ Mit freundlichen Grüßen
     }
 
     document.addEventListener('keydown', (e) => {
+      if (presentationActive) {
+        if (e.key === 'Escape') { exitPresentation(); return; }
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+          e.preventDefault();
+          presentationNext();
+          return;
+        }
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          presentationPrev();
+          return;
+        }
+        return;
+      }
       if (e.key === 'Escape') {
         closeShortcutsModal();
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
@@ -3754,7 +3858,138 @@ Mit freundlichen Grüßen
 
     document.addEventListener('fullscreenchange', () => {
       document.getElementById('fullscreenBtn').classList.toggle('active', !!document.fullscreenElement);
+      // Covers exiting native fullscreen via Esc/browser UI/F11 instead of the presentation's
+      // own close button — a half-fullscreen presentation would otherwise look broken.
+      if (presentationActive && presentationOwnsFullscreen && !document.fullscreenElement) {
+        exitPresentation();
+      }
     });
+
+    // --- PRESENTATION MODE ---
+    // Splits the document into slides on a lone thematic-break line ("---"/"***"/"___", the
+    // same syntax the Trennlinie toolbar button inserts) and steps through them full-screen,
+    // one at a time, like a slideshow.
+
+    let presentationSlides = [];
+    let presentationIndex = 0;
+    let presentationActive = false;
+    let presentationOwnsFullscreen = false;
+    let presentationOwnsPseudoFullscreen = false;
+
+    const presentationOverlay = document.getElementById('presentationOverlay');
+    const presentationSlideEl = document.getElementById('presentationSlide');
+    const presentationCounter = document.getElementById('presentationCounter');
+
+    // A "---"/"***"/"___" line only counts as a slide break if it's preceded by a blank line
+    // (or is the very first line) — the same rule CommonMark uses to tell a thematic break
+    // apart from a setext heading underline ("Title\n---"), so a heading written that way
+    // doesn't get accidentally split into its own slide.
+    function splitIntoSlides(markdown) {
+      const lines = markdown.split('\n');
+      const hrRegex = /^ {0,3}(-{3,}|\*{3,}|_{3,})[ \t]*$/;
+      const fenceRegex = /^ {0,3}(`{3,}|~{3,})/;
+      const slides = [];
+      let current = [];
+      let inFence = false;
+      let fenceChar = '';
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const fenceMatch = line.match(fenceRegex);
+        if (fenceMatch) {
+          if (!inFence) {
+            inFence = true;
+            fenceChar = fenceMatch[1][0];
+          } else if (fenceMatch[1][0] === fenceChar) {
+            inFence = false;
+          }
+          current.push(line);
+          continue;
+        }
+
+        if (!inFence && hrRegex.test(line) && (i === 0 || lines[i - 1].trim() === '')) {
+          slides.push(current.join('\n').trim());
+          current = [];
+          continue;
+        }
+
+        current.push(line);
+      }
+      slides.push(current.join('\n').trim());
+
+      const nonEmpty = slides.filter(s => s.length > 0);
+      return nonEmpty.length > 0 ? nonEmpty : [''];
+    }
+
+    function renderPresentationSlide() {
+      presentationSlideEl.className = 'presentation-slide markdown-body ' + currentTheme;
+      // The theme's --preview-bg is scoped to .markdown-body.theme-xxx (presentationSlideEl),
+      // which doesn't cascade back up to its own parent — so the overlay needs its background
+      // set explicitly, or it stays transparent and the editor/preview bleed through in the
+      // letterboxing outside the slide's max-width on wide screens.
+      presentationOverlay.style.backgroundColor = getComputedStyle(presentationSlideEl).backgroundColor;
+      suppressDrawingControls = true;
+      presentationSlideEl.innerHTML = marked.parse(presentationSlides[presentationIndex]);
+      suppressDrawingControls = false;
+      presentationCounter.textContent = (presentationIndex + 1) + ' / ' + presentationSlides.length;
+    }
+
+    function presentationNext() {
+      if (presentationIndex < presentationSlides.length - 1) {
+        presentationIndex++;
+        renderPresentationSlide();
+      }
+    }
+
+    function presentationPrev() {
+      if (presentationIndex > 0) {
+        presentationIndex--;
+        renderPresentationSlide();
+      }
+    }
+
+    // Reuses toggleFullscreen()'s own real-Fullscreen-API-vs-iOS-pseudo-fallback detection,
+    // but tracks whether presentation mode was the one that turned it on, so exiting the
+    // presentation doesn't yank the user out of a fullscreen they had already enabled themselves.
+    function requestPresentationFullscreen() {
+      const supportsRealFullscreen = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
+      if (supportsRealFullscreen) {
+        if (!document.fullscreenElement) {
+          presentationOwnsFullscreen = true;
+          document.documentElement.requestFullscreen().catch(err => console.warn('Vollbildmodus fehlgeschlagen:', err));
+        }
+      } else if (!document.body.classList.contains('pseudo-fullscreen')) {
+        presentationOwnsPseudoFullscreen = true;
+        document.body.classList.add('pseudo-fullscreen');
+      }
+    }
+
+    function exitPresentationFullscreen() {
+      if (presentationOwnsFullscreen && document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      if (presentationOwnsPseudoFullscreen) {
+        document.body.classList.remove('pseudo-fullscreen');
+      }
+      presentationOwnsFullscreen = false;
+      presentationOwnsPseudoFullscreen = false;
+    }
+
+    function startPresentation() {
+      if (editor.disabled) return;
+      presentationSlides = splitIntoSlides(editor.value);
+      presentationIndex = 0;
+      presentationActive = true;
+      renderPresentationSlide();
+      presentationOverlay.classList.add('active');
+      requestPresentationFullscreen();
+    }
+
+    function exitPresentation() {
+      presentationActive = false;
+      presentationOverlay.classList.remove('active');
+      exitPresentationFullscreen();
+    }
 
     function syncScrollFrom(source) {
       if (!syncScrollEnabled || isSyncingScroll || !showEditor || !showPreview) return;
