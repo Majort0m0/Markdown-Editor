@@ -3573,7 +3573,7 @@ Mit freundlichen Grüßen
     document.addEventListener('click', (e) => {
       const panel = document.getElementById('tocPanel');
       const btn = document.getElementById('tocToggleBtn');
-      if (panel.classList.contains('active') && !panel.contains(e.target) && e.target !== btn) {
+      if (panel.classList.contains('active') && !panel.contains(e.target) && !btn.contains(e.target)) {
         closeToc();
       }
     });
