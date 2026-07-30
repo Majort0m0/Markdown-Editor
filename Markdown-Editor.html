@@ -1906,7 +1906,9 @@ return He}()
     }
 
     main.preview-hidden .toc-toggle-btn,
-    main.preview-hidden .toc-panel {
+    main.preview-hidden .toc-panel,
+    main.html-tab-active .toc-toggle-btn,
+    main.html-tab-active .toc-panel {
       display: none;
     }
 
@@ -1963,6 +1965,7 @@ return He}()
       overflow: hidden;
       border-right: 1px solid var(--border-color);
       background-color: var(--bg-surface);
+      position: relative;
     }
 
     main.editor-hidden .editor-pane {
@@ -1988,6 +1991,60 @@ return He}()
       cursor: not-allowed;
     }
 
+    /* Editor-side syntax highlighting overlay (HTML source view) */
+    .editor-highlight-overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 16px;
+      overflow: hidden;
+      pointer-events: none;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      color: #24292e;
+      background-color: var(--bg-surface);
+    }
+
+    .editor-highlight-overlay.active {
+      display: block;
+    }
+
+    .editor-highlight-overlay code {
+      font-family: inherit;
+      background: none;
+    }
+
+    .editor-highlight-overlay .hljs-tag,
+    .editor-highlight-overlay .hljs-name { color: #22863a; }
+    .editor-highlight-overlay .hljs-attr { color: #6f42c1; }
+    .editor-highlight-overlay .hljs-string { color: #032f62; }
+    .editor-highlight-overlay .hljs-comment { color: #6a737d; font-style: italic; }
+    .editor-highlight-overlay .hljs-keyword,
+    .editor-highlight-overlay .hljs-selector-tag { color: #d73a49; }
+    .editor-highlight-overlay .hljs-built_in,
+    .editor-highlight-overlay .hljs-title.function_,
+    .editor-highlight-overlay .hljs-title { color: #6f42c1; }
+    .editor-highlight-overlay .hljs-number,
+    .editor-highlight-overlay .hljs-literal { color: #005cc5; }
+    .editor-highlight-overlay .hljs-attribute { color: #005cc5; }
+    .editor-highlight-overlay .hljs-selector-id,
+    .editor-highlight-overlay .hljs-selector-class { color: #6f42c1; }
+
+    textarea.has-highlight-overlay {
+      position: relative;
+      z-index: 1;
+      background-color: transparent;
+      color: transparent;
+      caret-color: var(--text-main);
+    }
+
     .preview-pane {
       grid-column: 3;
       height: 100%;
@@ -1999,6 +2056,22 @@ return He}()
 
     main.preview-hidden .preview-pane {
       display: none;
+    }
+
+    .html-preview-frame {
+      display: none;
+      width: 100%;
+      height: 100%;
+      border: none;
+      background-color: #fff;
+    }
+
+    .html-preview-frame.active {
+      display: block;
+    }
+
+    .preview-pane.html-active {
+      padding: 0;
     }
 
     /* Drag and Drop Overlay */
@@ -2482,6 +2555,107 @@ return He}()
       color: var(--text-muted);
     }
 
+    /* Camera Modal (live preview + crop) */
+    .camera-modal-card {
+      width: 92vw;
+      max-width: 640px;
+      max-height: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .camera-modal-card .modal-header {
+      padding: 12px 16px;
+      margin-bottom: 0;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .camera-modal-body {
+      position: relative;
+      background-color: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+      max-height: 60vh;
+      overflow: hidden;
+    }
+
+    .camera-stage {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #cameraVideo {
+      max-width: 100%;
+      max-height: 60vh;
+      display: block;
+    }
+
+    .camera-error-text {
+      color: #fff;
+      text-align: center;
+      padding: 24px;
+      font-size: 0.9rem;
+    }
+
+    .crop-wrapper {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      max-height: 60vh;
+      line-height: 0;
+    }
+
+    #cropImage {
+      display: block;
+      max-width: 100%;
+      max-height: 60vh;
+      -webkit-user-drag: none;
+      user-select: none;
+    }
+
+    .crop-box {
+      position: absolute;
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+      cursor: move;
+      touch-action: none;
+    }
+
+    .crop-handle {
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background-color: #fff;
+      border: 2px solid var(--accent);
+      border-radius: 50%;
+      touch-action: none;
+    }
+
+    .crop-handle[data-handle="nw"] { top: -8px; left: -8px; cursor: nwse-resize; }
+    .crop-handle[data-handle="ne"] { top: -8px; right: -8px; cursor: nesw-resize; }
+    .crop-handle[data-handle="sw"] { bottom: -8px; left: -8px; cursor: nesw-resize; }
+    .crop-handle[data-handle="se"] { bottom: -8px; right: -8px; cursor: nwse-resize; }
+
+    .camera-modal-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .camera-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
     /* WebDAV Sync settings modal */
     .settings-field {
       margin-bottom: 12px;
@@ -2915,7 +3089,7 @@ return He}()
 
       <!-- Dateimanagement -->
       <label class="icon-btn btn-label" for="fileInput" title="Öffnen (Datei öffnen)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M1 5C1 3.34315 2.34315 2 4 2H8.55848C9.84977 2 10.9962 2.82629 11.4045 4.05132L11.7208 5H20C21.1046 5 22 5.89543 22 7V9.00961C23.1475 9.12163 23.9808 10.196 23.7695 11.3578L22.1332 20.3578C21.9603 21.3087 21.132 22 20.1654 22H3C1.89543 22 1 21.1046 1 20V5ZM20 9V7H11.7208C10.8599 7 10.0956 6.44914 9.82339 5.63246L9.50716 4.68377C9.37105 4.27543 8.98891 4 8.55848 4H4C3.44772 4 3 4.44772 3 5V12.2709L3.35429 10.588C3.54913 9.66249 4.36562 9 5.31139 9H20ZM3.36634 20C3.41777 19.9109 3.4562 19.8122 3.47855 19.706L5.31139 11L21 11H21.8018L20.1654 20L3.36634 20Z" fill="currentColor"/></svg></label>
-      <input type="file" id="fileInput" accept=".md,.markdown,.txt,.csv,.json" multiple onchange="handleFileSelect(event)">
+      <input type="file" id="fileInput" accept=".md,.markdown,.txt,.csv,.json,.html,.htm" multiple onchange="handleFileSelect(event)">
       <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageFileSelect(event)">
 
       <button id="saveBtn" class="icon-btn" onclick="saveCurrentFile()" title="Speichern (Strg+S)"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg></button>
@@ -3084,6 +3258,7 @@ return He}()
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn fmt-btn" onclick="insertFormatting('link')" title="Link"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 12C14 14.7614 11.7614 17 9 17H7C4.23858 17 2 14.7614 2 12C2 9.23858 4.23858 7 7 7H7.5M10 12C10 9.23858 12.2386 7 15 7H17C19.7614 7 22 9.23858 22 12C22 14.7614 19.7614 17 17 17H16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="triggerImageFileInsert()" title="Bild einfügen"><svg fill="currentColor" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M30 2.497h-28c-1.099 0-2 0.901-2 2v23.006c0 1.099 0.9 2 2 2h28c1.099 0 2-0.901 2-2v-23.006c0-1.099-0.901-2-2-2zM30 27.503l-28-0v-5.892l8.027-7.779 8.275 8.265c0.341 0.414 0.948 0.361 1.379 0.035l3.652-3.306 6.587 6.762c0.025 0.025 0.053 0.044 0.080 0.065v1.85zM30 22.806l-5.876-6.013c-0.357-0.352-0.915-0.387-1.311-0.086l-3.768 3.282-8.28-8.19c-0.177-0.214-0.432-0.344-0.709-0.363-0.275-0.010-0.547 0.080-0.749 0.27l-7.309 7.112v-14.322h28v18.309zM23 12.504c1.102 0 1.995-0.894 1.995-1.995s-0.892-1.995-1.995-1.995-1.995 0.894-1.995 1.995c0 1.101 0.892 1.995 1.995 1.995z"></path></svg></button>
+    <button class="toolbar-btn fmt-btn" onclick="openCameraModal()" title="Foto aufnehmen"><svg viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g fill="currentColor" transform="translate(42.666667, 64.000000)"><path d="M277.333333,1.42108547e-14 C277.333333,1.42108547e-14 277.681778,0.557511111 278.378667,1.67253333 L278.698667,2.18453333 C279.438222,3.36782222 280.478222,5.03182222 281.818667,7.17653333 L282.458667,8.20053333 C283.891556,10.4931556 285.624889,13.2664889 287.658667,16.5205333 L288.618667,18.0565333 C290.744889,21.4584889 293.171556,25.3411556 295.898667,29.7045333 L297.178667,31.7525333 C299.998222,36.2638222 303.118222,41.2558222 306.538667,46.7285333 L308.138667,49.2885333 C311.003462,53.8722052 314.068069,58.775577 317.332489,63.9986486 L426.666667,64 L426.666667,362.666667 L7.10542736e-15,362.666667 L7.10542736e-15,64 L109.333,64 L149.333333,1.42108547e-14 L277.333333,1.42108547e-14 L277.333333,1.42108547e-14 Z M213.333333,85.3333333 C148.531923,85.3333333 96,137.865256 96,202.666667 C96,267.468077 148.531923,320 213.333333,320 C278.134744,320 330.666667,267.468077 330.666667,202.666667 C330.666667,137.865256 278.134744,85.3333333 213.333333,85.3333333 Z M213.333333,128 C254.570595,128 288,161.429405 288,202.666667 C288,243.903928 254.570595,277.333333 213.333333,277.333333 C172.096072,277.333333 138.666667,243.903928 138.666667,202.666667 C138.666667,161.429405 172.096072,128 213.333333,128 Z M384,106.666667 C372.217925,106.666667 362.666667,116.217925 362.666667,128 C362.666667,139.782075 372.217925,149.333333 384,149.333333 C395.782075,149.333333 405.333333,139.782075 405.333333,128 C405.333333,116.217925 395.782075,106.666667 384,106.666667 Z"></path></g></g></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="openDrawingModal()" title="Zeichnung einfügen"><svg fill="currentColor" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
 	 viewBox="0 0 60 60" xml:space="preserve"><g><g><path d="M60,37L60,37V1c0-0.6-0.4-1-1-1H1C0.4,0,0,0.4,0,1v47c0,0.6,0.4,1,1,1h10v-2H2V2h56v34H48c-0.6,0-1,0.4-1,1v10H25v2h23
 			c0.3,0,0.5-0.1,0.7-0.3l11-11c0.1-0.1,0.1-0.2,0.2-0.3v-0.1C60,37.2,60,37.1,60,37z M49,38h7.6l-3.8,3.8L49,45.6V38z"/><path d="M18.9,9.7C18.8,9.3,18.4,9,18,9s-0.8,0.3-0.9,0.7l-2.9,8.7C14.1,18.6,14,18.8,14,19v33v7c0,0.6,0.4,1,1,1h6
@@ -3113,11 +3288,13 @@ return He}()
 
   <main id="mainContainer">
     <div class="editor-pane" id="editorPane">
+      <pre id="editorHighlightOverlay" class="editor-highlight-overlay" aria-hidden="true"><code></code></pre>
       <textarea id="markdownInput" placeholder="Schreibe oder füge hier deinen Markdown-Text ein..." spellcheck="false"></textarea>
     </div>
     <div class="pane-resizer" id="paneResizer" title="Bereich verschieben"></div>
     <div class="preview-pane" id="previewPane">
       <div id="markdownPreview" class="markdown-body theme-github-light"></div>
+      <iframe id="htmlPreviewFrame" class="html-preview-frame" title="HTML-Vorschau" sandbox="allow-scripts"></iframe>
     </div>
 
     <button id="tocToggleBtn" class="toc-toggle-btn" onclick="toggleToc()" title="Inhaltsverzeichnis anzeigen/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7L4 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 12L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 17H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
@@ -3169,6 +3346,43 @@ return He}()
           <span>🖼️ Original einfügen</span>
           <span class="img-dialog-detail"></span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Camera Modal (live webcam/device-camera preview, capture, crop) -->
+  <div class="modal-overlay" id="cameraModal" onclick="if (event.target === this) closeCameraModal()">
+    <div class="modal-card camera-modal-card">
+      <div class="modal-header">
+        <h2>📷 Foto aufnehmen</h2>
+        <button class="icon-btn" onclick="closeCameraModal()" title="Schließen">✕</button>
+      </div>
+      <div class="camera-modal-body">
+        <div id="cameraLiveStage" class="camera-stage">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+          <p id="cameraErrorText" class="camera-error-text"></p>
+        </div>
+        <div id="cameraCropStage" class="camera-stage" style="display:none;">
+          <div id="cropWrapper" class="crop-wrapper">
+            <img id="cropImage" alt="Aufgenommenes Foto">
+            <div id="cropBox" class="crop-box">
+              <div class="crop-handle" data-handle="nw"></div>
+              <div class="crop-handle" data-handle="ne"></div>
+              <div class="crop-handle" data-handle="sw"></div>
+              <div class="crop-handle" data-handle="se"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="camera-modal-footer">
+        <div id="cameraLiveControls" class="camera-controls">
+          <button class="image-dialog-choice-btn" style="width:auto;" onclick="switchCamera()" title="Zwischen Front- und Rückkamera wechseln" type="button">🔄 Kamera wechseln</button>
+          <button class="btn-primary" onclick="capturePhoto()" type="button">📸 Foto aufnehmen</button>
+        </div>
+        <div id="cameraCropControls" class="camera-controls" style="display:none;">
+          <button class="image-dialog-choice-btn" style="width:auto;" onclick="retakePhoto()" title="Verwerfen und erneut aufnehmen" type="button">↺ Erneut aufnehmen</button>
+          <button class="btn-primary" onclick="applyCrop()" type="button">✓ Verwenden</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3291,6 +3505,9 @@ return He}()
     const editor = document.getElementById('markdownInput');
     const preview = document.getElementById('markdownPreview');
     const previewPane = document.getElementById('previewPane');
+    const htmlPreviewFrame = document.getElementById('htmlPreviewFrame');
+    const editorHighlightOverlay = document.getElementById('editorHighlightOverlay');
+    const editorHighlightOverlayCode = editorHighlightOverlay.querySelector('code');
     const tabList = document.getElementById('tabList');
     const mainContainer = document.getElementById('mainContainer');
     const paneResizer = document.getElementById('paneResizer');
@@ -3592,6 +3809,83 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 ### What
 
 
+` },
+      { id: 'timetable', name: 'Stundenplan', desc: 'Wochenplan Montag–Freitag, Stunde 1–6', content: `# Stundenplan
+
+| Stunde | Montag | Dienstag | Mittwoch | Donnerstag | Freitag |
+| --- | --- | --- | --- | --- | --- |
+| 1 |  |  |  |  |  |
+| 2 |  |  |  |  |  |
+| 3 |  |  |  |  |  |
+| 4 |  |  |  |  |  |
+| 5 |  |  |  |  |  |
+| 6 |  |  |  |  |  |
+` },
+      { id: 'html-hello-world', name: 'HTML „Hello World"', desc: 'HTML-Datei mit CSS- und JS-Abschnitt', filename: 'hello-world.html', content: `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Hello World</title>
+<style>
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    font-family: system-ui, sans-serif;
+  }
+  .card {
+    background: #fff;
+    padding: 40px 48px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    text-align: center;
+  }
+  h1 {
+    margin: 0 0 8px;
+    color: #333;
+  }
+  p {
+    margin: 0 0 20px;
+    color: #666;
+  }
+  button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 6px;
+    background: #667eea;
+    color: #fff;
+    cursor: pointer;
+  }
+  button:hover {
+    background: #5568d3;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Hallo Welt!</h1>
+  <p id="counterText">Button wurde 0-mal geklickt.</p>
+  <button id="counterBtn">Klick mich</button>
+</div>
+
+` /* split to avoid a literal closing script tag inside this template, which the HTML parser
+       would treat as closing THIS app's own outer script block regardless of JS string context —
+       same issue documented in CLAUDE.md for the embedded Excalidraw build */
+      + '<scr' + 'ipt>' + `
+  let count = 0;
+  const btn = document.getElementById('counterBtn');
+  const text = document.getElementById('counterText');
+  btn.addEventListener('click', () => {
+    count++;
+    text.textContent = 'Button wurde ' + count + '-mal geklickt.';
+  });
+` + '</scr' + 'ipt>' + `
+</body>
+</html>
 ` }
     ];
 
@@ -3624,7 +3918,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!tpl) return;
       lastTemplateId = id;
       closeTemplateModal();
-      createNewTab(null, tpl.content);
+      // `filename` is optional and unset for every markdown template (preserving the existing
+      // isDefaultName:true / first-heading auto-rename behavior); only a non-markdown template
+      // (e.g. the HTML one) sets it, so createNewTab's extension-based getFileTypeFromName()
+      // classifies the new tab correctly instead of defaulting to 'markdown'.
+      createNewTab(tpl.filename || null, tpl.content);
     }
 
     // --- LOCAL STORAGE PERSISTENCE ---
@@ -4405,6 +4703,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const lower = ext.toLowerCase();
       if (lower === 'csv') return 'csv';
       if (lower === 'json') return 'json';
+      if (lower === 'html' || lower === 'htm') return 'html';
       return 'markdown';
     }
 
@@ -4627,6 +4926,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (e.key === 'Escape') {
         closeShortcutsModal();
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
+        if (document.getElementById('cameraModal').classList.contains('active')) closeCameraModal();
         closeTemplateModal();
         closeToc();
         closeWebdavModal();
@@ -5069,7 +5369,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       requestAnimationFrame(() => { isSyncingScroll = false; });
     }
 
-    editor.addEventListener('scroll', () => syncScrollFrom('editor'));
+    editor.addEventListener('scroll', () => { syncScrollFrom('editor'); syncEditorHighlightScroll(); });
     previewPane.addEventListener('scroll', () => syncScrollFrom('preview'));
 
     function changeTheme(themeClass) {
@@ -5134,14 +5434,55 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return marked.parse(content);
     }
 
+    // HTML tabs bypass renderContentForTab entirely: the preview pane shows a real,
+    // sandboxed rendering of the document (a "web preview"), not a highlighted-source view.
+    function updateHtmlPreview(content) {
+      htmlPreviewFrame.srcdoc = content;
+    }
+
+    function renderHtmlSourceHighlight(content) {
+      const language = hljs.getLanguage('html') ? 'html' : null;
+      return language ? hljs.highlight(content, { language }).value : escapeHtmlText(content);
+    }
+
+    // Cosmetic paint layer only — sits behind the transparent-text textarea (see
+    // .editor-highlight-overlay / textarea.has-highlight-overlay CSS) and never touches
+    // editor.value or selection state, so every caret-position-dependent feature elsewhere
+    // (table controls, format-state detection, undo, ...) keeps working unmodified.
+    function updateEditorHighlightOverlay() {
+      const tab = getCurrentTab();
+      const isHtml = !!(tab && tab.fileType === 'html');
+      editorHighlightOverlay.classList.toggle('active', isHtml);
+      editor.classList.toggle('has-highlight-overlay', isHtml);
+      if (!isHtml) return;
+      editorHighlightOverlayCode.innerHTML = renderHtmlSourceHighlight(editor.value) + '\n';
+      syncEditorHighlightScroll();
+    }
+
+    function syncEditorHighlightScroll() {
+      editorHighlightOverlay.scrollTop = editor.scrollTop;
+      editorHighlightOverlay.scrollLeft = editor.scrollLeft;
+    }
+
     function updatePreview() {
       if (!activeTabId) return;
-      preview.innerHTML = renderContentForTab(getCurrentTab(), editor.value);
-      attachTaskCheckboxListeners();
+      const tab = getCurrentTab();
+      const isHtml = !!(tab && tab.fileType === 'html');
+      previewPane.classList.toggle('html-active', isHtml);
+      mainContainer.classList.toggle('html-tab-active', isHtml);
+      htmlPreviewFrame.classList.toggle('active', isHtml);
+      preview.style.display = isHtml ? 'none' : '';
+      if (isHtml) {
+        updateHtmlPreview(editor.value);
+      } else {
+        preview.innerHTML = renderContentForTab(tab, editor.value);
+        attachTaskCheckboxListeners();
+        updateTocPanel();
+      }
+      updateEditorHighlightOverlay();
       updateStats();
       updateFormatButtonStates();
       updateTabNameFromFirstHeading();
-      updateTocPanel();
       updateTableControlsVisibility();
     }
 
@@ -6070,6 +6411,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function getSaveFileTypeMeta(tab) {
       if (tab.fileType === 'csv') return { description: 'CSV-Datei', mime: 'text/csv', extensions: ['.csv'] };
       if (tab.fileType === 'json') return { description: 'JSON-Datei', mime: 'application/json', extensions: ['.json'] };
+      if (tab.fileType === 'html') return { description: 'HTML-Datei', mime: 'text/html', extensions: ['.html', '.htm'] };
       return { description: 'Markdown File', mime: 'text/markdown', extensions: ['.md', '.markdown'] };
     }
 
@@ -6116,6 +6458,19 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function exportAsHtml() {
       const currentTab = getCurrentTab();
       if (!currentTab) return;
+
+      // An HTML tab's content already IS a standalone HTML document — wrapping it in the
+      // markdown-export template below would double-nest <html>/<head>/<body>. Just download
+      // the source as-is instead (functionally the download-fallback half of Save As).
+      if (currentTab.fileType === 'html') {
+        const blob = new Blob([editor.value], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = currentTab.name.replace(/\.html?$/i, '') + '.html';
+        link.click();
+        URL.revokeObjectURL(link.href);
+        return;
+      }
 
       const cs = getComputedStyle(preview);
       const previewVars = ['--preview-bg', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
@@ -6236,6 +6591,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const currentTab = getCurrentTab();
       if (!currentTab) return;
 
+      // "Formatted note" copying relies on the browser serializing a live selection's computed
+      // styles — that means the source would need inserting into the real page DOM via innerHTML,
+      // where inline event-handler attributes (onerror/onload/...) in arbitrary HTML/JS content
+      // CAN execute in this app's own origin (unlike the sandboxed preview iframe). Not worth the
+      // risk for a feature that doesn't semantically apply to an already-standalone HTML document.
+      if (currentTab.fileType === 'html') {
+        showToast('Formatiertes Kopieren ist für HTML-Dateien nicht verfügbar');
+        return;
+      }
+
       const content = currentTab.fileType === 'markdown' ? expandBlankLinesForClipboard(editor.value) : editor.value;
       suppressDrawingControls = true;
       const bodyHtml = renderContentForTab(currentTab, content);
@@ -6308,6 +6673,244 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const choice = await requestImageInsertChoice(file);
       if (choice) insertImageAsset(choice.dataUrl, choice.name);
     }
+
+    // --- CAMERA (live capture + crop, feeds into the same insert-choice flow as image insert) ---
+    // The 📷 "Foto aufnehmen" toolbar button opens a live getUserMedia() preview, lets the user
+    // snap a frame and optionally crop it, then hands the result to the exact same
+    // requestImageInsertChoice()/insertImageAsset() pair image paste/drop/file-pick already use —
+    // so camera photos get the same resize-or-original choice and asset-map storage for free.
+
+    let cameraStream = null;
+    let cameraFacingMode = 'environment';
+    let cameraCaptureCanvas = null; // full-resolution captured frame, source for the crop step
+    let cropDrag = null;
+    const CROP_MIN_SIZE = 40;
+
+    async function openCameraModal() {
+      if (editor.disabled) return;
+      document.getElementById('cameraModal').classList.add('active');
+      showCameraStage('live');
+      await startCameraStream();
+    }
+
+    function closeCameraModal() {
+      stopCameraStream();
+      document.getElementById('cameraModal').classList.remove('active');
+      cameraCaptureCanvas = null;
+      cropDrag = null;
+    }
+
+    function showCameraStage(stage) {
+      const isLive = stage === 'live';
+      document.getElementById('cameraLiveStage').style.display = isLive ? '' : 'none';
+      document.getElementById('cameraCropStage').style.display = isLive ? 'none' : '';
+      document.getElementById('cameraLiveControls').style.display = isLive ? '' : 'none';
+      document.getElementById('cameraCropControls').style.display = isLive ? 'none' : '';
+    }
+
+    // file:// and plain http:// are not secure contexts, so `navigator.mediaDevices` is entirely
+    // absent there rather than throwing — checked explicitly so that case gets an explanatory
+    // message instead of a confusing "getUserMedia is not a function" crash.
+    async function startCameraStream() {
+      const video = document.getElementById('cameraVideo');
+      const errorEl = document.getElementById('cameraErrorText');
+      errorEl.textContent = '';
+      video.style.display = '';
+
+      if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+        video.style.display = 'none';
+        errorEl.textContent = 'Kamera ist in diesem Kontext nicht verfügbar (benötigt HTTPS oder localhost, nicht file://).';
+        return;
+      }
+
+      stopCameraStream();
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: cameraFacingMode } },
+          audio: false
+        });
+        video.srcObject = cameraStream;
+      } catch (err) {
+        video.style.display = 'none';
+        errorEl.textContent = describeCameraError(err);
+      }
+    }
+
+    function describeCameraError(err) {
+      if (err && err.name === 'NotAllowedError') return 'Kamerazugriff wurde verweigert. Bitte in den Browser-/System-Einstellungen erlauben.';
+      if (err && err.name === 'NotFoundError') return 'Keine Kamera gefunden.';
+      if (err && err.name === 'NotReadableError') return 'Kamera wird bereits von einer anderen Anwendung verwendet.';
+      return 'Kamera konnte nicht gestartet werden' + (err && err.message ? ': ' + err.message : '.');
+    }
+
+    function stopCameraStream() {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        cameraStream = null;
+      }
+    }
+
+    // A soft `{ ideal: ... }` constraint (not exact) so this never throws on a single-camera
+    // desktop webcam — it just silently keeps the same camera there. On iOS/Android with two
+    // cameras, re-requesting getUserMedia with the flipped facingMode switches for real.
+    async function switchCamera() {
+      cameraFacingMode = cameraFacingMode === 'environment' ? 'user' : 'environment';
+      await startCameraStream();
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById('cameraVideo');
+      if (!video.videoWidth || !video.videoHeight) {
+        showToast('Kamera wird noch geladen …');
+        return;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+      cameraCaptureCanvas = canvas;
+
+      const cropImg = document.getElementById('cropImage');
+      cropImg.onload = () => { initCropBoxToFullImage(); cropImg.onload = null; };
+      cropImg.src = canvas.toDataURL('image/jpeg', 0.92);
+      showCameraStage('crop');
+    }
+
+    function retakePhoto() {
+      cameraCaptureCanvas = null;
+      showCameraStage('live');
+    }
+
+    // Crop box defaults to the full photo — if the user never touches it, "Verwenden" below
+    // crops to the whole frame, i.e. behaves exactly like not cropping at all. Cropping is
+    // therefore purely optional, not a mandatory extra step.
+    function initCropBoxToFullImage() {
+      const box = document.getElementById('cropBox');
+      box.style.left = '0px';
+      box.style.top = '0px';
+      box.style.width = '100%';
+      box.style.height = '100%';
+    }
+
+    // Pointer Events (not mouse events) so dragging/resizing works uniformly for mouse, touch,
+    // and pen alike — same reasoning as the app's #paneResizer split-view drag (see CLAUDE.md).
+    function setupCropInteractions() {
+      const box = document.getElementById('cropBox');
+      box.addEventListener('pointerdown', (e) => {
+        if (e.target.classList.contains('crop-handle')) return;
+        startCropDrag(e, 'move');
+      });
+      box.querySelectorAll('.crop-handle').forEach(handle => {
+        handle.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          startCropDrag(e, handle.dataset.handle);
+        });
+      });
+    }
+
+    function startCropDrag(e, mode) {
+      e.preventDefault();
+      const wrapper = document.getElementById('cropWrapper');
+      const box = document.getElementById('cropBox');
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      cropDrag = {
+        mode,
+        startX: e.clientX,
+        startY: e.clientY,
+        wrapperW: wrapperRect.width,
+        wrapperH: wrapperRect.height,
+        boxLeft: boxRect.left - wrapperRect.left,
+        boxTop: boxRect.top - wrapperRect.top,
+        boxW: boxRect.width,
+        boxH: boxRect.height
+      };
+      box.setPointerCapture(e.pointerId);
+      document.addEventListener('pointermove', onCropDragMove);
+      document.addEventListener('pointerup', onCropDragEnd);
+    }
+
+    function onCropDragMove(e) {
+      if (!cropDrag) return;
+      const dx = e.clientX - cropDrag.startX;
+      const dy = e.clientY - cropDrag.startY;
+      const { wrapperW, wrapperH, mode } = cropDrag;
+      let { boxLeft: left, boxTop: top, boxW: w, boxH: h } = cropDrag;
+
+      if (mode === 'move') {
+        left = clamp(left + dx, 0, wrapperW - w);
+        top = clamp(top + dy, 0, wrapperH - h);
+      } else {
+        if (mode.includes('w')) {
+          const newLeft = clamp(left + dx, 0, left + w - CROP_MIN_SIZE);
+          w = w + (left - newLeft);
+          left = newLeft;
+        }
+        if (mode.includes('e')) {
+          w = clamp(w + dx, CROP_MIN_SIZE, wrapperW - left);
+        }
+        if (mode.includes('n')) {
+          const newTop = clamp(top + dy, 0, top + h - CROP_MIN_SIZE);
+          h = h + (top - newTop);
+          top = newTop;
+        }
+        if (mode.includes('s')) {
+          h = clamp(h + dy, CROP_MIN_SIZE, wrapperH - top);
+        }
+      }
+
+      const box = document.getElementById('cropBox');
+      box.style.left = left + 'px';
+      box.style.top = top + 'px';
+      box.style.width = w + 'px';
+      box.style.height = h + 'px';
+    }
+
+    function onCropDragEnd() {
+      cropDrag = null;
+      document.removeEventListener('pointermove', onCropDragMove);
+      document.removeEventListener('pointerup', onCropDragEnd);
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    // Maps the on-screen crop box (CSS pixels, relative to the displayed <img>) back to the
+    // full-resolution captured canvas' own pixel grid, so the crop stays sharp regardless of how
+    // small the modal happens to display the preview.
+    function applyCrop() {
+      const sourceCanvas = cameraCaptureCanvas;
+      if (!sourceCanvas) return;
+
+      const img = document.getElementById('cropImage');
+      const box = document.getElementById('cropBox');
+      const imgRect = img.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      const scaleX = sourceCanvas.width / imgRect.width;
+      const scaleY = sourceCanvas.height / imgRect.height;
+
+      const sx = Math.round((boxRect.left - imgRect.left) * scaleX);
+      const sy = Math.round((boxRect.top - imgRect.top) * scaleY);
+      const sw = Math.round(boxRect.width * scaleX);
+      const sh = Math.round(boxRect.height * scaleY);
+
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = sw;
+      cropCanvas.height = sh;
+      cropCanvas.getContext('2d').drawImage(sourceCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      cropCanvas.toBlob((blob) => finishCameraCapture(blob), 'image/jpeg', 0.92);
+    }
+
+    async function finishCameraCapture(blob) {
+      closeCameraModal();
+      const file = new File([blob], 'Foto_' + Date.now() + '.jpg', { type: 'image/jpeg' });
+      const choice = await requestImageInsertChoice(file);
+      if (choice) insertImageAsset(choice.dataUrl, choice.name);
+    }
+
+    setupCropInteractions();
 
     // --- AUDIO RECORDER ---
     // Reuses the same asset-map pattern as pasted images (see above): the recording is stored
