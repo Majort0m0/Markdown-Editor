@@ -3635,22 +3635,54 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         }
       }
 
+      const myTabsPayload = tabs.map(t => ({
+        id: t.id,
+        name: t.name,
+        content: t.content,
+        isModified: t.isModified,
+        assets: t.assets || {},
+        assetCounter: t.assetCounter || 0,
+        isDefaultName: !!t.isDefaultName,
+        drawingAssetIds: t.drawingAssetIds || {},
+        audioAssetIds: t.audioAssetIds || {},
+        fileType: t.fileType || 'markdown',
+        csvDelimiter: t.csvDelimiter || null,
+        syncId: t.syncId,
+        lastSyncedSnapshot: t.lastSyncedSnapshot || null
+      }));
+
+      // This function overwrites the entire md_studio_state key, which is only actually safe
+      // if this browser tab's in-memory `tabs` is the sole writer. It usually is — but a second
+      // same-origin browser tab of this app (or one that's simply been open a while and fallen
+      // behind whatever a different tab has since saved) has its own independent in-memory
+      // `tabs`, and would otherwise silently erase any document it never loaded into memory the
+      // moment it saves anything at all — reproduced directly: a real document vanished from
+      // localStorage this way until a WebDAV sync happened to pull it back in. Guard against
+      // that by preserving any *synced* tab (has a syncId — the only cross-session-reliable
+      // identity available) that's sitting in localStorage but unknown to this session, rather
+      // than dropping it. Explicitly excluded: syncIds in webdavPendingDeletions — those are
+      // documents *this* session just deliberately closed, and must stay gone rather than being
+      // resurrected right back in by this same safety net. Tabs that were never synced have no
+      // reliable identity to check across sessions, so this can't help there — a narrower,
+      // accepted gap, since it requires unsynced editing in two same-origin tabs at once.
+      let preserved = [];
+      try {
+        const existingRaw = localStorage.getItem('md_studio_state');
+        if (existingRaw) {
+          const existing = JSON.parse(existingRaw);
+          const myIds = new Set(tabs.map(t => t.id));
+          const mySyncIds = new Set(tabs.map(t => t.syncId).filter(Boolean));
+          const pendingDeletionSyncIds = new Set(webdavPendingDeletions);
+          preserved = (existing.tabs || []).filter(et =>
+            et.syncId && !mySyncIds.has(et.syncId) && !myIds.has(et.id) && !pendingDeletionSyncIds.has(et.syncId)
+          );
+        }
+      } catch (err) {
+        // Corrupt/unreadable existing state -- fall through to just saving this session's view.
+      }
+
       const state = {
-        tabs: tabs.map(t => ({
-          id: t.id,
-          name: t.name,
-          content: t.content,
-          isModified: t.isModified,
-          assets: t.assets || {},
-          assetCounter: t.assetCounter || 0,
-          isDefaultName: !!t.isDefaultName,
-          drawingAssetIds: t.drawingAssetIds || {},
-          audioAssetIds: t.audioAssetIds || {},
-          fileType: t.fileType || 'markdown',
-          csvDelimiter: t.csvDelimiter || null,
-          syncId: t.syncId,
-          lastSyncedSnapshot: t.lastSyncedSnapshot || null
-        })),
+        tabs: myTabsPayload.concat(preserved),
         activeTabId: activeTabId,
         currentTheme: currentTheme,
         showEditor: showEditor,
