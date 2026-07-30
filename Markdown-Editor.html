@@ -1395,8 +1395,12 @@ return He}()
     .fullscreen-exit-btn {
       display: none;
       position: fixed;
-      top: 14px;
-      right: 14px;
+      top: 16px;
+      /* #tocToggleBtn sits at right:28px and is 34px wide (occupying the 28px-62px range from
+         the edge) and can be visible at the same time as this button (both show whenever the
+         preview pane isn't hidden, fullscreen or not) — 70px keeps a clear gap to its left
+         instead of the two overlapping in the same corner. */
+      right: 70px;
       z-index: 10000;
       width: 34px;
       height: 34px;
@@ -2147,8 +2151,6 @@ return He}()
     .markdown-body {
       background-color: var(--preview-bg);
       color: var(--preview-text);
-      max-width: 850px;
-      margin: 0 auto;
       line-height: 1.7;
       font-size: 1rem;
       border-radius: 8px;
@@ -3856,6 +3858,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       t.isModified = false;
       t.history = [t.content];
       t.historyIndex = 0;
+      // Set immediately, not deferred to attemptWebdavSync()'s post-PUT bulk update: a silent
+      // pull means the local tab now matches this exact remote snapshot, which is true
+      // regardless of whether the push that follows later in *this* attempt succeeds. Deferring
+      // it caused a real false-conflict bug: if that later push hits a concurrency conflict (see
+      // putRemoteWebdavState) and performWebdavSync() retries the whole attempt, the retry's
+      // fresh fetch would compare this tab's (already-pulled) content against the *stale*
+      // lastSyncedSnapshot from before the pull — making a document some other device changed,
+      // and that *this* device only ever silently accepted, look like a local edit no user ever
+      // made. Reproduced directly with two genuinely concurrent devices (one continuously
+      // editing, one only ever pulling) before this fix, and confirmed gone after it.
+      t.lastSyncedSnapshot = remoteTabSnapshot(rt);
     }
 
     function appendNameSuffix(name, suffix) {
@@ -5007,20 +5020,38 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       presentationOwnsPseudoFullscreen = false;
     }
 
+    // Mirrors the live split view's proportions instead of a fixed max-width, so presentation
+    // mode reflects whatever width the user actually chose via the pane resizer — full width if
+    // the editor is currently hidden (nothing to mirror a ratio against), since there's no split
+    // to speak of in that case. presentation-slide isn't part of <main>'s own grid (it lives in
+    // a separate always-on-top overlay), so this is set directly rather than reusing the grid's
+    // own column sizing.
+    function updatePresentationWidth() {
+      presentationSlideEl.style.maxWidth = showEditor ? (100 - splitRatio) + '%' : 'none';
+    }
+
     function startPresentation() {
       if (editor.disabled) return;
       presentationSlides = splitIntoSlides(editor.value);
       presentationIndex = 0;
       presentationActive = true;
+      updatePresentationWidth();
       renderPresentationSlide();
       presentationOverlay.classList.add('active');
       requestPresentationFullscreen();
+      // Presentation mode also engages fullscreen/pseudo-fullscreen (see
+      // requestPresentationFullscreen above), which would otherwise show the generic
+      // fullscreen-exit button too — the presentation's own ✕ already covers exiting, and its
+      // z-index (10000) sits above the presentation overlay (5000), so left alone it visibly
+      // overlaps the presentation's own close button in the same corner.
+      document.getElementById('fullscreenExitBtn').style.display = 'none';
     }
 
     function exitPresentation() {
       presentationActive = false;
       presentationOverlay.classList.remove('active');
       exitPresentationFullscreen();
+      document.getElementById('fullscreenExitBtn').style.display = '';
     }
 
     function syncScrollFrom(source) {
