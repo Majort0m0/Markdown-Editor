@@ -3659,7 +3659,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         spellcheckEnabled: spellcheckEnabled,
         tabIdCounter: tabIdCounter,
         splitRatio: splitRatio,
-        lastTemplateId: lastTemplateId
+        lastTemplateId: lastTemplateId,
+        webdavPendingDeletions: webdavPendingDeletions
       };
       localStorage.setItem('md_studio_state', JSON.stringify(state));
       // performWebdavSync() itself calls this to persist sync bookkeeping (lastSyncedSnapshot,
@@ -3704,6 +3705,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         spellcheckEnabled = !!state.spellcheckEnabled;
         splitRatio = state.splitRatio !== undefined ? state.splitRatio : 50;
         lastTemplateId = state.lastTemplateId || 'blank';
+        webdavPendingDeletions = state.webdavPendingDeletions || [];
 
         themeSelector.value = currentTheme;
         changeTheme(currentTheme);
@@ -3741,9 +3743,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // the last successful sync, i.e. the merge base): if only local changed since then, push;
     // if only remote changed, pull silently; if both changed to the same thing, no-op; if both
     // changed to different things, it's a real conflict and the user is asked per-document via
-    // webdavConflictModal. Deletion is intentionally not synced (v1 scope limit, avoids a
-    // tombstone design) — a tab deleted on one device simply reappears from the server on the
-    // next sync on any device that still has it there.
+    // webdavConflictModal.
+    //
+    // Deletion is synced via a minimal tombstone list (webdavPendingDeletions, an array of
+    // syncIds) rather than richer per-document delete markers: closeTab() appends the closed
+    // tab's syncId here and triggers an immediate sync (see triggerImmediateWebdavSync). That
+    // sync excludes the syncId from what it pushes (removing it from the shared file) and clears
+    // the tombstone once the push succeeds — the remote file itself is the only thing that needs
+    // to remember a deletion happened, not each device indefinitely. Another device picks this up
+    // on its own next sync purely by noticing the syncId is now missing from the remote tabs it
+    // already knew about (see the `!rt` branch in performWebdavSync): if its own local copy is
+    // unchanged since it was last synced, it follows the deletion; if it has unsynced local edits,
+    // those edits win and the document is pushed back (resurrected) instead of silently discarded.
 
     const WEBDAV_CONFIG_KEY = 'md_studio_webdav_config';
     let webdavConfig = null;
@@ -3753,6 +3764,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     let webdavLastError = null;
     let webdavConflictResolve = null;
     let webdavConflictDecisions = {};
+    let webdavPendingDeletions = [];
 
     function loadWebdavConfig() {
       try {
@@ -3941,17 +3953,28 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         const remoteTabs = (remote && remote.tabs) || [];
         const remoteById = new Map(remoteTabs.map(rt => [rt.syncId, rt]));
         const localIds = new Set(tabs.map(t => ensureSyncId(t)));
+        const pendingDeletions = new Set(webdavPendingDeletions);
 
         const conflicts = [];
         const resultTabsById = new Map();
+        const tabsToRemoveLocally = [];
 
         for (const t of tabs) {
           const syncId = ensureSyncId(t);
           const rt = remoteById.get(syncId);
 
           if (!rt) {
-            // Not on the server yet: a new local tab, or one deleted remotely — either way,
-            // push the local version (see the module comment on why deletion isn't synced).
+            const previouslySynced = !!t.lastSyncedSnapshot;
+            const localChanged = !previouslySynced || tabSyncSnapshot(t) !== t.lastSyncedSnapshot;
+            if (previouslySynced && !localChanged) {
+              // Was synced before, is now gone from the server, and there's nothing unsynced
+              // here to lose — another device deleted it, so follow that deletion locally
+              // instead of resurrecting it.
+              tabsToRemoveLocally.push(t);
+              continue;
+            }
+            // A new local tab never synced, or one deleted remotely but with local edits —
+            // either way, push/resurrect the local version rather than lose those edits.
             resultTabsById.set(syncId, tabToSyncPayload(t));
             continue;
           }
@@ -3974,7 +3997,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           }
         }
 
-        const newRemoteTabs = remoteTabs.filter(rt => !localIds.has(rt.syncId));
+        for (const t of tabsToRemoveLocally) {
+          removeTabFromList(t.id);
+        }
+
+        // A syncId this device just tombstoned (closeTab) is, by definition, not in `tabs`
+        // anymore — without this exclusion it would look exactly like "a new tab from another
+        // device" below and get pulled straight back in on the same sync that's supposed to be
+        // propagating its deletion.
+        const newRemoteTabs = remoteTabs.filter(rt => !localIds.has(rt.syncId) && !pendingDeletions.has(rt.syncId));
 
         if (conflicts.length > 0) {
           const decisions = await showWebdavConflictModal(conflicts);
@@ -3999,7 +4030,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           resultTabsById.set(rt.syncId, rt);
         }
 
+        // Belt-and-suspenders: a tombstoned syncId should never end up back in resultTabsById
+        // via any of the paths above, but excluding it explicitly here is what actually removes
+        // it from the shared file if it somehow did.
+        for (const syncId of pendingDeletions) {
+          resultTabsById.delete(syncId);
+        }
+
         await putRemoteWebdavState({ version: 1, updatedAt: Date.now(), tabs: Array.from(resultTabsById.values()) });
+        // The server no longer has these — the tombstones have done their job.
+        webdavPendingDeletions = [];
 
         for (const t of tabs) {
           const syncId = ensureSyncId(t);
@@ -4168,6 +4208,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       webdavDebounceTimer = setTimeout(() => performWebdavSync({ silent: true }), 10000);
     }
 
+    // Closing a tab is deliberate enough to skip the usual 10s debounce and sync right away
+    // (see closeTab()) — still gated on the same autosync toggle as scheduleWebdavDebouncedSync,
+    // since this is still an automatic background sync from the user's perspective, just
+    // triggered by a more specific event.
+    function triggerImmediateWebdavSync() {
+      if (!(webdavConfig && webdavConfig.autosyncEnabled && isWebdavConfigured())) return;
+      clearTimeout(webdavDebounceTimer);
+      performWebdavSync({ silent: true });
+    }
+
     // --- SPELLCHECK TOGGLE ---
 
     function toggleSpellcheck() {
@@ -4327,16 +4377,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       saveStateToLocalStorage();
     }
 
-    function closeTab(id, event) {
-      if (event) event.stopPropagation();
-
+    // Splice a tab out of `tabs` and pick a sensible next active tab — shared between the user
+    // explicitly closing a tab (closeTab) and a sync pulling in a deletion made on another
+    // device (performWebdavSync), so both stay consistent about what "removing a tab" means.
+    function removeTabFromList(id) {
       const tabIndex = tabs.findIndex(t => t.id === id);
       if (tabIndex === -1) return;
-
-      const targetTab = tabs[tabIndex];
-      if (targetTab.isModified && !confirm('"' + targetTab.name + '" enthält ungespeicherte Änderungen. Wirklich schließen?')) {
-        return;
-      }
 
       tabs.splice(tabIndex, 1);
 
@@ -4348,7 +4394,30 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       } else {
         renderTabs();
       }
+    }
+
+    function closeTab(id, event) {
+      if (event) event.stopPropagation();
+
+      const tabIndex = tabs.findIndex(t => t.id === id);
+      if (tabIndex === -1) return;
+
+      const targetTab = tabs[tabIndex];
+      if (targetTab.isModified && !confirm('"' + targetTab.name + '" enthält ungespeicherte Änderungen. Wirklich schließen?')) {
+        return;
+      }
+
+      // Only a tab that's ever been synced (has a syncId) needs a tombstone — otherwise the
+      // remote never had it in the first place, so there's nothing to remove there.
+      if (targetTab.syncId) {
+        webdavPendingDeletions.push(targetTab.syncId);
+      }
+
+      removeTabFromList(id);
       saveStateToLocalStorage();
+      // Closing a tab is deliberate enough to propagate immediately rather than waiting for the
+      // usual debounce — see triggerImmediateWebdavSync().
+      triggerImmediateWebdavSync();
     }
 
     function renderTabs() {
