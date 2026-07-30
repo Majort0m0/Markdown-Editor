@@ -6626,9 +6626,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       suppressDrawingControls = false;
 
       let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n<style>\n' +
+        // The --preview-* custom properties are declared on <body> — a shared ancestor of
+        // .overlay/.slide AND .page-counter/.nav-arrow — rather than on .slide itself, since a
+        // custom property only cascades to descendants of whatever it's declared on. .page-counter
+        // and .nav-arrow are siblings of .slide, not descendants of it, so scoping the variables to
+        // .slide alone (as the live preview's own .markdown-body.theme-xxx does) would leave them
+        // with an undefined --preview-text and an invisible/black-on-dark fallback color.
+        '  body {\n' + previewVars + '\n  }\n' +
         '  html, body { margin: 0; height: 100%; overflow: hidden; background: ' + cs.getPropertyValue('--preview-bg').trim() + '; font-family: ' + cs.fontFamily + '; }\n' +
         '  .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; }\n' +
-        '  .slide {\n' + previewVars + '\n' +
+        '  .slide {\n' +
         '    background-color: var(--preview-bg); color: var(--preview-text);\n' +
         '    width: 100%; height: 100%; max-width: 1200px; box-sizing: border-box; margin: 0 auto;\n' +
         '    padding: 6vh 8vw; overflow-y: auto; cursor: default;\n' +
