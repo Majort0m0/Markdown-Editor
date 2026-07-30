@@ -2401,6 +2401,57 @@ return He}()
       border: 0;
     }
 
+    /* Shown instead of .video-embed-live only under html.is-file-protocol — see the class-toggle
+       comment near getVideoEmbedHtml()/buildVideoEmbedWrapper() in the script block for why. */
+    .video-embed-fallback {
+      display: none;
+      position: relative;
+      width: 100%;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      text-decoration: none;
+      background-color: #000;
+    }
+
+    .video-embed-fallback img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0.7;
+    }
+
+    .video-embed-play {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 56px;
+      height: 56px;
+      padding-left: 4px;
+      border-radius: 50%;
+      background-color: rgba(0, 0, 0, 0.6);
+      font-size: 1.3rem;
+    }
+
+    .video-embed-label {
+      position: absolute;
+      z-index: 1;
+      bottom: 10px;
+      left: 12px;
+      font-size: 0.8rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    html.is-file-protocol .video-embed-live { display: none; }
+    html.is-file-protocol .video-embed-fallback { display: flex; }
+
     .drawing-wrapper {
       position: relative;
       display: inline-block;
@@ -3628,6 +3679,15 @@ return He}()
     let splitRatio = 50;
     const DARK_THEMES = new Set(['theme-github-dark', 'theme-nord', 'theme-dracula', 'theme-monokai', 'theme-gruvbox', 'theme-tokyo-night', 'theme-catppuccin-mocha', 'theme-rose-pine']);
 
+    // YouTube/Vimeo iframes (see getVideoEmbedHtml() below) render as a plain black box and never
+    // actually play when the embedding document has an opaque/"null" origin — confirmed empirically
+    // — which is exactly what a file:// page gets. Since this app (and its HTML/eBook exports) is
+    // designed to be opened straight off disk, that's the common case, not an edge case. This class
+    // is the single, one-time signal .video-embed-fallback/.video-embed-live's CSS switches on;
+    // performHtmlExport() and exportAsEbookWidget() each set the same class in their own exported
+    // document's <head> (they can't share this line of JS, being standalone files).
+    document.documentElement.classList.toggle('is-file-protocol', location.protocol === 'file:');
+
     const editor = document.getElementById('markdownInput');
     const preview = document.getElementById('markdownPreview');
     const previewPane = document.getElementById('previewPane');
@@ -3670,21 +3730,52 @@ return He}()
     const VIMEO_URL_RE = /^https?:\/\/(?:www\.)?vimeo\.com\/(\d+)/i;
     const VIDEO_FILE_URL_RE = /\.(mp4|webm|ogv|ogg|mov)(?:[?#].*)?$/i;
 
+    // Renders an <iframe> (works when the document is opened over http(s)) *and* a click-through
+    // fallback card in the same wrapper — CSS (see .video-embed-fallback / html.is-file-protocol
+    // above) shows exactly one of the two, based on the one-time class toggle set at the top of
+    // this script. Both variants are always present in the markup; nothing here needs to know
+    // which one will actually be visible, so this stays a single render pass with no separate
+    // hydration step needed anywhere else (live preview, presentation mode, exports, clipboard
+    // copy all just work automatically).
+    function buildVideoEmbedWrapper(embedSrc, embedAllow, alt, fallbackHref, fallbackThumb, fallbackLabel) {
+      const thumbHtml = fallbackThumb ? '<img src="' + fallbackThumb + '" alt="" loading="lazy">' : '';
+      return '<div class="video-embed-wrapper">' +
+        '<iframe class="video-embed-live" src="' + embedSrc + '" title="' + alt + '" allow="' + embedAllow + '" allowfullscreen loading="lazy"></iframe>' +
+        '<a class="video-embed-fallback" href="' + fallbackHref + '" target="_blank" rel="noopener noreferrer" title="' + alt + '">' +
+        thumbHtml +
+        '<span class="video-embed-play">▶</span>' +
+        '<span class="video-embed-label">' + fallbackLabel + '</span>' +
+        '</a>' +
+        '</div>';
+    }
+
     function getVideoEmbedHtml(href, altText) {
       if (!href) return null;
       const alt = (altText || 'Video').replace(/"/g, '&quot;');
 
       let m = href.match(YOUTUBE_URL_RE);
       if (m) {
-        return '<div class="video-embed-wrapper"><iframe src="https://www.youtube-nocookie.com/embed/' + m[1] + '" title="' + alt + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>';
+        const id = m[1];
+        return buildVideoEmbedWrapper(
+          'https://www.youtube-nocookie.com/embed/' + id,
+          'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+          alt, 'https://www.youtube.com/watch?v=' + id, 'https://img.youtube.com/vi/' + id + '/hqdefault.jpg', 'Auf YouTube ansehen'
+        );
       }
 
       m = href.match(VIMEO_URL_RE);
       if (m) {
-        return '<div class="video-embed-wrapper"><iframe src="https://player.vimeo.com/video/' + m[1] + '" title="' + alt + '" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+        return buildVideoEmbedWrapper(
+          'https://player.vimeo.com/video/' + m[1],
+          'autoplay; fullscreen; picture-in-picture',
+          alt, href, null, 'Auf Vimeo ansehen'
+        );
       }
 
       if (VIDEO_FILE_URL_RE.test(href)) {
+        // A plain <video> tag isn't subject to the null-origin restriction above (confirmed
+        // empirically) — it just fetches the file over HTTP like any other resource — so it needs
+        // no fallback and works identically under file:// and http(s).
         return '<div class="video-embed-wrapper"><video controls src="' + href + '" title="' + alt + '"></video></div>';
       }
 
@@ -6698,6 +6789,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .markdown-body .audio-asset-player { display: block; width: 100%; max-width: 420px; margin: 8px 0; }\n' +
         '  .video-embed-wrapper { position: relative; max-width: 100%; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: 8px; overflow: hidden; background-color: var(--preview-code-bg); }\n' +
         '  .video-embed-wrapper iframe, .video-embed-wrapper video { display: block; width: 100%; height: 100%; border: 0; }\n' +
+        '  .video-embed-fallback { display: none; position: relative; width: 100%; height: 100%; align-items: center; justify-content: center; color: #fff; text-decoration: none; background-color: #000; }\n' +
+        '  .video-embed-fallback img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .7; }\n' +
+        '  .video-embed-play { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; padding-left: 4px; border-radius: 50%; background-color: rgba(0,0,0,.6); font-size: 1.3rem; }\n' +
+        '  .video-embed-label { position: absolute; z-index: 1; bottom: 10px; left: 12px; font-size: .8rem; padding: 3px 8px; border-radius: 4px; background-color: rgba(0,0,0,.6); }\n' +
+        '  html.is-file-protocol .video-embed-live { display: none; }\n' +
+        '  html.is-file-protocol .video-embed-fallback { display: flex; }\n' +
         '  .markdown-body blockquote { padding: 0 1em; opacity: .85; border-left: .25em solid var(--preview-border); }\n' +
         '  .markdown-body code { padding: .2em .4em; font-size: 85%; background-color: var(--preview-code-bg); border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; }\n' +
         '  .markdown-body pre { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: var(--preview-code-bg); border-radius: 6px; }\n' +
@@ -6779,7 +6876,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       const title = currentTab.name.replace(/\.(md|markdown|txt|csv|json)$/i, '');
 
-      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n<style>\n' +
+      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n' +
+        // Sets the same html.is-file-protocol class the live app sets on itself (see the
+        // comment near getVideoEmbedHtml() in the main script) — needed so a YouTube/Vimeo embed
+        // in this exported file falls back to a click-through card instead of the always-broken
+        // black box a live iframe renders as under a file:// (opaque-origin) document. Placed in
+        // <head>, before <style>, so the CSS switch is already in effect before the body paints.
+        '<script>document.documentElement.classList.toggle("is-file-protocol", location.protocol === "file:");</scr' + 'ipt>\n' +
+        '<style>\n' +
         '  body { margin: 0; padding: 40px 20px; font-family: ' + cs.fontFamily + '; background: ' + cs.getPropertyValue('--preview-bg').trim() + '; }\n' +
         '  .markdown-body {\n' + previewVars + '\n' +
         '    background-color: var(--preview-bg); color: var(--preview-text);\n' +
@@ -6867,6 +6971,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '<div class="nav-arrow right" id="arrowRight"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg></div>\n' +
         '<div id="slideData" style="display:none">\n' + slidesHtml + '\n</div>\n' +
         '<script>\n' +
+        // Same file:// fallback switch as performHtmlExport() and the live app itself set on
+        // themselves — see the comment near getVideoEmbedHtml() in the main script for why a
+        // YouTube/Vimeo iframe needs this at all (it silently renders as a black box otherwise).
+        '  document.documentElement.classList.toggle("is-file-protocol", location.protocol === "file:");\n' +
         '  const SLIDES = Array.from(document.querySelectorAll("#slideData .slide-item")).map(function (el) {\n' +
         '    return { layout: el.dataset.layout, html: el.innerHTML };\n' +
         '  });\n' +
