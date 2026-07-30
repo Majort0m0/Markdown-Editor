@@ -1798,6 +1798,27 @@ return He}()
       gap: 6px;
     }
 
+    .search-nav-btn {
+      min-width: 28px;
+      padding: 4px 8px;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .search-replace-toggle {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .search-bar:not(.show-replace) .search-replace-control {
+      display: none;
+    }
+
     .search-input-group input {
       padding: 4px 8px;
       border: 1px solid var(--border-color);
@@ -2221,6 +2242,56 @@ return He}()
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
+    .theme-tokyo-night {
+      --preview-bg: #1a1b26;
+      --preview-text: #c0caf5;
+      --preview-link: #7aa2f7;
+      --preview-code-bg: #24283b;
+      --preview-border: #414868;
+      --preview-header-border: #292e42;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .theme-catppuccin-mocha {
+      --preview-bg: #1e1e2e;
+      --preview-text: #cdd6f4;
+      --preview-link: #89b4fa;
+      --preview-code-bg: #313244;
+      --preview-border: #45475a;
+      --preview-header-border: #313244;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .theme-catppuccin-latte {
+      --preview-bg: #eff1f5;
+      --preview-text: #4c4f69;
+      --preview-link: #1e66f5;
+      --preview-code-bg: #e6e9ef;
+      --preview-border: #ccd0da;
+      --preview-header-border: #bcc0cc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .theme-rose-pine {
+      --preview-bg: #191724;
+      --preview-text: #e0def4;
+      --preview-link: #9ccfd8;
+      --preview-code-bg: #1f1d2e;
+      --preview-border: #524f67;
+      --preview-header-border: #26233a;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    .theme-ayu-light {
+      --preview-bg: #fafafa;
+      --preview-text: #5c6773;
+      --preview-link: #399ee6;
+      --preview-code-bg: #f3f4f5;
+      --preview-border: #e7eaed;
+      --preview-header-border: #e7eaed;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
     .markdown-body {
       background-color: var(--preview-bg);
       color: var(--preview-text);
@@ -2310,6 +2381,24 @@ return He}()
       width: 100%;
       max-width: 420px;
       margin: 8px 0;
+    }
+
+    .video-embed-wrapper {
+      position: relative;
+      max-width: 100%;
+      aspect-ratio: 16 / 9;
+      margin: 16px 0;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: var(--preview-code-bg);
+    }
+
+    .video-embed-wrapper iframe,
+    .video-embed-wrapper video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
     }
 
     .drawing-wrapper {
@@ -3106,6 +3195,15 @@ return He}()
       <!-- Search & Replace Toggle Button -->
       <button id="toggleSearchBtn" class="icon-btn" onclick="toggleSearchBar()" title="Suchen und Ersetzen (Strg+F)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.29289 1.29289C9.48043 1.10536 9.73478 1 10 1H18C19.6569 1 21 2.34315 21 4V8C21 8.55228 20.5523 9 20 9C19.4477 9 19 8.55228 19 8V4C19 3.44772 18.5523 3 18 3H11V8C11 8.55228 10.5523 9 10 9H5V20C5 20.5523 5.44772 21 6 21H10C10.5523 21 11 21.4477 11 22C11 22.5523 10.5523 23 10 23H6C4.34315 23 3 21.6569 3 20V8C3 7.73478 3.10536 7.48043 3.29289 7.29289L9.29289 1.29289ZM6.41421 7H9V4.41421L6.41421 7ZM20.1716 18.7574C20.6951 17.967 21 17.0191 21 16C21 13.2386 18.7614 11 16 11C13.2386 11 11 13.2386 11 16C11 18.7614 13.2386 21 16 21C17.0191 21 17.967 20.6951 18.7574 20.1716L21.2929 22.7071C21.6834 23.0976 22.3166 23.0976 22.7071 22.7071C23.0976 22.3166 23.0976 21.6834 22.7071 21.2929L20.1716 18.7574ZM13 16C13 14.3431 14.3431 13 16 13C17.6569 13 19 14.3431 19 16C19 17.6569 17.6569 19 16 19C14.3431 19 13 17.6569 13 16Z" fill="currentColor"/></svg></button>
 
+      <!-- Lint Button (Abstände/Leerzeilen bereinigen) -->
+      <button id="lintBtn" class="icon-btn" onclick="lintMarkdownSpacing()" title="Abstände (Leerzeilen) optimieren"><svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"><style type="text/css">.st0{fill:currentColor;}</style><g><path class="st0" d="M332.571,140.81l-16.665,16.648c-41.547-24.17-95.688-18.468-131.288,17.116l153.521,153.52
+		c35.583-35.592,41.294-89.732,17.115-131.278l16.666-16.657L332.571,140.81z"/><path class="st0" d="M0,299.943c0,0,9.585,18.251,28.989,45.303c14.864-9,51.042-31.664,90.012-61.833l6.324,6.332
+		c0,0-42.7,39.908-82.445,74.058c5.748,7.405,12.09,15.206,19.026,23.278c21.441-18.549,45.223-39.781,62.447-57.014l8.756,4.865
+		c0,0-29.692,31.691-60.914,63.788c6.558,7.279,13.584,14.701,21.079,22.196c18.954,18.954,37.494,34.692,54.158,47.448
+		c16.576-19.124,44.934-52.032,53.69-63.482l9.712,11.665c0,0-26.052,39.42-40.502,68.401
+		c26.269,17.935,43.907,26.331,43.907,26.331c31.331-54.654,114.695-169.502,114.695-169.502L172.997,185.825
+		C172.997,185.825,98.372,248.208,0,299.943z"/><rect x="334.304" y="62.854" transform="matrix(0.7071 -0.7071 0.7071 0.7071 67.7361 328.4017)" class="st0" width="191.963" height="39.163"/></g></svg></button>
+
       <!-- Spellcheck Toggle Button -->
       <button id="spellcheckBtn" class="icon-btn" onclick="toggleSpellcheck()" title="Rechtschreibprüfung aktivieren/deaktivieren"><svg fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M 7.3320312 5 L 3 18 L 5.1074219 18 L 6.1074219 15 L 10.667969 15 L 11.667969 18 L 13.775391 18 L 9.4414062 5 L 7.3320312 5 z M 15 5 L 15 10 L 15 12 L 15 18 L 21 18 C 23.206 18 25 16.206 25 14 C 25 12.321849 23.958205 10.887833 22.490234 10.294922 C 22.807718 9.7682918 23 9.1585118 23 8.5 C 23 6.57 21.43 5 19.5 5 L 15 5 z M 17 7 L 19.5 7 C 20.327 7 21 7.673 21 8.5 C 21 9.327 20.327 10 19.5 10 L 17 10 L 17 7 z M 8.3886719 8.1621094 L 10.001953 13 L 6.7753906 13 L 8.3886719 8.1621094 z M 17 12 L 19.5 12 L 21 12 C 22.103 12 23 12.897 23 14 C 23 15.103 22.103 16 21 16 L 17 16 L 17 12 z M 27.808594 17.777344 L 19.117188 26.113281 L 15.193359 22.335938 L 13.806641 23.775391 L 19.113281 28.886719 L 29.191406 19.222656 L 27.808594 17.777344 z"/></svg></button>
 
@@ -3175,7 +3273,7 @@ return He}()
 
       <!-- Design Selection -->
       <div class="theme-picker">
-        <span class="theme-picker-icon" title="Design wechseln"><svg viewBox="0 0 800 800" enable-background="new 0 0 800 800" id="GUIDE" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:svg="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><path d="M776.557,119.544c0.357-21.353-7.375-41.042-21.771-55.438c-7.812-7.81-20.475-7.81-28.285,0.001s-7.811,20.474,0,28.284   c6.663,6.662,10.236,16.067,10.063,26.484c-0.166,9.938-3.928,19.534-10.063,25.669c-12.725,12.725-139.57,124.086-238.635,210.734   L463.586,331c72.32-82.747,162.068-185.064,197.172-223.914l7.986,7.987c7.811,7.811,20.475,7.812,28.284,0.002   c7.812-7.81,7.813-20.473,0.003-28.284L674.35,64.108c-3.75-3.751-8.838-5.859-14.142-5.859h-0.001   c-5.305,0-10.391,2.107-14.142,5.857c-12.171,12.17-86.618,96.725-153.792,173.381c-18.065-27.343-42.194-50.865-70.895-68.921   c-41.949-26.391-90.855-39.772-145.362-39.772c-11.991,0-23.854,0.756-35.257,2.249c-10.953,1.434-18.669,11.474-17.236,22.427   c1.434,10.952,11.473,18.668,22.426,17.235c9.689-1.268,19.805-1.911,30.066-1.911c82.994,0,152.612,37.208,188.714,100.146   c-33.688,38.495-62.632,71.651-76.59,87.649c-24.918,3.395-43.511,13.592-56.621,31.078   c-12.189,16.257-17.532,35.673-23.188,56.229c-6.82,24.786-13.872,50.416-33.983,70.526c-5.721,5.72-7.432,14.322-4.336,21.796   s10.389,12.347,18.478,12.347c53.825,0,96.486-11.473,126.799-34.099c27.317-20.391,43.6-49.341,47.45-84.105   c51.533-45.007,273.565-239.051,292.047-257.533C768.281,159.333,776.217,139.911,776.557,119.544z M457.684,381.666   c-6.01,5.251-11.836,10.341-17.438,15.232l-18.261-18.26c4.887-5.601,9.976-11.432,15.226-17.444L457.684,381.666z    M391.361,482.411c-15.732,11.744-36.668,19.57-62.509,23.403c8.793-17.681,13.726-35.608,18.045-51.307   c9.27-33.688,14.916-50.596,37.758-56.63l36.929,36.928C417.518,454.463,407.401,470.438,391.361,482.411z"/><path d="M178.311,189.959c2.913,0,5.872-0.64,8.671-1.989c1.795-0.866,3.639-1.717,5.479-2.528   c10.105-4.461,14.681-16.269,10.22-26.374c-4.461-10.104-16.268-14.68-26.374-10.22c-2.247,0.992-4.5,2.032-6.697,3.091   c-9.949,4.797-14.126,16.752-9.33,26.701C163.728,185.79,170.871,189.959,178.311,189.959z"/><path d="M322.839,570.789c-11.035-0.108-20.099,8.729-20.224,19.773c-0.863,76.887-12.47,111.188-78.964,111.188   c-37.276,0-76.396-27.269-107.328-74.813C82.216,574.51,63.432,506.443,63.432,435.274c0-92.393,27.9-169.269,78.561-216.465   c8.082-7.529,8.53-20.185,1.001-28.267s-20.185-8.53-28.267-1.001c-29.841,27.801-52.93,63.923-68.627,107.363   c-15.042,41.626-22.668,88.181-22.668,138.37c0,78.821,21.083,154.636,59.363,213.476c38.451,59.104,89.792,93.001,140.856,93.001   c48.841,0,82.882-17.187,101.175-51.082c15.706-29.104,17.416-66.701,17.786-99.657   C342.736,579.967,333.884,570.912,322.839,570.789z"/><path d="M421.257,274.597c0-36.74-29.891-66.631-66.631-66.631c-36.741,0-66.633,29.891-66.633,66.631   c0,36.741,29.892,66.633,66.633,66.633C391.366,341.229,421.257,311.338,421.257,274.597z M327.993,274.597   c0-14.685,11.947-26.631,26.633-26.631c14.685,0,26.631,11.946,26.631,26.631c0,14.686-11.946,26.633-26.631,26.633   C339.94,301.229,327.993,289.282,327.993,274.597z"/><path d="M195.826,365.177c36.741,0,66.632-29.891,66.632-66.631c0-36.741-29.891-66.632-66.632-66.632   s-66.632,29.891-66.632,66.632C129.194,335.286,159.085,365.177,195.826,365.177z M195.826,271.914   c14.685,0,26.632,11.947,26.632,26.632s-11.947,26.631-26.632,26.631s-26.632-11.946-26.632-26.631   S181.142,271.914,195.826,271.914z"/><path d="M211.417,451.638c0-36.741-29.891-66.633-66.632-66.633s-66.632,29.892-66.632,66.633c0,36.74,29.891,66.631,66.632,66.631   S211.417,488.378,211.417,451.638z M144.785,478.269c-14.685,0-26.632-11.946-26.632-26.631c0-14.686,11.947-26.633,26.632-26.633   s26.632,11.947,26.632,26.633C171.417,466.322,159.47,478.269,144.785,478.269z"/><path d="M214.792,674.175c36.741,0,66.633-29.891,66.633-66.631s-29.892-66.631-66.633-66.631   c-36.74,0-66.631,29.891-66.631,66.631S178.052,674.175,214.792,674.175z M214.792,580.913c14.686,0,26.633,11.946,26.633,26.631   s-11.947,26.631-26.633,26.631c-14.684,0-26.631-11.946-26.631-26.631S200.108,580.913,214.792,580.913z"/></g></svg></span>
+        <span class="theme-picker-icon" title="Design wechseln"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" fill-rule="evenodd" d="M524,109 L522.497699,109 C522.214844,109 522,109.223858 522,109.5 C522,109.768066 522.222827,110 522.497699,110 L524,110 L524,111.502301 C524,111.785156 524.223858,112 524.5,112 C524.768066,112 525,111.777173 525,111.502301 L525,110 L526.502301,110 C526.785156,110 527,109.776142 527,109.5 C527,109.231934 526.777173,109 526.502301,109 L525,109 L525,107.497699 C525,107.214844 524.776142,107 524.5,107 C524.231934,107 524,107.222827 524,107.497699 L524,109 Z M519,112 C519,107.581722 522.590712,104 527,104 C531.418278,104 535,107.590712 535,112 C535,116.418278 531.409288,120 527,120 C522.581722,120 519,116.409288 519,112 Z M532,107.100505 C529.26633,104.366835 524.834175,104.366835 522.100505,107.100505 C519.366835,109.834175 519.366835,114.26633 522.100505,117 L532,107.100505 Z M528,114.5 C528,114.223858 528.215057,114 528.490479,114 L531.509521,114 C531.780405,114 532,114.231934 532,114.5 C532,114.776142 531.784943,115 531.509521,115 L528.490479,115 C528.219595,115 528,114.768066 528,114.5 Z" transform="translate(-519 -104)"/></svg></span>
         <select id="themeSelector" class="style-select" title="Design wechseln" onchange="changeTheme(this.value)">
           <option value="theme-github-light">GitHub Light</option>
           <option value="theme-github-dark">GitHub Dark</option>
@@ -3187,6 +3285,11 @@ return He}()
           <option value="theme-gruvbox">Gruvbox Dark</option>
           <option value="theme-sepia">Sepia</option>
           <option value="theme-high-contrast">High Contrast</option>
+          <option value="theme-tokyo-night">Tokyo Night</option>
+          <option value="theme-catppuccin-mocha">Catppuccin Mocha</option>
+          <option value="theme-catppuccin-latte">Catppuccin Latte</option>
+          <option value="theme-rose-pine">Rosé Pine</option>
+          <option value="theme-ayu-light">Ayu Light</option>
         </select>
       </div>
 
@@ -3201,16 +3304,21 @@ return He}()
   <div class="search-bar" id="searchBar">
     <div class="search-input-group">
       <span>🔍 Suchen:</span>
-      <input type="text" id="searchInput" placeholder="Suchbegriff..." onkeydown="if(event.key==='Enter') findNext()">
+      <input type="text" id="searchInput" placeholder="Suchbegriff..." oninput="updateSearchMatches()" onkeydown="if(event.key==='Enter'){ event.preventDefault(); event.shiftKey ? findPrevious() : findNext(); }">
     </div>
-    <div class="search-input-group">
+    <button class="search-nav-btn" onclick="findPrevious()" title="Vorheriger Treffer (Umschalt+Enter)">‹</button>
+    <button class="search-nav-btn" onclick="findNext()" title="Nächster Treffer (Enter)">›</button>
+    <span id="searchStatus" style="color: var(--text-muted); font-size: 0.8rem;"></span>
+    <label class="search-replace-toggle">
+      <input type="checkbox" id="replaceToggleCheckbox" onchange="document.getElementById('searchBar').classList.toggle('show-replace', this.checked)">
+      Ersetzen
+    </label>
+    <div class="search-input-group search-replace-control">
       <span>✏️ Ersetzen:</span>
       <input type="text" id="replaceInput" placeholder="Ersetzen durch...">
     </div>
-    <button onclick="findNext()">Nächster</button>
-    <button onclick="replaceOne()">Ersetzen</button>
-    <button onclick="replaceAll()">Alle ersetzen</button>
-    <span id="searchStatus" style="color: var(--text-muted); font-size: 0.8rem;"></span>
+    <button class="search-replace-control" onclick="replaceOne()">Ersetzen</button>
+    <button class="search-replace-control" onclick="replaceAll()">Alle ersetzen</button>
     <button onclick="toggleSearchBar()" style="margin-left: auto; border: none; background: transparent; cursor: pointer;">✕</button>
   </div>
 
@@ -3259,12 +3367,9 @@ return He}()
     <button class="toolbar-btn fmt-btn" onclick="insertFormatting('link')" title="Link"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 12C14 14.7614 11.7614 17 9 17H7C4.23858 17 2 14.7614 2 12C2 9.23858 4.23858 7 7 7H7.5M10 12C10 9.23858 12.2386 7 15 7H17C19.7614 7 22 9.23858 22 12C22 14.7614 19.7614 17 17 17H16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="triggerImageFileInsert()" title="Bild einfügen"><svg fill="currentColor" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M30 2.497h-28c-1.099 0-2 0.901-2 2v23.006c0 1.099 0.9 2 2 2h28c1.099 0 2-0.901 2-2v-23.006c0-1.099-0.901-2-2-2zM30 27.503l-28-0v-5.892l8.027-7.779 8.275 8.265c0.341 0.414 0.948 0.361 1.379 0.035l3.652-3.306 6.587 6.762c0.025 0.025 0.053 0.044 0.080 0.065v1.85zM30 22.806l-5.876-6.013c-0.357-0.352-0.915-0.387-1.311-0.086l-3.768 3.282-8.28-8.19c-0.177-0.214-0.432-0.344-0.709-0.363-0.275-0.010-0.547 0.080-0.749 0.27l-7.309 7.112v-14.322h28v18.309zM23 12.504c1.102 0 1.995-0.894 1.995-1.995s-0.892-1.995-1.995-1.995-1.995 0.894-1.995 1.995c0 1.101 0.892 1.995 1.995 1.995z"></path></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="openCameraModal()" title="Foto aufnehmen"><svg viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g fill="currentColor" transform="translate(42.666667, 64.000000)"><path d="M277.333333,1.42108547e-14 C277.333333,1.42108547e-14 277.681778,0.557511111 278.378667,1.67253333 L278.698667,2.18453333 C279.438222,3.36782222 280.478222,5.03182222 281.818667,7.17653333 L282.458667,8.20053333 C283.891556,10.4931556 285.624889,13.2664889 287.658667,16.5205333 L288.618667,18.0565333 C290.744889,21.4584889 293.171556,25.3411556 295.898667,29.7045333 L297.178667,31.7525333 C299.998222,36.2638222 303.118222,41.2558222 306.538667,46.7285333 L308.138667,49.2885333 C311.003462,53.8722052 314.068069,58.775577 317.332489,63.9986486 L426.666667,64 L426.666667,362.666667 L7.10542736e-15,362.666667 L7.10542736e-15,64 L109.333,64 L149.333333,1.42108547e-14 L277.333333,1.42108547e-14 L277.333333,1.42108547e-14 Z M213.333333,85.3333333 C148.531923,85.3333333 96,137.865256 96,202.666667 C96,267.468077 148.531923,320 213.333333,320 C278.134744,320 330.666667,267.468077 330.666667,202.666667 C330.666667,137.865256 278.134744,85.3333333 213.333333,85.3333333 Z M213.333333,128 C254.570595,128 288,161.429405 288,202.666667 C288,243.903928 254.570595,277.333333 213.333333,277.333333 C172.096072,277.333333 138.666667,243.903928 138.666667,202.666667 C138.666667,161.429405 172.096072,128 213.333333,128 Z M384,106.666667 C372.217925,106.666667 362.666667,116.217925 362.666667,128 C362.666667,139.782075 372.217925,149.333333 384,149.333333 C395.782075,149.333333 405.333333,139.782075 405.333333,128 C405.333333,116.217925 395.782075,106.666667 384,106.666667 Z"></path></g></g></svg></button>
-    <button class="toolbar-btn fmt-btn" onclick="openDrawingModal()" title="Zeichnung einfügen"><svg fill="currentColor" version="1.1" id="Capa_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
-	 viewBox="0 0 60 60" xml:space="preserve"><g><g><path d="M60,37L60,37V1c0-0.6-0.4-1-1-1H1C0.4,0,0,0.4,0,1v47c0,0.6,0.4,1,1,1h10v-2H2V2h56v34H48c-0.6,0-1,0.4-1,1v10H25v2h23
-			c0.3,0,0.5-0.1,0.7-0.3l11-11c0.1-0.1,0.1-0.2,0.2-0.3v-0.1C60,37.2,60,37.1,60,37z M49,38h7.6l-3.8,3.8L49,45.6V38z"/><path d="M18.9,9.7C18.8,9.3,18.4,9,18,9s-0.8,0.3-0.9,0.7l-2.9,8.7C14.1,18.6,14,18.8,14,19v33v7c0,0.6,0.4,1,1,1h6
-			c0.6,0,1-0.4,1-1v-7V19c0-0.2-0.1-0.5-0.2-0.6L18.9,9.7z M16,20h1v31h-1V20z M19,20h1v31h-1V20z M18,13.2l1.6,4.8h-3.2L18,13.2z
-			 M20,58h-4v-5h1h2h1V58z"/><path d="M35,6c-5,0-9,4-9,9v2h2v-2c0-3.9,3.1-7,7-7s7,3.1,7,7v2h2v-2C44,10,40,6,35,6z"/><path d="M54,16v-2h-2v2c0,3.9-3.1,7-7,7s-7-3.1-7-7v-2h-2v2c0,5,4,9,9,9S54,21,54,16z"/><path d="M25,33v10c0,0.6,0.4,1,1,1h10c0.6,0,1-0.4,1-1V33c0-0.6-0.4-1-1-1H26C25.4,32,25,32.4,25,33z M27,34h8v8h-8V34z"/><path d="M39,35v2h2c0.6,0,1-0.4,1-1v-8c0-0.6-0.4-1-1-1h-8c-0.6,0-1,0.4-1,1v2h2v-1h6v6H39z"/><rect x="6" y="5"/><rect x="10" y="5"/><rect x="14" y="5"/><rect x="10" y="9"/><rect x="6" y="9"/><rect x="6" y="13"/><rect x="6" y="17"/><rect x="6" y="21"/><rect x="6" y="25"/><rect x="6" y="29"/><rect x="6" y="33"/><rect x="6" y="37"/><rect x="6" y="41"/></g></g></svg></button>
+    <button class="toolbar-btn fmt-btn" onclick="openDrawingModal()" title="Zeichnung einfügen"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><style>.cls-1{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:2px;}</style></defs><g data-name="Layer 2" id="Layer_2"><polyline class="cls-1" points="16 22 1 22 1 4 31 4 31 22 28 22"/><path class="cls-1" d="M19,22V18H17.6A1.6,1.6,0,0,0,16,19.6v5.2A3.2,3.2,0,0,0,19.2,28h5.6A3.2,3.2,0,0,0,28,24.8V21.2A3.2,3.2,0,0,0,24.8,18H22V12.3a1.5,1.5,0,0,0-1.5-1.5h0A1.5,1.5,0,0,0,19,12.3V22"/><path class="cls-1" d="M16,13c-2,0-2-2-4-2s-2,2-4,2-2-2-4-2"/></g></svg></button>
     <button id="audioRecordBtn" class="toolbar-btn fmt-btn" onclick="toggleAudioRecording()" title="Sprachaufnahme einfügen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5C8 2.79086 9.79086 1 12 1C14.2091 1 16 2.79086 16 5V12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12V5Z" fill="currentColor"/><path d="M6.25 11.8438V12C6.25 13.525 6.8558 14.9875 7.93414 16.0659C9.01247 17.1442 10.475 17.75 12 17.75C13.525 17.75 14.9875 17.1442 16.0659 16.0659C17.1442 14.9875 17.75 13.525 17.75 12V11.8438C17.75 11.2915 18.1977 10.8438 18.75 10.8438H19.25C19.8023 10.8438 20.25 11.2915 20.25 11.8437V12C20.25 14.188 19.3808 16.2865 17.8336 17.8336C16.5842 19.0831 14.9753 19.8903 13.25 20.1548V22C13.25 22.5523 12.8023 23 12.25 23H11.75C11.1977 23 10.75 22.5523 10.75 22V20.1548C9.02471 19.8903 7.41579 19.0831 6.16637 17.8336C4.61919 16.2865 3.75 14.188 3.75 12V11.8438C3.75 11.2915 4.19772 10.8438 4.75 10.8438H5.25C5.80228 10.8438 6.25 11.2915 6.25 11.8438Z" fill="currentColor"/></svg></button>
+    <button class="toolbar-btn fmt-btn" onclick="insertFormatting('video')" title="Video einbetten (YouTube/Vimeo-Link oder Videodatei-URL)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.49614 7.13176C9.18664 6.9549 8.80639 6.95617 8.49807 7.13509C8.18976 7.31401 8 7.64353 8 8V16C8 16.3565 8.18976 16.686 8.49807 16.8649C8.80639 17.0438 9.18664 17.0451 9.49614 16.8682L16.4961 12.8682C16.8077 12.6902 17 12.3589 17 12C17 11.6411 16.8077 11.3098 16.4961 11.1318L9.49614 7.13176ZM13.9844 12L10 14.2768V9.72318L13.9844 12Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M0 12C0 8.25027 0 6.3754 0.954915 5.06107C1.26331 4.6366 1.6366 4.26331 2.06107 3.95491C3.3754 3 5.25027 3 9 3H15C18.7497 3 20.6246 3 21.9389 3.95491C22.3634 4.26331 22.7367 4.6366 23.0451 5.06107C24 6.3754 24 8.25027 24 12C24 15.7497 24 17.6246 23.0451 18.9389C22.7367 19.3634 22.3634 19.7367 21.9389 20.0451C20.6246 21 18.7497 21 15 21H9C5.25027 21 3.3754 21 2.06107 20.0451C1.6366 19.7367 1.26331 19.3634 0.954915 18.9389C0 17.6246 0 15.7497 0 12ZM9 5H15C16.9194 5 18.1983 5.00275 19.1673 5.10773C20.0989 5.20866 20.504 5.38448 20.7634 5.57295C21.018 5.75799 21.242 5.98196 21.4271 6.23664C21.6155 6.49605 21.7913 6.90113 21.8923 7.83269C21.9973 8.80167 22 10.0806 22 12C22 13.9194 21.9973 15.1983 21.8923 16.1673C21.7913 17.0989 21.6155 17.504 21.4271 17.7634C21.242 18.018 21.018 18.242 20.7634 18.4271C20.504 18.6155 20.0989 18.7913 19.1673 18.8923C18.1983 18.9973 16.9194 19 15 19H9C7.08058 19 5.80167 18.9973 4.83269 18.8923C3.90113 18.7913 3.49605 18.6155 3.23664 18.4271C2.98196 18.242 2.75799 18.018 2.57295 17.7634C2.38448 17.504 2.20866 17.0989 2.10773 16.1673C2.00275 15.1983 2 13.9194 2 12C2 10.0806 2.00275 8.80167 2.10773 7.83269C2.20866 6.90113 2.38448 6.49605 2.57295 6.23664C2.75799 5.98196 2.98196 5.75799 3.23664 5.57295C3.49605 5.38448 3.90113 5.20866 4.83269 5.10773C5.80167 5.00275 7.08058 5 9 5Z" fill="currentColor"/></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="insertFormatting('table')" title="Tabelle"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M1740 0c99.24 0 180 80.76 180 180v1560c0 99.24-80.76 180-180 180H180c-99.24 0-180-80.76-180-180V180C0 80.76 80.76 0 180 0h1560Zm-420 1200h480V720h-480v480Zm480 540v-420h-480v480h420c33 0 60-27 60-60ZM720 1200h480V720H720v480Zm0 600h480v-480H720v480Zm-600-600h480V720H120v480Zm480 600v-480H120v420c0 33 27 60 60 60h420Z" fill-rule="evenodd"/></svg></button>
   </div>
 
@@ -3521,7 +3626,7 @@ return He}()
     let inputTimeout = null;
     let currentTheme = 'theme-github-light';
     let splitRatio = 50;
-    const DARK_THEMES = new Set(['theme-github-dark', 'theme-nord', 'theme-dracula', 'theme-monokai', 'theme-gruvbox']);
+    const DARK_THEMES = new Set(['theme-github-dark', 'theme-nord', 'theme-dracula', 'theme-monokai', 'theme-gruvbox', 'theme-tokyo-night', 'theme-catppuccin-mocha', 'theme-rose-pine']);
 
     const editor = document.getElementById('markdownInput');
     const preview = document.getElementById('markdownPreview');
@@ -3553,6 +3658,39 @@ return He}()
     // Marked options setup
     // marked v5+ removed the old synchronous `highlight` option, so syntax highlighting
     // is wired up via a custom code renderer instead (see marked.Renderer() docs).
+    // Video-URL embedding reuses the plain image markdown syntax (![Video](url)) rather than a
+    // separate syntax — hljsRenderer.image() below checks every href against these patterns
+    // first (real http(s) URLs, never an asset:ID) and, on a match, renders an embedded
+    // YouTube/Vimeo iframe or a native <video> player instead of an <img>. This makes ANY
+    // markdown image pointing at such a URL auto-embed, not just ones inserted via the toolbar
+    // button (insertFormatting('video') just inserts the empty ![Video]() scaffold to paste a
+    // URL into, mirroring the 'link' case — no dedicated modal/asset storage needed since it's
+    // just an external URL, not a local file).
+    const YOUTUBE_URL_RE = /^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{6,})/i;
+    const VIMEO_URL_RE = /^https?:\/\/(?:www\.)?vimeo\.com\/(\d+)/i;
+    const VIDEO_FILE_URL_RE = /\.(mp4|webm|ogv|ogg|mov)(?:[?#].*)?$/i;
+
+    function getVideoEmbedHtml(href, altText) {
+      if (!href) return null;
+      const alt = (altText || 'Video').replace(/"/g, '&quot;');
+
+      let m = href.match(YOUTUBE_URL_RE);
+      if (m) {
+        return '<div class="video-embed-wrapper"><iframe src="https://www.youtube-nocookie.com/embed/' + m[1] + '" title="' + alt + '" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>';
+      }
+
+      m = href.match(VIMEO_URL_RE);
+      if (m) {
+        return '<div class="video-embed-wrapper"><iframe src="https://player.vimeo.com/video/' + m[1] + '" title="' + alt + '" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>';
+      }
+
+      if (VIDEO_FILE_URL_RE.test(href)) {
+        return '<div class="video-embed-wrapper"><video controls src="' + href + '" title="' + alt + '"></video></div>';
+      }
+
+      return null;
+    }
+
     const hljsRenderer = new marked.Renderer();
     hljsRenderer.code = function({ text, lang }) {
       const language = lang && hljs.getLanguage(lang) ? lang : null;
@@ -3570,6 +3708,9 @@ return He}()
     let suppressDrawingControls = false;
 
     hljsRenderer.image = function({ href, title, text }) {
+      const videoEmbed = getVideoEmbedHtml(href, text);
+      if (videoEmbed) return videoEmbed;
+
       let resolvedHref = href;
       let isDrawing = false;
       let isAudio = false;
@@ -5021,35 +5162,95 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (searchBar.classList.contains('active')) {
         toggleSearchBtn.classList.add('active');
         searchInput.focus();
+        updateSearchMatches();
       } else {
         toggleSearchBtn.classList.remove('active');
         if (!editor.disabled) editor.focus();
       }
     }
 
-    function findNext() {
+    // Finds every occurrence of `query` in `text` (case-insensitive, non-overlapping) as an
+    // array of { start, end } ranges — the shared basis for both the "X von Y" counter and the
+    // </> navigation below, so they can never disagree about what counts as a match.
+    function computeSearchMatches(query, text) {
+      const matches = [];
+      if (!query) return matches;
+      const lowerText = text.toLowerCase();
+      const lowerQuery = query.toLowerCase();
+      let idx = lowerText.indexOf(lowerQuery);
+      while (idx !== -1) {
+        matches.push({ start: idx, end: idx + query.length });
+        idx = lowerText.indexOf(lowerQuery, idx + query.length);
+      }
+      return matches;
+    }
+
+    // Called while typing in the search field: only refreshes the "X von Y" counter, deliberately
+    // without touching editor focus/selection so typing isn't interrupted.
+    function updateSearchMatches() {
+      const query = searchInput.value;
+      if (!query) {
+        searchStatus.textContent = '';
+        return;
+      }
+      const matches = computeSearchMatches(query, editor.value);
+      if (matches.length === 0) {
+        searchStatus.textContent = 'Keine Treffer';
+        return;
+      }
+      const cursorPos = editor.selectionStart;
+      let position = matches.findIndex(m => m.start >= cursorPos);
+      if (position === -1) position = 0;
+      searchStatus.textContent = (position + 1) + ' von ' + matches.length;
+    }
+
+    // Stateless by design: recomputes matches against the *current* editor content on every call
+    // (instead of caching an array from typing-time) so it's always correct even if the document
+    // was edited since the last search, then steps from whichever match the current selection
+    // sits on (or the nearest one in the requested direction, if none is currently selected).
+    function stepSearchMatch(direction) {
       if (editor.disabled) return;
       const query = searchInput.value;
       if (!query) {
         searchStatus.textContent = '';
         return;
       }
-
-      const text = editor.value;
-      const startPos = editor.selectionEnd;
-      let matchIdx = text.toLowerCase().indexOf(query.toLowerCase(), startPos);
-
-      if (matchIdx === -1) {
-        matchIdx = text.toLowerCase().indexOf(query.toLowerCase(), 0);
+      const matches = computeSearchMatches(query, editor.value);
+      if (matches.length === 0) {
+        searchStatus.textContent = 'Keine Treffer';
+        return;
       }
 
-      if (matchIdx !== -1) {
-        editor.focus();
-        editor.setSelectionRange(matchIdx, matchIdx + query.length);
-        searchStatus.textContent = 'Treffer gefunden';
+      const selStart = editor.selectionStart;
+      const selEnd = editor.selectionEnd;
+      const currentIndex = matches.findIndex(m => m.start === selStart && m.end === selEnd);
+
+      let targetIndex;
+      if (currentIndex !== -1) {
+        targetIndex = (currentIndex + direction + matches.length) % matches.length;
+      } else if (direction > 0) {
+        targetIndex = matches.findIndex(m => m.start >= selStart);
+        if (targetIndex === -1) targetIndex = 0;
       } else {
-        searchStatus.textContent = 'Nicht gefunden';
+        let lastBefore = -1;
+        for (let i = 0; i < matches.length; i++) {
+          if (matches[i].start <= selStart) lastBefore = i;
+        }
+        targetIndex = lastBefore === -1 ? matches.length - 1 : lastBefore;
       }
+
+      const m = matches[targetIndex];
+      editor.focus();
+      editor.setSelectionRange(m.start, m.end);
+      searchStatus.textContent = (targetIndex + 1) + ' von ' + matches.length;
+    }
+
+    function findNext() {
+      stepSearchMatch(1);
+    }
+
+    function findPrevious() {
+      stepSearchMatch(-1);
     }
 
     function replaceOne() {
@@ -5748,6 +5949,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           case 'link':
             replacement = '[' + selection + ']()';
             newCursorPos = selection ? start + replacement.length - 1 : start + 1;
+            break;
+          case 'video':
+            replacement = '![Video]()';
+            newCursorPos = start + replacement.length - 1;
             break;
           case 'hr':
             replacement = '\n\n---\n\n';
@@ -6491,6 +6696,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .markdown-body a:hover { text-decoration: underline; }\n' +
         '  .markdown-body img { max-width: 100%; height: auto; border-radius: 4px; }\n' +
         '  .markdown-body .audio-asset-player { display: block; width: 100%; max-width: 420px; margin: 8px 0; }\n' +
+        '  .video-embed-wrapper { position: relative; max-width: 100%; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: 8px; overflow: hidden; background-color: var(--preview-code-bg); }\n' +
+        '  .video-embed-wrapper iframe, .video-embed-wrapper video { display: block; width: 100%; height: 100%; border: 0; }\n' +
         '  .markdown-body blockquote { padding: 0 1em; opacity: .85; border-left: .25em solid var(--preview-border); }\n' +
         '  .markdown-body code { padding: .2em .4em; font-size: 85%; background-color: var(--preview-code-bg); border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; }\n' +
         '  .markdown-body pre { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: var(--preview-code-bg); border-radius: 6px; }\n' +
@@ -6734,6 +6941,63 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // breathing room between a heading and its content just by typing more blank lines in the
     // source. Lines inside fenced code blocks are left untouched — a blank line there is literal
     // code content, not a paragraph separator, and must not turn into stray "&nbsp;" text.
+    // Collapses runs of 2+ consecutive blank lines down to exactly one (and drops leading/
+    // trailing blank lines entirely) — markdown renders any run of blank lines identically to a
+    // single one, so this only tidies the raw source, it never changes the rendered output.
+    // Lines inside fenced code blocks are left completely untouched, same fence-tracking idiom as
+    // expandBlankLinesForClipboard() below, since a blank line there is literal code content.
+    function lintMarkdownSpacing() {
+      if (editor.disabled) return;
+      const currentTab = getCurrentTab();
+      if (!currentTab || currentTab.fileType !== 'markdown') {
+        showToast('Nur für Markdown-Dokumente verfügbar');
+        return;
+      }
+
+      const lines = editor.value.split('\n');
+      const out = [];
+      let inFence = false;
+      let blankRun = 0;
+
+      const flushBlankRun = () => {
+        if (blankRun > 0 && out.length > 0) out.push('');
+        blankRun = 0;
+      };
+
+      for (const line of lines) {
+        const isFenceMarker = /^\s*(```|~~~)/.test(line);
+        if (inFence) {
+          out.push(line);
+          if (isFenceMarker) inFence = false;
+          continue;
+        }
+        if (isFenceMarker) {
+          flushBlankRun();
+          out.push(line);
+          inFence = true;
+          continue;
+        }
+        if (line.trim() === '') {
+          blankRun++;
+        } else {
+          flushBlankRun();
+          out.push(line);
+        }
+      }
+
+      const result = out.join('\n');
+      if (result === editor.value) {
+        showToast('Abstände sind bereits optimal');
+        return;
+      }
+
+      editor.value = result;
+      recordHistory();
+      markActiveTabModified();
+      updatePreview();
+      showToast('Abstände optimiert');
+    }
+
     function expandBlankLinesForClipboard(markdown) {
       const lines = markdown.split('\n');
       const out = [];
