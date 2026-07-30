@@ -8,20 +8,40 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 
 ## ✨ Funktionen
 
+### Dokumente & Dateiformate
 - **Mehrere Tabs** — beliebig viele Dokumente gleichzeitig offen, mit Autospeicherung im Browser (LocalStorage)
+- **Markdown, CSV, JSON und HTML** in derselben App: CSV und JSON werden als Tabelle bzw. hübsch formatiert mit Syntax-Hervorhebung angezeigt; HTML-Dateien bekommen eine echte Syntax-Hervorhebung im Editor **und** eine echte gerenderte Web-Vorschau (in einer abgeschotteten Sandbox, damit fremder HTML/JS-Code nichts im Editor selbst anrichten kann)
+- **14 Dokumentvorlagen** über den ✨-Button — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan und eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt)
+- **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
+- **Speichern** in eine lokale Datei (inkl. Speichern unter, mit direktem Dateizugriff sofern der Browser das unterstützt)
+
+### Editor & Formatierung
+- **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
+- **Tabellen-Werkzeuge** — Zeilen/Spalten einfügen, löschen, verschieben und nach einer Spalte sortieren, sobald der Cursor in einer Tabelle steht (funktioniert identisch für Markdown- und CSV-Tabellen)
+- **Frei verschiebbarer Trenner** zwischen Editor und Vorschau — das Verhältnis lässt sich beliebig in beide Richtungen ziehen
+- **Suchen & Ersetzen**, **Rückgängig/Wiederherstellen**, optionale **Rechtschreibprüfung**
+
+### Medien einfügen
+- **Bilder einfügen** per Copy-Paste, Drag & Drop oder Datei-Dialog — mit Auswahl, ob das Bild verkleinert oder im Original eingefügt werden soll
+- **📷 Kamera** — Foto direkt in der App aufnehmen (auf dem iPhone/iPad wahlweise Front- oder Rückkamera), optional zuschneiden, danach wie ein eingefügtes Bild weiterverarbeiten
+- **Zeichnungen** — eingebauter Excalidraw-Editor (Button "🖌️ Zeichnung"), Skizzen bleiben jederzeit bearbeitbar: Klick auf die Zeichnung öffnet sie erneut zum Weiterzeichnen
+- **🎙️ Sprachaufnahmen** — Audio direkt in das Dokument einbetten, in der Vorschau über einen Player abspielbar
+
+### Vorschau & Darstellung
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau
 - **Inhaltsverzeichnis** — schwebender Button über der Vorschau, Klick auf eine Überschrift springt direkt dorthin
-- **5 Designs** — GitHub Light/Dark, Solarized Paper, Nord Dark, Academic Serif (inkl. farbiger Code-Hervorhebung)
-- **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
-- **Tabellen-Werkzeuge** — Zeilen/Spalten einfügen oder löschen, sobald der Cursor in einer Tabelle steht
-- **Bilder einfügen** per Copy-Paste oder Drag & Drop — mit Dialog, ob das Bild verkleinert oder im Original eingefügt werden soll
-- **Zeichnungen** — eingebauter Excalidraw-Editor (Button "🖌️ Zeichnung"), Skizzen bleiben jederzeit bearbeitbar: Klick auf die Zeichnung öffnet sie erneut zum Weiterzeichnen
-- **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
-- **Suchen & Ersetzen**, **Rückgängig/Wiederherstellen**, optionale **Rechtschreibprüfung**
-- **Fokus-Modi** — Editor oder Vorschau einzeln ausblenden, plus echter **Vollbildmodus**
-- **Export** als eigenständige HTML-Datei, **RTF** (zum Einfügen in Word/E-Mail) oder direkt **Drucken/als PDF speichern**
-- **Speichern** in eine lokale Datei (inkl. Speichern unter, mit direktem Dateizugriff sofern der Browser das unterstützt)
+- **10 Designs** — GitHub Light/Dark, Solarized Paper, Nord Dark, Academic Serif, Dracula, Monokai, Gruvbox Dark, Sepia, High Contrast (inkl. farbiger Code-Hervorhebung)
+- **Fokus-Modi** — Editor oder Vorschau einzeln ausblenden, plus echter **Vollbildmodus** (mit Fallback für iOS Safari)
+- **Präsentationsmodus** — Folien werden automatisch an Trennlinien (`---`) aufgeteilt und lassen sich per Tastatur, Klick oder Touch durchblättern, mit automatischer Zentrierung für reine Titel- bzw. Text-Folien
+
+### Synchronisation & Export
+- **WebDAV-Synchronisierung** zwischen mehreren Geräten — automatisch bei Änderungen, in Intervallen oder manuell, inkl. Konfliktbehandlung (lokale Version behalten, Server-Version übernehmen oder beide als getrennte Dokumente behalten)
+- **Export** als eigenständige HTML-Datei oder direkt **Drucken/als PDF speichern**
+- **Formatierte Notiz in die Zwischenablage kopieren** (zum Einfügen in Word, Outlook, Gmail, …)
+
+### Sonstiges
 - **Responsiv** — Bedienleisten werden auf schmalen Bildschirmen (z. B. iPhone) horizontal scrollbar, Editor/Vorschau stapeln sich übereinander
+- **Installierbar** — App-Icon und Web-Manifest, auf iOS über „Zum Home-Bildschirm“ startbar wie eine echte App
 - **Tastenkürzel-Hilfe** über das ⌨️-Symbol in der Kopfzeile
 
 ## 🚀 Verwenden
