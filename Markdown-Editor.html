@@ -3908,20 +3908,44 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return fetch(webdavConfig.url, { method: method, headers: headers, body: options.body, credentials: 'omit' });
     }
 
+    // Returns { state, rawText } — rawText (the exact bytes read) is what putRemoteWebdavState
+    // uses for its just-before-write conflict check below; keeping it around avoids a
+    // redundant GET/re-serialize just to compare against what this same attempt already read.
     async function fetchRemoteWebdavState() {
       const res = await webdavRequest('GET');
-      if (res.status === 404) return null;
+      if (res.status === 404) return { state: null, rawText: '' };
       if (!res.ok) throw new Error('GET ' + res.status);
       const text = await res.text();
-      if (!text.trim()) return null;
+      if (!text.trim()) return { state: null, rawText: text };
       try {
-        return JSON.parse(text);
+        return { state: JSON.parse(text), rawText: text };
       } catch (err) {
         throw new Error('Ungültiges Sync-Dateiformat auf dem Server – zeigt die URL auf eine Datei (nicht einen Ordner)?');
       }
     }
 
-    async function putRemoteWebdavState(state) {
+    // expectedRawText is whatever fetchRemoteWebdavState() read at the *start* of this sync
+    // attempt. Two devices syncing within the same short window is a completely realistic
+    // scenario (not just a rare edge case) — without a check here, whichever PUT lands second
+    // would silently overwrite the first with its own now-stale view, undoing anything the first
+    // write did (most importantly: silently resurrecting a tab the first device had just
+    // deleted). ETag/If-Match would be the standard HTTP way to guard this, but ETag is not on
+    // the CORS-safelisted response headers, so a cross-origin fetch() can't reliably read it
+    // unless the server opts in via Access-Control-Expose-Headers — not something this app can
+    // assume about an arbitrary WebDAV server. Re-reading the body immediately before writing and
+    // comparing raw text works identically everywhere since it only relies on the response body,
+    // never a header. It doesn't close the race perfectly (there's still a small window between
+    // this re-check and the PUT itself), but it shrinks it from "the whole sync operation,
+    // potentially reused across an entire debounce/interval period" down to one extra round-trip,
+    // and performWebdavSync() retries the whole merge on top of that when it does detect one.
+    async function putRemoteWebdavState(state, expectedRawText) {
+      const check = await webdavRequest('GET');
+      const currentRawText = check.status === 404 ? '' : await check.text();
+      if (currentRawText !== (expectedRawText || '')) {
+        const err = new Error('Konflikt: Die Sync-Datei wurde zwischenzeitlich von einem anderen Gerät geändert.');
+        err.isWebdavConcurrencyConflict = true;
+        throw err;
+      }
       const res = await webdavRequest('PUT', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) });
       if (!res.ok) throw new Error('PUT ' + res.status);
     }
@@ -3934,6 +3958,116 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (/\b401\b/.test(msg)) return 'Zugangsdaten falsch (401)';
       if (/\b403\b/.test(msg)) return 'Zugriff verweigert (403)';
       return msg;
+    }
+
+    // One fetch-merge-push cycle. Broken out from performWebdavSync() so it can be retried
+    // wholesale (fresh fetch, fresh merge) when putRemoteWebdavState() detects that another
+    // device wrote in between — see the comment there for why that's a realistic scenario, not
+    // just a rare edge case. Safe to simply re-run on retry: local mutations already made in a
+    // failed attempt (a tab pulled in, a deletion followed, a remote update applied) reflect a
+    // valid reading of the remote as it was at that moment, and tab.lastSyncedSnapshot — the only
+    // thing that would make a second pass treat something differently — is exclusively updated
+    // after a *successful* push, never mid-attempt, so re-running this against the now-current
+    // local tabs and a fresh remote fetch is just another sync pass, not a partial/inconsistent one.
+    async function attemptWebdavSync() {
+      const remoteFetch = await fetchRemoteWebdavState();
+      const remoteTabs = (remoteFetch.state && remoteFetch.state.tabs) || [];
+      const remoteById = new Map(remoteTabs.map(rt => [rt.syncId, rt]));
+      const localIds = new Set(tabs.map(t => ensureSyncId(t)));
+      const pendingDeletions = new Set(webdavPendingDeletions);
+
+      const conflicts = [];
+      const resultTabsById = new Map();
+      const tabsToRemoveLocally = [];
+
+      for (const t of tabs) {
+        const syncId = ensureSyncId(t);
+        const rt = remoteById.get(syncId);
+
+        if (!rt) {
+          const previouslySynced = !!t.lastSyncedSnapshot;
+          const localChanged = !previouslySynced || tabSyncSnapshot(t) !== t.lastSyncedSnapshot;
+          if (previouslySynced && !localChanged) {
+            // Was synced before, is now gone from the server, and there's nothing unsynced
+            // here to lose — another device deleted it, so follow that deletion locally
+            // instead of resurrecting it.
+            tabsToRemoveLocally.push(t);
+            continue;
+          }
+          // A new local tab never synced, or one deleted remotely but with local edits —
+          // either way, push/resurrect the local version rather than lose those edits.
+          resultTabsById.set(syncId, tabToSyncPayload(t));
+          continue;
+        }
+
+        const lastSnap = t.lastSyncedSnapshot;
+        const localSnap = tabSyncSnapshot(t);
+        const remoteSnap = remoteTabSnapshot(rt);
+        const localChanged = !lastSnap || localSnap !== lastSnap;
+        const remoteChanged = !lastSnap || remoteSnap !== lastSnap;
+
+        if (!remoteChanged) {
+          resultTabsById.set(syncId, tabToSyncPayload(t));
+        } else if (!localChanged) {
+          applyRemoteTabToLocal(t, rt);
+          resultTabsById.set(syncId, rt);
+        } else if (remoteSnap === localSnap) {
+          resultTabsById.set(syncId, tabToSyncPayload(t));
+        } else {
+          conflicts.push({ syncId: syncId, localTab: t, remoteTab: rt });
+        }
+      }
+
+      for (const t of tabsToRemoveLocally) {
+        removeTabFromList(t.id);
+      }
+
+      // A syncId this device just tombstoned (closeTab) is, by definition, not in `tabs`
+      // anymore — without this exclusion it would look exactly like "a new tab from another
+      // device" below and get pulled straight back in on the same sync that's supposed to be
+      // propagating its deletion.
+      const newRemoteTabs = remoteTabs.filter(rt => !localIds.has(rt.syncId) && !pendingDeletions.has(rt.syncId));
+
+      if (conflicts.length > 0) {
+        const decisions = await showWebdavConflictModal(conflicts);
+        for (const c of conflicts) {
+          const decision = decisions[c.syncId];
+          if (decision === 'local') {
+            resultTabsById.set(c.syncId, tabToSyncPayload(c.localTab));
+          } else if (decision === 'remote') {
+            applyRemoteTabToLocal(c.localTab, c.remoteTab);
+            resultTabsById.set(c.syncId, c.remoteTab);
+          } else if (decision === 'both') {
+            addRemoteTabAsNewLocalTab(c.remoteTab, ' (Server-Version)');
+            resultTabsById.set(c.syncId, tabToSyncPayload(c.localTab));
+          }
+          // no decision (modal closed early) -> skip: lastSyncedSnapshot stays stale so this
+          // document is flagged as conflicting again next time, instead of silently resolved.
+        }
+      }
+
+      for (const rt of newRemoteTabs) {
+        addRemoteTabAsNewLocalTab(rt);
+        resultTabsById.set(rt.syncId, rt);
+      }
+
+      // Belt-and-suspenders: a tombstoned syncId should never end up back in resultTabsById
+      // via any of the paths above, but excluding it explicitly here is what actually removes
+      // it from the shared file if it somehow did.
+      for (const syncId of pendingDeletions) {
+        resultTabsById.delete(syncId);
+      }
+
+      await putRemoteWebdavState({ version: 1, updatedAt: Date.now(), tabs: Array.from(resultTabsById.values()) }, remoteFetch.rawText);
+      // The server no longer has these — the tombstones have done their job.
+      webdavPendingDeletions = [];
+
+      for (const t of tabs) {
+        const syncId = ensureSyncId(t);
+        if (resultTabsById.has(syncId)) {
+          t.lastSyncedSnapshot = tabSyncSnapshot(t);
+        }
+      }
     }
 
     async function performWebdavSync(opts) {
@@ -3949,102 +4083,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       saveStateToLocalStorage({ skipWebdavDebounce: true });
 
       try {
-        const remote = await fetchRemoteWebdavState();
-        const remoteTabs = (remote && remote.tabs) || [];
-        const remoteById = new Map(remoteTabs.map(rt => [rt.syncId, rt]));
-        const localIds = new Set(tabs.map(t => ensureSyncId(t)));
-        const pendingDeletions = new Set(webdavPendingDeletions);
-
-        const conflicts = [];
-        const resultTabsById = new Map();
-        const tabsToRemoveLocally = [];
-
-        for (const t of tabs) {
-          const syncId = ensureSyncId(t);
-          const rt = remoteById.get(syncId);
-
-          if (!rt) {
-            const previouslySynced = !!t.lastSyncedSnapshot;
-            const localChanged = !previouslySynced || tabSyncSnapshot(t) !== t.lastSyncedSnapshot;
-            if (previouslySynced && !localChanged) {
-              // Was synced before, is now gone from the server, and there's nothing unsynced
-              // here to lose — another device deleted it, so follow that deletion locally
-              // instead of resurrecting it.
-              tabsToRemoveLocally.push(t);
-              continue;
+        const MAX_ATTEMPTS = 4;
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          try {
+            await attemptWebdavSync();
+            break;
+          } catch (err) {
+            if (err.isWebdavConcurrencyConflict && attempt < MAX_ATTEMPTS) {
+              continue; // another device wrote in between -- refetch and redo the merge
             }
-            // A new local tab never synced, or one deleted remotely but with local edits —
-            // either way, push/resurrect the local version rather than lose those edits.
-            resultTabsById.set(syncId, tabToSyncPayload(t));
-            continue;
-          }
-
-          const lastSnap = t.lastSyncedSnapshot;
-          const localSnap = tabSyncSnapshot(t);
-          const remoteSnap = remoteTabSnapshot(rt);
-          const localChanged = !lastSnap || localSnap !== lastSnap;
-          const remoteChanged = !lastSnap || remoteSnap !== lastSnap;
-
-          if (!remoteChanged) {
-            resultTabsById.set(syncId, tabToSyncPayload(t));
-          } else if (!localChanged) {
-            applyRemoteTabToLocal(t, rt);
-            resultTabsById.set(syncId, rt);
-          } else if (remoteSnap === localSnap) {
-            resultTabsById.set(syncId, tabToSyncPayload(t));
-          } else {
-            conflicts.push({ syncId: syncId, localTab: t, remoteTab: rt });
-          }
-        }
-
-        for (const t of tabsToRemoveLocally) {
-          removeTabFromList(t.id);
-        }
-
-        // A syncId this device just tombstoned (closeTab) is, by definition, not in `tabs`
-        // anymore — without this exclusion it would look exactly like "a new tab from another
-        // device" below and get pulled straight back in on the same sync that's supposed to be
-        // propagating its deletion.
-        const newRemoteTabs = remoteTabs.filter(rt => !localIds.has(rt.syncId) && !pendingDeletions.has(rt.syncId));
-
-        if (conflicts.length > 0) {
-          const decisions = await showWebdavConflictModal(conflicts);
-          for (const c of conflicts) {
-            const decision = decisions[c.syncId];
-            if (decision === 'local') {
-              resultTabsById.set(c.syncId, tabToSyncPayload(c.localTab));
-            } else if (decision === 'remote') {
-              applyRemoteTabToLocal(c.localTab, c.remoteTab);
-              resultTabsById.set(c.syncId, c.remoteTab);
-            } else if (decision === 'both') {
-              addRemoteTabAsNewLocalTab(c.remoteTab, ' (Server-Version)');
-              resultTabsById.set(c.syncId, tabToSyncPayload(c.localTab));
-            }
-            // no decision (modal closed early) -> skip: lastSyncedSnapshot stays stale so this
-            // document is flagged as conflicting again next time, instead of silently resolved.
-          }
-        }
-
-        for (const rt of newRemoteTabs) {
-          addRemoteTabAsNewLocalTab(rt);
-          resultTabsById.set(rt.syncId, rt);
-        }
-
-        // Belt-and-suspenders: a tombstoned syncId should never end up back in resultTabsById
-        // via any of the paths above, but excluding it explicitly here is what actually removes
-        // it from the shared file if it somehow did.
-        for (const syncId of pendingDeletions) {
-          resultTabsById.delete(syncId);
-        }
-
-        await putRemoteWebdavState({ version: 1, updatedAt: Date.now(), tabs: Array.from(resultTabsById.values()) });
-        // The server no longer has these — the tombstones have done their job.
-        webdavPendingDeletions = [];
-
-        for (const t of tabs) {
-          const syncId = ensureSyncId(t);
-          if (resultTabsById.has(syncId)) {
-            t.lastSyncedSnapshot = tabSyncSnapshot(t);
+            throw err;
           }
         }
 
