@@ -4256,12 +4256,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       webdavDebounceTimer = setTimeout(() => performWebdavSync({ silent: true }), 10000);
     }
 
-    // Closing a tab is deliberate enough to skip the usual 10s debounce and sync right away
-    // (see closeTab()) — still gated on the same autosync toggle as scheduleWebdavDebouncedSync,
-    // since this is still an automatic background sync from the user's perspective, just
-    // triggered by a more specific event.
+    // Closing a tab is a deliberate, explicit action — much closer to clicking "Jetzt
+    // synchronisieren" (which runs regardless of the autosync toggle) than to the passive
+    // background triggers (the debounce, the interval timer), which the "Automatisch
+    // synchronisieren" toggle is meant to suppress. Gating this on that toggle was a bug: with
+    // autosync off, closeTab()'s tombstone would just sit unsynced indefinitely, so another
+    // instance that never proactively syncs on its own would never learn about the deletion and
+    // would keep showing/re-pushing the "closed" tab — which looks exactly like "closed tabs
+    // keep coming back," even though nothing was racing. Only isWebdavConfigured() is checked
+    // here (not autosyncEnabled) — and deliberately not performWebdavSync() itself, since that
+    // opens the settings modal when nothing is configured, which a plain tab close shouldn't do.
     function triggerImmediateWebdavSync() {
-      if (!(webdavConfig && webdavConfig.autosyncEnabled && isWebdavConfigured())) return;
+      if (!isWebdavConfigured()) return;
       clearTimeout(webdavDebounceTimer);
       performWebdavSync({ silent: true });
     }
