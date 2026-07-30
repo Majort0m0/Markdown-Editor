@@ -3181,7 +3181,7 @@ return He}()
       <div class="settings-field">
         <label for="webdavUrlInput">Server-URL</label>
         <input type="url" id="webdavUrlInput" placeholder="https://cloud.beispiel.de/remote.php/dav/.../sync.json" autocomplete="off" spellcheck="false">
-        <p class="settings-field-hint">Vollständige URL zur Sync-Datei. Wird beim ersten Sync angelegt, falls sie noch nicht existiert.</p>
+        <p class="settings-field-hint">URL zur Sync-Datei, oder ein Ordner (dann wird darin automatisch markdown-studio-sync.json verwendet). Wird beim ersten Sync angelegt, falls sie noch nicht existiert.</p>
       </div>
       <div class="settings-field">
         <label for="webdavUserInput">Benutzername</label>
@@ -3858,9 +3858,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return { url: m[1].trim(), username: m[2].trim(), password: m[3].trim() };
     }
 
+    // WebDAV needs a URL to one exact file (see webdavRequest — plain GET/PUT, no PROPFIND/
+    // MKCOL), but the natural thing to paste here is a *folder* URL — e.g. a dedicated
+    // Nextcloud folder created just for this app, which is exactly what has no filename at the
+    // end. A GET on a WebDAV collection doesn't return JSON, so left as-is this fails with a
+    // confusing "invalid file format" error. Heuristic: if the last path segment has no `.ext`,
+    // treat it as a folder and append a default filename inside it, rather than requiring every
+    // user to already know this app wants a file, not a folder.
+    function normalizeWebdavUrl(url) {
+      if (!url) return url;
+      const trimmed = url.replace(/\/+$/, '');
+      const lastSegment = trimmed.split('/').pop() || '';
+      const looksLikeFile = /\.[a-zA-Z0-9]+$/.test(lastSegment);
+      return looksLikeFile ? trimmed : trimmed + '/markdown-studio-sync.json';
+    }
+
     function importWebdavConfig(parsed) {
       webdavConfig = {
-        url: parsed.url,
+        url: normalizeWebdavUrl(parsed.url),
         username: parsed.username,
         password: parsed.password,
         autosyncEnabled: webdavConfig ? webdavConfig.autosyncEnabled !== false : true,
@@ -3890,7 +3905,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       try {
         return JSON.parse(text);
       } catch (err) {
-        throw new Error('Ungültiges Sync-Dateiformat auf dem Server');
+        throw new Error('Ungültiges Sync-Dateiformat auf dem Server – zeigt die URL auf eine Datei (nicht einen Ordner)?');
       }
     }
 
@@ -4117,13 +4132,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function saveWebdavConfigFromModal() {
       webdavConfig = {
-        url: document.getElementById('webdavUrlInput').value.trim(),
+        url: normalizeWebdavUrl(document.getElementById('webdavUrlInput').value.trim()),
         username: document.getElementById('webdavUserInput').value.trim(),
         password: document.getElementById('webdavPassInput').value,
         autosyncEnabled: document.getElementById('webdavAutosyncCheckbox').checked,
         autosyncIntervalMinutes: parseInt(document.getElementById('webdavIntervalSelect').value, 10) || 5,
         lastSyncAt: webdavConfig ? webdavConfig.lastSyncAt : null
       };
+      // Reflect the normalized URL back into the field so a folder URL visibly turns into the
+      // actual file URL being used, rather than silently diverging from what was typed.
+      document.getElementById('webdavUrlInput').value = webdavConfig.url;
       saveWebdavConfig();
       scheduleWebdavAutosyncTimer();
       updateWebdavStatusText();
