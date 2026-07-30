@@ -1389,6 +1389,38 @@ return He}()
       display: none !important;
     }
 
+    /* The header (hidden above) holds the only fullscreen-toggle button, which trapped
+       users with no way out — most visibly on iOS, where pseudo-fullscreen has no OS-level
+       exit gesture either. This floating control stays reachable regardless. */
+    .fullscreen-exit-btn {
+      display: none;
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 10000;
+      width: 34px;
+      height: 34px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      font-size: 1rem;
+      cursor: pointer;
+      opacity: 0.55;
+    }
+
+    .fullscreen-exit-btn:hover {
+      opacity: 1;
+    }
+
+    :fullscreen .fullscreen-exit-btn,
+    body.pseudo-fullscreen .fullscreen-exit-btn {
+      display: flex;
+    }
+
     /* Top Navigation / App Header */
     header {
       background-color: var(--bg-surface);
@@ -1682,6 +1714,23 @@ return He}()
     .toolbar-btn.active {
       background-color: #d7e4f7;
       color: var(--accent);
+    }
+
+    /* Row-move buttons reuse the column-move (left/right) icons rotated 90deg clockwise
+       (left -> up, right -> down) rather than shipping separate up/down artwork. */
+    .toolbar-btn.rotate-90 svg {
+      transform: rotate(90deg);
+    }
+
+    .toolbar-btn.recording {
+      background-color: #fbdada;
+      color: #d92626;
+      animation: audio-recording-pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes audio-recording-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
 
     .toolbar-select {
@@ -2181,6 +2230,13 @@ return He}()
       border-radius: 4px;
     }
 
+    .markdown-body .audio-asset-player {
+      display: block;
+      width: 100%;
+      max-width: 420px;
+      margin: 8px 0;
+    }
+
     .drawing-wrapper {
       position: relative;
       display: inline-block;
@@ -2230,7 +2286,16 @@ return He}()
       margin-left: -1.4em;
     }
 
+    /* display:block turns the table itself into the horizontal-scroll container (its own box
+       clipped to overflow-x:auto) instead of letting a too-wide table (common for CSV files
+       with many columns) overflow .markdown-body's box — .markdown-body stays at its normal
+       max-width, so its themed background covers the full scrollable width instead of exposing
+       .preview-pane's un-themed background once you scroll past the original viewport edge. The
+       row/cell display roles (table-row-group/table-row/table-cell) survive unaffected since
+       those come from the browser's default stylesheet on <tbody>/<tr>/<td>, not from <table>. */
     .markdown-body table {
+      display: block;
+      overflow-x: auto;
       border-collapse: collapse;
       width: 100%;
       margin-bottom: 16px;
@@ -2415,6 +2480,119 @@ return He}()
       color: var(--text-muted);
     }
 
+    /* WebDAV Sync settings modal */
+    .settings-field {
+      margin-bottom: 12px;
+    }
+
+    .settings-field label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .settings-field input[type="text"],
+    .settings-field input[type="url"],
+    .settings-field input[type="password"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.85rem;
+      outline: none;
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+    }
+
+    .settings-field input:focus {
+      border-color: var(--accent);
+    }
+
+    .settings-field-hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .settings-field-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .settings-field-row select {
+      padding: 4px 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 0.8rem;
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+    }
+
+    .webdav-status {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin: 0 0 12px;
+    }
+
+    @keyframes webdav-spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #webdavSyncBtn.syncing svg {
+      animation: webdav-spin 1s linear infinite;
+    }
+
+    /* WebDAV Sync conflict resolution */
+    .conflict-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 10px;
+      max-height: 40vh;
+      overflow-y: auto;
+    }
+
+    .conflict-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 8px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      flex-wrap: wrap;
+    }
+
+    .conflict-row-name {
+      font-weight: 600;
+      font-size: 0.85rem;
+      word-break: break-word;
+    }
+
+    .conflict-row-buttons {
+      display: flex;
+      gap: 6px;
+    }
+
+    .conflict-row-buttons button {
+      padding: 5px 9px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+
+    .conflict-row-buttons button:hover {
+      background-color: #eceff2;
+    }
+
     /* Template Picker */
     .template-modal-card {
       max-width: 640px;
@@ -2554,6 +2732,38 @@ return He}()
       border-radius: 0;
     }
 
+    /* A slide containing *only* a level-1 heading reads as a title/section-break slide, so it
+       gets centered on both axes instead of sitting top-left like body content — see
+       classifySlidePresentationLayout(). */
+    .presentation-slide.centered-heading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .presentation-slide.centered-heading h1 {
+      text-align: center;
+      max-width: 100%;
+      margin: 0;
+    }
+
+    /* A slide with prose/lists and no heading at all gets the same both-axes centering treatment
+       for the block as a whole, but — unlike the heading case — text-align stays left so a
+       centered list's items stay left-aligned to each other rather than each line individually
+       centering (which reads badly the moment items have different lengths). Each top-level
+       block (a paragraph, a list, ...) is centered as its own shrink-to-fit unit and stacked. */
+    .presentation-slide.centered-text {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .presentation-slide.centered-text > * {
+      max-width: 100%;
+      text-align: left;
+    }
+
     .presentation-counter {
       position: absolute;
       bottom: 18px;
@@ -2583,7 +2793,7 @@ return He}()
 
     /* Print / PDF export */
     @media print {
-      header, .tab-bar-container, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel {
+      header, .tab-bar-container, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel, .fullscreen-exit-btn {
         display: none !important;
       }
 
@@ -2703,7 +2913,7 @@ return He}()
 
       <!-- Dateimanagement -->
       <label class="icon-btn btn-label" for="fileInput" title="Öffnen (Datei öffnen)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M1 5C1 3.34315 2.34315 2 4 2H8.55848C9.84977 2 10.9962 2.82629 11.4045 4.05132L11.7208 5H20C21.1046 5 22 5.89543 22 7V9.00961C23.1475 9.12163 23.9808 10.196 23.7695 11.3578L22.1332 20.3578C21.9603 21.3087 21.132 22 20.1654 22H3C1.89543 22 1 21.1046 1 20V5ZM20 9V7H11.7208C10.8599 7 10.0956 6.44914 9.82339 5.63246L9.50716 4.68377C9.37105 4.27543 8.98891 4 8.55848 4H4C3.44772 4 3 4.44772 3 5V12.2709L3.35429 10.588C3.54913 9.66249 4.36562 9 5.31139 9H20ZM3.36634 20C3.41777 19.9109 3.4562 19.8122 3.47855 19.706L5.31139 11L21 11H21.8018L20.1654 20L3.36634 20Z" fill="currentColor"/></svg></label>
-      <input type="file" id="fileInput" accept=".md,.markdown,.txt" multiple onchange="handleFileSelect(event)">
+      <input type="file" id="fileInput" accept=".md,.markdown,.txt,.csv,.json" multiple onchange="handleFileSelect(event)">
       <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageFileSelect(event)">
 
       <button id="saveBtn" class="icon-btn" onclick="saveCurrentFile()" title="Speichern (Strg+S)"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg></button>
@@ -2779,6 +2989,11 @@ return He}()
 		c0-5.028-3.393-8.553-9.23-8.553h-26.086c-0.545,0-0.81-0.272-0.81-0.817v-19.425c0-0.545,0.265-0.816,0.81-0.816h32.733
 		c5.572,0,9.245-3.666,9.245-8.553C370.411,256.45,366.738,252.785,361.167,252.785z"/></g></svg></button>
       <button id="copyFormattedBtn" class="icon-btn" onclick="copyFormattedToClipboard()" title="Formatierte Notiz in die Zwischenablage kopieren (zum Einfügen in Word, E-Mail, ...)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Copy"><path id="Vector" d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
+
+      <div class="action-divider"></div>
+
+      <!-- WebDAV-Synchronisierung -->
+      <button id="webdavSyncBtn" class="icon-btn" onclick="openWebdavModal()" title="WebDAV-Synchronisierung"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V11M12 11L9 14M12 11L15 14M7 16.8184C4.69636 16.2074 3 14.1246 3 11.6493C3 9.20008 4.8 6.9375 7.5 6.5C8.34694 4.48637 10.3514 3 12.6893 3C15.684 3 18.1317 5.32251 18.3 8.25C19.8893 8.94488 21 10.6503 21 12.4969C21 14.8148 19.25 16.7236 17 16.9725" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
       <div class="action-divider"></div>
 
@@ -2872,6 +3087,7 @@ return He}()
 			c0.3,0,0.5-0.1,0.7-0.3l11-11c0.1-0.1,0.1-0.2,0.2-0.3v-0.1C60,37.2,60,37.1,60,37z M49,38h7.6l-3.8,3.8L49,45.6V38z"/><path d="M18.9,9.7C18.8,9.3,18.4,9,18,9s-0.8,0.3-0.9,0.7l-2.9,8.7C14.1,18.6,14,18.8,14,19v33v7c0,0.6,0.4,1,1,1h6
 			c0.6,0,1-0.4,1-1v-7V19c0-0.2-0.1-0.5-0.2-0.6L18.9,9.7z M16,20h1v31h-1V20z M19,20h1v31h-1V20z M18,13.2l1.6,4.8h-3.2L18,13.2z
 			 M20,58h-4v-5h1h2h1V58z"/><path d="M35,6c-5,0-9,4-9,9v2h2v-2c0-3.9,3.1-7,7-7s7,3.1,7,7v2h2v-2C44,10,40,6,35,6z"/><path d="M54,16v-2h-2v2c0,3.9-3.1,7-7,7s-7-3.1-7-7v-2h-2v2c0,5,4,9,9,9S54,21,54,16z"/><path d="M25,33v10c0,0.6,0.4,1,1,1h10c0.6,0,1-0.4,1-1V33c0-0.6-0.4-1-1-1H26C25.4,32,25,32.4,25,33z M27,34h8v8h-8V34z"/><path d="M39,35v2h2c0.6,0,1-0.4,1-1v-8c0-0.6-0.4-1-1-1h-8c-0.6,0-1,0.4-1,1v2h2v-1h6v6H39z"/><rect x="6" y="5"/><rect x="10" y="5"/><rect x="14" y="5"/><rect x="10" y="9"/><rect x="6" y="9"/><rect x="6" y="13"/><rect x="6" y="17"/><rect x="6" y="21"/><rect x="6" y="25"/><rect x="6" y="29"/><rect x="6" y="33"/><rect x="6" y="37"/><rect x="6" y="41"/></g></g></svg></button>
+    <button id="audioRecordBtn" class="toolbar-btn fmt-btn" onclick="toggleAudioRecording()" title="Sprachaufnahme einfügen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5C8 2.79086 9.79086 1 12 1C14.2091 1 16 2.79086 16 5V12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12V5Z" fill="currentColor"/><path d="M6.25 11.8438V12C6.25 13.525 6.8558 14.9875 7.93414 16.0659C9.01247 17.1442 10.475 17.75 12 17.75C13.525 17.75 14.9875 17.1442 16.0659 16.0659C17.1442 14.9875 17.75 13.525 17.75 12V11.8438C17.75 11.2915 18.1977 10.8438 18.75 10.8438H19.25C19.8023 10.8438 20.25 11.2915 20.25 11.8437V12C20.25 14.188 19.3808 16.2865 17.8336 17.8336C16.5842 19.0831 14.9753 19.8903 13.25 20.1548V22C13.25 22.5523 12.8023 23 12.25 23H11.75C11.1977 23 10.75 22.5523 10.75 22V20.1548C9.02471 19.8903 7.41579 19.0831 6.16637 17.8336C4.61919 16.2865 3.75 14.188 3.75 12V11.8438C3.75 11.2915 4.19772 10.8438 4.75 10.8438H5.25C5.80228 10.8438 6.25 11.2915 6.25 11.8438Z" fill="currentColor"/></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="insertFormatting('table')" title="Tabelle"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M1740 0c99.24 0 180 80.76 180 180v1560c0 99.24-80.76 180-180 180H180c-99.24 0-180-80.76-180-180V180C0 80.76 80.76 0 180 0h1560Zm-420 1200h480V720h-480v480Zm480 540v-420h-480v480h420c33 0 60-27 60-60ZM720 1200h480V720H720v480Zm0 600h480v-480H720v480Zm-600-600h480V720H120v480Zm480 600v-480H120v420c0 33 27 60 60 60h420Z" fill-rule="evenodd"/></svg></button>
   </div>
 
@@ -2880,11 +3096,17 @@ return He}()
     <span class="table-controls-label">📊 Tabelle:</span>
     <button class="toolbar-btn" onclick="tableInsertRow('before')" title="Zeile davor einfügen"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M1740 120H180c-33 0-60 26.88-60 60v1020h1680V180c0-33.12-27-60-60-60Zm60 1620v-420h-480v480h420c33 0 60-26.88 60-60Zm-600 60v-480H720v480h480Zm-1080-60c0 33.12 27 60 60 60h420v-480H120v420ZM0 180C0 80.76 80.76 0 180 0h1560c99.24 0 180 80.76 180 180v1560c0 99.24-80.76 180-180 180H180c-99.24 0-180-80.76-180-180V180Zm510 596.484v-240h330v-330h240v330h330v240h-330v330H840v-330H510Z" fill-rule="evenodd"/></svg></button>
     <button class="toolbar-btn" onclick="tableInsertRow('after')" title="Zeile danach einfügen"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M180 1800h1560c33 0 60-26.88 60-60V720H120v1020c0 33.12 27 60 60 60ZM120 180v420h480V120H180c-33 0-60 26.88-60 60Zm600-60v480h480V120H720Zm1080 60c0-33.12-27-60-60-60h-420v480h480V180Zm120 1560c0 99.24-80.76 180-180 180H180c-99.24 0-180-80.76-180-180V180C0 80.76 80.76 0 180 0h1560c99.24 0 180 80.76 180 180v1560Zm-510-596.484v240h-330v330H840v-330H510v-240h330v-330h240v330h330Z" fill-rule="evenodd"/></svg></button>
+    <button class="toolbar-btn rotate-90" onclick="tableMoveRow('up')" title="Zeile nach oben verschieben"><svg viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M235.097 255v1410.58H0V255h235.097Zm778.84 34.406 166.331 166.214-387.087 387.087H1920v235.096H793.181l387.087 387.087-166.33 166.214-670.85-670.849 670.85-670.849Z" fill-rule="evenodd"/></svg></button>
+    <button class="toolbar-btn rotate-90" onclick="tableMoveRow('down')" title="Zeile nach unten verschieben"><svg viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M1684.903 255v1410.58H1920V255h-235.097Zm-778.84 34.406L739.732 455.62l387.087 387.087H0v235.096h1126.819L739.732 1464.89l166.33 166.214 670.85-670.849-670.85-670.849Z" fill-rule="evenodd"/></svg></button>
     <button class="toolbar-btn" onclick="tableDeleteRow()" title="Zeile löschen"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M180 1800c-33 0-60-27-60-60v-420h300v-120H120V720h300V600H120V180c0-33.12 27-60 60-60h1560c33 0 60 26.88 60 60v420h-300v120h300v480h-300v120h300v420c0 33-27 60-60 60H180Zm1740-60V180c0-99.24-80.76-180-180-180H180C80.76 0 0 80.76 0 180v1560c0 99.24 80.76 180 180 180h1560c99.24 0 180-80.76 180-180ZM485.32 1265 655 1434.68l305.16-305.16 305.16 305.16L1435 1265l-305.16-305.16L1435 654.68 1265.32 485 960.16 790.16 655 485 485.32 654.68l305.16 305.16L485.32 1265Z" fill-rule="evenodd"/></svg></button>
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn" onclick="tableInsertColumn('before')" title="Spalte davor einfügen"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M120 180v1560c0 33 26.88 60 60 60h1020V120H180c-33.12 0-60 27-60 60Zm1620-60h-420v480h480V180c0-33-26.88-60-60-60Zm60 600h-480v480h480V720Zm-60 1080c33.12 0 60-27 60-60v-420h-480v480h420ZM180 1920c-99.24 0-180-80.76-180-180V180C0 80.76 80.76 0 180 0h1560c99.24 0 180 80.76 180 180v1560c0 99.24-80.76 180-180 180H180Zm596.484-510h-240v-330h-330V840h330V510h240v330h330v240h-330v330Z" fill-rule="evenodd"/></svg></button>
     <button class="toolbar-btn" onclick="tableInsertColumn('after')" title="Spalte danach einfügen"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M1740 0c99.24 0 180 80.76 180 180v1560c0 99.24-80.76 180-180 180H180c-99.24 0-180-80.76-180-180V180C0 80.76 80.76 0 180 0h1560Zm60 1740V180c0-33-26.88-60-60-60H720v1680h1020c33.12 0 60-27 60-60Zm-1620 60h420v-480H120v420c0 33 26.88 60 60 60Zm-60-600h480V720H120v480Zm60-1080c-33.12 0-60 27-60 60v420h480V120H180Zm963.516 390h240v330h330v240h-330v330h-240v-330h-330V840h330V510Z" fill-rule="evenodd"/></svg></button>
+    <button class="toolbar-btn" onclick="tableMoveColumn('left')" title="Spalte nach links verschieben"><svg viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M235.097 255v1410.58H0V255h235.097Zm778.84 34.406 166.331 166.214-387.087 387.087H1920v235.096H793.181l387.087 387.087-166.33 166.214-670.85-670.849 670.85-670.849Z" fill-rule="evenodd"/></svg></button>
+    <button class="toolbar-btn" onclick="tableMoveColumn('right')" title="Spalte nach rechts verschieben"><svg viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M1684.903 255v1410.58H1920V255h-235.097Zm-778.84 34.406L739.732 455.62l387.087 387.087H0v235.096h1126.819L739.732 1464.89l166.33 166.214 670.85-670.849-670.85-670.849Z" fill-rule="evenodd"/></svg></button>
     <button class="toolbar-btn" onclick="tableDeleteColumn()" title="Spalte löschen"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M1800 1740c0 33-27 60-60 60h-420v-300h-120v300H720v-300H600v300H180c-33.12 0-60-27-60-60V180c0-33 26.88-60 60-60h420v300h120V120h480v300h120V120h420c33 0 60 27 60 60v1560ZM1740 0H180C80.76 0 0 80.76 0 180v1560c0 99.24 80.76 180 180 180h1560c99.24 0 180-80.76 180-180V180c0-99.24-80.76-180-180-180Zm-305.16 654.84-169.68-169.68L960 790.32 654.84 485.16 485.16 654.84 790.32 960l-305.16 305.16 169.68 169.68L960 1129.68l305.16 305.16 169.68-169.68L1129.68 960l305.16-305.16Z" fill-rule="evenodd"/></svg></button>
+    <div class="toolbar-divider"></div>
+    <button class="toolbar-btn" onclick="tableSortByColumn()" title="Nach dieser Spalte sortieren (erneut klicken kehrt die Reihenfolge um)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 13.125C12.3013 13.125 12.5733 13.3052 12.6907 13.5827C12.8081 13.8601 12.7482 14.1808 12.5384 14.3971L8.53844 18.5221C8.39719 18.6678 8.20293 18.75 8.00002 18.75C7.79711 18.75 7.60285 18.6678 7.46159 18.5221L3.46159 14.3971C3.25188 14.1808 3.19192 13.8601 3.30934 13.5827C3.42676 13.3052 3.69877 13.125 4.00002 13.125H7.25002V6C7.25002 5.58579 7.5858 5.25 8.00002 5.25C8.41423 5.25 8.75002 5.58579 8.75002 6V13.125H12Z" fill="currentColor"/><path d="M20 10.875C20.3013 10.875 20.5733 10.6948 20.6907 10.4173C20.8081 10.1399 20.7482 9.81916 20.5384 9.60289L16.5384 5.47789C16.3972 5.33222 16.2029 5.25 16 5.25C15.7971 5.25 15.6029 5.33222 15.4616 5.47789L11.4616 9.60289C11.2519 9.81916 11.1919 10.1399 11.3093 10.4173C11.4268 10.6948 11.6988 10.875 12 10.875H15.25V18C15.25 18.4142 15.5858 18.75 16 18.75C16.4142 18.75 16.75 18.4142 16.75 18L16.75 10.875H20Z" fill="currentColor"/></svg></button>
   </div>
 
   <main id="mainContainer">
@@ -2949,6 +3171,67 @@ return He}()
     </div>
   </div>
 
+  <!-- WebDAV Sync settings -->
+  <div class="modal-overlay" id="webdavModal" onclick="if (event.target === this) closeWebdavModal()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>☁️ WebDAV-Synchronisierung</h2>
+        <button class="icon-btn" onclick="closeWebdavModal()" title="Schließen">✕</button>
+      </div>
+      <div class="settings-field">
+        <label for="webdavUrlInput">Server-URL</label>
+        <input type="url" id="webdavUrlInput" placeholder="https://cloud.beispiel.de/remote.php/dav/.../sync.json" autocomplete="off" spellcheck="false">
+        <p class="settings-field-hint">Vollständige URL zur Sync-Datei. Wird beim ersten Sync angelegt, falls sie noch nicht existiert.</p>
+      </div>
+      <div class="settings-field">
+        <label for="webdavUserInput">Benutzername</label>
+        <input type="text" id="webdavUserInput" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="settings-field">
+        <label for="webdavPassInput">App-Kennwort</label>
+        <input type="password" id="webdavPassInput" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="settings-field settings-field-row">
+        <label><input type="checkbox" id="webdavAutosyncCheckbox"> Automatisch synchronisieren</label>
+        <select id="webdavIntervalSelect">
+          <option value="1">alle 1 Min.</option>
+          <option value="5">alle 5 Min.</option>
+          <option value="15">alle 15 Min.</option>
+          <option value="30">alle 30 Min.</option>
+        </select>
+      </div>
+      <p id="webdavStatusText" class="webdav-status"></p>
+      <div class="image-dialog-choices">
+        <button class="image-dialog-choice-btn recommended" type="button" onclick="saveWebdavConfigFromModal()">
+          <span>💾 Speichern</span>
+        </button>
+        <button class="image-dialog-choice-btn" type="button" onclick="performWebdavSync()">
+          <span>🔄 Jetzt synchronisieren</span>
+        </button>
+      </div>
+      <div class="settings-field">
+        <div class="image-dialog-choices">
+          <button class="image-dialog-choice-btn" type="button" onclick="openWebdavConfigTemplate()">
+            <span>📄 Konfigurationsdatei öffnen</span>
+          </button>
+        </div>
+        <p class="settings-field-hint">Öffnet eine leere Vorlage (ohne Zugangsdaten) als neues Dokument. Trage dort Benutzername und App-Kennwort ein, speichere die Datei und öffne sie auf einem anderen Gerät in Markdown Studio — die WebDAV-Zugangsdaten werden dort automatisch übernommen.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- WebDAV Sync conflict resolution -->
+  <div class="modal-overlay" id="webdavConflictModal" onclick="if (event.target === this) closeWebdavConflictModal()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2>⚠️ Sync-Konflikte</h2>
+        <button class="icon-btn" onclick="closeWebdavConflictModal()" title="Später entscheiden">✕</button>
+      </div>
+      <p class="webdav-status">Diese Dokumente wurden auf mehreren Geräten geändert. Wähle je Dokument, was übernommen werden soll:</p>
+      <div id="webdavConflictList" class="conflict-list"></div>
+    </div>
+  </div>
+
   <!-- Template Picker (opens when creating a new document) -->
   <div class="modal-overlay" id="templateModal" onclick="if (event.target === this) closeTemplateModal()">
     <div class="modal-card template-modal-card">
@@ -2980,8 +3263,10 @@ return He}()
 
   <div id="appToast" class="toast"></div>
 
+  <button id="fullscreenExitBtn" class="fullscreen-exit-btn" onclick="toggleFullscreen()" title="Vollbildmodus verlassen" type="button">✕</button>
+
   <!-- Presentation Mode: full-viewport slideshow, slides split on a lone "---" line -->
-  <div class="presentation-overlay" id="presentationOverlay" onclick="presentationNext()">
+  <div class="presentation-overlay" id="presentationOverlay" onclick="presentationHandleClick(event)">
     <div class="presentation-slide markdown-body" id="presentationSlide"></div>
     <span class="presentation-counter" id="presentationCounter"></span>
     <button class="presentation-close-btn" onclick="event.stopPropagation(); exitPresentation()" title="Präsentation beenden (Esc)" type="button">✕</button>
@@ -3047,15 +3332,25 @@ return He}()
     hljsRenderer.image = function({ href, title, text }) {
       let resolvedHref = href;
       let isDrawing = false;
+      let isAudio = false;
       let assetId = null;
       if (href && href.indexOf('asset:') === 0) {
         const tab = getCurrentTab();
         assetId = href.slice('asset:'.length);
         resolvedHref = (tab && tab.assets && tab.assets[assetId]) || '';
         isDrawing = !!(tab && tab.drawingAssetIds && tab.drawingAssetIds[assetId]);
+        isAudio = !!(tab && tab.audioAssetIds && tab.audioAssetIds[assetId]);
       }
-      const titleAttr = title ? ' title="' + title.replace(/"/g, '&quot;') + '"' : '';
       const altAttr = (text || '').replace(/"/g, '&quot;');
+
+      // Audio assets reuse the image markdown syntax (![alt](asset:audio_N)), same as
+      // drawings reuse it below — the asset map doesn't distinguish media types, only the
+      // per-tab audioAssetIds/drawingAssetIds markers do, at render time.
+      if (isAudio) {
+        return '<audio class="audio-asset-player" controls src="' + resolvedHref + '" aria-label="' + altAttr + '"></audio>';
+      }
+
+      const titleAttr = title ? ' title="' + title.replace(/"/g, '&quot;') + '"' : '';
       const imgTag = '<img src="' + resolvedHref + '" alt="' + altAttr + '"' + titleAttr + '>';
 
       if (isDrawing && !suppressDrawingControls) {
@@ -3239,6 +3534,62 @@ Sehr geehrte Damen und Herren,
 
 
 Mit freundlichen Grüßen
+` },
+      { id: 'presentation', name: 'Präsentation', desc: 'Titelfolie, Agenda, Kapitel, Zitat-Folie', content: `# Präsentationstitel
+
+---
+
+## Agenda
+
+1. Einleitung
+2. Hauptteil
+3. Zusammenfassung
+
+---
+
+# Kapitel 1
+
+---
+
+## Detailfolie
+
+
+
+---
+
+Zentrale Kernaussage oder Zitat für diese Folie.
+
+---
+
+# Vielen Dank!
+` },
+      { id: 'training', name: 'Fortbildungsplanung', desc: 'Kurzbeschreibung, Adressaten, Lernziele, Konzeption', content: `# Fortbildungstitel
+
+## Kurzbeschreibung
+
+
+
+## Adressaten
+
+
+
+## Lernziele
+
+
+
+## Konzeption
+
+### Why
+
+
+
+### How
+
+
+
+### What
+
+
 ` }
     ];
 
@@ -3276,7 +3627,7 @@ Mit freundlichen Grüßen
 
     // --- LOCAL STORAGE PERSISTENCE ---
 
-    function saveStateToLocalStorage() {
+    function saveStateToLocalStorage(opts) {
       if (activeTabId) {
         const currentTab = getCurrentTab();
         if (currentTab) {
@@ -3293,7 +3644,12 @@ Mit freundlichen Grüßen
           assets: t.assets || {},
           assetCounter: t.assetCounter || 0,
           isDefaultName: !!t.isDefaultName,
-          drawingAssetIds: t.drawingAssetIds || {}
+          drawingAssetIds: t.drawingAssetIds || {},
+          audioAssetIds: t.audioAssetIds || {},
+          fileType: t.fileType || 'markdown',
+          csvDelimiter: t.csvDelimiter || null,
+          syncId: t.syncId,
+          lastSyncedSnapshot: t.lastSyncedSnapshot || null
         })),
         activeTabId: activeTabId,
         currentTheme: currentTheme,
@@ -3306,6 +3662,12 @@ Mit freundlichen Grüßen
         lastTemplateId: lastTemplateId
       };
       localStorage.setItem('md_studio_state', JSON.stringify(state));
+      // performWebdavSync() itself calls this to persist sync bookkeeping (lastSyncedSnapshot,
+      // flushing the editor into tab.content) — without this guard, every sync would reschedule
+      // another sync 10s later even when nothing changed, looping against the server forever.
+      if (!(opts && opts.skipWebdavDebounce)) {
+        scheduleWebdavDebouncedSync();
+      }
     }
 
     function loadStateFromLocalStorage() {
@@ -3324,7 +3686,14 @@ Mit freundlichen Grüßen
           assets: t.assets || {},
           assetCounter: t.assetCounter || 0,
           isDefaultName: t.isDefaultName !== undefined ? t.isDefaultName : /^Unbenannt \d+\.md$/.test(t.name),
-          drawingAssetIds: t.drawingAssetIds || {}
+          drawingAssetIds: t.drawingAssetIds || {},
+          audioAssetIds: t.audioAssetIds || {},
+          fileType: t.fileType || 'markdown',
+          csvDelimiter: t.csvDelimiter || null,
+          // Tabs saved before WebDAV sync existed have no syncId yet; ensureSyncId() below
+          // mints one on first use rather than every tab needing a migration pass here.
+          syncId: t.syncId || null,
+          lastSyncedSnapshot: t.lastSyncedSnapshot || null
         }));
 
         tabIdCounter = state.tabIdCounter || (tabs.length + 1);
@@ -3356,6 +3725,429 @@ Mit freundlichen Grüßen
         console.warn('Fehler beim Laden aus dem LocalStorage:', err);
         return false;
       }
+    }
+
+    // --- WEBDAV SYNC ---
+    // Syncs the *document* portion of the app state (tab name/content/image-assets/drawing-
+    // markers) as a single JSON file at a WebDAV URL the user provides — not the whole
+    // md_studio_state blob, since UI prefs (theme, split ratio, pane visibility) are reasonably
+    // expected to stay per-device rather than following documents across a phone and a desktop.
+    //
+    // Cross-device identity: tab.id ("tab_3") is only unique within one device's own
+    // tabIdCounter, so two independent devices will happily both mint "tab_3" for unrelated
+    // documents. tab.syncId (a UUID, minted lazily by ensureSyncId) is the real merge key.
+    //
+    // Conflict detection is a 3-way compare against tab.lastSyncedSnapshot (the content as of
+    // the last successful sync, i.e. the merge base): if only local changed since then, push;
+    // if only remote changed, pull silently; if both changed to the same thing, no-op; if both
+    // changed to different things, it's a real conflict and the user is asked per-document via
+    // webdavConflictModal. Deletion is intentionally not synced (v1 scope limit, avoids a
+    // tombstone design) — a tab deleted on one device simply reappears from the server on the
+    // next sync on any device that still has it there.
+
+    const WEBDAV_CONFIG_KEY = 'md_studio_webdav_config';
+    let webdavConfig = null;
+    let webdavSyncTimer = null;
+    let webdavDebounceTimer = null;
+    let webdavSyncInProgress = false;
+    let webdavLastError = null;
+    let webdavConflictResolve = null;
+    let webdavConflictDecisions = {};
+
+    function loadWebdavConfig() {
+      try {
+        const saved = localStorage.getItem(WEBDAV_CONFIG_KEY);
+        webdavConfig = saved ? JSON.parse(saved) : null;
+      } catch (err) {
+        webdavConfig = null;
+      }
+    }
+
+    function saveWebdavConfig() {
+      localStorage.setItem(WEBDAV_CONFIG_KEY, JSON.stringify(webdavConfig));
+    }
+
+    function isWebdavConfigured() {
+      return !!(webdavConfig && webdavConfig.url && webdavConfig.username && webdavConfig.password);
+    }
+
+    function ensureSyncId(tab) {
+      if (!tab.syncId) {
+        tab.syncId = (crypto.randomUUID ? crypto.randomUUID() : 'sync_' + Date.now() + '_' + Math.random().toString(36).slice(2));
+      }
+      return tab.syncId;
+    }
+
+    function tabSyncSnapshot(tab) {
+      return JSON.stringify({ name: tab.name, content: tab.content, assets: tab.assets || {}, drawingAssetIds: tab.drawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null });
+    }
+
+    function remoteTabSnapshot(rt) {
+      return JSON.stringify({ name: rt.name, content: rt.content, assets: rt.assets || {}, drawingAssetIds: rt.drawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null });
+    }
+
+    function tabToSyncPayload(t) {
+      return {
+        syncId: ensureSyncId(t),
+        name: t.name,
+        content: t.content,
+        assets: t.assets || {},
+        assetCounter: t.assetCounter || 0,
+        drawingAssetIds: t.drawingAssetIds || {},
+        audioAssetIds: t.audioAssetIds || {},
+        fileType: t.fileType || 'markdown',
+        csvDelimiter: t.csvDelimiter || null
+      };
+    }
+
+    function applyRemoteTabToLocal(t, rt) {
+      t.name = rt.name;
+      t.content = rt.content;
+      t.assets = rt.assets || {};
+      t.assetCounter = Object.keys(t.assets).length;
+      t.drawingAssetIds = rt.drawingAssetIds || {};
+      t.audioAssetIds = rt.audioAssetIds || {};
+      t.fileType = rt.fileType || 'markdown';
+      t.csvDelimiter = rt.csvDelimiter || null;
+      t.isModified = false;
+      t.history = [t.content];
+      t.historyIndex = 0;
+    }
+
+    function appendNameSuffix(name, suffix) {
+      const m = name.match(/^(.*?)(\.[^./\\]+)?$/);
+      return m[1] + suffix + (m[2] || '');
+    }
+
+    // Used both for a document that's brand new on another device (no nameSuffix, keeps the
+    // remote syncId so it's already "in sync") and for the "Beide behalten" conflict resolution
+    // (nameSuffix given, gets a fresh syncId so it's treated as a new local-only doc to push).
+    function addRemoteTabAsNewLocalTab(remoteTabData, nameSuffix) {
+      const tabId = 'tab_' + tabIdCounter++;
+      const assets = remoteTabData.assets || {};
+      const newTab = {
+        id: tabId,
+        name: nameSuffix ? appendNameSuffix(remoteTabData.name, nameSuffix) : remoteTabData.name,
+        content: remoteTabData.content,
+        fileHandle: null,
+        isModified: false,
+        history: [remoteTabData.content],
+        historyIndex: 0,
+        assets: assets,
+        assetCounter: Object.keys(assets).length,
+        isDefaultName: false,
+        drawingAssetIds: remoteTabData.drawingAssetIds || {},
+        audioAssetIds: remoteTabData.audioAssetIds || {},
+        fileType: remoteTabData.fileType || 'markdown',
+        csvDelimiter: remoteTabData.csvDelimiter || null,
+        syncId: nameSuffix ? null : remoteTabData.syncId,
+        lastSyncedSnapshot: nameSuffix ? null : remoteTabSnapshot(remoteTabData)
+      };
+      tabs.push(newTab);
+      return newTab;
+    }
+
+    // Detects the "Markdown Studio WebDAV Config" credential-import document format:
+    // a heading followed by three "Label: value" lines. Opening/pasting a document in exactly
+    // this shape imports WebDAV credentials instead of just being read as a normal note.
+    function parseWebdavConfigDoc(content) {
+      if (typeof content !== 'string') return null;
+      const normalized = content.replace(/\r\n/g, '\n').trim();
+      const m = normalized.match(/^#\s+Markdown Studio WebDAV Config\s*\n+URL:\s*(\S[^\n]*)\n+Benutzername:\s*(\S[^\n]*)\n+App Kennwort:\s*(\S[^\n]*)\s*$/);
+      if (!m) return null;
+      return { url: m[1].trim(), username: m[2].trim(), password: m[3].trim() };
+    }
+
+    function importWebdavConfig(parsed) {
+      webdavConfig = {
+        url: parsed.url,
+        username: parsed.username,
+        password: parsed.password,
+        autosyncEnabled: webdavConfig ? webdavConfig.autosyncEnabled !== false : true,
+        autosyncIntervalMinutes: webdavConfig ? (webdavConfig.autosyncIntervalMinutes || 5) : 5,
+        lastSyncAt: null
+      };
+      saveWebdavConfig();
+      scheduleWebdavAutosyncTimer();
+      showToast('WebDAV-Zugangsdaten übernommen');
+    }
+
+    function webdavRequest(method, options) {
+      options = options || {};
+      // btoa() only accepts Latin1 — this is the standard trick for a UTF-8-safe base64
+      // encoding of "user:pass" before it goes into an HTTP Basic Authorization header.
+      const basic = btoa(unescape(encodeURIComponent(webdavConfig.username + ':' + webdavConfig.password)));
+      const headers = Object.assign({ 'Authorization': 'Basic ' + basic }, options.headers || {});
+      return fetch(webdavConfig.url, { method: method, headers: headers, body: options.body, credentials: 'omit' });
+    }
+
+    async function fetchRemoteWebdavState() {
+      const res = await webdavRequest('GET');
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error('GET ' + res.status);
+      const text = await res.text();
+      if (!text.trim()) return null;
+      try {
+        return JSON.parse(text);
+      } catch (err) {
+        throw new Error('Ungültiges Sync-Dateiformat auf dem Server');
+      }
+    }
+
+    async function putRemoteWebdavState(state) {
+      const res = await webdavRequest('PUT', { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(state) });
+      if (!res.ok) throw new Error('PUT ' + res.status);
+    }
+
+    function describeWebdavError(err) {
+      if (err instanceof TypeError) {
+        return 'Netzwerkfehler oder CORS blockiert den Zugriff – ist der Server erreichbar und erlaubt er Anfragen von dieser Seite?';
+      }
+      const msg = err.message || String(err);
+      if (/\b401\b/.test(msg)) return 'Zugangsdaten falsch (401)';
+      if (/\b403\b/.test(msg)) return 'Zugriff verweigert (403)';
+      return msg;
+    }
+
+    async function performWebdavSync(opts) {
+      const silent = !!(opts && opts.silent);
+      if (!isWebdavConfigured()) {
+        openWebdavModal();
+        return;
+      }
+      if (webdavSyncInProgress) return;
+
+      webdavSyncInProgress = true;
+      updateWebdavSyncUi('syncing');
+      saveStateToLocalStorage({ skipWebdavDebounce: true });
+
+      try {
+        const remote = await fetchRemoteWebdavState();
+        const remoteTabs = (remote && remote.tabs) || [];
+        const remoteById = new Map(remoteTabs.map(rt => [rt.syncId, rt]));
+        const localIds = new Set(tabs.map(t => ensureSyncId(t)));
+
+        const conflicts = [];
+        const resultTabsById = new Map();
+
+        for (const t of tabs) {
+          const syncId = ensureSyncId(t);
+          const rt = remoteById.get(syncId);
+
+          if (!rt) {
+            // Not on the server yet: a new local tab, or one deleted remotely — either way,
+            // push the local version (see the module comment on why deletion isn't synced).
+            resultTabsById.set(syncId, tabToSyncPayload(t));
+            continue;
+          }
+
+          const lastSnap = t.lastSyncedSnapshot;
+          const localSnap = tabSyncSnapshot(t);
+          const remoteSnap = remoteTabSnapshot(rt);
+          const localChanged = !lastSnap || localSnap !== lastSnap;
+          const remoteChanged = !lastSnap || remoteSnap !== lastSnap;
+
+          if (!remoteChanged) {
+            resultTabsById.set(syncId, tabToSyncPayload(t));
+          } else if (!localChanged) {
+            applyRemoteTabToLocal(t, rt);
+            resultTabsById.set(syncId, rt);
+          } else if (remoteSnap === localSnap) {
+            resultTabsById.set(syncId, tabToSyncPayload(t));
+          } else {
+            conflicts.push({ syncId: syncId, localTab: t, remoteTab: rt });
+          }
+        }
+
+        const newRemoteTabs = remoteTabs.filter(rt => !localIds.has(rt.syncId));
+
+        if (conflicts.length > 0) {
+          const decisions = await showWebdavConflictModal(conflicts);
+          for (const c of conflicts) {
+            const decision = decisions[c.syncId];
+            if (decision === 'local') {
+              resultTabsById.set(c.syncId, tabToSyncPayload(c.localTab));
+            } else if (decision === 'remote') {
+              applyRemoteTabToLocal(c.localTab, c.remoteTab);
+              resultTabsById.set(c.syncId, c.remoteTab);
+            } else if (decision === 'both') {
+              addRemoteTabAsNewLocalTab(c.remoteTab, ' (Server-Version)');
+              resultTabsById.set(c.syncId, tabToSyncPayload(c.localTab));
+            }
+            // no decision (modal closed early) -> skip: lastSyncedSnapshot stays stale so this
+            // document is flagged as conflicting again next time, instead of silently resolved.
+          }
+        }
+
+        for (const rt of newRemoteTabs) {
+          addRemoteTabAsNewLocalTab(rt);
+          resultTabsById.set(rt.syncId, rt);
+        }
+
+        await putRemoteWebdavState({ version: 1, updatedAt: Date.now(), tabs: Array.from(resultTabsById.values()) });
+
+        for (const t of tabs) {
+          const syncId = ensureSyncId(t);
+          if (resultTabsById.has(syncId)) {
+            t.lastSyncedSnapshot = tabSyncSnapshot(t);
+          }
+        }
+
+        const current = getCurrentTab();
+        if (current && editor.value !== current.content) {
+          editor.value = current.content;
+          updatePreview();
+        }
+        renderTabs();
+
+        webdavConfig.lastSyncAt = Date.now();
+        webdavConfig.lastSyncError = null;
+        saveWebdavConfig();
+        saveStateToLocalStorage({ skipWebdavDebounce: true });
+        updateWebdavSyncUi('idle');
+        if (!silent) showToast('Synchronisierung abgeschlossen');
+      } catch (err) {
+        console.warn('WebDAV-Sync fehlgeschlagen:', err);
+        updateWebdavSyncUi('error', describeWebdavError(err));
+        if (!silent) showToast('Sync fehlgeschlagen');
+      } finally {
+        webdavSyncInProgress = false;
+      }
+    }
+
+    function showWebdavConflictModal(conflicts) {
+      return new Promise(resolve => {
+        webdavConflictDecisions = {};
+        webdavConflictResolve = resolve;
+        const list = document.getElementById('webdavConflictList');
+        list.innerHTML = '';
+        const buttonSpecs = [['local', 'Lokal behalten'], ['remote', 'Server-Version'], ['both', 'Beide behalten']];
+        conflicts.forEach(c => {
+          const row = document.createElement('div');
+          row.className = 'conflict-row';
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'conflict-row-name';
+          nameSpan.textContent = c.localTab.name;
+          row.appendChild(nameSpan);
+
+          const btnGroup = document.createElement('div');
+          btnGroup.className = 'conflict-row-buttons';
+          buttonSpecs.forEach(([key, label]) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = label;
+            btn.onclick = () => {
+              webdavConflictDecisions[c.syncId] = key;
+              row.remove();
+              if (list.children.length === 0) finishWebdavConflictModal();
+            };
+            btnGroup.appendChild(btn);
+          });
+          row.appendChild(btnGroup);
+          list.appendChild(row);
+        });
+        document.getElementById('webdavConflictModal').classList.add('active');
+      });
+    }
+
+    function finishWebdavConflictModal() {
+      document.getElementById('webdavConflictModal').classList.remove('active');
+      const decisions = webdavConflictDecisions;
+      webdavConflictDecisions = {};
+      const resolve = webdavConflictResolve;
+      webdavConflictResolve = null;
+      if (resolve) resolve(decisions);
+    }
+
+    function closeWebdavConflictModal() {
+      finishWebdavConflictModal();
+    }
+
+    function updateWebdavSyncUi(state, errorMsg) {
+      const btn = document.getElementById('webdavSyncBtn');
+      if (btn) btn.classList.toggle('syncing', state === 'syncing');
+      webdavLastError = state === 'error' ? errorMsg : null;
+      updateWebdavStatusText();
+    }
+
+    function updateWebdavStatusText() {
+      const el = document.getElementById('webdavStatusText');
+      if (!el) return;
+      if (!isWebdavConfigured()) {
+        el.textContent = 'Noch nicht konfiguriert.';
+      } else if (webdavSyncInProgress) {
+        el.textContent = 'Synchronisiere...';
+      } else if (webdavLastError) {
+        el.textContent = 'Fehler: ' + webdavLastError;
+      } else if (webdavConfig.lastSyncAt) {
+        el.textContent = 'Zuletzt synchronisiert: ' + new Date(webdavConfig.lastSyncAt).toLocaleString('de-DE');
+      } else {
+        el.textContent = 'Noch nie synchronisiert.';
+      }
+    }
+
+    function openWebdavModal() {
+      loadWebdavConfig();
+      document.getElementById('webdavUrlInput').value = (webdavConfig && webdavConfig.url) || '';
+      document.getElementById('webdavUserInput').value = (webdavConfig && webdavConfig.username) || '';
+      document.getElementById('webdavPassInput').value = (webdavConfig && webdavConfig.password) || '';
+      document.getElementById('webdavAutosyncCheckbox').checked = !webdavConfig || webdavConfig.autosyncEnabled !== false;
+      document.getElementById('webdavIntervalSelect').value = String((webdavConfig && webdavConfig.autosyncIntervalMinutes) || 5);
+      updateWebdavStatusText();
+      document.getElementById('webdavModal').classList.add('active');
+    }
+
+    function closeWebdavModal() {
+      document.getElementById('webdavModal').classList.remove('active');
+    }
+
+    // Opens a fresh "Markdown Studio WebDAV Config" document — the same template
+    // parseWebdavConfigDoc() auto-imports on open — so it can be filled in and carried to
+    // another device. The URL is prefilled since it's just an endpoint address, not a
+    // credential; username/password are deliberately left blank. This also means the freshly
+    // created tab never matches the auto-import regex itself (which requires a non-blank value
+    // on all three lines), so opening it here never triggers importWebdavConfig() on itself.
+    function openWebdavConfigTemplate() {
+      closeWebdavModal();
+      const url = (webdavConfig && webdavConfig.url) || '';
+      const template = '# Markdown Studio WebDAV Config\n\nURL: ' + url + '\nBenutzername: \nApp Kennwort: \n';
+      createNewTab('Markdown Studio WebDAV Config.md', template);
+    }
+
+    function saveWebdavConfigFromModal() {
+      webdavConfig = {
+        url: document.getElementById('webdavUrlInput').value.trim(),
+        username: document.getElementById('webdavUserInput').value.trim(),
+        password: document.getElementById('webdavPassInput').value,
+        autosyncEnabled: document.getElementById('webdavAutosyncCheckbox').checked,
+        autosyncIntervalMinutes: parseInt(document.getElementById('webdavIntervalSelect').value, 10) || 5,
+        lastSyncAt: webdavConfig ? webdavConfig.lastSyncAt : null
+      };
+      saveWebdavConfig();
+      scheduleWebdavAutosyncTimer();
+      updateWebdavStatusText();
+      showToast('WebDAV-Einstellungen gespeichert');
+    }
+
+    function scheduleWebdavAutosyncTimer() {
+      if (webdavSyncTimer) {
+        clearInterval(webdavSyncTimer);
+        webdavSyncTimer = null;
+      }
+      if (webdavConfig && webdavConfig.autosyncEnabled && isWebdavConfigured()) {
+        const ms = Math.max(1, webdavConfig.autosyncIntervalMinutes || 5) * 60 * 1000;
+        webdavSyncTimer = setInterval(() => performWebdavSync({ silent: true }), ms);
+      }
+    }
+
+    // Debounced "sync on change": saveStateToLocalStorage() already runs after essentially every
+    // mutating action, but a network round-trip on every single one would hammer the server while
+    // the user is actively editing — so this waits for a quiet moment instead.
+    function scheduleWebdavDebouncedSync() {
+      if (!(webdavConfig && webdavConfig.autosyncEnabled && isWebdavConfigured())) return;
+      clearTimeout(webdavDebounceTimer);
+      webdavDebounceTimer = setTimeout(() => performWebdavSync({ silent: true }), 10000);
     }
 
     // --- SPELLCHECK TOGGLE ---
@@ -3437,15 +4229,39 @@ Mit freundlichen Grüßen
       });
     }
 
+    // Detected once from the opened/saved filename's extension and fixed for the tab's
+    // lifetime — there's no manual "convert this tab" toggle, and a later Save As under a
+    // different extension doesn't retroactively reclassify it (see createNewTab below).
+    function getFileTypeFromName(name) {
+      const ext = (name.match(/\.([a-z0-9]+)$/i) || [])[1];
+      if (!ext) return 'markdown';
+      const lower = ext.toLowerCase();
+      if (lower === 'csv') return 'csv';
+      if (lower === 'json') return 'json';
+      return 'markdown';
+    }
+
     function createNewTab(name = null, content = null, fileHandle = null) {
       const tabId = 'tab_' + tabIdCounter++;
       const tabName = name || 'Unbenannt ' + (tabs.length + 1) + '.md';
       const rawContent = content !== null ? content : (tabs.length === 0 ? defaultContent : '# ' + tabName.replace('.md', '') + '\n\n');
+      const fileType = getFileTypeFromName(tabName);
+
+      // A document matching the "Markdown Studio WebDAV Config" template is a credential
+      // import, not a note — opening/pasting it wires up sync instead of just displaying text.
+      // CSV/JSON files can't meaningfully match this markdown-shaped template anyway.
+      const webdavConfigFromDoc = fileType === 'markdown' ? parseWebdavConfigDoc(rawContent) : null;
+      if (webdavConfigFromDoc) {
+        importWebdavConfig(webdavConfigFromDoc);
+      }
 
       // Normalize any pre-existing inline base64 images (e.g. from a .md file saved
       // elsewhere, or from before this app stored images out-of-line) into the asset map too,
-      // so the source stays manageable regardless of where the content came from.
-      const { content: tabContent, assets } = extractInlineImagesToAssets(rawContent);
+      // so the source stays manageable regardless of where the content came from. Doesn't apply
+      // to CSV/JSON — there's no markdown image syntax to extract there.
+      const { content: tabContent, assets } = fileType === 'markdown'
+        ? extractInlineImagesToAssets(rawContent)
+        : { content: rawContent, assets: {} };
 
       const newTab = {
         id: tabId,
@@ -3458,7 +4274,12 @@ Mit freundlichen Grüßen
         assets: assets,
         assetCounter: Object.keys(assets).length,
         isDefaultName: name === null,
-        drawingAssetIds: {}
+        drawingAssetIds: {},
+        audioAssetIds: {},
+        syncId: null,
+        lastSyncedSnapshot: null,
+        fileType: fileType,
+        csvDelimiter: fileType === 'csv' ? detectCsvDelimiter(tabContent) : null
       };
 
       tabs.push(newTab);
@@ -3622,6 +4443,8 @@ Mit freundlichen Grüßen
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
         closeTemplateModal();
         closeToc();
+        closeWebdavModal();
+        if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();
       }
     });
 
@@ -3921,15 +4744,40 @@ Mit freundlichen Grüßen
       return nonEmpty.length > 0 ? nonEmpty : [''];
     }
 
+    // Classifies a single slide's markdown into one of three presentation layouts (see the
+    // .presentation-slide.centered-heading/.centered-text CSS above for what each does):
+    // - 'centered-heading': the slide is *only* a single level-1 heading.
+    // - 'centered-text': the slide has content but no heading at all (prose and/or lists).
+    // - 'normal': headings alongside other content — rendered exactly like the live preview.
+    // Uses marked's own tokenizer rather than regexing the raw text, so this stays correct for
+    // any block type (multi-line paragraphs, loose/tight lists, tables, ...) without having to
+    // hand-reimplement what marked already knows how to parse.
+    function classifySlidePresentationLayout(markdown) {
+      const tokens = marked.lexer(markdown.trim());
+      const significant = tokens.filter(t => t.type !== 'space');
+      if (significant.length === 0) return 'normal';
+
+      const headings = significant.filter(t => t.type === 'heading');
+      if (significant.length === 1 && headings.length === 1 && headings[0].depth === 1) {
+        return 'centered-heading';
+      }
+      if (headings.length === 0) {
+        return 'centered-text';
+      }
+      return 'normal';
+    }
+
     function renderPresentationSlide() {
-      presentationSlideEl.className = 'presentation-slide markdown-body ' + currentTheme;
+      const slideMarkdown = presentationSlides[presentationIndex];
+      const layout = classifySlidePresentationLayout(slideMarkdown);
+      presentationSlideEl.className = 'presentation-slide markdown-body ' + currentTheme + (layout === 'normal' ? '' : ' ' + layout);
       // The theme's --preview-bg is scoped to .markdown-body.theme-xxx (presentationSlideEl),
       // which doesn't cascade back up to its own parent — so the overlay needs its background
       // set explicitly, or it stays transparent and the editor/preview bleed through in the
       // letterboxing outside the slide's max-width on wide screens.
       presentationOverlay.style.backgroundColor = getComputedStyle(presentationSlideEl).backgroundColor;
       suppressDrawingControls = true;
-      presentationSlideEl.innerHTML = marked.parse(presentationSlides[presentationIndex]);
+      presentationSlideEl.innerHTML = marked.parse(slideMarkdown);
       suppressDrawingControls = false;
       presentationCounter.textContent = (presentationIndex + 1) + ' / ' + presentationSlides.length;
     }
@@ -3945,6 +4793,17 @@ Mit freundlichen Grüßen
       if (presentationIndex > 0) {
         presentationIndex--;
         renderPresentationSlide();
+      }
+    }
+
+    // Tapping/clicking the left half of the overlay goes back, the right half advances —
+    // this is what lets touch users (no arrow keys) navigate backward at all.
+    function presentationHandleClick(e) {
+      const rect = presentationOverlay.getBoundingClientRect();
+      if (e.clientX - rect.left < rect.width / 2) {
+        presentationPrev();
+      } else {
+        presentationNext();
       }
     }
 
@@ -4024,9 +4883,56 @@ Mit freundlichen Grüßen
       saveStateToLocalStorage();
     }
 
+    // --- CSV / JSON preview rendering ---
+    // Markdown is the only format marked.parse() understands; CSV/JSON tabs (tab.fileType,
+    // set from the file extension at open time — see createNewTab) render through these instead.
+    // renderContentForTab() is the one shared dispatch point used by updatePreview(),
+    // exportAsHtml(), and copyFormattedToClipboard(), so all three stay consistent automatically.
+
+    function escapeHtmlText(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function renderCsvPreview(content, delimiter) {
+      const rows = parseCsv(content, delimiter || detectCsvDelimiter(content));
+      if (rows.length === 0) {
+        return '<div class="empty-state"><h3>Leere CSV-Datei</h3></div>';
+      }
+      const colCount = Math.max(...rows.map(r => r.length));
+      let html = '<table class="csv-preview-table"><thead><tr>';
+      for (let c = 0; c < colCount; c++) html += '<th>' + escapeHtmlText(rows[0][c] || '') + '</th>';
+      html += '</tr></thead><tbody>';
+      for (let r = 1; r < rows.length; r++) {
+        html += '<tr>';
+        for (let c = 0; c < colCount; c++) html += '<td>' + escapeHtmlText(rows[r][c] || '') + '</td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      return html;
+    }
+
+    function renderJsonPreview(content) {
+      let parsed;
+      try {
+        parsed = JSON.parse(content);
+      } catch (err) {
+        return '<div class="empty-state"><h3>Ungültiges JSON</h3><p>' + escapeHtmlText(err.message) + '</p></div>';
+      }
+      const pretty = JSON.stringify(parsed, null, 2);
+      const language = hljs.getLanguage('json') ? 'json' : null;
+      const highlighted = language ? hljs.highlight(pretty, { language }).value : escapeHtmlText(pretty);
+      return '<pre><code class="hljs language-json">' + highlighted + '</code></pre>';
+    }
+
+    function renderContentForTab(tab, content) {
+      if (tab && tab.fileType === 'csv') return renderCsvPreview(content, tab.csvDelimiter);
+      if (tab && tab.fileType === 'json') return renderJsonPreview(content);
+      return marked.parse(content);
+    }
+
     function updatePreview() {
       if (!activeTabId) return;
-      preview.innerHTML = marked.parse(editor.value);
+      preview.innerHTML = renderContentForTab(getCurrentTab(), editor.value);
       attachTaskCheckboxListeners();
       updateStats();
       updateFormatButtonStates();
@@ -4419,7 +5325,13 @@ Mit freundlichen Grüßen
       }
     });
 
-    // --- TABLE CONTROLS (row/column insert & delete when the cursor is inside a table) ---
+    // --- TABLE CONTROLS (row/column insert, delete & move — markdown pipe tables and CSV files) ---
+    // The row/column operations below (tableInsertRow, tableMoveColumn, ...) are shared between
+    // markdown pipe tables and CSV documents; only findTableBlock() (what counts as "the table"
+    // and its header/"separator" line) and the cell parse/build primitives (getRowCells,
+    // buildRowFromCells, ...) differ, dispatching on isCsvTab(). A CSV file has no separator row
+    // at all, so its `separatorLine` is just 0 (the header/first row) — reusing the same field
+    // lets every "can't touch the header/separator" guard below work unmodified for both.
 
     const TABLE_SEPARATOR_RE = /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)*\|?\s*$/;
 
@@ -4433,17 +5345,40 @@ Mit freundlichen Grüßen
       return offset;
     }
 
-    function findTableBlock() {
-      const lines = editor.value.split('\n');
-      const pos = editor.selectionStart;
+    function isCsvTab() {
+      const tab = getCurrentTab();
+      return !!(tab && tab.fileType === 'csv');
+    }
 
-      let offset = 0, cursorLine = lines.length - 1;
+    function findCursorLine(lines) {
+      const pos = editor.selectionStart;
+      let offset = 0;
       for (let i = 0; i < lines.length; i++) {
         const lineEnd = offset + lines[i].length;
-        if (pos <= lineEnd) { cursorLine = i; break; }
+        if (pos <= lineEnd) return i;
         offset = lineEnd + 1;
       }
+      return lines.length - 1;
+    }
 
+    function findTableBlock() {
+      const tab = getCurrentTab();
+      if (tab && tab.fileType === 'json') return null;
+
+      const lines = editor.value.split('\n');
+
+      if (tab && tab.fileType === 'csv') {
+        // The whole document is the table — no delimiter line marks where it starts/ends,
+        // unlike a markdown pipe table. A lone trailing blank line (from the file's closing
+        // newline) isn't a data row, so it's excluded rather than offered up as one.
+        const hasTrailingNewline = lines.length > 1 && lines[lines.length - 1] === '';
+        const rowCount = hasTrailingNewline ? lines.length - 1 : lines.length;
+        if (rowCount < 1) return null;
+        const cursorLine = Math.min(findCursorLine(lines), rowCount - 1);
+        return { lines, start: 0, end: rowCount - 1, cursorLine, separatorLine: 0 };
+      }
+
+      const cursorLine = findCursorLine(lines);
       if (!isTableRowLine(lines[cursorLine])) return null;
 
       let start = cursorLine;
@@ -4456,9 +5391,11 @@ Mit freundlichen Grüßen
       return { lines, start, end, cursorLine, separatorLine: start + 1 };
     }
 
+    // --- Markdown pipe-table cell parsing/building ---
+
     // Cell boundaries as character ranges within a row's raw text — works whether the row
     // has leading/trailing pipes or not (both are valid GFM table syntax).
-    function getCellRanges(lineText) {
+    function getMarkdownCellRanges(lineText) {
       const pipePositions = [];
       for (let i = 0; i < lineText.length; i++) {
         if (lineText[i] === '|' && lineText[i - 1] !== '\\') pipePositions.push(i);
@@ -4478,16 +5415,103 @@ Mit freundlichen Grüßen
       return ranges;
     }
 
-    function getRowCells(lineText) {
-      return getCellRanges(lineText).map(r => lineText.substring(r.start, r.end).trim());
-    }
-
-    function buildRowFromCells(cells) {
+    function buildMarkdownRow(cells) {
       return '| ' + cells.join(' | ') + ' |';
     }
 
+    // --- CSV cell parsing/building (quote-aware, RFC 4180-ish) ---
+
+    function detectCsvDelimiter(content) {
+      const firstLine = content.split('\n', 1)[0] || '';
+      const semicolons = (firstLine.match(/;/g) || []).length;
+      const commas = (firstLine.match(/,/g) || []).length;
+      return semicolons > commas ? ';' : ',';
+    }
+
+    // A real char-by-char parser rather than a naive split() — a quoted field can legally
+    // contain the delimiter, literal newlines, and `""`-escaped quotes.
+    function parseCsv(content, delimiter) {
+      const rows = [];
+      let row = [], field = '', inQuotes = false;
+      for (let i = 0; i < content.length; i++) {
+        const ch = content[i];
+        if (inQuotes) {
+          if (ch === '"') {
+            if (content[i + 1] === '"') { field += '"'; i++; } else { inQuotes = false; }
+          } else {
+            field += ch;
+          }
+          continue;
+        }
+        if (ch === '"' && field === '') { inQuotes = true; continue; }
+        if (ch === delimiter) { row.push(field); field = ''; continue; }
+        if (ch === '\r') continue;
+        if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; continue; }
+        field += ch;
+      }
+      if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+      return rows;
+    }
+
+    function quoteCsvFieldIfNeeded(field, delimiter) {
+      if (field.includes(delimiter) || field.includes('"') || field.includes('\n') || field.includes('\r')) {
+        return '"' + field.replace(/"/g, '""') + '"';
+      }
+      return field;
+    }
+
+    // Cell boundaries as character ranges, mirroring getMarkdownCellRanges's role for
+    // column-index-at-cursor detection — quote-aware so a delimiter inside a quoted field
+    // isn't mistaken for a cell boundary.
+    function getCsvCellRanges(lineText, delimiter) {
+      const ranges = [];
+      let cellStart = 0;
+      let inQuotes = false;
+      for (let i = 0; i < lineText.length; i++) {
+        const ch = lineText[i];
+        if (ch === '"') {
+          if (inQuotes && lineText[i + 1] === '"') { i++; continue; }
+          inQuotes = !inQuotes;
+          continue;
+        }
+        if (ch === delimiter && !inQuotes) {
+          ranges.push({ start: cellStart, end: i });
+          cellStart = i + 1;
+        }
+      }
+      ranges.push({ start: cellStart, end: lineText.length });
+      return ranges;
+    }
+
+    function unquoteCsvField(field) {
+      const trimmed = field.trim();
+      if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+        return trimmed.slice(1, -1).replace(/""/g, '"');
+      }
+      return trimmed;
+    }
+
+    function buildCsvRow(cells, delimiter) {
+      return cells.map(c => quoteCsvFieldIfNeeded(c, delimiter)).join(delimiter);
+    }
+
+    // --- Shared row/column operations (dispatch on isCsvTab()) ---
+
+    function getRowCells(lineText) {
+      if (isCsvTab()) {
+        const delimiter = getCurrentTab().csvDelimiter || ',';
+        return getCsvCellRanges(lineText, delimiter).map(r => unquoteCsvField(lineText.substring(r.start, r.end)));
+      }
+      return getMarkdownCellRanges(lineText).map(r => lineText.substring(r.start, r.end).trim());
+    }
+
+    function buildRowFromCells(cells) {
+      if (isCsvTab()) return buildCsvRow(cells, getCurrentTab().csvDelimiter || ',');
+      return buildMarkdownRow(cells);
+    }
+
     function getColumnIndexAtCursor(lineText, colInLine) {
-      const ranges = getCellRanges(lineText);
+      const ranges = isCsvTab() ? getCsvCellRanges(lineText, getCurrentTab().csvDelimiter || ',') : getMarkdownCellRanges(lineText);
       for (let i = 0; i < ranges.length; i++) {
         if (colInLine >= ranges[i].start && colInLine <= ranges[i].end) return i;
       }
@@ -4495,6 +5519,12 @@ Mit freundlichen Grüßen
     }
 
     function offsetOfCellInRow(cells, cellIndex) {
+      if (isCsvTab()) {
+        const delimiter = getCurrentTab().csvDelimiter || ',';
+        let offset = 0;
+        for (let i = 0; i < cellIndex; i++) offset += quoteCsvFieldIfNeeded(cells[i], delimiter).length + delimiter.length;
+        return offset;
+      }
       let offset = 2; // '| '
       for (let i = 0; i < cellIndex; i++) offset += cells[i].length + 3; // cell + ' | '
       return offset;
@@ -4512,17 +5542,18 @@ Mit freundlichen Grüßen
     function tableInsertRow(direction) {
       const table = findTableBlock();
       if (!table) return;
-      const { lines, cursorLine, separatorLine } = table;
+      const { lines, start, cursorLine, separatorLine } = table;
 
-      const colCount = getRowCells(lines[separatorLine - 1]).length;
-      const emptyRow = '|' + Array(colCount).fill(' ').join('|') + '|';
+      const colCount = getRowCells(lines[start]).length;
+      const csv = isCsvTab();
+      const emptyRow = csv ? buildRowFromCells(Array(colCount).fill('')) : '|' + Array(colCount).fill(' ').join('|') + '|';
 
       const targetLineIndex = cursorLine <= separatorLine
         ? separatorLine + 1
         : (direction === 'before' ? cursorLine : cursorLine + 1);
 
       lines.splice(targetLineIndex, 0, emptyRow);
-      commitTableEdit(lines, lineStartOffset(lines, targetLineIndex) + 2);
+      commitTableEdit(lines, lineStartOffset(lines, targetLineIndex) + (csv ? 0 : 2));
     }
 
     function tableDeleteRow() {
@@ -4536,10 +5567,29 @@ Mit freundlichen Grüßen
       commitTableEdit(lines, lineStartOffset(lines, newCursorLine));
     }
 
+    function tableMoveRow(direction) {
+      const table = findTableBlock();
+      if (!table) return;
+      const { lines, cursorLine, separatorLine, end } = table;
+      if (cursorLine <= separatorLine) return; // header/separator can't be moved
+
+      const targetLine = direction === 'up' ? cursorLine - 1 : cursorLine + 1;
+      if (targetLine <= separatorLine || targetLine > end) return; // already at the top/bottom
+
+      const posInLine = editor.selectionStart - lineStartOffset(lines, cursorLine);
+      const tmp = lines[cursorLine];
+      lines[cursorLine] = lines[targetLine];
+      lines[targetLine] = tmp;
+
+      const newCursorOffset = lineStartOffset(lines, targetLine) + Math.min(posInLine, lines[targetLine].length);
+      commitTableEdit(lines, newCursorOffset);
+    }
+
     function tableInsertColumn(direction) {
       const table = findTableBlock();
       if (!table) return;
       const { lines, start, end, cursorLine, separatorLine } = table;
+      const csv = isCsvTab();
 
       const lineStart = lineStartOffset(lines, cursorLine);
       const posInLine = editor.selectionStart - lineStart;
@@ -4549,7 +5599,7 @@ Mit freundlichen Grüßen
       let cursorRowCells = null;
       for (let i = start; i <= end; i++) {
         const cells = getRowCells(lines[i]);
-        cells.splice(insertAt, 0, i === separatorLine ? '---' : '');
+        cells.splice(insertAt, 0, (i === separatorLine && !csv) ? '---' : '');
         lines[i] = buildRowFromCells(cells);
         if (i === cursorLine) cursorRowCells = cells;
       }
@@ -4560,9 +5610,9 @@ Mit freundlichen Grüßen
     function tableDeleteColumn() {
       const table = findTableBlock();
       if (!table) return;
-      const { lines, start, end, cursorLine, separatorLine } = table;
+      const { lines, start, end, cursorLine } = table;
 
-      const colCount = getRowCells(lines[separatorLine]).length;
+      const colCount = getRowCells(lines[start]).length;
       if (colCount <= 1) return; // keep at least one column
 
       const lineStart = lineStartOffset(lines, cursorLine);
@@ -4579,6 +5629,62 @@ Mit freundlichen Grüßen
 
       const targetIndex = Math.min(colIndex, cursorRowCells.length - 1);
       commitTableEdit(lines, lineStartOffset(lines, cursorLine) + offsetOfCellInRow(cursorRowCells, targetIndex));
+    }
+
+    function tableMoveColumn(direction) {
+      const table = findTableBlock();
+      if (!table) return;
+      const { lines, start, end, cursorLine } = table;
+
+      const lineStart = lineStartOffset(lines, cursorLine);
+      const posInLine = editor.selectionStart - lineStart;
+      const colIndex = getColumnIndexAtCursor(lines[cursorLine], posInLine);
+      const targetIndex = direction === 'left' ? colIndex - 1 : colIndex + 1;
+
+      const colCount = getRowCells(lines[start]).length;
+      if (targetIndex < 0 || targetIndex >= colCount) return; // already at the leftmost/rightmost column
+
+      let cursorRowCells = null;
+      for (let i = start; i <= end; i++) {
+        const cells = getRowCells(lines[i]);
+        const tmp = cells[colIndex];
+        cells[colIndex] = cells[targetIndex];
+        cells[targetIndex] = tmp;
+        lines[i] = buildRowFromCells(cells);
+        if (i === cursorLine) cursorRowCells = cells;
+      }
+
+      commitTableEdit(lines, lineStartOffset(lines, cursorLine) + offsetOfCellInRow(cursorRowCells, targetIndex));
+    }
+
+    // Sorts every body row by the value in the cursor's column. Stateless direction toggle —
+    // rather than remembering "last sorted column/direction" across clicks, it just checks
+    // whether the rows are *already* in ascending order for this column; if so this click means
+    // "reverse it", otherwise it means "sort ascending". A stable sort (guaranteed by the spec
+    // for Array.prototype.sort) keeps this check well-defined even with duplicate values.
+    function tableSortByColumn() {
+      const table = findTableBlock();
+      if (!table) return;
+      const { lines, start, cursorLine, separatorLine, end } = table;
+      const bodyStart = separatorLine + 1;
+      if (end < bodyStart + 1) return; // need at least 2 body rows for sorting to mean anything
+
+      const lineStart = lineStartOffset(lines, cursorLine);
+      const posInLine = editor.selectionStart - lineStart;
+      const colIndex = getColumnIndexAtCursor(lines[cursorLine], posInLine);
+
+      const bodyRows = lines.slice(bodyStart, end + 1).map(l => getRowCells(l));
+      const collator = new Intl.Collator('de', { numeric: true, sensitivity: 'base' });
+      const compareAsc = (a, b) => collator.compare(a[colIndex] || '', b[colIndex] || '');
+
+      const ascending = bodyRows.slice().sort(compareAsc);
+      const alreadyAscending = bodyRows.every((row, i) => row === ascending[i]);
+      const sorted = alreadyAscending ? bodyRows.slice().sort((a, b) => compareAsc(b, a)) : ascending;
+
+      for (let i = 0; i < sorted.length; i++) {
+        lines[bodyStart + i] = buildRowFromCells(sorted[i]);
+      }
+      commitTableEdit(lines, lineStartOffset(lines, bodyStart));
     }
 
     function updateTableControlsVisibility() {
@@ -4757,16 +5863,23 @@ Mit freundlichen Grüßen
       saveCurrentFileAs();
     }
 
+    function getSaveFileTypeMeta(tab) {
+      if (tab.fileType === 'csv') return { description: 'CSV-Datei', mime: 'text/csv', extensions: ['.csv'] };
+      if (tab.fileType === 'json') return { description: 'JSON-Datei', mime: 'application/json', extensions: ['.json'] };
+      return { description: 'Markdown File', mime: 'text/markdown', extensions: ['.md', '.markdown'] };
+    }
+
     async function saveCurrentFileAs() {
       const currentTab = getCurrentTab();
       if (!currentTab) return;
       const contentToSave = inlineAssetsIntoContent(editor.value, currentTab.assets);
+      const typeMeta = getSaveFileTypeMeta(currentTab);
 
       if ('showSaveFilePicker' in window) {
         try {
           const handle = await window.showSaveFilePicker({
             suggestedName: currentTab.name,
-            types: [{ description: 'Markdown File', accept: { 'text/markdown': ['.md', '.markdown'] } }]
+            types: [{ description: typeMeta.description, accept: { [typeMeta.mime]: typeMeta.extensions } }]
           });
           currentTab.fileHandle = handle;
           currentTab.name = handle.name;
@@ -4781,7 +5894,7 @@ Mit freundlichen Grüßen
         } catch (err) { if (err.name === 'AbortError') return; }
       }
 
-      const blob = new Blob([contentToSave], { type: 'text/markdown;charset=utf-8;' });
+      const blob = new Blob([contentToSave], { type: typeMeta.mime + ';charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = currentTab.name;
@@ -4809,7 +5922,7 @@ Mit freundlichen Grüßen
         ? document.getElementById('hljs-theme-dark').textContent
         : document.getElementById('hljs-theme-light').textContent;
 
-      const title = currentTab.name.replace(/\.(md|markdown|txt)$/i, '');
+      const title = currentTab.name.replace(/\.(md|markdown|txt|csv|json)$/i, '');
 
       let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n<style>\n' +
         '  body { margin: 0; padding: 40px 20px; font-family: ' + cs.fontFamily + '; background: ' + cs.getPropertyValue('--preview-bg').trim() + '; }\n' +
@@ -4825,20 +5938,21 @@ Mit freundlichen Grüßen
         '  .markdown-body a { color: var(--preview-link); text-decoration: none; }\n' +
         '  .markdown-body a:hover { text-decoration: underline; }\n' +
         '  .markdown-body img { max-width: 100%; height: auto; border-radius: 4px; }\n' +
+        '  .markdown-body .audio-asset-player { display: block; width: 100%; max-width: 420px; margin: 8px 0; }\n' +
         '  .markdown-body blockquote { padding: 0 1em; opacity: .85; border-left: .25em solid var(--preview-border); }\n' +
         '  .markdown-body code { padding: .2em .4em; font-size: 85%; background-color: var(--preview-code-bg); border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; }\n' +
         '  .markdown-body pre { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: var(--preview-code-bg); border-radius: 6px; }\n' +
         '  .markdown-body pre code { background-color: transparent; padding: 0; }\n' +
         '  .markdown-body ul, .markdown-body ol { padding-left: 2em; }\n' +
         '  .markdown-body li.task-list-item { list-style-type: none; margin-left: -1.4em; }\n' +
-        '  .markdown-body table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }\n' +
+        '  .markdown-body table { display: block; overflow-x: auto; border-collapse: collapse; width: 100%; margin-bottom: 16px; }\n' +
         '  .markdown-body table th, .markdown-body table td { padding: 8px 13px; border: 1px solid var(--preview-header-border); }\n' +
         '  .markdown-body table th { font-weight: 600; background-color: var(--preview-code-bg); }\n' +
         '  .markdown-body hr { height: 2px; margin: 24px 0; background-color: var(--preview-header-border); border: 0; }\n' +
         hljsCss + '\n';
 
       suppressDrawingControls = true;
-      const bodyHtml = marked.parse(editor.value);
+      const bodyHtml = renderContentForTab(currentTab, editor.value);
       suppressDrawingControls = false;
 
       html += '</style>\n</head>\n<body>\n<div class="markdown-body">\n' + bodyHtml + '\n</div>\n</body>\n</html>';
@@ -4918,8 +6032,9 @@ Mit freundlichen Grüßen
       const currentTab = getCurrentTab();
       if (!currentTab) return;
 
+      const content = currentTab.fileType === 'markdown' ? expandBlankLinesForClipboard(editor.value) : editor.value;
       suppressDrawingControls = true;
-      const bodyHtml = marked.parse(expandBlankLinesForClipboard(editor.value));
+      const bodyHtml = renderContentForTab(currentTab, content);
       suppressDrawingControls = false;
 
       const container = document.createElement('div');
@@ -4988,6 +6103,117 @@ Mit freundlichen Grüßen
       if (!file) return;
       const choice = await requestImageInsertChoice(file);
       if (choice) insertImageAsset(choice.dataUrl, choice.name);
+    }
+
+    // --- AUDIO RECORDER ---
+    // Reuses the same asset-map pattern as pasted images (see above): the recording is stored
+    // in tab.assets and referenced from the source as a short `![Sprachaufnahme](asset:audio_N)`
+    // — never inline base64 — with tab.audioAssetIds marking that ID as audio (mirrors how
+    // tab.drawingAssetIds marks a drawing) so hljsRenderer.image renders it as <audio> instead
+    // of <img>. Unlike an image (chosen from a file, inserted synchronously), a recording can run
+    // for a while — the user could switch tabs mid-recording — so the target tab/cursor position
+    // is captured at record-start time, not read fresh when the recording finally stops.
+
+    let audioMediaRecorder = null;
+    let audioRecorderChunks = [];
+    let audioRecorderStream = null;
+    let audioInsertTarget = null;
+
+    function toggleAudioRecording() {
+      if (audioMediaRecorder && audioMediaRecorder.state === 'recording') {
+        audioMediaRecorder.stop();
+      } else {
+        startAudioRecording();
+      }
+    }
+
+    async function startAudioRecording() {
+      if (editor.disabled) return;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+        showToast('Sprachaufnahme wird von diesem Browser nicht unterstützt');
+        return;
+      }
+
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (err) {
+        showToast('Mikrofonzugriff verweigert oder nicht verfügbar');
+        return;
+      }
+
+      audioRecorderStream = stream;
+      audioInsertTarget = { tabId: activeTabId, start: editor.selectionStart, end: editor.selectionEnd };
+      audioRecorderChunks = [];
+
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+      audioMediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      audioMediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) audioRecorderChunks.push(e.data); };
+      audioMediaRecorder.onerror = () => {
+        showToast('Aufnahme fehlgeschlagen');
+        setAudioRecordingUiState(false);
+      };
+      audioMediaRecorder.onstop = onAudioRecordingStop;
+      audioMediaRecorder.start();
+      setAudioRecordingUiState(true);
+    }
+
+    function onAudioRecordingStop() {
+      const blob = new Blob(audioRecorderChunks, { type: (audioMediaRecorder && audioMediaRecorder.mimeType) || 'audio/webm' });
+      audioRecorderChunks = [];
+      audioRecorderStream.getTracks().forEach(track => track.stop());
+      audioRecorderStream = null;
+      setAudioRecordingUiState(false);
+
+      const target = audioInsertTarget;
+      audioInsertTarget = null;
+      const reader = new FileReader();
+      reader.onload = () => insertAudioAsset(reader.result, target);
+      reader.readAsDataURL(blob);
+    }
+
+    function setAudioRecordingUiState(recording) {
+      const btn = document.getElementById('audioRecordBtn');
+      if (!btn) return;
+      btn.classList.toggle('recording', recording);
+      btn.title = recording ? 'Aufnahme stoppen' : 'Sprachaufnahme einfügen';
+    }
+
+    function insertAudioAsset(dataUrl, target) {
+      const tab = tabs.find(t => t.id === target.tabId);
+      if (!tab) return;
+
+      if (!tab.assets) tab.assets = {};
+      tab.assetCounter = (tab.assetCounter || 0) + 1;
+      const assetId = 'audio_' + tab.assetCounter;
+      tab.assets[assetId] = dataUrl;
+      if (!tab.audioAssetIds) tab.audioAssetIds = {};
+      tab.audioAssetIds[assetId] = true;
+
+      const markdownRef = '![Sprachaufnahme](asset:' + assetId + ')';
+
+      if (tab.id === activeTabId) {
+        editor.value = editor.value.substring(0, target.start) + markdownRef + editor.value.substring(target.end);
+        const newPos = target.start + markdownRef.length;
+        editor.setSelectionRange(newPos, newPos);
+        editor.focus();
+        recordHistory();
+        markActiveTabModified();
+        updatePreview();
+      } else {
+        // The user switched away from the recording's tab while it was running — splice into
+        // its stored content directly rather than touching the (unrelated) active tab/editor.
+        tab.content = tab.content.substring(0, target.start) + markdownRef + tab.content.substring(target.end);
+        tab.isModified = true;
+        tab.history = tab.history.slice(0, tab.historyIndex + 1);
+        tab.history.push(tab.content);
+        tab.historyIndex = tab.history.length - 1;
+        if (tab.history.length > 80) { tab.history.shift(); tab.historyIndex--; }
+        renderTabs();
+      }
+
+      saveStateToLocalStorage();
+      showToast('Sprachaufnahme eingefügt');
     }
 
     // --- DRAWING (Excalidraw embedded via iframe) ---
@@ -5369,8 +6595,15 @@ Mit freundlichen Grüßen
     });
 
     // INITIALIZATION
+    loadWebdavConfig();
+    scheduleWebdavAutosyncTimer();
     if (!loadStateFromLocalStorage()) {
       createNewTab();
+    }
+    if (isWebdavConfigured()) {
+      // Slight delay so a silent startup sync doesn't compete with the rest of the app
+      // still wiring itself up (theme, pane visibility, etc.).
+      setTimeout(() => performWebdavSync({ silent: true }), 1500);
     }
   </script>
 </body>
