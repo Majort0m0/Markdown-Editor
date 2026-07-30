@@ -19,18 +19,21 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
 - **Tabellen-Werkzeuge** — Zeilen/Spalten einfügen, löschen, verschieben und nach einer Spalte sortieren, sobald der Cursor in einer Tabelle steht (funktioniert identisch für Markdown- und CSV-Tabellen)
 - **Frei verschiebbarer Trenner** zwischen Editor und Vorschau — das Verhältnis lässt sich beliebig in beide Richtungen ziehen
-- **Suchen & Ersetzen**, **Rückgängig/Wiederherstellen**, optionale **Rechtschreibprüfung**
+- **Suchen & Ersetzen** mit Treffer-Zähler ("3 von 12") und `‹`/`›`-Navigation zwischen allen Fundstellen; die Ersetzen-Funktion lässt sich per Checkbox ein-/ausblenden
+- **Formatierung aufräumen** — ein Klick normalisiert überflüssige Leerzeilen im Dokument (Inhalt in Codeblöcken bleibt unangetastet)
+- **Rückgängig/Wiederherstellen**, optionale **Rechtschreibprüfung**
 
 ### Medien einfügen
 - **Bilder einfügen** per Copy-Paste, Drag & Drop oder Datei-Dialog — mit Auswahl, ob das Bild verkleinert oder im Original eingefügt werden soll
 - **📷 Kamera** — Foto direkt in der App aufnehmen (auf dem iPhone/iPad wahlweise Front- oder Rückkamera), optional zuschneiden, danach wie ein eingefügtes Bild weiterverarbeiten
 - **Zeichnungen** — eingebauter Excalidraw-Editor (Button "🖌️ Zeichnung"), Skizzen bleiben jederzeit bearbeitbar: Klick auf die Zeichnung öffnet sie erneut zum Weiterzeichnen
 - **🎙️ Sprachaufnahmen** — Audio direkt in das Dokument einbetten, in der Vorschau über einen Player abspielbar
+- **🎬 Video einbetten** — YouTube- oder Vimeo-Link (oder eine direkte Videodatei-URL) einfügen, wird in der Vorschau automatisch als eingebetteter Player angezeigt
 
 ### Vorschau & Darstellung
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau
 - **Inhaltsverzeichnis** — schwebender Button über der Vorschau, Klick auf eine Überschrift springt direkt dorthin
-- **10 Designs** — GitHub Light/Dark, Solarized Paper, Nord Dark, Academic Serif, Dracula, Monokai, Gruvbox Dark, Sepia, High Contrast (inkl. farbiger Code-Hervorhebung)
+- **15 Designs** — GitHub Light/Dark, Solarized Paper, Nord Dark, Academic Serif, Dracula, Monokai, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Mocha/Latte, Rosé Pine, Ayu Light (inkl. farbiger Code-Hervorhebung)
 - **Fokus-Modi** — Editor oder Vorschau einzeln ausblenden, plus echter **Vollbildmodus** (mit Fallback für iOS Safari)
 - **Präsentationsmodus** — Folien werden automatisch an Trennlinien (`---`) aufgeteilt und lassen sich per Tastatur, Klick oder Touch durchblättern, mit automatischer Zentrierung für reine Titel- bzw. Text-Folien
 
