@@ -3387,6 +3387,27 @@ return He}()
     </div>
   </div>
 
+  <!-- HTML Export Choice Dialog (shown only when the document contains at least one slide-break line) -->
+  <div class="modal-overlay" id="exportChoiceModal" onclick="if (event.target === this) closeExportChoiceModal()">
+    <div class="modal-card image-dialog-card">
+      <div class="modal-header">
+        <h2>📤 Als HTML exportieren</h2>
+        <button class="icon-btn" onclick="closeExportChoiceModal()" title="Abbrechen">✕</button>
+      </div>
+      <p class="image-dialog-info">Das Dokument enthält Trennlinien (Folien) — wie soll exportiert werden?</p>
+      <div class="image-dialog-choices">
+        <button class="image-dialog-choice-btn" type="button" onclick="chooseNormalHtmlExport()">
+          <span>🌐 Als normales HTML</span>
+          <span class="img-dialog-detail">Eine durchgehende Seite, wie in der Vorschau</span>
+        </button>
+        <button class="image-dialog-choice-btn" type="button" onclick="chooseEbookWidgetExport()">
+          <span>📖 Als eBook-Widget (Diaschau)</span>
+          <span class="img-dialog-detail">Eigenständige Diaschau mit Folienwechsel, wie im Präsentationsmodus</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- WebDAV Sync settings -->
   <div class="modal-overlay" id="webdavModal" onclick="if (event.target === this) closeWebdavModal()">
     <div class="modal-card">
@@ -4927,6 +4948,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         closeShortcutsModal();
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
         if (document.getElementById('cameraModal').classList.contains('active')) closeCameraModal();
+        closeExportChoiceModal();
         closeTemplateModal();
         closeToc();
         closeWebdavModal();
@@ -6455,40 +6477,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // --- EXPORT AS STANDALONE HTML ---
 
-    function exportAsHtml() {
-      const currentTab = getCurrentTab();
-      if (!currentTab) return;
-
-      // An HTML tab's content already IS a standalone HTML document — wrapping it in the
-      // markdown-export template below would double-nest <html>/<head>/<body>. Just download
-      // the source as-is instead (functionally the download-fallback half of Save As).
-      if (currentTab.fileType === 'html') {
-        const blob = new Blob([editor.value], { type: 'text/html;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = currentTab.name.replace(/\.html?$/i, '') + '.html';
-        link.click();
-        URL.revokeObjectURL(link.href);
-        return;
-      }
-
-      const cs = getComputedStyle(preview);
-      const previewVars = ['--preview-bg', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
-        .map(name => `        ${name}: ${cs.getPropertyValue(name).trim()};`)
-        .join('\n');
-
-      const hljsCss = DARK_THEMES.has(currentTheme)
-        ? document.getElementById('hljs-theme-dark').textContent
-        : document.getElementById('hljs-theme-light').textContent;
-
-      const title = currentTab.name.replace(/\.(md|markdown|txt|csv|json)$/i, '');
-
-      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n<style>\n' +
-        '  body { margin: 0; padding: 40px 20px; font-family: ' + cs.fontFamily + '; background: ' + cs.getPropertyValue('--preview-bg').trim() + '; }\n' +
-        '  .markdown-body {\n' + previewVars + '\n' +
-        '    background-color: var(--preview-bg); color: var(--preview-text);\n' +
-        '    max-width: 850px; margin: 0 auto; line-height: 1.7; font-size: 1rem; border-radius: 8px; padding: 20px;\n' +
-        '  }\n' +
+    // Shared typography rules for a rendered markdown body — used both by the single-page HTML
+    // export and each slide of the eBook widget export below, so the two exported formats' content
+    // styling can't drift apart from being hand-duplicated in two places.
+    function getMarkdownTypographyCss() {
+      return (
         '  .markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6 { margin-top: 1.4em; margin-bottom: .6em; font-weight: 600; line-height: 1.25; color: inherit; }\n' +
         '  .markdown-body h1 { font-size: 2em; border-bottom: 2px solid var(--preview-header-border); padding-bottom: .3em; }\n' +
         '  .markdown-body h2 { font-size: 1.5em; border-bottom: 1px solid var(--preview-header-border); padding-bottom: .3em; }\n' +
@@ -6507,7 +6500,85 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .markdown-body table { display: block; overflow-x: auto; border-collapse: collapse; width: 100%; margin-bottom: 16px; }\n' +
         '  .markdown-body table th, .markdown-body table td { padding: 8px 13px; border: 1px solid var(--preview-header-border); }\n' +
         '  .markdown-body table th { font-weight: 600; background-color: var(--preview-code-bg); }\n' +
-        '  .markdown-body hr { height: 2px; margin: 24px 0; background-color: var(--preview-header-border); border: 0; }\n' +
+        '  .markdown-body hr { height: 2px; margin: 24px 0; background-color: var(--preview-header-border); border: 0; }\n'
+      );
+    }
+
+    function downloadHtmlBlob(html, filename) {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
+
+    // Entry point for the 🖨️→HTML export button. Only markdown documents that actually contain
+    // at least one slide-break line (the same "---"/"***"/"___" rule splitIntoSlides() and
+    // presentation mode use) get asked which export shape they want — a document with no slide
+    // breaks has nothing to choose between, so it goes straight to the normal export unprompted,
+    // exactly as before this feature existed.
+    function exportAsHtml() {
+      const currentTab = getCurrentTab();
+      if (!currentTab) return;
+
+      // An HTML tab's content already IS a standalone HTML document — wrapping it in the
+      // markdown-export template below would double-nest <html>/<head>/<body>. Just download
+      // the source as-is instead (functionally the download-fallback half of Save As).
+      if (currentTab.fileType === 'html') {
+        const blob = new Blob([editor.value], { type: 'text/html;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = currentTab.name.replace(/\.html?$/i, '') + '.html';
+        link.click();
+        URL.revokeObjectURL(link.href);
+        return;
+      }
+
+      if (currentTab.fileType === 'markdown' && splitIntoSlides(editor.value).length > 1) {
+        document.getElementById('exportChoiceModal').classList.add('active');
+        return;
+      }
+
+      performHtmlExport();
+    }
+
+    function closeExportChoiceModal() {
+      document.getElementById('exportChoiceModal').classList.remove('active');
+    }
+
+    function chooseNormalHtmlExport() {
+      closeExportChoiceModal();
+      performHtmlExport();
+    }
+
+    function chooseEbookWidgetExport() {
+      closeExportChoiceModal();
+      exportAsEbookWidget();
+    }
+
+    function performHtmlExport() {
+      const currentTab = getCurrentTab();
+      if (!currentTab) return;
+
+      const cs = getComputedStyle(preview);
+      const previewVars = ['--preview-bg', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
+        .map(name => `        ${name}: ${cs.getPropertyValue(name).trim()};`)
+        .join('\n');
+
+      const hljsCss = DARK_THEMES.has(currentTheme)
+        ? document.getElementById('hljs-theme-dark').textContent
+        : document.getElementById('hljs-theme-light').textContent;
+
+      const title = currentTab.name.replace(/\.(md|markdown|txt|csv|json)$/i, '');
+
+      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n<style>\n' +
+        '  body { margin: 0; padding: 40px 20px; font-family: ' + cs.fontFamily + '; background: ' + cs.getPropertyValue('--preview-bg').trim() + '; }\n' +
+        '  .markdown-body {\n' + previewVars + '\n' +
+        '    background-color: var(--preview-bg); color: var(--preview-text);\n' +
+        '    max-width: 850px; margin: 0 auto; line-height: 1.7; font-size: 1rem; border-radius: 8px; padding: 20px;\n' +
+        '  }\n' +
+        getMarkdownTypographyCss() +
         hljsCss + '\n';
 
       suppressDrawingControls = true;
@@ -6516,12 +6587,119 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       html += '</style>\n</head>\n<body>\n<div class="markdown-body">\n' + bodyHtml + '\n</div>\n</body>\n</html>';
 
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = title + '.html';
-      link.click();
-      URL.revokeObjectURL(link.href);
+      downloadHtmlBlob(html, title + '.html');
+    }
+
+    // "eBook Widget" export: a standalone HTML slideshow. Reuses the exact same slide-splitting
+    // (splitIntoSlides) and per-slide layout classification (classifySlidePresentationLayout) as
+    // the in-app presentation mode, so the exported file looks like what "Präsentationsmodus"
+    // already showed — see the Presentation mode section in CLAUDE.md for what each layout does.
+    //
+    // Each slide's rendered HTML is placed into a hidden <div class="slide-item"> in the exported
+    // document's own <body> (not embedded as a JSON string inside a script element) specifically so
+    // arbitrary raw HTML a user's markdown might contain (including, in principle, a literal
+    // embedded-script block) is parsed by the browser's normal HTML parser exactly like the plain
+    // HTML export already does — no hand-rolled escaping of the closing script-tag sequence inside
+    // slide content needed, since body markup was never at risk of that in the first place (only
+    // this function's own source code, building the exported file's script element via string
+    // concatenation, has to avoid writing that sequence literally — see the split below).
+    function exportAsEbookWidget() {
+      const currentTab = getCurrentTab();
+      if (!currentTab) return;
+
+      const cs = getComputedStyle(preview);
+      const previewVars = ['--preview-bg', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
+        .map(name => `        ${name}: ${cs.getPropertyValue(name).trim()};`)
+        .join('\n');
+
+      const hljsCss = DARK_THEMES.has(currentTheme)
+        ? document.getElementById('hljs-theme-dark').textContent
+        : document.getElementById('hljs-theme-light').textContent;
+
+      const title = currentTab.name.replace(/\.(md|markdown|txt)$/i, '');
+
+      suppressDrawingControls = true;
+      const slidesHtml = splitIntoSlides(editor.value).map(slideMarkdown => {
+        const layout = classifySlidePresentationLayout(slideMarkdown);
+        return '<div class="slide-item" data-layout="' + layout + '">' + marked.parse(slideMarkdown) + '</div>';
+      }).join('\n');
+      suppressDrawingControls = false;
+
+      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n<style>\n' +
+        '  html, body { margin: 0; height: 100%; overflow: hidden; background: ' + cs.getPropertyValue('--preview-bg').trim() + '; font-family: ' + cs.fontFamily + '; }\n' +
+        '  .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; }\n' +
+        '  .slide {\n' + previewVars + '\n' +
+        '    background-color: var(--preview-bg); color: var(--preview-text);\n' +
+        '    width: 100%; height: 100%; max-width: 1200px; box-sizing: border-box; margin: 0 auto;\n' +
+        '    padding: 6vh 8vw; overflow-y: auto; cursor: default;\n' +
+        '    font-size: clamp(1.1rem, 2.2vw, 2rem);\n' +
+        '  }\n' +
+        '  .slide.centered-heading { display: flex; align-items: center; justify-content: center; }\n' +
+        '  .slide.centered-heading h1 { text-align: center; max-width: 100%; margin: 0; }\n' +
+        '  .slide.centered-text { display: flex; flex-direction: column; align-items: center; justify-content: center; }\n' +
+        '  .slide.centered-text > * { max-width: 100%; text-align: left; }\n' +
+        getMarkdownTypographyCss() +
+        '  .page-counter { position: fixed; bottom: 14px; left: 18px; font-size: 0.8rem; color: var(--preview-text); opacity: 0.45; pointer-events: none; }\n' +
+        '  .nav-arrow { position: fixed; top: 50%; transform: translateY(-50%); color: var(--preview-text); pointer-events: none; animation: navArrowPulse 2.6s ease-in-out infinite; }\n' +
+        '  .nav-arrow.left { left: 16px; }\n' +
+        '  .nav-arrow.right { right: 16px; }\n' +
+        '  .nav-arrow.hidden { display: none; }\n' +
+        '  @keyframes navArrowPulse { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.45; } }\n' +
+        hljsCss + '\n' +
+        '</style>\n</head>\n<body>\n' +
+        '<div class="overlay" id="overlay"><div class="slide markdown-body ' + currentTheme + '" id="stage"></div></div>\n' +
+        '<div class="page-counter" id="counter"></div>\n' +
+        '<div class="nav-arrow left" id="arrowLeft"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 6 9 12 15 18"></polyline></svg></div>\n' +
+        '<div class="nav-arrow right" id="arrowRight"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg></div>\n' +
+        '<div id="slideData" style="display:none">\n' + slidesHtml + '\n</div>\n' +
+        '<script>\n' +
+        '  const SLIDES = Array.from(document.querySelectorAll("#slideData .slide-item")).map(function (el) {\n' +
+        '    return { layout: el.dataset.layout, html: el.innerHTML };\n' +
+        '  });\n' +
+        '  let idx = 0;\n' +
+        '  const stage = document.getElementById("stage");\n' +
+        '  const counter = document.getElementById("counter");\n' +
+        '  const arrowLeft = document.getElementById("arrowLeft");\n' +
+        '  const arrowRight = document.getElementById("arrowRight");\n' +
+        '  const DURATION = 280;\n' +
+        '  function paint() {\n' +
+        '    const s = SLIDES[idx];\n' +
+        '    stage.className = "slide markdown-body ' + currentTheme + '" + (s.layout === "normal" ? "" : " " + s.layout);\n' +
+        '    stage.innerHTML = s.html;\n' +
+        '    counter.textContent = (idx + 1) + " / " + SLIDES.length;\n' +
+        '    arrowLeft.classList.toggle("hidden", idx === 0);\n' +
+        '    arrowRight.classList.toggle("hidden", idx === SLIDES.length - 1);\n' +
+        '  }\n' +
+        '  function goTo(newIdx, dir) {\n' +
+        '    stage.style.transition = "opacity " + DURATION + "ms ease, transform " + DURATION + "ms ease";\n' +
+        '    stage.style.opacity = "0";\n' +
+        '    stage.style.transform = "translateX(" + (dir > 0 ? "-24px" : "24px") + ")";\n' +
+        '    setTimeout(function () {\n' +
+        '      idx = newIdx;\n' +
+        '      paint();\n' +
+        '      stage.style.transition = "none";\n' +
+        '      stage.style.transform = "translateX(" + (dir > 0 ? "24px" : "-24px") + ")";\n' +
+        '      void stage.offsetWidth;\n' +
+        '      stage.style.transition = "opacity " + DURATION + "ms ease, transform " + DURATION + "ms ease";\n' +
+        '      stage.style.opacity = "1";\n' +
+        '      stage.style.transform = "translateX(0)";\n' +
+        '    }, DURATION);\n' +
+        '  }\n' +
+        '  function next() { if (idx < SLIDES.length - 1) goTo(idx + 1, 1); }\n' +
+        '  function prev() { if (idx > 0) goTo(idx - 1, -1); }\n' +
+        '  document.addEventListener("keydown", function (e) {\n' +
+        '    if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") { e.preventDefault(); next(); }\n' +
+        '    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); prev(); }\n' +
+        '  });\n' +
+        '  document.getElementById("overlay").addEventListener("click", function (e) {\n' +
+        '    const rect = document.getElementById("overlay").getBoundingClientRect();\n' +
+        '    if (e.clientX - rect.left < rect.width / 2) prev(); else next();\n' +
+        '  });\n' +
+        '  paint();\n' +
+        '</scr' + 'ipt>\n' +
+        '</body>\n</html>';
+
+      downloadHtmlBlob(html, title + '-ebook.html');
     }
 
     // --- COPY FORMATTED NOTE TO CLIPBOARD (for pasting into Word, email clients, etc.) ---
