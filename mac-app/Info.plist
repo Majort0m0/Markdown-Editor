@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Markdown Studio</string>
+    <key>CFBundleDisplayName</key>
+    <string>Markdown Studio</string>
+    <key>CFBundleIdentifier</key>
+    <string>blog.lernsachen.markdownstudio</string>
+    <key>CFBundleVersion</key>
+    <string>1.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleExecutable</key>
+    <string>MarkdownStudio</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSCameraUsageDescription</key>
+    <string>Markdown Studio verwendet die Kamera, um Fotos direkt in Notizen einzufügen.</string>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>Markdown Studio verwendet das Mikrofon für Sprachaufnahmen in Notizen.</string>
+</dict>
+</plist>
