@@ -1652,6 +1652,35 @@ return He}()
       color: #1f2328;
     }
 
+    .tab.renaming {
+      max-width: none;
+      cursor: default;
+      user-select: auto;
+      background-color: var(--active-tab-bg);
+    }
+
+    .tab-rename-form {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tab-rename-input,
+    .tab-rename-select {
+      border: 1px solid var(--accent);
+      border-radius: 3px;
+      padding: 2px 4px;
+      font-size: 0.82rem;
+      font-family: inherit;
+      color: var(--text-main);
+      background-color: #fff;
+      outline: none;
+    }
+
+    .tab-rename-input {
+      width: 110px;
+    }
+
     .add-tab-btn {
       background: transparent;
       border: none;
@@ -2385,12 +2414,17 @@ return He}()
 
     .video-embed-wrapper {
       position: relative;
+      width: 100%;
       max-width: 100%;
       aspect-ratio: 16 / 9;
       margin: 16px 0;
       border-radius: 8px;
       overflow: hidden;
       background-color: var(--preview-code-bg);
+      /* No-op outside a flex-column ancestor (i.e. everywhere except a heading-less presentation/
+         eBook-widget slide); see the .presentation-slide.centered-text comment for why it's
+         needed there. */
+      align-self: stretch;
     }
 
     .video-embed-wrapper iframe,
@@ -2523,6 +2557,16 @@ return He}()
 
     .markdown-body table th {
       font-weight: 600;
+      background-color: var(--preview-code-bg);
+    }
+
+    /* Only CSV preview cells carry data-start/data-end (see renderCsvPreview) — a markdown
+       table's plain <td> never matches this, so the hover affordance only shows up where a click
+       actually does something (selects the matching span in the source, see the delegated click
+       listener on `preview` further down). */
+    .markdown-body table td[data-start]:hover,
+    .markdown-body table th[data-start]:hover {
+      cursor: pointer;
       background-color: var(--preview-code-bg);
     }
 
@@ -3078,6 +3122,23 @@ return He}()
     .presentation-slide.centered-text > * {
       max-width: 100%;
       text-align: left;
+    }
+
+    /* Video/audio embeds are meant to fill available width, not shrink-to-fit like a text block —
+       the shrink-to-fit-and-center behavior above is correct for prose/lists but was silently
+       collapsing media to a tiny (video) or fully invisible (audio) size on a heading-less slide,
+       since align-items: center sizes flex items by content instead of stretching them. A video
+       image gets p-split to a direct child of .centered-text by the browser's own HTML parser
+       (block content isn't allowed inside <p>, so it's hoisted out — see hljsRenderer.image), so
+       .video-embed-wrapper itself is the flex item; audio isn't p-split, so its own <p> is the
+       flex item that needs to stretch instead. Both confirmed empirically (a heading-less slide
+       with just a video rendered at a fraction of the slide width; with just audio, no player was
+       visible on-screen at all). This rule is otherwise a no-op wherever the parent isn't a flex
+       container (i.e. everywhere outside presentation/eBook-widget slides), so it's safe to leave
+       on .video-embed-wrapper unconditionally rather than only under .centered-text.
+    */
+    .presentation-slide.centered-text > p:has(> .audio-asset-player) {
+      align-self: stretch;
     }
 
     .presentation-counter {
@@ -4947,9 +5008,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       });
     }
 
-    // Detected once from the opened/saved filename's extension and fixed for the tab's
-    // lifetime — there's no manual "convert this tab" toggle, and a later Save As under a
-    // different extension doesn't retroactively reclassify it (see createNewTab below).
+    // Detected once from the opened/saved filename's extension and otherwise fixed for the
+    // tab's lifetime — a later Save As under a different extension doesn't retroactively
+    // reclassify it (see createNewTab below), so that flow can't silently change a document's
+    // rendering mode out from under the user. The one deliberate, opt-in way to actually convert
+    // a tab's format is the tab-bar double-click rename dialog (confirmTabRename() further down),
+    // which sets both tab.name and tab.fileType together.
     function getFileTypeFromName(name) {
       const ext = (name.match(/\.([a-z0-9]+)$/i) || [])[1];
       if (!ext) return 'markdown';
@@ -4957,6 +5021,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (lower === 'csv') return 'csv';
       if (lower === 'json') return 'json';
       if (lower === 'html' || lower === 'htm') return 'html';
+      if (lower === 'txt') return 'txt';
       return 'markdown';
     }
 
@@ -5071,12 +5136,138 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       triggerImmediateWebdavSync();
     }
 
+    // Tab bar: single click selects (switchTab), double click enters inline rename — the id of
+    // whichever tab is currently mid-rename (or null). renderTabs() rebuilds the whole list from
+    // scratch on every call (same as before this existed), so this is the one piece of state that
+    // survives a rebuild and tells it which tab, if any, to render as an edit form instead of a
+    // plain label.
+    let renamingTabId = null;
+
+    // The format options offered by the rename dialog's extension <select> — the tab-bar's
+    // deliberate, opt-in way to convert a tab's fileType (see the comment on getFileTypeFromName
+    // above for why this is kept separate from Save As, which never reclassifies a tab).
+    const TAB_FORMAT_OPTIONS = [
+      { ext: 'md', fileType: 'markdown', label: '.md' },
+      { ext: 'txt', fileType: 'txt', label: '.txt' },
+      { ext: 'csv', fileType: 'csv', label: '.csv' },
+      { ext: 'json', fileType: 'json', label: '.json' },
+      { ext: 'html', fileType: 'html', label: '.html' },
+    ];
+
+    function splitTabNameExt(name) {
+      const m = name.match(/^(.*)\.([a-zA-Z0-9]+)$/);
+      return m ? { base: m[1], ext: m[2].toLowerCase() } : { base: name, ext: 'md' };
+    }
+
+    function startTabRename(tabId) {
+      renamingTabId = tabId;
+      renderTabs();
+      const input = tabList.querySelector('.tab.renaming .tab-rename-input');
+      if (input) { input.focus(); input.select(); }
+    }
+
+    function cancelTabRename() {
+      renamingTabId = null;
+      renderTabs();
+    }
+
+    function confirmTabRename(tabId, rawBaseName, ext) {
+      const tab = tabs.find(t => t.id === tabId);
+      renamingTabId = null;
+
+      const baseName = rawBaseName.trim();
+      if (!tab || !baseName) {
+        renderTabs();
+        return;
+      }
+
+      const option = TAB_FORMAT_OPTIONS.find(o => o.ext === ext) || TAB_FORMAT_OPTIONS[0];
+      const fileTypeChanged = option.fileType !== tab.fileType;
+
+      tab.name = baseName + '.' + option.ext;
+      tab.fileType = option.fileType;
+      tab.isDefaultName = false;
+
+      // Converting *to* CSV needs a fresh delimiter guess — the tab was never treated as CSV
+      // before, so there's no previously-detected one to fall back on. Mirrors createNewTab's own
+      // detectCsvDelimiter call. Uses the live editor content if this is the active tab (that's
+      // where the current text actually lives — see switchTab's own flush-before-read pattern).
+      if (fileTypeChanged && option.fileType === 'csv') {
+        tab.csvDelimiter = detectCsvDelimiter(tab.id === activeTabId ? editor.value : tab.content);
+      }
+
+      renderTabs();
+      if (tab.id === activeTabId) updatePreview();
+      saveStateToLocalStorage();
+    }
+
+    // Builds the inline "name + format" edit form shown in place of a tab's normal label/close
+    // button while it's being renamed. A <select> next to the name input is how a format
+    // conversion actually happens — see TAB_FORMAT_OPTIONS/confirmTabRename above.
+    function buildTabRenameForm(tab) {
+      const { base, ext } = splitTabNameExt(tab.name);
+      const currentExt = TAB_FORMAT_OPTIONS.some(o => o.ext === ext) ? ext : 'md';
+
+      const form = document.createElement('div');
+      form.className = 'tab-rename-form';
+
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'tab-rename-input';
+      input.value = base;
+      input.spellcheck = false;
+
+      const select = document.createElement('select');
+      select.className = 'tab-rename-select';
+      TAB_FORMAT_OPTIONS.forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.ext;
+        opt.textContent = o.label;
+        if (o.ext === currentExt) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      const commit = () => confirmTabRename(tab.id, input.value, select.value);
+      const handleKeydown = (e) => {
+        // Keep Enter/Escape from also reaching the document-level shortcut/modal handler while
+        // typing a tab name (e.g. its own Escape-closes-modals logic has nothing to do here).
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        else if (e.key === 'Escape') { e.preventDefault(); cancelTabRename(); }
+      };
+      input.onkeydown = handleKeydown;
+      select.onkeydown = handleKeydown;
+      form.onclick = (e) => e.stopPropagation();
+
+      // A single focusout listener on the whole form (rather than blur on each control) so
+      // tabbing/clicking from the name input to the format select — both inside the same form —
+      // doesn't look like "focus left the form" and prematurely commit mid-edit; relatedTarget is
+      // what lets that distinction be made at all (plain blur doesn't carry it).
+      form.addEventListener('focusout', (e) => {
+        if (renamingTabId !== tab.id) return;
+        if (form.contains(e.relatedTarget)) return;
+        commit();
+      });
+
+      form.appendChild(input);
+      form.appendChild(select);
+      return form;
+    }
+
     function renderTabs() {
       tabList.innerHTML = '';
       tabs.forEach(tab => {
         const tabEl = document.createElement('div');
-        tabEl.className = 'tab ' + (tab.id === activeTabId ? 'active' : '');
+        tabEl.className = 'tab ' + (tab.id === activeTabId ? 'active' : '') + (tab.id === renamingTabId ? ' renaming' : '');
+
+        if (tab.id === renamingTabId) {
+          tabEl.appendChild(buildTabRenameForm(tab));
+          tabList.appendChild(tabEl);
+          return;
+        }
+
         tabEl.onclick = () => switchTab(tab.id);
+        tabEl.ondblclick = () => startTabRename(tab.id);
 
         const nameSpan = document.createElement('span');
         nameSpan.className = 'tab-name';
@@ -5701,8 +5892,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       saveStateToLocalStorage();
     }
 
-    // --- CSV / JSON preview rendering ---
-    // Markdown is the only format marked.parse() understands; CSV/JSON tabs (tab.fileType,
+    // --- CSV / JSON / TXT preview rendering ---
+    // Markdown is the only format marked.parse() understands; CSV/JSON/txt tabs (tab.fileType,
     // set from the file extension at open time — see createNewTab) render through these instead.
     // renderContentForTab() is the one shared dispatch point used by updatePreview(),
     // exportAsHtml(), and copyFormattedToClipboard(), so all three stay consistent automatically.
@@ -5711,18 +5902,33 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    // Cell markup carries data-start/data-end (the cell's exact [start, end) range in the raw
+    // source, from parseCsvWithPositions) so a click can select the matching span in the editor —
+    // see the delegated click listener on `preview` further down. A cell missing from a ragged
+    // row (fewer fields than colCount) has no source position of its own, so it gets neither
+    // attribute and is simply unclickable, rather than pointing at some other cell's range.
+    function csvCellAttrs(cell) {
+      return cell ? ' data-start="' + cell.start + '" data-end="' + cell.end + '"' : '';
+    }
+
     function renderCsvPreview(content, delimiter) {
-      const rows = parseCsv(content, delimiter || detectCsvDelimiter(content));
+      const rows = parseCsvWithPositions(content, delimiter || detectCsvDelimiter(content));
       if (rows.length === 0) {
         return '<div class="empty-state"><h3>Leere CSV-Datei</h3></div>';
       }
       const colCount = Math.max(...rows.map(r => r.length));
       let html = '<table class="csv-preview-table"><thead><tr>';
-      for (let c = 0; c < colCount; c++) html += '<th>' + escapeHtmlText(rows[0][c] || '') + '</th>';
+      for (let c = 0; c < colCount; c++) {
+        const cell = rows[0][c];
+        html += '<th' + csvCellAttrs(cell) + '>' + escapeHtmlText(cell ? cell.value : '') + '</th>';
+      }
       html += '</tr></thead><tbody>';
       for (let r = 1; r < rows.length; r++) {
         html += '<tr>';
-        for (let c = 0; c < colCount; c++) html += '<td>' + escapeHtmlText(rows[r][c] || '') + '</td>';
+        for (let c = 0; c < colCount; c++) {
+          const cell = rows[r][c];
+          html += '<td' + csvCellAttrs(cell) + '>' + escapeHtmlText(cell ? cell.value : '') + '</td>';
+        }
         html += '</tr>';
       }
       html += '</tbody></table>';
@@ -5742,9 +5948,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return '<pre><code class="hljs language-json">' + highlighted + '</code></pre>';
     }
 
+    // Plain text: no parsing at all, just escaped and wrapped in the same <pre><code class="hljs">
+    // box the JSON preview already uses — reuses that existing styling for free instead of
+    // inventing a dedicated plain-text style, same reasoning as the CSV/JSON previews above.
+    function renderTxtPreview(content) {
+      return '<pre><code class="hljs">' + escapeHtmlText(content) + '</code></pre>';
+    }
+
     function renderContentForTab(tab, content) {
       if (tab && tab.fileType === 'csv') return renderCsvPreview(content, tab.csvDelimiter);
       if (tab && tab.fileType === 'json') return renderJsonPreview(content);
+      if (tab && tab.fileType === 'txt') return renderTxtPreview(content);
       return marked.parse(content);
     }
 
@@ -6226,7 +6440,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function findTableBlock() {
       const tab = getCurrentTab();
-      if (tab && tab.fileType === 'json') return null;
+      if (tab && (tab.fileType === 'json' || tab.fileType === 'txt')) return null;
 
       const lines = editor.value.split('\n');
 
@@ -6292,10 +6506,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     // A real char-by-char parser rather than a naive split() — a quoted field can legally
-    // contain the delimiter, literal newlines, and `""`-escaped quotes.
-    function parseCsv(content, delimiter) {
+    // contain the delimiter, literal newlines, and `""`-escaped quotes. Each cell is
+    // { value, start, end } — the exact [start, end) character range in the raw content that
+    // cell came from, quotes included (start is captured right before a field begins, end right
+    // where the delimiter/newline that closes it is hit, so a quoted field's start/end land on
+    // its opening/closing quote, not just its unquoted value). renderCsvPreview() uses the
+    // positions to drive "click a preview cell, select the matching span in the source" (see the
+    // delegated click listener on `preview`).
+    function parseCsvWithPositions(content, delimiter) {
       const rows = [];
-      let row = [], field = '', inQuotes = false;
+      let row = [], field = '', inQuotes = false, fieldStart = 0;
       for (let i = 0; i < content.length; i++) {
         const ch = content[i];
         if (inQuotes) {
@@ -6307,12 +6527,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           continue;
         }
         if (ch === '"' && field === '') { inQuotes = true; continue; }
-        if (ch === delimiter) { row.push(field); field = ''; continue; }
+        if (ch === delimiter) { row.push({ value: field, start: fieldStart, end: i }); field = ''; fieldStart = i + 1; continue; }
         if (ch === '\r') continue;
-        if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; continue; }
+        if (ch === '\n') { row.push({ value: field, start: fieldStart, end: i }); rows.push(row); row = []; field = ''; fieldStart = i + 1; continue; }
         field += ch;
       }
-      if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+      if (field !== '' || row.length > 0) { row.push({ value: field, start: fieldStart, end: content.length }); rows.push(row); }
       return rows;
     }
 
@@ -6730,6 +6950,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (tab.fileType === 'csv') return { description: 'CSV-Datei', mime: 'text/csv', extensions: ['.csv'] };
       if (tab.fileType === 'json') return { description: 'JSON-Datei', mime: 'application/json', extensions: ['.json'] };
       if (tab.fileType === 'html') return { description: 'HTML-Datei', mime: 'text/html', extensions: ['.html', '.htm'] };
+      if (tab.fileType === 'txt') return { description: 'Textdatei', mime: 'text/plain', extensions: ['.txt'] };
       return { description: 'Markdown File', mime: 'text/markdown', extensions: ['.md', '.markdown'] };
     }
 
@@ -6787,7 +7008,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .markdown-body a:hover { text-decoration: underline; }\n' +
         '  .markdown-body img { max-width: 100%; height: auto; border-radius: 4px; }\n' +
         '  .markdown-body .audio-asset-player { display: block; width: 100%; max-width: 420px; margin: 8px 0; }\n' +
-        '  .video-embed-wrapper { position: relative; max-width: 100%; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: 8px; overflow: hidden; background-color: var(--preview-code-bg); }\n' +
+        '  .video-embed-wrapper { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: 8px; overflow: hidden; background-color: var(--preview-code-bg); align-self: stretch; }\n' +
         '  .video-embed-wrapper iframe, .video-embed-wrapper video { display: block; width: 100%; height: 100%; border: 0; }\n' +
         '  .video-embed-fallback { display: none; position: relative; width: 100%; height: 100%; align-items: center; justify-content: center; color: #fff; text-decoration: none; background-color: #000; }\n' +
         '  .video-embed-fallback img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .7; }\n' +
@@ -6956,6 +7177,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .slide.centered-heading h1 { text-align: center; max-width: 100%; margin: 0; }\n' +
         '  .slide.centered-text { display: flex; flex-direction: column; align-items: center; justify-content: center; }\n' +
         '  .slide.centered-text > * { max-width: 100%; text-align: left; }\n' +
+        // See the matching .presentation-slide.centered-text comment in the main <style> block —
+        // same fix, same reason (a heading-less slide with just a video/audio embed otherwise
+        // renders it shrunk to near-nothing or fully invisible).
+        '  .slide.centered-text > p:has(> .audio-asset-player) { align-self: stretch; }\n' +
         getMarkdownTypographyCss() +
         '  .page-counter { position: fixed; bottom: 14px; left: 18px; font-size: 0.8rem; color: var(--preview-text); opacity: 0.45; pointer-events: none; }\n' +
         '  .nav-arrow { position: fixed; top: 50%; transform: translateY(-50%); color: var(--preview-text); pointer-events: none; animation: navArrowPulse 2.6s ease-in-out infinite; }\n' +
@@ -7738,6 +7963,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const wrapper = e.target.closest('.drawing-wrapper');
       if (!wrapper) return;
       openDrawingModal(wrapper.dataset.assetId);
+    });
+
+    // Same delegated-on-`preview` pattern as the drawing-wrapper listener above — clicking a CSV
+    // preview cell (see renderCsvPreview/csvCellAttrs) selects that cell's exact span in the raw
+    // source, quotes included, so the editor visibly jumps to and highlights "where this value
+    // lives". Only CSV preview cells ever carry data-start, so this is implicitly a no-op for
+    // every other tab/fileType without needing its own guard.
+    preview.addEventListener('click', (e) => {
+      const cell = e.target.closest('td[data-start], th[data-start]');
+      if (!cell || editor.disabled) return;
+      editor.focus();
+      editor.setSelectionRange(Number(cell.dataset.start), Number(cell.dataset.end));
     });
 
     // Drives Excalidraw's own "Bild exportieren" dialog to get a PNG (with the full editable
