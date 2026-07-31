@@ -10,7 +10,8 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 
 ### Dokumente & Dateiformate
 - **Mehrere Tabs** — beliebig viele Dokumente gleichzeitig offen, mit Autospeicherung im Browser (LocalStorage)
-- **Markdown, CSV, JSON und HTML** in derselben App: CSV und JSON werden als Tabelle bzw. hübsch formatiert mit Syntax-Hervorhebung angezeigt; HTML-Dateien bekommen eine echte Syntax-Hervorhebung im Editor **und** eine echte gerenderte Web-Vorschau (in einer abgeschotteten Sandbox, damit fremder HTML/JS-Code nichts im Editor selbst anrichten kann)
+- **Markdown, CSV, JSON, HTML und TXT** in derselben App: CSV und JSON werden als Tabelle bzw. hübsch formatiert mit Syntax-Hervorhebung angezeigt; HTML-Dateien bekommen eine echte Syntax-Hervorhebung im Editor **und** eine echte gerenderte Web-Vorschau (in einer abgeschotteten Sandbox, damit fremder HTML/JS-Code nichts im Editor selbst anrichten kann); TXT-Dateien werden unverändert als reiner Text angezeigt
+- **Tabs umbenennen & Format wechseln** — Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit Format-Dropdown (Markdown/TXT/CSV/JSON/HTML), um ein Dokument gezielt in ein anderes Format zu konvertieren
 - **14 Dokumentvorlagen** über den ✨-Button — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan und eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt)
 - **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
 - **Speichern** in eine lokale Datei (inkl. Speichern unter, mit direktem Dateizugriff sofern der Browser das unterstützt)
@@ -18,6 +19,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 ### Editor & Formatierung
 - **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
 - **Tabellen-Werkzeuge** — Zeilen/Spalten einfügen, löschen, verschieben und nach einer Spalte sortieren, sobald der Cursor in einer Tabelle steht (funktioniert identisch für Markdown- und CSV-Tabellen)
+- **Klick & Mehrfachauswahl in der Tabellen-Vorschau** — Klick auf eine Zelle (Markdown-Tabelle oder CSV) springt zur passenden Stelle im Quelltext; durch mehrere Zellen ziehen markiert eine Zeile, Spalte oder einen beliebigen Zellblock zum Kopieren als Tabelle in die Zwischenablage
 - **Frei verschiebbarer Trenner** zwischen Editor und Vorschau — das Verhältnis lässt sich beliebig in beide Richtungen ziehen
 - **Suchen & Ersetzen** mit Treffer-Zähler ("3 von 12") und `‹`/`›`-Navigation zwischen allen Fundstellen; die Ersetzen-Funktion lässt sich per Checkbox ein-/ausblenden
 - **Formatierung aufräumen** — ein Klick normalisiert überflüssige Leerzeilen im Dokument (Inhalt in Codeblöcken bleibt unangetastet)
