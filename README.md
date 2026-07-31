@@ -29,6 +29,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **Bilder einfügen** per Copy-Paste, Drag & Drop oder Datei-Dialog — mit Auswahl, ob das Bild verkleinert oder im Original eingefügt werden soll
 - **📷 Kamera** — Foto direkt in der App aufnehmen (auf dem iPhone/iPad wahlweise Front- oder Rückkamera), optional zuschneiden, danach wie ein eingefügtes Bild weiterverarbeiten
 - **Zeichnungen** — eingebauter Excalidraw-Editor (Button "🖌️ Zeichnung"), Skizzen bleiben jederzeit bearbeitbar: Klick auf die Zeichnung öffnet sie erneut zum Weiterzeichnen
+- **📄 PDF als Arbeitsblatt öffnen** — eine PDF-Datei öffnen oder hineinziehen, eine oder mehrere Seiten auswählen (einzeln, alle, oder ein Seitenbereich wie „1-3,5"); jede gewählte Seite wird direkt in den Zeichen-Editor geladen und kann dort beschriftet werden. Landet automatisch in einer neuen, eigenen Notiz — bei mehreren Seiten alle untereinander, mit automatischem Weiterschalten zur nächsten Seite nach dem Speichern
 - **🎙️ Sprachaufnahmen** — Audio direkt in das Dokument einbetten, in der Vorschau über einen Player abspielbar
 - **🎬 Video einbetten** — YouTube- oder Vimeo-Link (oder eine direkte Videodatei-URL) einfügen, wird in der Vorschau automatisch als eingebetteter Player angezeigt
 
@@ -53,7 +54,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 
 **Im Browser:** Einfach den [Live-Link](https://majort0m0.github.io/Markdown-Editor/) öffnen.
 
-**Lokal:** `Markdown-Editor.html` herunterladen und im Browser öffnen (Doppelklick genügt) — funktioniert auch offline, da alle Bibliotheken (inklusive des eingebauten Zeichen-Editors) bereits in der Datei enthalten sind. Dadurch ist die Datei mit ca. 11 MB spürbar größer als ein gewöhnlicher Markdown-Editor, lässt sich aber weiterhin als einzelne Datei weitergeben.
+**Lokal:** `Markdown-Editor.html` herunterladen und im Browser öffnen (Doppelklick genügt) — funktioniert auch offline, da alle Bibliotheken (inklusive des eingebauten Zeichen-Editors und der PDF-Verarbeitung) bereits in der Datei enthalten sind. Dadurch ist die Datei mit ca. 13 MB spürbar größer als ein gewöhnlicher Markdown-Editor, lässt sich aber weiterhin als einzelne Datei weitergeben.
 
 ## 🛠️ Entwicklung
 
