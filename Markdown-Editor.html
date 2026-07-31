@@ -2560,14 +2560,30 @@ return He}()
       background-color: var(--preview-code-bg);
     }
 
-    /* Only CSV preview cells carry data-start/data-end (see renderCsvPreview) — a markdown
-       table's plain <td> never matches this, so the hover affordance only shows up where a click
-       actually does something (selects the matching span in the source, see the delegated click
-       listener on `preview` further down). */
+    /* Only CSV and markdown-table preview cells carry data-start/data-end (see renderCsvPreview /
+       attachMarkdownTableCellPositions) — a plain HTML <table> pasted raw into markdown source
+       never matches this, so the affordance only shows up where clicking/dragging actually does
+       something (jump-to-source on a click, rectangular multi-cell selection on a drag — see the
+       cell-selection block further down). "cell" is the standard cursor for exactly this kind of
+       spreadsheet-like cell interaction. user-select: none suppresses the browser's own native
+       text-selection so it can't visually compete with the .cell-selected highlight below during
+       a drag — this app deliberately drives that highlight itself instead of relying on native
+       Selection, which (confirmed empirically) can't represent a column selection at all. */
+    .markdown-body table td[data-start],
+    .markdown-body table th[data-start] {
+      user-select: none;
+    }
+
     .markdown-body table td[data-start]:hover,
     .markdown-body table th[data-start]:hover {
-      cursor: pointer;
+      cursor: cell;
       background-color: var(--preview-code-bg);
+    }
+
+    .markdown-body table td.cell-selected,
+    .markdown-body table th.cell-selected {
+      background-color: var(--accent);
+      color: #fff;
     }
 
     .markdown-body input[type="checkbox"] {
@@ -5376,6 +5392,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         closeToc();
         closeWebdavModal();
         if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();
+        if (cellSelection) { cellSelection = null; clearCellSelectionHighlight(); }
       }
     });
 
@@ -5994,6 +6011,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function updatePreview() {
       if (!activeTabId) return;
+      // Any live cell-selection refers to DOM nodes that preview.innerHTML below is about to
+      // destroy — no need to also strip .cell-selected off them first, they're going away anyway.
+      cellSelection = null;
       const tab = getCurrentTab();
       const isHtml = !!(tab && tab.fileType === 'html');
       previewPane.classList.toggle('html-active', isHtml);
@@ -8030,68 +8050,132 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       openDrawingModal(wrapper.dataset.assetId);
     });
 
-    // Same delegated-on-`preview` pattern as the drawing-wrapper listener above — clicking a CSV
-    // or markdown-table preview cell (see renderCsvPreview/csvCellAttrs and
-    // attachMarkdownTableCellPositions) selects that cell's exact span in the raw source, quotes
-    // included for CSV, so the editor visibly jumps to and highlights "where this value lives".
-    // Only cells tagged by those two render paths ever carry data-start, so this is implicitly a
-    // no-op everywhere else without needing its own fileType guard.
-    // Skipped when the click is actually the tail end of a drag that left behind a real selection
-    // (sel.isCollapsed false) — that's the multi-cell "select a row/column to copy" gesture below,
-    // and jumping editor focus away right after would collapse the selection the user just made.
-    preview.addEventListener('click', (e) => {
-      const cell = e.target.closest('td[data-start], th[data-start]');
-      if (!cell || editor.disabled) return;
-      const sel = window.getSelection();
-      if (sel && !sel.isCollapsed) return;
-      editor.focus();
-      editor.setSelectionRange(Number(cell.dataset.start), Number(cell.dataset.end));
-    });
+    // --- Rectangular cell-range selection for CSV/markdown-table previews ---
+    // Native browser Selection/Range can select a whole row (or the whole table, or a sub-range
+    // within one row) by dragging, but it fundamentally cannot represent "a column across
+    // multiple rows" — a Range only ever spans one *linear* stretch of the DOM tree, and a
+    // table's DOM order runs row-by-row, so a drag from row 1 to row 2 always sweeps in
+    // everything between them (the rest of row 1, then the start of row 2), not just one
+    // column's cells. Confirmed empirically before building this. This is a from-scratch
+    // rectangular cell-selection system on Pointer Events (same technique as #paneResizer/
+    // cropBox elsewhere in this file) specifically so a column (or row, or arbitrary rectangular
+    // sub-block) is selectable through one uniform drag gesture, replacing reliance on native
+    // Selection for this feature entirely — including for the copy step at the bottom, which no
+    // longer needs a real browser Selection to know what's "selected".
+    let cellSelection = null; // { table, anchorRow, anchorCol, focusRow, focusCol }
 
-    // Finds the single <table> a Selection lies within, if any — null if the selection spans
-    // outside a table entirely (commonAncestorContainer then has no table ancestor) or crosses
-    // out of one into surrounding prose/another table. Only tables with at least one tagged cell
-    // (CSV or markdown-table previews — see attachMarkdownTableCellPositions/renderCsvPreview)
-    // are eligible, so copying a plain HTML table pasted raw into markdown source (no tags at all)
-    // falls through to normal browser copy instead of producing an empty grid.
-    function findTaggedTableForSelection(range) {
-      let node = range.commonAncestorContainer;
-      if (node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement;
-      const table = node ? node.closest('table') : null;
-      if (!table || !preview.contains(table) || !table.querySelector('[data-start]')) return null;
-      return table;
+    function clearCellSelectionHighlight() {
+      document.querySelectorAll('.cell-selected').forEach(el => el.classList.remove('cell-selected'));
     }
 
-    // Selection is resolved at cell granularity (Selection.containsNode(cell, true) — true for
-    // "partially contained" — treats a cell as selected the moment the drag touches any part of
-    // it), not by slicing exact character offsets within the boundary cells. That matches how
-    // spreadsheet copy already behaves (whole cells, not partial text within an edge cell) and
-    // sidesteps a much fussier problem for very little practical benefit, per the user's own
-    // framing of the request ("eine Spalte oder Teile einer Spalte... markiert werden" — a
-    // possibly-incomplete subset of a row/column, not sub-cell text spans). cellIndex/rowIndex are
-    // native DOM properties (both tables here are span-free — no colspan/rowspan — so they line up
-    // directly with a plain grid, no extra bookkeeping needed) and give the selection's bounding
-    // rectangle directly; any gaps within that rectangle (shouldn't normally occur for a
-    // contiguous drag) are filled with an empty cell rather than left undefined.
-    function buildClipboardGridFromSelection(sel) {
-      const range = sel.getRangeAt(0);
-      const table = findTaggedTableForSelection(range);
-      if (!table) return null;
+    function applyCellSelectionHighlight() {
+      clearCellSelectionHighlight();
+      if (!cellSelection) return;
+      const { table, anchorRow, anchorCol, focusRow, focusCol } = cellSelection;
+      const minRow = Math.min(anchorRow, focusRow), maxRow = Math.max(anchorRow, focusRow);
+      const minCol = Math.min(anchorCol, focusCol), maxCol = Math.max(anchorCol, focusCol);
+      for (let r = minRow; r <= maxRow; r++) {
+        const row = table.rows[r];
+        if (!row) continue;
+        for (let c = minCol; c <= maxCol; c++) {
+          const cell = row.cells[c];
+          if (cell) cell.classList.add('cell-selected');
+        }
+      }
+    }
 
-      const cells = Array.from(table.querySelectorAll('td, th')).filter(cell => sel.containsNode(cell, true));
-      if (cells.length === 0) return null;
+    // Deliberately uses elementFromPoint rather than e.target — once preview.setPointerCapture()
+    // is active (below), every pointermove's e.target stays pinned to the capturing element
+    // regardless of what the pointer is actually over, so finding the real cell under the cursor
+    // needs the same "what's visually here" query the browser itself uses for hit-testing.
+    function cellFromPoint(clientX, clientY) {
+      const el = document.elementFromPoint(clientX, clientY);
+      return el ? el.closest('td[data-start], th[data-start]') : null;
+    }
 
-      const minRow = Math.min(...cells.map(c => c.parentElement.rowIndex));
-      const maxRow = Math.max(...cells.map(c => c.parentElement.rowIndex));
-      const minCol = Math.min(...cells.map(c => c.cellIndex));
-      const maxCol = Math.max(...cells.map(c => c.cellIndex));
+    // Same delegated-on-`preview` pattern as the drawing-wrapper listener above. Only cells
+    // tagged by renderCsvPreview/attachMarkdownTableCellPositions ever carry data-start, so this
+    // is implicitly a no-op everywhere else without needing its own fileType guard.
+    preview.addEventListener('pointerdown', (e) => {
+      const cell = e.target.closest('td[data-start], th[data-start]');
+      if (!cell || editor.disabled) return;
+      e.preventDefault();
+      const table = cell.closest('table');
+      const row = cell.parentElement.rowIndex;
+      const col = cell.cellIndex;
 
-      const domRows = table.rows;
+      if (e.shiftKey && cellSelection && cellSelection.table === table) {
+        // Extend the existing selection to here instead of starting a new one — no drag needed,
+        // mirrors how shift-click extends a selection in a real spreadsheet. Blur for the same
+        // reason as the plain-click branch below: a shift-click doesn't natively move
+        // document.activeElement off the editor either, and the Ctrl/Cmd+C handler further down
+        // needs that to correctly see "a preview selection is active" after this.
+        editor.blur();
+        cellSelection.focusRow = row;
+        cellSelection.focusCol = col;
+        applyCellSelectionHighlight();
+        return;
+      }
+
+      // Moves DOM focus out of the editor (if it was there) so the Ctrl/Cmd+C handler further
+      // down can tell "the user just made a preview selection" apart from "the editor is
+      // focused and they want to copy from there" — <td>/<th> aren't natively focusable, so a
+      // plain click on one wouldn't otherwise move document.activeElement away from the editor.
+      editor.blur();
+      cellSelection = { table, anchorRow: row, anchorCol: col, focusRow: row, focusCol: col };
+      applyCellSelectionHighlight();
+
+      preview.setPointerCapture(e.pointerId);
+      document.addEventListener('pointermove', onCellSelectionMove);
+      document.addEventListener('pointerup', onCellSelectionEnd);
+      document.addEventListener('pointercancel', onCellSelectionEnd);
+    });
+
+    function onCellSelectionMove(e) {
+      if (!cellSelection) return;
+      const cell = cellFromPoint(e.clientX, e.clientY);
+      if (!cell || cell.closest('table') !== cellSelection.table) return;
+      const row = cell.parentElement.rowIndex;
+      const col = cell.cellIndex;
+      if (row === cellSelection.focusRow && col === cellSelection.focusCol) return;
+      cellSelection.focusRow = row;
+      cellSelection.focusCol = col;
+      applyCellSelectionHighlight();
+    }
+
+    function onCellSelectionEnd() {
+      document.removeEventListener('pointermove', onCellSelectionMove);
+      document.removeEventListener('pointerup', onCellSelectionEnd);
+      document.removeEventListener('pointercancel', onCellSelectionEnd);
+      if (!cellSelection) return;
+      const { table, anchorRow, anchorCol, focusRow, focusCol } = cellSelection;
+      if (anchorRow === focusRow && anchorCol === focusCol) {
+        // No real drag happened — a plain click on a single cell also jumps to its source
+        // position, same click-to-source behavior as before this multi-cell system existed.
+        // cellSelection is deliberately *not* cleared here (only its editor-focus side effect
+        // runs) — the clicked cell stays selected/highlighted so it's available as the anchor
+        // for a following shift+click, same as a spreadsheet leaves the last-clicked cell
+        // selected. editor.focus() below does move focus back onto the editor, same as clicking
+        // any single cell always did before — a follow-up shift+click's own editor.blur() (see
+        // above) is what re-establishes "a preview selection is active" for Ctrl/Cmd+C if used.
+        const cell = table.rows[anchorRow] && table.rows[anchorRow].cells[anchorCol];
+        if (cell) {
+          editor.focus();
+          editor.setSelectionRange(Number(cell.dataset.start), Number(cell.dataset.end));
+        }
+      }
+    }
+
+    function buildGridFromCellSelection() {
+      if (!cellSelection) return null;
+      const { table, anchorRow, anchorCol, focusRow, focusCol } = cellSelection;
+      const minRow = Math.min(anchorRow, focusRow), maxRow = Math.max(anchorRow, focusRow);
+      const minCol = Math.min(anchorCol, focusCol), maxCol = Math.max(anchorCol, focusCol);
       const grid = [];
       for (let r = minRow; r <= maxRow; r++) {
         const rowValues = [];
         for (let c = minCol; c <= maxCol; c++) {
-          const cell = domRows[r] && domRows[r].cells[c];
+          const cell = table.rows[r] && table.rows[r].cells[c];
           rowValues.push(cell ? cell.textContent.trim() : '');
         }
         grid.push(rowValues);
@@ -8111,19 +8195,51 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return '<table>' + rowsHtml + '</table>';
     }
 
-    // Lets a normal drag-select-then-Ctrl+C over a CSV/markdown-table preview copy a real
-    // tab-separated grid (plus an HTML <table> fragment for rich-text targets) instead of
-    // whatever plain-text run the browser's default copy would otherwise produce from a
-    // multi-cell selection. Feasibility requested and discussed before implementing this.
-    preview.addEventListener('copy', (e) => {
+    // execCommand('copy') needs a *real* non-empty selection to actually fire a 'copy' event at
+    // all — same reasoning copyFormattedToClipboard() elsewhere in this file already relies on —
+    // so an offscreen table (removed again right after) is selected via Range/Selection just to
+    // give it one, rather than trying to synthesize a clipboard write with nothing selected. The
+    // one-time 'copy' listener then overrides both flavors explicitly instead of trusting
+    // whatever the browser would auto-derive from that offscreen table on its own.
+    function copyGridToClipboard(grid) {
+      const offscreen = document.createElement('table');
+      offscreen.style.position = 'fixed';
+      offscreen.style.top = '-9999px';
+      offscreen.style.left = '-9999px';
+      offscreen.innerHTML = grid.map(row => '<tr>' + row.map(() => '<td></td>').join('') + '</tr>').join('');
+      document.body.appendChild(offscreen);
+
+      const range = document.createRange();
+      range.selectNodeContents(offscreen);
       const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
-      const grid = buildClipboardGridFromSelection(sel);
+      sel.removeAllRanges();
+      sel.addRange(range);
+
+      const onCopy = (e) => {
+        e.clipboardData.setData('text/plain', gridToTsv(grid));
+        e.clipboardData.setData('text/html', gridToHtmlTable(grid));
+        e.preventDefault();
+      };
+      document.addEventListener('copy', onCopy, { once: true });
+      const ok = document.execCommand('copy');
+      document.removeEventListener('copy', onCopy);
+
+      sel.removeAllRanges();
+      document.body.removeChild(offscreen);
+      showToast(ok ? 'Auswahl kopiert' : 'Kopieren fehlgeschlagen');
+    }
+
+    // Gated on document.activeElement !== editor specifically so this never hijacks a normal
+    // Ctrl/Cmd+C made while typing/selecting text in the editor itself — see the editor.blur()
+    // call in the pointerdown handler above for why that check is meaningful at all (clicking a
+    // <td> can't move focus there on its own).
+    document.addEventListener('keydown', (e) => {
+      if (!((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'C'))) return;
+      if (!cellSelection || document.activeElement === editor) return;
+      const grid = buildGridFromCellSelection();
       if (!grid) return;
-      e.clipboardData.setData('text/plain', gridToTsv(grid));
-      e.clipboardData.setData('text/html', gridToHtmlTable(grid));
       e.preventDefault();
-      showToast('Auswahl kopiert');
+      copyGridToClipboard(grid);
     });
 
     // Drives Excalidraw's own "Bild exportieren" dialog to get a PNG (with the full editable
