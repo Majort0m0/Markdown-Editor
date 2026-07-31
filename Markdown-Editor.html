@@ -6006,6 +6006,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         preview.innerHTML = renderContentForTab(tab, editor.value);
         attachTaskCheckboxListeners();
         updateTocPanel();
+        if (tab && tab.fileType === 'markdown') attachMarkdownTableCellPositions();
       }
       updateEditorHighlightOverlay();
       updateStats();
@@ -6466,6 +6467,70 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (end - start < 1 || !TABLE_SEPARATOR_RE.test(lines[start + 1])) return null;
 
       return { lines, start, end, cursorLine, separatorLine: start + 1 };
+    }
+
+    // Unlike findTableBlock() (cursor-relative, one block), this scans the *whole* document for
+    // every markdown pipe-table block — used to feed attachMarkdownTableCellPositions() below,
+    // which needs every table's cell source-positions up front to tag the whole rendered preview
+    // in one pass, not just whichever table the cursor happens to be in. Same "contiguous
+    // pipe-line run + separator on the second line" detection as findTableBlock, just repeated
+    // across the full document instead of expanding outward from one cursor line. Returns one
+    // entry per table block: an array of rows (header row first, then body rows — the separator
+    // line itself carries no cells and is skipped), each row an array of { start, end } character
+    // ranges in the *whole document* (not line-relative, unlike getMarkdownCellRanges's own
+    // return value — lineStartOffset is what shifts them from line-relative to absolute here).
+    function findAllMarkdownTableBlocks(text) {
+      const lines = text.split('\n');
+      const blocks = [];
+      let i = 0;
+      while (i < lines.length) {
+        if (!isTableRowLine(lines[i])) { i++; continue; }
+        const start = i;
+        let end = i;
+        while (end < lines.length - 1 && isTableRowLine(lines[end + 1])) end++;
+
+        if (end - start >= 1 && TABLE_SEPARATOR_RE.test(lines[start + 1])) {
+          const rows = [];
+          for (let lineIndex = start; lineIndex <= end; lineIndex++) {
+            if (lineIndex === start + 1) continue;
+            const lineOffset = lineStartOffset(lines, lineIndex);
+            rows.push(getMarkdownCellRanges(lines[lineIndex]).map(r => ({ start: lineOffset + r.start, end: lineOffset + r.end })));
+          }
+          blocks.push(rows);
+        }
+        i = end + 1;
+      }
+      return blocks;
+    }
+
+    // Tags every <td>/<th> in every rendered markdown table with the same data-start/data-end
+    // attributes renderCsvPreview() already gives CSV cells — same delegated click listener and
+    // CSS then apply to both for free. Matches the Nth table found in the source (via
+    // findAllMarkdownTableBlocks above) to the Nth <table> element in the rendered preview, in
+    // document order; HTMLTableElement.rows already spans thead+tbody in document order too, so
+    // its index lines up with this function's row array (header row at index 0) with no extra
+    // bookkeeping. Only meaningful for markdown tabs — called from updatePreview() right after it
+    // renders one. A stray literal HTML <table> in the markdown source (rare, but marked does pass
+    // raw HTML through) would throw this matching off by one; accepted as a known edge case rather
+    // than solved, same spirit as this file's other documented heuristic trade-offs.
+    function attachMarkdownTableCellPositions() {
+      const blocks = findAllMarkdownTableBlocks(editor.value);
+      const domTables = preview.querySelectorAll('table');
+      const tableCount = Math.min(blocks.length, domTables.length);
+      for (let t = 0; t < tableCount; t++) {
+        const rows = blocks[t];
+        const domRows = domTables[t].rows;
+        const rowCount = Math.min(rows.length, domRows.length);
+        for (let r = 0; r < rowCount; r++) {
+          const cellRanges = rows[r];
+          const domCells = domRows[r].cells;
+          const colCount = Math.min(cellRanges.length, domCells.length);
+          for (let c = 0; c < colCount; c++) {
+            domCells[c].dataset.start = cellRanges[c].start;
+            domCells[c].dataset.end = cellRanges[c].end;
+          }
+        }
+      }
     }
 
     // --- Markdown pipe-table cell parsing/building ---
@@ -7966,15 +8031,99 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     });
 
     // Same delegated-on-`preview` pattern as the drawing-wrapper listener above — clicking a CSV
-    // preview cell (see renderCsvPreview/csvCellAttrs) selects that cell's exact span in the raw
-    // source, quotes included, so the editor visibly jumps to and highlights "where this value
-    // lives". Only CSV preview cells ever carry data-start, so this is implicitly a no-op for
-    // every other tab/fileType without needing its own guard.
+    // or markdown-table preview cell (see renderCsvPreview/csvCellAttrs and
+    // attachMarkdownTableCellPositions) selects that cell's exact span in the raw source, quotes
+    // included for CSV, so the editor visibly jumps to and highlights "where this value lives".
+    // Only cells tagged by those two render paths ever carry data-start, so this is implicitly a
+    // no-op everywhere else without needing its own fileType guard.
+    // Skipped when the click is actually the tail end of a drag that left behind a real selection
+    // (sel.isCollapsed false) — that's the multi-cell "select a row/column to copy" gesture below,
+    // and jumping editor focus away right after would collapse the selection the user just made.
     preview.addEventListener('click', (e) => {
       const cell = e.target.closest('td[data-start], th[data-start]');
       if (!cell || editor.disabled) return;
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
       editor.focus();
       editor.setSelectionRange(Number(cell.dataset.start), Number(cell.dataset.end));
+    });
+
+    // Finds the single <table> a Selection lies within, if any — null if the selection spans
+    // outside a table entirely (commonAncestorContainer then has no table ancestor) or crosses
+    // out of one into surrounding prose/another table. Only tables with at least one tagged cell
+    // (CSV or markdown-table previews — see attachMarkdownTableCellPositions/renderCsvPreview)
+    // are eligible, so copying a plain HTML table pasted raw into markdown source (no tags at all)
+    // falls through to normal browser copy instead of producing an empty grid.
+    function findTaggedTableForSelection(range) {
+      let node = range.commonAncestorContainer;
+      if (node.nodeType !== Node.ELEMENT_NODE) node = node.parentElement;
+      const table = node ? node.closest('table') : null;
+      if (!table || !preview.contains(table) || !table.querySelector('[data-start]')) return null;
+      return table;
+    }
+
+    // Selection is resolved at cell granularity (Selection.containsNode(cell, true) — true for
+    // "partially contained" — treats a cell as selected the moment the drag touches any part of
+    // it), not by slicing exact character offsets within the boundary cells. That matches how
+    // spreadsheet copy already behaves (whole cells, not partial text within an edge cell) and
+    // sidesteps a much fussier problem for very little practical benefit, per the user's own
+    // framing of the request ("eine Spalte oder Teile einer Spalte... markiert werden" — a
+    // possibly-incomplete subset of a row/column, not sub-cell text spans). cellIndex/rowIndex are
+    // native DOM properties (both tables here are span-free — no colspan/rowspan — so they line up
+    // directly with a plain grid, no extra bookkeeping needed) and give the selection's bounding
+    // rectangle directly; any gaps within that rectangle (shouldn't normally occur for a
+    // contiguous drag) are filled with an empty cell rather than left undefined.
+    function buildClipboardGridFromSelection(sel) {
+      const range = sel.getRangeAt(0);
+      const table = findTaggedTableForSelection(range);
+      if (!table) return null;
+
+      const cells = Array.from(table.querySelectorAll('td, th')).filter(cell => sel.containsNode(cell, true));
+      if (cells.length === 0) return null;
+
+      const minRow = Math.min(...cells.map(c => c.parentElement.rowIndex));
+      const maxRow = Math.max(...cells.map(c => c.parentElement.rowIndex));
+      const minCol = Math.min(...cells.map(c => c.cellIndex));
+      const maxCol = Math.max(...cells.map(c => c.cellIndex));
+
+      const domRows = table.rows;
+      const grid = [];
+      for (let r = minRow; r <= maxRow; r++) {
+        const rowValues = [];
+        for (let c = minCol; c <= maxCol; c++) {
+          const cell = domRows[r] && domRows[r].cells[c];
+          rowValues.push(cell ? cell.textContent.trim() : '');
+        }
+        grid.push(rowValues);
+      }
+      return grid;
+    }
+
+    // Tabs/newlines inside a copied value would otherwise be misread as extra columns/rows by
+    // whatever the TSV gets pasted into — flattened to a single space, same trade-off
+    // expandBlankLinesForClipboard elsewhere in this file makes peace with for a different format.
+    function gridToTsv(grid) {
+      return grid.map(row => row.map(v => v.replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
+    }
+
+    function gridToHtmlTable(grid) {
+      const rowsHtml = grid.map(row => '<tr>' + row.map(v => '<td>' + escapeHtmlText(v) + '</td>').join('') + '</tr>').join('');
+      return '<table>' + rowsHtml + '</table>';
+    }
+
+    // Lets a normal drag-select-then-Ctrl+C over a CSV/markdown-table preview copy a real
+    // tab-separated grid (plus an HTML <table> fragment for rich-text targets) instead of
+    // whatever plain-text run the browser's default copy would otherwise produce from a
+    // multi-cell selection. Feasibility requested and discussed before implementing this.
+    preview.addEventListener('copy', (e) => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || sel.rangeCount === 0) return;
+      const grid = buildClipboardGridFromSelection(sel);
+      if (!grid) return;
+      e.clipboardData.setData('text/plain', gridToTsv(grid));
+      e.clipboardData.setData('text/html', gridToHtmlTable(grid));
+      e.preventDefault();
+      showToast('Auswahl kopiert');
     });
 
     // Drives Excalidraw's own "Bild exportieren" dialog to get a PNG (with the full editable
