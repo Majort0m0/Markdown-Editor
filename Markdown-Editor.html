@@ -2030,7 +2030,7 @@ return He}()
       outline: none;
       resize: none;
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-      font-size: 0.95rem;
+      font-size: calc(0.95rem * var(--zoom-scale, 1));
       line-height: 1.6;
       background-color: var(--bg-surface);
       color: var(--text-main);
@@ -2054,7 +2054,7 @@ return He}()
       overflow: hidden;
       pointer-events: none;
       font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-      font-size: 0.95rem;
+      font-size: calc(0.95rem * var(--zoom-scale, 1));
       line-height: 1.6;
       white-space: pre-wrap;
       word-wrap: break-word;
@@ -2343,7 +2343,7 @@ return He}()
       background-color: var(--preview-bg);
       color: var(--preview-text);
       line-height: 1.7;
-      font-size: 1rem;
+      font-size: calc(1rem * var(--zoom-scale, 1));
       border-radius: 8px;
       padding: 20px;
       transition: all 0.2s ease;
@@ -3455,6 +3455,10 @@ return He}()
       <!-- Synchrones Scrollen Toggle Button -->
       <button id="syncScrollBtn" class="icon-btn active" onclick="toggleSyncScroll()" title="Synchrones Scrollen ein-/ausblenden"><svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7.293,8.707a1,1,0,0,1,0-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,1,1-1.414,1.414L12,5.414,8.707,8.707A1,1,0,0,1,7.293,8.707Zm0,8,4,4a1,1,0,0,0,1.414,0l4-4a1,1,0,0,0-1.414-1.414L12,18.586,8.707,15.293a1,1,0,1,0-1.414,1.414Z"/></svg></button>
 
+      <!-- Zoom (Schriftgröße von Editor und Vorschau) -->
+      <button id="zoomOutBtn" class="icon-btn" onclick="zoomOut()" title="Verkleinern (Strg/Cmd + -)"><svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.1922 12.6064C10.0236 13.4816 8.57234 14 7 14C3.13401 14 0 10.866 0 7C0 3.13401 3.13401 0 7 0C10.866 0 14 3.13401 14 7C14 8.57234 13.4816 10.0236 12.6064 11.1922L15.7071 14.2929L14.2929 15.7071L11.1922 12.6064ZM10 6V8L4 8V6L10 6Z" fill="currentColor"/></svg></button>
+      <button id="zoomInBtn" class="icon-btn" onclick="zoomIn()" title="Vergrößern (Strg/Cmd + +)"><svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.1922 12.6064C10.0236 13.4816 8.57234 14 7 14C3.13401 14 0 10.866 0 7C0 3.13401 3.13401 0 7 0C10.866 0 14 3.13401 14 7C14 8.57234 13.4816 10.0236 12.6064 11.1922L15.7071 14.2929L14.2929 15.7071L11.1922 12.6064ZM4 6H6L6 4L8 4L8 6L10 6V8L8 8V10H6V8L4 8L4 6Z" fill="currentColor"/></svg></button>
+
       <!-- Vollbildmodus (Fokusmodus: blendet Menüs/Kopf-/Fußleiste/Tableiste aus) -->
       <button id="fullscreenBtn" class="icon-btn" onclick="toggleFullscreen()" title="Fokus-/Vollbildmodus ein-/ausschalten (blendet Menüs, Kopf-, Fußleiste und Tableiste aus)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.00002 3.99998H4.00004L4 9M20 8.99999V4L15 3.99997M15 20H20L20 15M4 15L4 20L9.00002 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
@@ -3664,6 +3668,8 @@ return He}()
         <tr><td><kbd>Strg</kbd> + <kbd>Z</kbd></td><td>Rückgängig</td></tr>
         <tr><td><kbd>Strg</kbd> + <kbd>Y</kbd></td><td>Wiederherstellen</td></tr>
         <tr><td><kbd>Strg</kbd> + <kbd>Umschalt</kbd> + <kbd>Z</kbd></td><td>Wiederherstellen (Alternative)</td></tr>
+        <tr><td><kbd>Strg</kbd> + <kbd>+</kbd></td><td>Vergrößern (Editor &amp; Vorschau)</td></tr>
+        <tr><td><kbd>Strg</kbd> + <kbd>-</kbd></td><td>Verkleinern (Editor &amp; Vorschau)</td></tr>
         <tr><td><kbd>Enter</kbd> in einer Liste</td><td>Listenpunkt fortsetzen (Aufzählung, Nummerierung, Aufgaben)</td></tr>
         <tr><td><kbd>Enter</kbd> auf leerem Listenpunkt</td><td>Liste beenden</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Dieses Fenster schließen</td></tr>
@@ -3892,6 +3898,7 @@ return He}()
     let inputTimeout = null;
     let currentTheme = 'theme-github-light';
     let splitRatio = 50;
+    let zoomLevel = 100;
     const DARK_THEMES = new Set(['theme-github-dark', 'theme-dracula', 'theme-gruvbox', 'theme-tokyo-night']);
 
     // YouTube/Vimeo iframes (see getVideoEmbedHtml() below) render as a plain black box and never
@@ -4469,6 +4476,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         spellcheckEnabled: spellcheckEnabled,
         tabIdCounter: tabIdCounter,
         splitRatio: splitRatio,
+        zoomLevel: zoomLevel,
         lastTemplateId: lastTemplateId,
         webdavPendingDeletions: webdavPendingDeletions
       };
@@ -4515,6 +4523,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         syncScrollEnabled = state.syncScrollEnabled !== undefined ? state.syncScrollEnabled : true;
         spellcheckEnabled = !!state.spellcheckEnabled;
         splitRatio = state.splitRatio !== undefined ? state.splitRatio : 50;
+        zoomLevel = state.zoomLevel !== undefined ? state.zoomLevel : 100;
         lastTemplateId = state.lastTemplateId || 'blank';
         webdavPendingDeletions = state.webdavPendingDeletions || [];
 
@@ -4523,6 +4532,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         setSpellcheckState(spellcheckEnabled);
         applyPaneVisibility();
         applySplitRatio();
+        applyZoomLevel();
         syncScrollBtn.classList.toggle('active', syncScrollEnabled);
 
         if (tabs.length > 0) {
@@ -5101,13 +5111,31 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function toggleSpellcheck() {
       spellcheckEnabled = !spellcheckEnabled;
-      setSpellcheckState(spellcheckEnabled);
+      setSpellcheckState(spellcheckEnabled, true);
       saveStateToLocalStorage();
     }
 
-    function setSpellcheckState(enabled) {
+    // forceRecheck is true only for an explicit user toggle-on (not the page-load state restore
+    // below, which shouldn't steal focus) — browsers only ever spellcheck text typed *after*
+    // `spellcheck` becomes true, never text already sitting in the field, so merely flipping the
+    // property leaves every pre-existing misspelling unmarked until the user happens to retype it.
+    // Cycling the attribute off/on is necessary but not sufficient on its own — Chrome/Firefox only
+    // actually re-run the check once the field regains focus, so this also cycles focus (preserving
+    // the caret/selection across it) rather than just writing the property twice.
+    function setSpellcheckState(enabled, forceRecheck) {
       spellcheckEnabled = enabled;
-      editor.spellcheck = enabled;
+      if (enabled && forceRecheck) {
+        const hadFocus = document.activeElement === editor;
+        const selStart = editor.selectionStart, selEnd = editor.selectionEnd;
+        editor.spellcheck = false;
+        editor.spellcheck = true;
+        editor.blur();
+        editor.focus();
+        editor.setSelectionRange(selStart, selEnd);
+        if (!hadFocus) editor.blur();
+      } else {
+        editor.spellcheck = enabled;
+      }
       if (spellcheckBtn) {
         spellcheckBtn.classList.toggle('active', enabled);
       }
@@ -5536,6 +5564,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         }
         return;
       }
+      // Zoom shortcuts (Strg/Cmd +/-): global, not scoped to the editor's own keydown listener,
+      // so they work regardless of which pane has focus. preventDefault() is required here — left
+      // unhandled, Ctrl/Cmd+Plus/Minus is also the browser's own native page-zoom shortcut, which
+      // would otherwise fire alongside (and fight with) this app-level content-only zoom.
+      if ((e.ctrlKey || e.metaKey) && (e.key === '+' || e.key === '=')) {
+        e.preventDefault();
+        zoomIn();
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+        e.preventDefault();
+        zoomOut();
+        return;
+      }
       if (e.key === 'Escape') {
         closeShortcutsModal();
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
@@ -5781,6 +5823,32 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function applySplitRatio() {
       mainContainer.style.setProperty('--split-ratio', splitRatio + '%');
+    }
+
+    // --- ZOOM (Schriftgröße von Editor und Vorschau) ---
+
+    const ZOOM_MIN = 60;
+    const ZOOM_MAX = 200;
+    const ZOOM_STEP = 10;
+
+    // Scoped on :root (not #mainContainer, like --split-ratio) since it has to reach both
+    // #markdownInput/.editor-highlight-overlay (inside .editor-pane) and .markdown-body (inside
+    // .preview-pane) — see the textarea/.editor-highlight-overlay/.markdown-body font-size rules,
+    // which all read this same variable so editor and preview scale together, in sync.
+    function applyZoomLevel() {
+      document.documentElement.style.setProperty('--zoom-scale', zoomLevel / 100);
+    }
+
+    function zoomIn() {
+      zoomLevel = Math.min(ZOOM_MAX, zoomLevel + ZOOM_STEP);
+      applyZoomLevel();
+      saveStateToLocalStorage();
+    }
+
+    function zoomOut() {
+      zoomLevel = Math.max(ZOOM_MIN, zoomLevel - ZOOM_STEP);
+      applyZoomLevel();
+      saveStateToLocalStorage();
     }
 
     // --- PANE RESIZER (draggable divider between editor and preview) ---
@@ -7338,7 +7406,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           closePdfImportModal();
         }
 
-        openDrawingModal(null, dataUrlToFile(dataUrl, 'seite-' + firstPage + '.png'));
+        // Awaited deliberately (see continuePdfImportSequence() below for why this matters even
+        // though nothing here currently races against it): openDrawingModal() is what drops the
+        // page image and scales it into place, and letting either of this function's callers
+        // observe "the PDF import finished" before that's actually done is exactly the bug that
+        // continuePdfImportSequence() used to have.
+        await openDrawingModal(null, dataUrlToFile(dataUrl, 'seite-' + firstPage + '.png'));
       } catch (err) {
         console.warn('PDF-Seite konnte nicht gerendert werden:', err);
         statusEl.textContent = 'Rendern fehlgeschlagen — bitte erneut versuchen.';
@@ -7371,7 +7444,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // The pdf itself is only needed to render pages still queued — safe to release right
         // after rendering the last one, before the user has even started drawing on it.
         if (isLastPage) cleanupPdfImportSequence();
-        openDrawingModal(null, dataUrlToFile(dataUrl, 'seite-' + nextPage + '.png'));
+
+        // MUST be awaited: this used to be a fire-and-forget call, which let saveDrawing() (the
+        // only caller of this function) resolve — and re-enable its "Speichern" button — the
+        // instant this line merely *started* the next page's load, not once it actually finished
+        // (openDrawingModal() itself takes ~1-2s: iframe reload, canvas mount, then the drop/scale
+        // delays below). A save click landing in that window ran exportDrawingBlob() against
+        // whatever the canvas happened to contain yet (still the previous page, or nothing) —
+        // reproduced directly, and it's exactly what caused pages/assets to end up duplicated or
+        // out of order. Awaiting here closes the window: saveDrawing()'s own `await
+        // continuePdfImportSequence()` now only resolves (and re-enables the button) once this
+        // page is genuinely ready to be drawn on and saved.
+        await openDrawingModal(null, dataUrlToFile(dataUrl, 'seite-' + nextPage + '.png'));
       } catch (err) {
         console.warn('Nächste PDF-Seite konnte nicht gerendert werden:', err);
         showToast('Weitere Seiten konnten nicht eingefügt werden');
