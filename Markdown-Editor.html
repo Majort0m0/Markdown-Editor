@@ -3464,6 +3464,62 @@ return He}()
       opacity: .5;
     }
 
+    /* Table of contents inside presentation mode -- bottom-left, the one corner not already
+       taken by .presentation-close-btn (top-right), .presentation-tts-btn (top-left), or
+       .presentation-counter (bottom-right). A second, independent instance from the live
+       preview's own #tocToggleBtn/#tocPanel, same reasoning as .presentation-tts-btn above:
+       the main app chrome isn't visible during presentation mode at all. Reuses the plain
+       .toc-entry/.toc-empty classes from the live TOC panel (not scoped to .toc-panel, so
+       they work standalone here too) rather than duplicating that styling. */
+    .presentation-toc-btn {
+      position: absolute;
+      bottom: 18px;
+      left: 22px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      opacity: 0.45;
+    }
+
+    .presentation-toc-btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .presentation-toc-btn:hover,
+    .presentation-toc-btn.active {
+      opacity: 1;
+    }
+
+    .presentation-toc-panel {
+      position: absolute;
+      bottom: 60px;
+      left: 22px;
+      width: 260px;
+      max-height: 60vh;
+      overflow-y: auto;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      padding: 6px 0;
+      cursor: default;
+      display: none;
+    }
+
+    .presentation-toc-panel.active {
+      display: block;
+    }
+
     /* Print / PDF export */
     @media print {
       header, .tab-bar-container, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel, .fullscreen-exit-btn, .tts-toggle-btn {
@@ -4122,6 +4178,8 @@ return He}()
     <span class="presentation-counter" id="presentationCounter"></span>
     <button class="presentation-close-btn" onclick="event.stopPropagation(); exitPresentation()" title="Präsentation beenden (Esc)" type="button">✕</button>
     <button id="presentationTtsToggleBtn" class="presentation-tts-btn" onclick="event.stopPropagation()" title="Vorlesen starten" type="button"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.15" d="M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" fill="currentColor"/><path d="M16 8.99998C16.5 9.49999 17 10.5 17 12C17 13.5 16.5 14.5 16 15M19 6C20.5 7.5 21 10 21 12C21 14 20.5 16.5 19 18M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button id="presentationTocToggleBtn" class="presentation-toc-btn" onclick="event.stopPropagation(); togglePresentationToc()" title="Inhaltsverzeichnis anzeigen/ausblenden" type="button"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7L4 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 12L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 17H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <div class="presentation-toc-panel" id="presentationTocPanel" onclick="event.stopPropagation()"></div>
   </div>
 
   <script>
@@ -6898,6 +6956,69 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       presentationOverlay.classList.remove('active');
       exitPresentationFullscreen();
       document.getElementById('fullscreenExitBtn').style.display = '';
+      closePresentationToc();
+    }
+
+    // Table of contents inside presentation mode -- "chapter" maps to "slide" here (navigation
+    // only ever moves by whole slide, never to an arbitrary scroll position within one), so each
+    // entry is a slide's first heading; slides with no heading at all (classifySlidePresentation
+    // Layout's centered-text case) have nothing chapter-like to label them with and are skipped.
+    // Rendering each slide through marked.parse() into a detached scratch element and reading the
+    // heading's real textContent (rather than the raw token text) mirrors updateTocPanel()'s own
+    // approach, so markdown syntax inside a heading (bold, code, ...) doesn't leak into the label.
+    function togglePresentationToc() {
+      const panel = document.getElementById('presentationTocPanel');
+      if (panel.classList.contains('active')) {
+        closePresentationToc();
+      } else {
+        updatePresentationTocPanel();
+        panel.classList.add('active');
+        document.getElementById('presentationTocToggleBtn').classList.add('active');
+      }
+    }
+
+    function closePresentationToc() {
+      document.getElementById('presentationTocPanel').classList.remove('active');
+      document.getElementById('presentationTocToggleBtn').classList.remove('active');
+    }
+
+    function updatePresentationTocPanel() {
+      const panel = document.getElementById('presentationTocPanel');
+      panel.innerHTML = '';
+
+      const scratch = document.createElement('div');
+      const entries = [];
+      presentationSlides.forEach((slideMarkdown, index) => {
+        scratch.innerHTML = marked.parse(slideMarkdown);
+        const heading = scratch.querySelector('h1, h2, h3, h4, h5, h6');
+        if (heading) {
+          entries.push({ index: index, level: parseInt(heading.tagName.substring(1), 10), text: heading.textContent });
+        }
+      });
+
+      if (entries.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'toc-empty';
+        empty.textContent = 'Keine Überschriften gefunden.';
+        panel.appendChild(empty);
+        return;
+      }
+
+      entries.forEach(entry => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'toc-entry';
+        btn.textContent = entry.text;
+        btn.title = entry.text;
+        btn.style.paddingLeft = (12 + (entry.level - 1) * 14) + 'px';
+        btn.onclick = () => {
+          presentationTts.stop();
+          presentationIndex = entry.index;
+          renderPresentationSlide();
+          closePresentationToc();
+        };
+        panel.appendChild(btn);
+      });
     }
 
     function syncScrollFrom(source) {
@@ -8463,6 +8584,69 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       );
     }
 
+    // Table of contents for both HTML exports below (performHtmlExport()/exportAsEbookWidget()) —
+    // same rationale as the TTS button above: a self-contained button + panel + script embedded
+    // via string concatenation, zero dependency on this app once downloaded. Position is
+    // parameterized (raw CSS position declarations) since the two exports anchor it to whichever
+    // corner isn't already taken by their own TTS button/page-counter — see the call sites.
+    function getTocExportCss(btnPositionCss, panelPositionCss) {
+      return (
+        '  .toc-toggle-btn { position: fixed; ' + btnPositionCss + ' z-index: 20; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--preview-border); background-color: var(--preview-bg); color: var(--preview-text); box-shadow: 0 2px 6px rgba(0,0,0,.15); cursor: pointer; opacity: .55; display: flex; align-items: center; justify-content: center; padding: 0; }\n' +
+        '  .toc-toggle-btn svg { width: 18px; height: 18px; flex-shrink: 0; }\n' +
+        '  .toc-toggle-btn:hover, .toc-toggle-btn.active { opacity: 1; }\n' +
+        '  .toc-toggle-btn.active { background-color: var(--preview-code-bg); }\n' +
+        '  .toc-panel { position: fixed; ' + panelPositionCss + ' z-index: 20; width: 260px; max-height: 60vh; overflow-y: auto; background-color: var(--preview-bg); color: var(--preview-text); border: 1px solid var(--preview-border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.18); padding: 6px 0; display: none; }\n' +
+        '  .toc-panel.active { display: block; }\n' +
+        '  .toc-panel .toc-empty { padding: 10px 14px; font-size: .82rem; opacity: .6; }\n' +
+        '  .toc-entry { display: block; width: 100%; text-align: left; background: transparent; border: none; padding: 6px 14px; font-size: .82rem; cursor: pointer; color: var(--preview-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n' +
+        '  .toc-entry:hover { background-color: var(--preview-code-bg); }\n'
+      );
+    }
+
+    // entriesExpr/onJumpExpr are raw JS source snippets (not values), same convention as
+    // getTtsButtonExportHtml()'s containerExpr/onSlideCompleteExpr — entriesExpr is an expression
+    // evaluating once (at script-run time, page content being static in an export) to an array of
+    // { level, text, target }; onJumpExpr is a function(target) closing over that export's own
+    // navigation primitives — scrollIntoView for the plain export (target = a heading element),
+    // goTo() for the eBook one (target = a slide index). One shared toggle/render/click function
+    // works for both this way, despite the two exports having entirely different DOM shapes.
+    function getTocButtonExportHtml(entriesExpr, onJumpExpr) {
+      return (
+        '<button id="tocToggleBtn" class="toc-toggle-btn" title="Inhaltsverzeichnis anzeigen/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7L4 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 12L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 17H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>\n' +
+        '<div class="toc-panel" id="tocPanel"></div>\n' +
+        '<script>\n' +
+        '(function () {\n' +
+        '  var entries = (' + entriesExpr + ');\n' +
+        '  var onJump = (' + onJumpExpr + ');\n' +
+        '  var btn = document.getElementById("tocToggleBtn");\n' +
+        '  var panel = document.getElementById("tocPanel");\n' +
+        '  btn.addEventListener("click", function () {\n' +
+        '    if (panel.classList.contains("active")) { panel.classList.remove("active"); btn.classList.remove("active"); return; }\n' +
+        '    panel.innerHTML = "";\n' +
+        '    if (entries.length === 0) {\n' +
+        '      var empty = document.createElement("div");\n' +
+        '      empty.className = "toc-empty";\n' +
+        '      empty.textContent = "Keine Überschriften gefunden.";\n' +
+        '      panel.appendChild(empty);\n' +
+        '    } else {\n' +
+        '      entries.forEach(function (entry) {\n' +
+        '        var e = document.createElement("button");\n' +
+        '        e.type = "button";\n' +
+        '        e.className = "toc-entry";\n' +
+        '        e.textContent = entry.text;\n' +
+        '        e.title = entry.text;\n' +
+        '        e.style.paddingLeft = (12 + (entry.level - 1) * 14) + "px";\n' +
+        '        e.onclick = function () { onJump(entry.target); panel.classList.remove("active"); btn.classList.remove("active"); };\n' +
+        '        panel.appendChild(e);\n' +
+        '      });\n' +
+        '    }\n' +
+        '    panel.classList.add("active"); btn.classList.add("active");\n' +
+        '  });\n' +
+        '})();\n' +
+        '</scr' + 'ipt>\n'
+      );
+    }
+
     // Entry point for the 🖨️→HTML export button. Only markdown documents that actually contain
     // at least one slide-break line (the same "---"/"***"/"___" rule splitIntoSlides() and
     // presentation mode use) get asked which export shape they want — a document with no slide
@@ -8537,15 +8721,25 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  }\n' +
         getMarkdownTypographyCss() +
         hljsCss + '\n' +
-        getTtsButtonExportCss(16, 16);
+        getTtsButtonExportCss(16, 16) +
+        // Opposite corner from the TTS button above (top-right vs. its top-left).
+        getTocExportCss('top: 16px; right: 16px;', 'top: 56px; right: 16px;');
 
       suppressDrawingControls = true;
       const bodyHtml = renderContentForTab(currentTab, editor.value);
       suppressDrawingControls = false;
 
-      // No onSlideComplete — a single-page export has no slides to advance through.
+      // No onSlideComplete — a single-page export has no slides to advance through. The TOC's
+      // entries are every heading in the rendered body (mirroring the live app's own
+      // updateTocPanel(), which likewise lists every heading rather than one-per-section), since
+      // this export is a single scrollable page with no slide/chapter granularity of its own —
+      // unlike the eBook export below, where "chapter" means "slide".
       html += '</style>\n</head>\n<body>\n<div class="markdown-body">\n' + bodyHtml + '\n</div>\n' +
         getTtsButtonExportHtml('document.querySelector(".markdown-body")', 'null') +
+        getTocButtonExportHtml(
+          'Array.from(document.querySelectorAll(".markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4, .markdown-body h5, .markdown-body h6")).map(function (h) { return { level: parseInt(h.tagName.substring(1), 10), text: h.textContent, target: h }; })',
+          'function (target) { target.scrollIntoView({ behavior: "smooth", block: "start" }); }'
+        ) +
         '\n</body>\n</html>';
 
       downloadHtmlBlob(html, title + '.html');
@@ -8619,6 +8813,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  @keyframes navArrowPulse { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.45; } }\n' +
         hljsCss + '\n' +
         getTtsButtonExportCss(14, 18) +
+        // Bottom-right — the one corner not already taken by the TTS button (top-left) or the
+        // page counter (bottom-left, per .page-counter above).
+        getTocExportCss('bottom: 14px; right: 18px;', 'bottom: 54px; right: 18px;') +
         '</style>\n</head>\n<body>\n' +
         '<div class="overlay" id="overlay"><div class="slide markdown-body ' + currentTheme + '" id="stage"></div></div>\n' +
         '<div class="page-counter" id="counter"></div>\n' +
@@ -8692,6 +8889,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  paint();\n' +
         '</scr' + 'ipt>\n' +
         getTtsButtonExportHtml('document.getElementById("stage")', 'ttsAdvance') +
+        // "Chapter" means "slide" here, same as the live presentation mode's own TOC — each
+        // entry is a slide's first heading (rendered into a detached scratch element so its real
+        // textContent is used, not the raw markdown), and slides with no heading at all have
+        // nothing chapter-like to label them with and are skipped. Must come after the script
+        // above, which is where SLIDES/goTo/idx/markdownTts are declared.
+        getTocButtonExportHtml(
+          'SLIDES.map(function (s, i) { var scratch = document.createElement("div"); scratch.innerHTML = s.html; var h = scratch.querySelector("h1, h2, h3, h4, h5, h6"); return h ? { level: parseInt(h.tagName.substring(1), 10), text: h.textContent, target: i } : null; }).filter(Boolean)',
+          'function (target) { if (markdownTts) markdownTts.stop(); goTo(target, target > idx ? 1 : -1); }'
+        ) +
         '</body>\n</html>';
 
       downloadHtmlBlob(html, title + '-ebook.html');
