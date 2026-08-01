@@ -39,6 +39,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **15 Designs** — GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (inkl. farbiger Code-Hervorhebung)
 - **Fokus-Modi** — Editor oder Vorschau einzeln ausblenden, plus echter **Vollbildmodus** (mit Fallback für iOS Safari)
 - **Präsentationsmodus** — Folien werden automatisch an Trennlinien (`---`) aufgeteilt und lassen sich per Tastatur, Klick oder Touch durchblättern, mit automatischer Zentrierung für reine Titel- bzw. Text-Folien
+- **Simple Modus** — ein „Simple"-Schalter in der Kopfzeile reduziert Kopf- und Werkzeugleiste auf das Nötigste (Öffnen, Speichern, Rückgängig/Wiederherstellen, Quelltext/Vorschau als reiner Umschalter, Zoom, Vollbild sowie Überschrift/Bild/Foto/Zeichnung/Audio), stellt automatisch das Design „Clean" und eine größere Zoomstufe ein und springt beim Einfügen von Bild, Foto, Zeichnung oder Audioaufnahme direkt in die Vorschau — praktisch für Tablets, jüngere Nutzer:innen oder eine aufgeräumte Schreibumgebung. Bleibt geräteweit gespeichert und lässt sich auch per Link mit `?simple=true` direkt aktiviert öffnen
 
 ### Synchronisation & Export
 - **WebDAV-Synchronisierung** zwischen mehreren Geräten — automatisch bei Änderungen, in Intervallen oder manuell, inkl. Konfliktbehandlung (lokale Version behalten, Server-Version übernehmen oder beide als getrennte Dokumente behalten)
