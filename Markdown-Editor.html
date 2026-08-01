@@ -4432,6 +4432,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         audioAssetIds: t.audioAssetIds || {},
         fileType: t.fileType || 'markdown',
         csvDelimiter: t.csvDelimiter || null,
+        // Mac app only (see isMacApp()) — deliberately device-local like fileHandle itself (never
+        // included in the WebDAV sync payload functions below), since a native filesystem path is
+        // meaningless on another device. Persisting it here (unlike fileHandle, which genuinely
+        // can't survive serialization) means "Speichern" keeps silently overwriting the right file
+        // even across app restarts.
+        nativeFilePath: t.nativeFilePath || null,
         syncId: t.syncId,
         lastSyncedSnapshot: t.lastSyncedSnapshot || null
       }));
@@ -5221,7 +5227,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return 'markdown';
     }
 
-    function createNewTab(name = null, content = null, fileHandle = null) {
+    function createNewTab(name = null, content = null, fileHandle = null, nativeFilePath = null) {
       const tabId = 'tab_' + tabIdCounter++;
       const tabName = name || 'Unbenannt ' + (tabs.length + 1) + '.md';
       const rawContent = content !== null ? content : (tabs.length === 0 ? defaultContent : '# ' + tabName.replace('.md', '') + '\n\n');
@@ -5248,6 +5254,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         name: tabName,
         content: tabContent,
         fileHandle: fileHandle,
+        // macOS app only (see isMacApp() below) — the real on-disk path this tab was opened from
+        // or last saved to via the native "mdNative" bridge, letting saveCurrentFile() overwrite
+        // it silently instead of always prompting like "Speichern unter". Always null in a plain
+        // browser, which has no equivalent (fileHandle above is the closest browser analog, but
+        // only Chromium-family browsers ever populate it, and only after a "Speichern unter").
+        nativeFilePath: nativeFilePath,
         isModified: false,
         history: [tabContent],
         historyIndex: 0,
@@ -7228,6 +7240,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     });
 
     // --- FILE I/O & ACCESS API ---
+
+    // Present only when this page is loaded inside the packaged macOS app — see
+    // mac-app/main.swift's WKScriptMessageHandlerWithReply registration under the name
+    // "mdNative". A plain browser (including this file opened straight from disk) has no
+    // window.webkit.messageHandlers at all, so isMacApp() is false there and every call site
+    // below already has its own browser-native fallback (the File System Access API where
+    // supported, the existing download-blob flow otherwise) — none of this changes web-app
+    // behavior. callMdNative()'s returned promise resolves with whatever Swift's replyHandler
+    // passes (see main.swift) — no manual request-tracking needed, WKScriptMessageHandlerWithReply
+    // makes postMessage() itself return a real, natively-resolved Promise.
+    function isMacApp() {
+      return !!(window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.mdNative);
+    }
+
+    function callMdNative(action, payload) {
+      return window.webkit.messageHandlers.mdNative.postMessage(Object.assign({ action: action }, payload));
+    }
+
     function isPdfFile(file) {
       return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     }
@@ -7235,10 +7265,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function handleFileSelect(event) {
       const files = event.target.files;
       if (!files) return;
-      Array.from(files).forEach(file => {
+      // Mac app only: mac-app/main.swift's runOpenPanelWith stashes the native path(s) of
+      // whatever was just picked here, in the same order as `files` (both reflect this same
+      // picker interaction) — a File/Blob from <input type="file"> never carries a real
+      // filesystem path in any browser, by design, so this side-channel is the only way a tab can
+      // learn what on-disk file it came from, for saveCurrentFile()'s silent-overwrite path.
+      const nativePaths = window.__mdNativeLastOpenPaths || null;
+      window.__mdNativeLastOpenPaths = null;
+      Array.from(files).forEach((file, i) => {
         if (isPdfFile(file)) { handlePdfFile(file); return; }
+        const nativePath = (nativePaths && nativePaths[i]) || null;
         const reader = new FileReader();
-        reader.onload = (e) => createNewTab(file.name, e.target.result, null);
+        reader.onload = (e) => createNewTab(file.name, e.target.result, null, nativePath);
         reader.readAsText(file);
       });
       event.target.value = '';
@@ -7440,6 +7478,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           console.warn('Direktes Speichern fehlgeschlagen:', err);
         }
       }
+
+      // Mac app: a tab opened from (or previously saved to, via "Speichern unter") a real on-disk
+      // file carries its native path — write straight back to it with no dialog at all, which is
+      // what "Speichern" is supposed to do, rather than always behaving like "Speichern unter"
+      // the way the plain download-blob fallback below effectively does. See isMacApp() above and
+      // mac-app/main.swift's "mdNative" message handler.
+      if (isMacApp() && currentTab.nativeFilePath) {
+        try {
+          await callMdNative('save', { path: currentTab.nativeFilePath, content: contentToSave });
+          currentTab.isModified = false;
+          renderTabs();
+          saveStateToLocalStorage();
+          return;
+        } catch (err) {
+          console.warn('Direktes Speichern (macOS) fehlgeschlagen:', err);
+        }
+      }
+
       saveCurrentFileAs();
     }
 
@@ -7456,6 +7512,26 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!currentTab) return;
       const contentToSave = inlineAssetsIntoContent(editor.value, currentTab.assets);
       const typeMeta = getSaveFileTypeMeta(currentTab);
+
+      // Mac app: WebKit has no File System Access API on any OS, so this is the one place that
+      // gets a real native Save panel, with the resulting path remembered on the tab so future
+      // "Speichern" calls can silently reuse it instead of prompting again. See isMacApp() above
+      // and mac-app/main.swift's "mdNative" message handler.
+      if (isMacApp()) {
+        try {
+          const result = await callMdNative('saveAs', { content: contentToSave, suggestedName: currentTab.name });
+          if (!result) return; // user cancelled the native save panel
+          currentTab.nativeFilePath = result.path;
+          currentTab.name = result.name;
+          currentTab.isModified = false;
+          currentTab.isDefaultName = false;
+          renderTabs();
+          saveStateToLocalStorage();
+        } catch (err) {
+          console.warn('Speichern unter (macOS) fehlgeschlagen:', err);
+        }
+        return;
+      }
 
       if ('showSaveFilePicker' in window) {
         try {
