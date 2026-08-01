@@ -20,6 +20,14 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate {
         window.collectionBehavior.insert(.fullScreenPrimary)
 
         let config = WKWebViewConfiguration()
+        // Registers the "mdNative" bridge the web app's saveCurrentFile()/saveCurrentFileAs()
+        // use (see the WKScriptMessageHandlerWithReply extension below) for a real, silent
+        // "Speichern" that overwrites the already-open file in place — something WebKit's total
+        // lack of a File System Access API otherwise makes impossible from the page's own side.
+        // Must be attached to this config before the WKWebView below is created from it.
+        if #available(macOS 11.0, *) {
+            config.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "mdNative")
+        }
         webView = WKWebView(frame: rect, configuration: config)
         webView.uiDelegate = self
         // Required for "Speichern"/"Speichern unter"/"Als HTML exportieren": the web app has no
@@ -83,7 +91,123 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate {
         panel.canChooseDirectories = parameters.allowsDirectories
         panel.allowsMultipleSelection = parameters.allowsMultipleSelection
         panel.beginSheetModal(for: window) { response in
-            completionHandler(response == .OK ? panel.urls : nil)
+            guard response == .OK else { completionHandler(nil); return }
+            // Stash the native path(s) for handleFileSelect() to zip up with the resulting
+            // FileList by position — both reflect this exact picker interaction, in the same
+            // order. WebKit hands picked files to the page as plain File/Blob objects with no
+            // path property at all (true in every browser, by design), so this side-channel is
+            // the only way the page can ever learn which on-disk file a tab came from — which the
+            // "mdNative" save bridge below needs to overwrite it silently on "Speichern" instead
+            // of always prompting like "Speichern unter". Set (and awaited via its own completion
+            // handler, so it's guaranteed to land before WebKit populates the <input>'s change
+            // event) only when the reply-bridge is actually available.
+            guard #available(macOS 11.0, *) else { completionHandler(panel.urls); return }
+            let paths = panel.urls.map { $0.path }
+            let pathsJson = (try? JSONSerialization.data(withJSONObject: paths))
+                .flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+            webView.evaluateJavaScript("window.__mdNativeLastOpenPaths = \(pathsJson);") { _, _ in
+                completionHandler(panel.urls)
+            }
+        }
+    }
+
+    // Plain `alert()`/`confirm()`/`prompt()` calls (e.g. closeTab()'s "ungespeicherte Änderungen"
+    // confirmation) silently do nothing in a WKWebView without these three implemented — unlike a
+    // full browser, WebKit-as-a-component has no default UI for any of them at all, so a
+    // `confirm()` call simply falls through as if the user had cancelled, which is exactly why
+    // closing a modified tab looked like it was failing outright rather than asking anything.
+    func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping () -> Void) {
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.addButton(withTitle: "OK")
+        alert.beginSheetModal(for: window) { _ in completionHandler() }
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String,
+                 initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping (Bool) -> Void) {
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Abbrechen")
+        alert.beginSheetModal(for: window) { response in
+            completionHandler(response == .alertFirstButtonReturn)
+        }
+    }
+
+    func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String,
+                 defaultText: String?, initiatedByFrame frame: WKFrameInfo,
+                 completionHandler: @escaping (String?) -> Void) {
+        let alert = NSAlert()
+        alert.messageText = prompt
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Abbrechen")
+        let input = NSTextField(frame: NSRect(x: 0, y: 0, width: 280, height: 24))
+        input.stringValue = defaultText ?? ""
+        alert.accessoryView = input
+        alert.beginSheetModal(for: window) { response in
+            completionHandler(response == .alertFirstButtonReturn ? input.stringValue : nil)
+        }
+    }
+}
+
+// MARK: - Native file save/save-as bridge ("mdNative")
+//
+// WebKit has no File System Access API on any OS, so the web app's saveCurrentFile()/
+// saveCurrentFileAs() can never get a writable, reusable handle to an on-disk file the way they
+// can in Chrome — every "save" would otherwise always mean "prompt for a new file", which is what
+// made Speichern and Speichern unter indistinguishable. This bridge gives the page a real
+// native-path-aware save: "save" writes straight to an already-known path with no dialog at all;
+// "saveAs" always shows a panel and hands the chosen path back so future "save" calls can reuse
+// it. See Markdown-Editor.html's isMacApp()/callMdNative() and where they're used in
+// saveCurrentFile()/saveCurrentFileAs()/handleFileSelect().
+@available(macOS 11.0, *)
+extension AppDelegate: WKScriptMessageHandlerWithReply {
+    func userContentController(_ userContentController: WKUserContentController,
+                                didReceive message: WKScriptMessage,
+                                replyHandler: @escaping (Any?, String?) -> Void) {
+        guard let body = message.body as? [String: Any], let action = body["action"] as? String else {
+            replyHandler(nil, "invalid message")
+            return
+        }
+
+        switch action {
+        case "save":
+            guard let path = body["path"] as? String, let content = body["content"] as? String else {
+                replyHandler(nil, "missing path/content")
+                return
+            }
+            do {
+                try content.write(toFile: path, atomically: true, encoding: .utf8)
+                replyHandler(true, nil)
+            } catch {
+                replyHandler(nil, error.localizedDescription)
+            }
+
+        case "saveAs":
+            guard let content = body["content"] as? String else {
+                replyHandler(nil, "missing content")
+                return
+            }
+            let panel = NSSavePanel()
+            panel.nameFieldStringValue = (body["suggestedName"] as? String) ?? "Unbenannt"
+            panel.isExtensionHidden = false
+            panel.canCreateDirectories = true
+            panel.beginSheetModal(for: window) { result in
+                guard result == .OK, let url = panel.url else {
+                    replyHandler(nil, nil) // cancelled — not an error, just nothing to report back
+                    return
+                }
+                do {
+                    try content.write(to: url, atomically: true, encoding: .utf8)
+                    replyHandler(["path": url.path, "name": url.lastPathComponent], nil)
+                } catch {
+                    replyHandler(nil, error.localizedDescription)
+                }
+            }
+
+        default:
+            replyHandler(nil, "unknown action")
         }
     }
 }
