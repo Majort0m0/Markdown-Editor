@@ -3724,7 +3724,7 @@ return He}()
       <button id="toggleSearchBtn" class="icon-btn simple-hide" onclick="toggleSearchBar()" title="Suchen und Ersetzen (Strg+F)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.29289 1.29289C9.48043 1.10536 9.73478 1 10 1H18C19.6569 1 21 2.34315 21 4V8C21 8.55228 20.5523 9 20 9C19.4477 9 19 8.55228 19 8V4C19 3.44772 18.5523 3 18 3H11V8C11 8.55228 10.5523 9 10 9H5V20C5 20.5523 5.44772 21 6 21H10C10.5523 21 11 21.4477 11 22C11 22.5523 10.5523 23 10 23H6C4.34315 23 3 21.6569 3 20V8C3 7.73478 3.10536 7.48043 3.29289 7.29289L9.29289 1.29289ZM6.41421 7H9V4.41421L6.41421 7ZM20.1716 18.7574C20.6951 17.967 21 17.0191 21 16C21 13.2386 18.7614 11 16 11C13.2386 11 11 13.2386 11 16C11 18.7614 13.2386 21 16 21C17.0191 21 17.967 20.6951 18.7574 20.1716L21.2929 22.7071C21.6834 23.0976 22.3166 23.0976 22.7071 22.7071C23.0976 22.3166 23.0976 21.6834 22.7071 21.2929L20.1716 18.7574ZM13 16C13 14.3431 14.3431 13 16 13C17.6569 13 19 14.3431 19 16C19 17.6569 17.6569 19 16 19C14.3431 19 13 17.6569 13 16Z" fill="currentColor"/></svg></button>
 
       <!-- Lint Button (Abstände/Leerzeilen bereinigen) -->
-      <button id="lintBtn" class="icon-btn simple-hide" onclick="lintMarkdownSpacing()" title="Abstände (Leerzeilen) optimieren"><svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"><style type="text/css">.st0{fill:currentColor;}</style><g><path class="st0" d="M332.571,140.81l-16.665,16.648c-41.547-24.17-95.688-18.468-131.288,17.116l153.521,153.52
+      <button id="lintBtn" class="icon-btn simple-hide" onclick="lintMarkdownSpacing()" title="Abstände optimieren (Leerzeilen bereinigen, Abschnitte wie Überschriften, Tabellen und Einbettungen absetzen)"><svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"><style type="text/css">.st0{fill:currentColor;}</style><g><path class="st0" d="M332.571,140.81l-16.665,16.648c-41.547-24.17-95.688-18.468-131.288,17.116l153.521,153.52
 		c35.583-35.592,41.294-89.732,17.115-131.278l16.666-16.657L332.571,140.81z"/><path class="st0" d="M0,299.943c0,0,9.585,18.251,28.989,45.303c14.864-9,51.042-31.664,90.012-61.833l6.324,6.332
 		c0,0-42.7,39.908-82.445,74.058c5.748,7.405,12.09,15.206,19.026,23.278c21.441-18.549,45.223-39.781,62.447-57.014l8.756,4.865
 		c0,0-29.692,31.691-60.914,63.788c6.558,7.279,13.584,14.701,21.079,22.196c18.954,18.954,37.494,34.692,54.158,47.448
@@ -4738,6 +4738,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         isDefaultName: !!t.isDefaultName,
         drawingAssetIds: t.drawingAssetIds || {},
         rawDrawingAssetIds: t.rawDrawingAssetIds || {},
+        pdfDrawingAssetIds: t.pdfDrawingAssetIds || {},
         audioAssetIds: t.audioAssetIds || {},
         fileType: t.fileType || 'markdown',
         csvDelimiter: t.csvDelimiter || null,
@@ -4759,23 +4760,30 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // `tabs`, and would otherwise silently erase any document it never loaded into memory the
       // moment it saves anything at all — reproduced directly: a real document vanished from
       // localStorage this way until a WebDAV sync happened to pull it back in. Guard against
-      // that by preserving any *synced* tab (has a syncId — the only cross-session-reliable
-      // identity available) that's sitting in localStorage but unknown to this session, rather
-      // than dropping it. Explicitly excluded: syncIds in webdavPendingDeletions — those are
-      // documents *this* session just deliberately closed, and must stay gone rather than being
-      // resurrected right back in by this same safety net. Tabs that were never synced have no
-      // reliable identity to check across sessions, so this can't help there — a narrower,
-      // accepted gap, since it requires unsynced editing in two same-origin tabs at once.
+      // that by preserving any tab that's sitting in localStorage but unknown to this session,
+      // rather than dropping it. Explicitly excluded: syncIds in webdavPendingDeletions — those
+      // are documents *this* session just deliberately closed, and must stay gone rather than
+      // being resurrected right back in by this same safety net.
+      //
+      // "Unknown to this session" is decided purely by syncId (see ensureSyncId — every tab has
+      // one from the moment it's created, not just once it's actually synced) rather than
+      // tab.id: tab.id ("tab_3") is only unique within one session's own tabIdCounter, so two
+      // independent same-origin sessions will happily both mint "tab_3" for unrelated documents.
+      // An earlier version of this check also excluded any et.id already present in this
+      // session's own tabs, on top of the syncId check — which sounds like extra safety but was
+      // actually the bug: the moment two same-origin sessions' tabIdCounters produced the same
+      // "tab_3" for two *different* documents, that id-based check wrongly treated the other
+      // session's genuinely different tab_3 as "known to me" and silently excluded it from
+      // preservation, discarding it on the very next save from this session.
       let preserved = [];
       try {
         const existingRaw = localStorage.getItem('md_studio_state');
         if (existingRaw) {
           const existing = JSON.parse(existingRaw);
-          const myIds = new Set(tabs.map(t => t.id));
           const mySyncIds = new Set(tabs.map(t => t.syncId).filter(Boolean));
           const pendingDeletionSyncIds = new Set(webdavPendingDeletions);
           preserved = (existing.tabs || []).filter(et =>
-            et.syncId && !mySyncIds.has(et.syncId) && !myIds.has(et.id) && !pendingDeletionSyncIds.has(et.syncId)
+            et.syncId && !mySyncIds.has(et.syncId) && !pendingDeletionSyncIds.has(et.syncId)
           );
         }
       } catch (err) {
@@ -4829,6 +4837,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           isDefaultName: t.isDefaultName !== undefined ? t.isDefaultName : /^(Unbenannt|Notiz) \d+\.md$/.test(t.name),
           drawingAssetIds: t.drawingAssetIds || {},
           rawDrawingAssetIds: t.rawDrawingAssetIds || {},
+          pdfDrawingAssetIds: t.pdfDrawingAssetIds || {},
           audioAssetIds: t.audioAssetIds || {},
           fileType: t.fileType || 'markdown',
           csvDelimiter: t.csvDelimiter || null,
@@ -4838,6 +4847,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           syncId: t.syncId || null,
           lastSyncedSnapshot: t.lastSyncedSnapshot || null
         }));
+        // Backfills a permanent syncId for tabs saved before it became eager (see createNewTab)
+        // -- without this, a tab from before this fix would stay syncId-less, and therefore
+        // exempt from saveStateToLocalStorage()'s cross-session collision guard, until it
+        // happened to go through an actual WebDAV sync.
+        tabs.forEach(ensureSyncId);
 
         tabIdCounter = state.tabIdCounter || (tabs.length + 1);
         currentTheme = state.currentTheme || 'theme-github-light';
@@ -4890,7 +4904,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     //
     // Cross-device identity: tab.id ("tab_3") is only unique within one device's own
     // tabIdCounter, so two independent devices will happily both mint "tab_3" for unrelated
-    // documents. tab.syncId (a UUID, minted lazily by ensureSyncId) is the real merge key.
+    // documents. tab.syncId (a UUID, minted eagerly by ensureSyncId() at tab creation — see
+    // createNewTab() — not just once a tab is first synced) is the real merge key; giving every
+    // tab one from the start, sync configured or not, is also what saveStateToLocalStorage()'s
+    // own same-origin multi-tab guard relies on (see its comment) to tell two genuinely
+    // different documents apart even when their tab.ids happen to collide.
     //
     // Conflict detection is a 3-way compare against tab.lastSyncedSnapshot (the content as of
     // the last successful sync, i.e. the merge base): if only local changed since then, push;
@@ -4944,11 +4962,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     function tabSyncSnapshot(tab) {
-      return JSON.stringify({ name: tab.name, content: tab.content, assets: tab.assets || {}, drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light' });
+      return JSON.stringify({ name: tab.name, content: tab.content, assets: tab.assets || {}, drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, pdfDrawingAssetIds: tab.pdfDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light' });
     }
 
     function remoteTabSnapshot(rt) {
-      return JSON.stringify({ name: rt.name, content: rt.content, assets: rt.assets || {}, drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light' });
+      return JSON.stringify({ name: rt.name, content: rt.content, assets: rt.assets || {}, drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, pdfDrawingAssetIds: rt.pdfDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light' });
     }
 
     function tabToSyncPayload(t) {
@@ -4960,6 +4978,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         assetCounter: t.assetCounter || 0,
         drawingAssetIds: t.drawingAssetIds || {},
         rawDrawingAssetIds: t.rawDrawingAssetIds || {},
+        pdfDrawingAssetIds: t.pdfDrawingAssetIds || {},
         audioAssetIds: t.audioAssetIds || {},
         fileType: t.fileType || 'markdown',
         csvDelimiter: t.csvDelimiter || null,
@@ -4992,6 +5011,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       t.assetCounter = Object.keys(t.assets).length;
       t.drawingAssetIds = rt.drawingAssetIds || {};
       t.rawDrawingAssetIds = rt.rawDrawingAssetIds || {};
+      t.pdfDrawingAssetIds = rt.pdfDrawingAssetIds || {};
       t.audioAssetIds = rt.audioAssetIds || {};
       t.fileType = rt.fileType || 'markdown';
       t.csvDelimiter = rt.csvDelimiter || null;
@@ -5037,6 +5057,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         isDefaultName: false,
         drawingAssetIds: remoteTabData.drawingAssetIds || {},
         rawDrawingAssetIds: remoteTabData.rawDrawingAssetIds || {},
+        pdfDrawingAssetIds: remoteTabData.pdfDrawingAssetIds || {},
         audioAssetIds: remoteTabData.audioAssetIds || {},
         fileType: remoteTabData.fileType || 'markdown',
         csvDelimiter: remoteTabData.csvDelimiter || null,
@@ -5044,6 +5065,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         syncId: nameSuffix ? null : remoteTabData.syncId,
         lastSyncedSnapshot: nameSuffix ? null : remoteTabSnapshot(remoteTabData)
       };
+      // See createNewTab()'s matching call -- a 'both'-decision fork (nameSuffix given) would
+      // otherwise sit with syncId: null until its first sync, vulnerable in the meantime to the
+      // same cross-session tab.id collision saveStateToLocalStorage() guards against.
+      ensureSyncId(newTab);
       tabs.push(newTab);
       return newTab;
     }
@@ -5168,6 +5193,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const conflicts = [];
       const resultTabsById = new Map();
       const tabsToRemoveLocally = [];
+      // syncId -> the exact tabSyncSnapshot() string captured at the moment a tab's payload was
+      // built and handed to resultTabsById (i.e. what's actually about to be written to the
+      // remote). markActiveTabModified() writes tab.content on every keystroke, live, with no
+      // debounce -- so if the user keeps typing in the active tab while putRemoteWebdavState()'s
+      // GET+PUT round-trip (or, worse, an await on showWebdavConflictModal() for some *other*
+      // conflicting tab) is still in flight, t.content can already have moved on by the time a
+      // later step re-reads it. The final loop below must stamp lastSyncedSnapshot from this
+      // frozen string, not from a fresh tabSyncSnapshot(t) call after the await -- otherwise
+      // lastSyncedSnapshot silently drifts ahead of what's actually on the remote, and the very
+      // next sync sees a mismatch it can't explain, either reverting those extra keystrokes
+      // (silently, if nothing further was typed) or flagging a conflict against a remote that no
+      // other device ever touched. This was reproducible with a single instance simply by typing
+      // continuously through a sync cycle.
+      const pushedSnapshotById = new Map();
 
       for (const t of tabs) {
         const syncId = ensureSyncId(t);
@@ -5175,7 +5214,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
         if (!rt) {
           const previouslySynced = !!t.lastSyncedSnapshot;
-          const localChanged = !previouslySynced || tabSyncSnapshot(t) !== t.lastSyncedSnapshot;
+          const localSnap = tabSyncSnapshot(t);
+          const localChanged = !previouslySynced || localSnap !== t.lastSyncedSnapshot;
           if (previouslySynced && !localChanged) {
             // Was synced before, is now gone from the server, and there's nothing unsynced
             // here to lose — another device deleted it, so follow that deletion locally
@@ -5186,6 +5226,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           // A new local tab never synced, or one deleted remotely but with local edits —
           // either way, push/resurrect the local version rather than lose those edits.
           resultTabsById.set(syncId, tabToSyncPayload(t));
+          pushedSnapshotById.set(syncId, localSnap);
           continue;
         }
 
@@ -5197,11 +5238,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
         if (!remoteChanged) {
           resultTabsById.set(syncId, tabToSyncPayload(t));
+          pushedSnapshotById.set(syncId, localSnap);
         } else if (!localChanged) {
           applyRemoteTabToLocal(t, rt);
           resultTabsById.set(syncId, rt);
         } else if (remoteSnap === localSnap) {
           resultTabsById.set(syncId, tabToSyncPayload(t));
+          pushedSnapshotById.set(syncId, localSnap);
         } else {
           conflicts.push({ syncId: syncId, localTab: t, remoteTab: rt });
         }
@@ -5223,12 +5266,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           const decision = decisions[c.syncId];
           if (decision === 'local') {
             resultTabsById.set(c.syncId, tabToSyncPayload(c.localTab));
+            pushedSnapshotById.set(c.syncId, tabSyncSnapshot(c.localTab));
           } else if (decision === 'remote') {
             applyRemoteTabToLocal(c.localTab, c.remoteTab);
             resultTabsById.set(c.syncId, c.remoteTab);
           } else if (decision === 'both') {
             addRemoteTabAsNewLocalTab(c.remoteTab, ' (Server-Version)');
             resultTabsById.set(c.syncId, tabToSyncPayload(c.localTab));
+            pushedSnapshotById.set(c.syncId, tabSyncSnapshot(c.localTab));
           }
           // no decision (modal closed early) -> skip: lastSyncedSnapshot stays stale so this
           // document is flagged as conflicting again next time, instead of silently resolved.
@@ -5251,10 +5296,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // The server no longer has these — the tombstones have done their job.
       webdavPendingDeletions = [];
 
+      // Only stamp lastSyncedSnapshot for tabs that were actually pushed (pushedSnapshotById),
+      // using the frozen snapshot captured before the PUT -- see the comment on that map above.
+      // Pulled tabs are deliberately left alone here: applyRemoteTabToLocal() already stamped
+      // their lastSyncedSnapshot itself, immediately upon the pull, for the exact same
+      // drift reason (see its own comment) -- re-deriving it here a second time, from
+      // whatever tab.content happens to be by now, would silently undo that fix.
       for (const t of tabs) {
         const syncId = ensureSyncId(t);
-        if (resultTabsById.has(syncId)) {
-          t.lastSyncedSnapshot = tabSyncSnapshot(t);
+        if (pushedSnapshotById.has(syncId)) {
+          t.lastSyncedSnapshot = pushedSnapshotById.get(syncId);
         }
       }
     }
@@ -5623,6 +5674,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         isDefaultName: name === null,
         drawingAssetIds: {},
         rawDrawingAssetIds: {},
+        pdfDrawingAssetIds: {},
         audioAssetIds: {},
         syncId: null,
         lastSyncedSnapshot: null,
@@ -5635,6 +5687,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         theme: (getCurrentTab() && getCurrentTab().theme) || currentTheme
       };
 
+      // Minted eagerly, not lazily on first WebDAV sync -- see ensureSyncId() and the
+      // "Same-origin multi-tab safety" comment on saveStateToLocalStorage() below for why every
+      // tab needs a real cross-session-unique identity from the moment it's created, not just
+      // once it's actually synced.
+      ensureSyncId(newTab);
       tabs.push(newTab);
       enableEditorUI();
       switchTab(tabId);
@@ -5642,6 +5699,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function switchTab(id) {
       if (activeTabId) {
+        // Flushes a pending debounced history snapshot (see the editor's 'input' listener) before
+        // leaving this tab. markActiveTabModified() already copied editor.value into
+        // currentTab.content synchronously on every keystroke, so content itself was never at
+        // risk -- but without this, typing right before a tab switch (within the trailing ~400ms
+        // debounce window) never got its own undo/redo checkpoint, silently widening the next
+        // undo step the next time this tab is revisited.
+        if (inputTimeout) {
+          clearTimeout(inputTimeout);
+          inputTimeout = null;
+          recordHistory();
+        }
         const currentTab = getCurrentTab();
         if (currentTab) currentTab.content = editor.value;
       }
@@ -5701,11 +5769,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         return;
       }
 
-      // Only a tab that's ever been synced (has a syncId) needs a tombstone — otherwise the
-      // remote never had it in the first place, so there's nothing to remove there.
-      if (targetTab.syncId) {
-        webdavPendingDeletions.push(targetTab.syncId);
-      }
+      // Every tab has a syncId from creation (see ensureSyncId) regardless of whether it was
+      // ever actually pushed to the remote -- tombstoning one that was never synced is simply a
+      // no-op the next time attemptWebdavSync() excludes it from what it pulls/pushes, so there's
+      // no need to gate this on sync history first.
+      webdavPendingDeletions.push(targetTab.syncId);
 
       removeTabFromList(id);
       saveStateToLocalStorage();
@@ -6536,7 +6604,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const count = (editor.value.match(regex) || []).length;
 
       if (count > 0) {
-        editor.value = editor.value.replace(regex, replacement);
+        // A replacer *function* is used instead of passing `replacement` as a string directly --
+        // String.prototype.replace() treats a string replacement specially, interpreting $&/$$/
+        // $`/$'/$1../ as live patterns rather than literal text. A function's return value is
+        // always inserted verbatim, so a replacement the user actually typed (e.g. literal
+        // "$$E=mc^2$$") lands exactly as typed instead of $$ silently collapsing to $.
+        editor.value = editor.value.replace(regex, () => replacement);
         recordHistory();
         markActiveTabModified();
         updatePreview();
@@ -6988,12 +7061,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       const scratch = document.createElement('div');
       const entries = [];
+      // Every heading in a slide gets its own entry, not just the first -- a slide can carry an
+      // H1 title plus H2/H3 subheadings underneath it (e.g. an overview slide listing several
+      // sub-topics), and all of them should be reachable from the TOC, not just the first one
+      // found. They all still point at the same slide `index`: navigation here is slide-granular
+      // (see the "chapter means slide" reasoning throughout this feature), so an H2 sub-entry
+      // jumps to the same slide as its sibling H1 -- the multiple entries just outline that
+      // slide's own structure in more detail than a single flat list would.
       presentationSlides.forEach((slideMarkdown, index) => {
         scratch.innerHTML = marked.parse(slideMarkdown);
-        const heading = scratch.querySelector('h1, h2, h3, h4, h5, h6');
-        if (heading) {
+        scratch.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
           entries.push({ index: index, level: parseInt(heading.tagName.substring(1), 10), text: heading.textContent });
-        }
+        });
       });
 
       if (entries.length === 0) {
@@ -7392,22 +7471,35 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
         const prefixCleanupRegex = /^(\s*)(?:#{1,6}\s*|[-*+]\s+\[[ xX]\]\s*|[-*+]\s+|\d+\.\s+|>\s*)+/;
 
-        const updatedLines = lines.map(line => {
-          let existingType = null;
-          if (/^\s*#\s+/.test(line)) existingType = 'h1';
-          else if (/^\s*##\s+/.test(line)) existingType = 'h2';
-          else if (/^\s*###\s+/.test(line)) existingType = 'h3';
-          else if (/^\s*####\s+/.test(line)) existingType = 'h4';
-          else if (/^\s*#####\s+/.test(line)) existingType = 'h5';
-          else if (/^\s*######\s+/.test(line)) existingType = 'h6';
-          else if (/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line)) existingType = 'task';
-          else if (/^\s*[-*+]\s+/.test(line)) existingType = 'ul';
-          else if (/^\s*\d+\.\s+/.test(line)) existingType = 'ol';
-          else if (/^\s*>\s+/.test(line)) existingType = 'quote';
+        const detectExistingType = (line) => {
+          if (/^\s*#\s+/.test(line)) return 'h1';
+          if (/^\s*##\s+/.test(line)) return 'h2';
+          if (/^\s*###\s+/.test(line)) return 'h3';
+          if (/^\s*####\s+/.test(line)) return 'h4';
+          if (/^\s*#####\s+/.test(line)) return 'h5';
+          if (/^\s*######\s+/.test(line)) return 'h6';
+          if (/^\s*[-*+]\s+\[[ xX]\]\s+/.test(line)) return 'task';
+          if (/^\s*[-*+]\s+/.test(line)) return 'ul';
+          if (/^\s*\d+\.\s+/.test(line)) return 'ol';
+          if (/^\s*>\s+/.test(line)) return 'quote';
+          return null;
+        };
 
+        // The toggle-off decision ("strip instead of reapply") is made once for the *whole*
+        // selection, not per line — deciding it per line instead (the original approach) breaks
+        // a mixed selection: e.g. selecting an existing "# Heading" together with a plain
+        // paragraph and clicking H1 would strip the heading's "# " while simultaneously adding
+        // "# " to the paragraph, landing further from a uniform result than before the click.
+        // Only when every selected line already has exactly the clicked type does this toggle
+        // off (matching the single-line/cursor case exactly, since a one-line selection's "every"
+        // check reduces to that one line's own type); any mix — or none matching — turns the
+        // whole selection uniformly into `type` instead of half-toggling it.
+        const allAlreadyType = lines.length > 0 && lines.every(line => detectExistingType(line) === type);
+
+        const updatedLines = lines.map(line => {
           const pureText = line.replace(prefixCleanupRegex, '$1').trimStart();
 
-          if (existingType === type) {
+          if (allAlreadyType) {
             return pureText;
           }
 
@@ -8060,11 +8152,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         const start = editor.selectionStart;
         const text = editor.value;
         const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-        const currentLine = text.substring(lineStart, start);
+        let lineEnd = text.indexOf('\n', start);
+        if (lineEnd === -1) lineEnd = text.length;
+        // Matched against the *whole* line, not just the text before the cursor -- the
+        // "is this list item empty, so exit the list" check below needs to know whether the
+        // item has any content anywhere on the line. Matching only the before-cursor slice used
+        // to misfire whenever the cursor sat between the marker and existing text (e.g. right
+        // after "- ", before "Hello world"): content-before-cursor reads as empty even though
+        // the line itself isn't, so the "exit list" branch deleted the whole line -- silently
+        // destroying "Hello world". The actual split-at-cursor insert below already only ever
+        // uses `start`, not this match, so matching the full line doesn't change that behavior.
+        const fullLine = text.substring(lineStart, lineEnd);
 
-        const taskMatch = currentLine.match(/^(\s*)[-*+]\s+\[[ xX]\]\s*(.*)$/);
-        const numMatch = currentLine.match(/^(\s*)(\d+)\.\s+(.*)$/);
-        const bulletMatch = currentLine.match(/^(\s*)[-*+]\s+(.*)$/);
+        const taskMatch = fullLine.match(/^(\s*)[-*+]\s+\[[ xX]\]\s*(.*)$/);
+        const numMatch = fullLine.match(/^(\s*)(\d+)\.\s+(.*)$/);
+        const bulletMatch = fullLine.match(/^(\s*)[-*+]\s+(.*)$/);
 
         // 1. Task List
         if (taskMatch) {
@@ -8073,8 +8175,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           const content = taskMatch[2];
 
           if (content.trim() === '') {
-            let lineEnd = text.indexOf('\n', start);
-            if (lineEnd === -1) lineEnd = text.length;
             editor.value = text.substring(0, lineStart) + text.substring(lineEnd);
             editor.setSelectionRange(lineStart, lineStart);
           } else {
@@ -8097,8 +8197,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           const content = numMatch[3];
 
           if (content.trim() === '') {
-            let lineEnd = text.indexOf('\n', start);
-            if (lineEnd === -1) lineEnd = text.length;
             editor.value = text.substring(0, lineStart) + text.substring(lineEnd);
             editor.setSelectionRange(lineStart, lineStart);
           } else {
@@ -8121,8 +8219,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           const content = bulletMatch[2];
 
           if (content.trim() === '') {
-            let lineEnd = text.indexOf('\n', start);
-            if (lineEnd === -1) lineEnd = text.length;
             editor.value = text.substring(0, lineStart) + text.substring(lineEnd);
             editor.setSelectionRange(lineStart, lineStart);
           } else {
@@ -8706,7 +8802,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       const title = currentTab.name.replace(/\.(md|markdown|txt|csv|json)$/i, '');
 
-      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n' +
+      // Tab names have no character restrictions (the rename dialog accepts anything) — escaped
+      // here so a name containing "</title><script>..." can't break out of the <title> tag and
+      // inject a script into this exported, standalone document.
+      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + escapeHtmlText(title) + '</title>\n' +
         // Sets the same html.is-file-protocol class the live app sets on itself (see the
         // comment near getVideoEmbedHtml() in the main script) — needed so a YouTube/Vimeo embed
         // in this exported file falls back to a click-through card instead of the always-broken
@@ -8780,7 +8879,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }).join('\n');
       suppressDrawingControls = false;
 
-      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + title + '</title>\n<style>\n' +
+      // See the matching comment in performHtmlExport() -- escaped so an unrestricted tab name
+      // can't break out of <title> and inject a script into this exported document.
+      let html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + escapeHtmlText(title) + '</title>\n<style>\n' +
         // The --preview-* custom properties are declared on <body> — a shared ancestor of
         // .overlay/.slide AND .page-counter/.nav-arrow — rather than on .slide itself, since a
         // custom property only cascades to descendants of whatever it's declared on. .page-counter
@@ -8889,13 +8990,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  paint();\n' +
         '</scr' + 'ipt>\n' +
         getTtsButtonExportHtml('document.getElementById("stage")', 'ttsAdvance') +
-        // "Chapter" means "slide" here, same as the live presentation mode's own TOC — each
-        // entry is a slide's first heading (rendered into a detached scratch element so its real
-        // textContent is used, not the raw markdown), and slides with no heading at all have
-        // nothing chapter-like to label them with and are skipped. Must come after the script
-        // above, which is where SLIDES/goTo/idx/markdownTts are declared.
+        // "Chapter" means "slide" here, same as the live presentation mode's own TOC — every
+        // heading in a slide gets its own entry (rendered into a detached scratch element so its
+        // real textContent is used, not the raw markdown), not just the first, so an overview
+        // slide's H1 title plus its H2/H3 sub-topics are all reachable; all entries from the same
+        // slide share that slide's index as `target`, since navigation here is slide-granular.
+        // Slides with no heading at all contribute nothing and are simply absent from the list.
+        // Must come after the script above, which is where SLIDES/goTo/idx/markdownTts are
+        // declared.
         getTocButtonExportHtml(
-          'SLIDES.map(function (s, i) { var scratch = document.createElement("div"); scratch.innerHTML = s.html; var h = scratch.querySelector("h1, h2, h3, h4, h5, h6"); return h ? { level: parseInt(h.tagName.substring(1), 10), text: h.textContent, target: i } : null; }).filter(Boolean)',
+          'SLIDES.flatMap(function (s, i) { var scratch = document.createElement("div"); scratch.innerHTML = s.html; return Array.from(scratch.querySelectorAll("h1, h2, h3, h4, h5, h6")).map(function (h) { return { level: parseInt(h.tagName.substring(1), 10), text: h.textContent, target: i }; }); })',
           'function (target) { if (markdownTts) markdownTts.stop(); goTo(target, target > idx ? 1 : -1); }'
         ) +
         '</body>\n</html>';
@@ -8928,11 +9032,119 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // breathing room between a heading and its content just by typing more blank lines in the
     // source. Lines inside fenced code blocks are left untouched — a blank line there is literal
     // code content, not a paragraph separator, and must not turn into stray "&nbsp;" text.
-    // Collapses runs of 2+ consecutive blank lines down to exactly one (and drops leading/
-    // trailing blank lines entirely) — markdown renders any run of blank lines identically to a
-    // single one, so this only tidies the raw source, it never changes the rendered output.
-    // Lines inside fenced code blocks are left completely untouched, same fence-tracking idiom as
-    // expandBlankLinesForClipboard() below, since a blank line there is literal code content.
+
+    // Heading levels 2-6 only (ATX, "#" + a space or end-of-line, capped at 6 like CommonMark
+    // itself). Level 1 is deliberately excluded — it's normally a one-off document title, not a
+    // repeated section marker the way H2+ is throughout a document, so lintMarkdownSpacing()
+    // leaves it exactly as written rather than forcing spacing around it.
+    const LINT_HEADING_RE = /^#{2,6}(\s|$)/;
+    // A line that consists *purely* of one or more image/embed references and nothing else —
+    // covers images, drawings, video, and audio alike, since all of them are inserted via the
+    // same `![alt](href)` syntax (see hljsRenderer.image()/Audio recorder above). An image
+    // mentioned mid-sentence doesn't match this and is left inside its paragraph untouched.
+    const LINT_EMBED_LINE_RE = /^(?:!\[[^\]]*\]\([^)]*\)\s*)+$/;
+    const LINT_BLOCKQUOTE_LINE_RE = /^\s*>/;
+    const LINT_FENCE_LINE_RE = /^\s*(```|~~~)/;
+
+    // Segments a document into blocks so lintMarkdownSpacing() can force a blank line around the
+    // ones that read as their own distinct "section" — headings, fenced code, tables,
+    // blockquotes, lone embeds — while leaving paragraphs and lists exactly as tight or loose as
+    // the user wrote them. A blank line before/after any of those five types never changes
+    // CommonMark's own block boundaries, since each is already self-delimiting by its own syntax
+    // (an ATX heading ends at end-of-line, a fence by its closing marker, a table/blockquote by
+    // the first line that no longer looks like one) — so forcing one there is purely cosmetic.
+    // A list is the opposite: inserting a blank line between two items turns a *tight* list
+    // *loose* (marked wraps each item in <p>, adding real vertical spacing to the rendered
+    // output) — a genuine rendering change, not a cosmetic one — which is exactly why list
+    // content is deliberately left classified as plain 'other' below rather than singled out.
+    function segmentLinesForLint(lines) {
+      const segments = [];
+      let i = 0;
+      while (i < lines.length) {
+        const line = lines[i];
+
+        if (line.trim() === '') {
+          const start = i;
+          while (i < lines.length && lines[i].trim() === '') i++;
+          segments.push({ type: 'blank', lines: lines.slice(start, i) });
+          continue;
+        }
+
+        if (LINT_FENCE_LINE_RE.test(line)) {
+          const start = i;
+          i++;
+          while (i < lines.length && !LINT_FENCE_LINE_RE.test(lines[i])) i++;
+          if (i < lines.length) i++; // include the closing fence marker itself
+          segments.push({ type: 'fence', lines: lines.slice(start, i) });
+          continue;
+        }
+
+        if (isTableRowLine(line)) {
+          let end = i;
+          while (end < lines.length - 1 && isTableRowLine(lines[end + 1])) end++;
+          if (end > i && TABLE_SEPARATOR_RE.test(lines[i + 1])) {
+            segments.push({ type: 'table', lines: lines.slice(i, end + 1) });
+            i = end + 1;
+            continue;
+          }
+          // A pipe-containing line with no valid separator row isn't a real table (same check
+          // findTableBlock() uses) — falls through and is treated as ordinary text below.
+        }
+
+        if (LINT_BLOCKQUOTE_LINE_RE.test(line)) {
+          const start = i;
+          while (i < lines.length && LINT_BLOCKQUOTE_LINE_RE.test(lines[i])) i++;
+          segments.push({ type: 'blockquote', lines: lines.slice(start, i) });
+          continue;
+        }
+
+        if (LINT_HEADING_RE.test(line)) {
+          segments.push({ type: 'heading', lines: [line] });
+          i++;
+          continue;
+        }
+
+        if (LINT_EMBED_LINE_RE.test(line.trim())) {
+          segments.push({ type: 'embed', lines: [line] });
+          i++;
+          continue;
+        }
+
+        // Ordinary paragraph/list/other content — accumulated as one atomic run so the forced-
+        // spacing pass below can never split it (e.g. insert a blank line between list items).
+        const start = i;
+        while (
+          i < lines.length &&
+          lines[i].trim() !== '' &&
+          !LINT_FENCE_LINE_RE.test(lines[i]) &&
+          !LINT_BLOCKQUOTE_LINE_RE.test(lines[i]) &&
+          !LINT_HEADING_RE.test(lines[i]) &&
+          !LINT_EMBED_LINE_RE.test(lines[i].trim()) &&
+          !(isTableRowLine(lines[i]) && lines[i + 1] !== undefined && TABLE_SEPARATOR_RE.test(lines[i + 1]))
+        ) {
+          i++;
+        }
+        segments.push({ type: 'other', lines: lines.slice(start, i) });
+      }
+      return segments;
+    }
+
+    // Drops every 'blank' segment and rejoins the rest with exactly one blank line between each
+    // pair — which sounds like it would also need to special-case "don't force one between two
+    // plain paragraphs that never had one", but that case can't actually occur here: two 'other'
+    // segments can only ever end up adjacent in the first place if a blank line (or a fence/
+    // table/blockquote/heading/embed segment) separated them during segmentation, since anything
+    // else would already have been absorbed into the same 'other' run above. So "always exactly
+    // one blank line between segments" already reduces to "collapse an existing gap to one" for
+    // plain text, and "add the gap that wasn't there" for the five structural types — one rule
+    // covers both halves of the feature. Leading/trailing blank lines are dropped for free, same
+    // as the collapse-only behavior this replaces, since there's no segment before the first or
+    // after the last to join against.
+    function buildLintedMarkdown(content) {
+      const segments = segmentLinesForLint(content.split('\n')).filter((s) => s.type !== 'blank');
+      return segments.map((s) => s.lines.join('\n')).join('\n\n');
+    }
+
     function lintMarkdownSpacing() {
       if (editor.disabled) return;
       const currentTab = getCurrentTab();
@@ -8941,38 +9153,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         return;
       }
 
-      const lines = editor.value.split('\n');
-      const out = [];
-      let inFence = false;
-      let blankRun = 0;
-
-      const flushBlankRun = () => {
-        if (blankRun > 0 && out.length > 0) out.push('');
-        blankRun = 0;
-      };
-
-      for (const line of lines) {
-        const isFenceMarker = /^\s*(```|~~~)/.test(line);
-        if (inFence) {
-          out.push(line);
-          if (isFenceMarker) inFence = false;
-          continue;
-        }
-        if (isFenceMarker) {
-          flushBlankRun();
-          out.push(line);
-          inFence = true;
-          continue;
-        }
-        if (line.trim() === '') {
-          blankRun++;
-        } else {
-          flushBlankRun();
-          out.push(line);
-        }
-      }
-
-      const result = out.join('\n');
+      const result = buildLintedMarkdown(editor.value);
       if (result === editor.value) {
         showToast('Abstände sind bereits optimal');
         return;
@@ -9273,6 +9454,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       box.setPointerCapture(e.pointerId);
       document.addEventListener('pointermove', onCropDragMove);
       document.addEventListener('pointerup', onCropDragEnd);
+      // Same pointercancel handling as #paneResizer's drag (see CLAUDE.md) -- without it, a
+      // touch-interrupted drag (e.g. an incoming call, a system gesture taking over) never fires
+      // pointerup, leaking these two document-level listeners and leaving cropDrag non-null.
+      document.addEventListener('pointercancel', onCropDragEnd);
     }
 
     function onCropDragMove(e) {
@@ -9315,6 +9500,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       cropDrag = null;
       document.removeEventListener('pointermove', onCropDragMove);
       document.removeEventListener('pointerup', onCropDragEnd);
+      document.removeEventListener('pointercancel', onCropDragEnd);
     }
 
     function clamp(v, min, max) {
@@ -9572,16 +9758,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // empirically by dropping both a 1272x1800px and a 3816x5400px render of the same page and
     // getting the identical on-canvas size both times, which rules out "just render PDFs at a
     // higher DPI" as a fix. A full PDF page at that size reads as far too small to comfortably
-    // annotate, so a raw, freshly-dropped PDF-page image is scaled up (and repositioned, see below)
-    // right after the drop (see openDrawingModal()'s isFreshImageDrop branch) using the same "drive
-    // the real UI" approach every other Excalidraw interaction in this file uses (there's no
-    // official API for the standalone app — see the comments around
-    // dropFileOntoExcalidraw/exportDrawingBlob): open the "Statistiken für Nerds" panel (Alt+/,
-    // which only registers when dispatched on the canvas element itself — dispatching on
-    // window/document/document.body was silently ignored in testing), drive its editable
-    // Shape-properties fields for the currently-selected (just-dropped) element via the native
-    // input-value setter (a plain `.value =` assignment doesn't trigger React's onChange on a
-    // controlled input), then close the panel again the same way it was opened. The whole dance
+    // annotate, so a raw, freshly-dropped PDF-page image is scaled up to exactly fill the canvas'
+    // width (and repositioned, see below) right after the drop (see openDrawingModal()'s
+    // isFreshImageDrop branch) using the same "drive the real UI" approach every other Excalidraw
+    // interaction in this file uses (there's no official API for the standalone app — see the
+    // comments around dropFileOntoExcalidraw/exportDrawingBlob): open the "Statistiken für Nerds"
+    // panel (Alt+/, which only registers when dispatched on the canvas element itself —
+    // dispatching on window/document/document.body was silently ignored in testing), drive its
+    // editable Shape-properties fields for the currently-selected (just-dropped) element via the
+    // native input-value setter (a plain `.value =` assignment doesn't trigger React's onChange on
+    // a controlled input), then close the panel again the same way it was opened. The whole dance
     // runs while openDrawingModal()'s own "Lädt Zeichenfläche…" overlay is still showing, so
     // nothing of it is ever visible to the user. Deliberately best-effort: if Excalidraw's DOM
     // structure ever changes and this stops finding what it expects, the image is simply left
@@ -9589,12 +9775,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // drawing that's already gone through a real Excalidraw export (currentDrawingAssetId with the
     // asset absent from tab.rawDrawingAssetIds, see openDrawingModal()) — that drop restores a
     // whole previously-sized/positioned scene via embedded PNG metadata, not a single fresh
-    // element, and redoing this on every reopen would compound the size (3x, then 9x, then 27x,
-    // ...) and fight the user's own subsequent repositioning. It IS applied every time a
-    // tab.rawDrawingAssetIds entry is opened — that asset is a plain PNG with no embedded scene at
-    // all, so dropping it lands at the same tiny default footprint every time until it's actually
-    // saved through Excalidraw once (see saveDrawing(), which then clears the raw marker).
-    async function scaleSelectedExcalidrawImage(win, factor) {
+    // element, and redoing a rescale on every reopen would compound the size (full-width, then
+    // way-too-wide, then wider still, ...) and fight the user's own subsequent repositioning; a
+    // reopen of an already-processed drawing instead only ever re-pans/re-zooms the camera, never
+    // touches element geometry — see positionPdfDrawingViewport() below. This IS re-applied every
+    // time a tab.rawDrawingAssetIds entry is (re)opened — that asset is a plain PNG with no
+    // embedded scene at all, so dropping it lands at the same tiny default footprint every time
+    // until it's actually saved through Excalidraw once (see saveDrawing(), which then clears the
+    // raw marker).
+    async function scaleSelectedExcalidrawImage(win, leftClearance) {
+      leftClearance = leftClearance || 0;
       try {
         const doc = win.document;
         const canvas = doc.querySelector('canvas.excalidraw__canvas.interactive');
@@ -9622,25 +9812,31 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
         const widthInput = findField('W');
         if (widthInput && widthInput.tagName === 'INPUT') {
-          const newWidth = parseFloat(widthInput.value) * factor;
+          // Target the canvas' own current width exactly ("die gesamte Breite") rather than a
+          // guessed multiplier — a fixed factor only ever coincidentally matched the actual
+          // canvas width, which depends on the browser window/modal size at the moment this
+          // runs, not on anything about the source image. Scene coordinates map 1:1 onto canvas
+          // CSS pixels here because a freshly-dropped image always sits on a brand-new,
+          // never-panned/zoomed Excalidraw session (a fresh srcdoc iframe every modal open) —
+          // confirmed empirically (canvas top-left == scene 0,0 at 100% zoom). leftClearance
+          // (the live-measured width of the Text tool's own properties panel — see
+          // presetPdfDrawingToolDefaults(), which is what forces that panel to be showing in the
+          // first place for a PDF-origin drawing) is subtracted here so "full width" means the
+          // full width actually available next to that panel, not the raw canvas width — without
+          // this the panel sits directly on top of the image's left edge the moment the Text
+          // tool (now the default, locked-active tool) is showing.
+          const canvasRect = canvas.getBoundingClientRect();
+          const newWidth = canvasRect.width - leftClearance;
           setField(widthInput, newWidth);
           await new Promise((r) => setTimeout(r, 150));
 
-          // A freshly scaled-up image otherwise lands wherever Excalidraw's small default drop
-          // footprint happened to sit, which after a 3x blow-up reads as "shifted toward the top
-          // right, partly hidden behind the toolbar" rather than a deliberate position — so
-          // explicitly re-center it: horizontally centered on the canvas, top edge just far enough
-          // below the floating toolbar to clear it. Scene coordinates map 1:1 onto canvas CSS
-          // pixels here because a freshly-dropped image always sits on a brand-new, never-panned/
-          // zoomed Excalidraw session (a fresh srcdoc iframe every modal open) — confirmed
-          // empirically (canvas top-left == scene 0,0 at 100% zoom). Reads the toolbar's own live
-          // bounding box rather than hardcoding its height, since that isn't a stable contract to
-          // assume; 76 (its measured height at the time this was written) is only a fallback for
-          // if the lookup itself ever fails.
-          const canvasRect = canvas.getBoundingClientRect();
+          // Flush against the right edge and just clear of the left-hand panel (0 if there is
+          // none). Reads the toolbar's own live bounding box rather than hardcoding its height,
+          // since that isn't a stable contract to assume; 76 (its measured height at the time
+          // this was written) is only a fallback for if the lookup itself ever fails.
           const toolbarEl = doc.querySelector('.Island.App-toolbar') || doc.querySelector('[class*="App-toolbar"]');
           const toolbarBottom = toolbarEl ? toolbarEl.getBoundingClientRect().bottom : 76;
-          const desiredX = (canvasRect.width - newWidth) / 2;
+          const desiredX = leftClearance;
           const desiredY = (toolbarBottom - canvasRect.top) + 20;
 
           const xInput = findField('X');
@@ -9652,6 +9848,134 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         toggleStatsPanel();
       } catch (err) {
         console.warn('Bildgröße/-position konnte nicht automatisch angepasst werden:', err);
+      }
+    }
+
+    // Locks the just-positioned page image (Cmd/Ctrl+Shift+L — Excalidraw's own "Sperren"
+    // shortcut, found via its right-click context menu; no dedicated toolbar button or
+    // data-testid exists for it) so it can't be accidentally nudged or resized while annotating
+    // on top of it, which is the whole point of pinning it to a fixed position/size in the first
+    // place. Confirmed empirically to work here even though the Text tool (not the Selection
+    // tool) is the active tool at this point — the image dropped by dropFileOntoExcalidraw()
+    // stays Excalidraw's "current selection" for Stats-panel/shortcut purposes regardless of
+    // which tool is active, same as scaleSelectedExcalidrawImage() above already relies on.
+    //
+    // Called exactly once, right after the very first fresh-drop scale/position (see
+    // openDrawingModal()'s isFreshImageDrop branch) — never on a later reopen. Excalidraw's own
+    // scene serialization already preserves an element's locked state through the embedded-PNG
+    // save/restore cycle this app relies on elsewhere (confirmed directly: lock it, save,
+    // reopen, still locked), so re-asserting a lock on every reopen would only ever fight a user
+    // who deliberately unlocked the page themselves later to reposition it.
+    async function lockSelectedExcalidrawImage(win) {
+      try {
+        const doc = win.document;
+        const canvas = doc.querySelector('canvas.excalidraw__canvas.interactive');
+        if (!canvas) return;
+        canvas.dispatchEvent(new win.KeyboardEvent('keydown', {
+          key: 'l', code: 'KeyL', keyCode: 76, which: 76, shiftKey: true, ctrlKey: true, metaKey: true, bubbles: true, cancelable: true
+        }));
+        await new Promise((r) => setTimeout(r, 150));
+      } catch (err) {
+        console.warn('Seite konnte nicht automatisch gesperrt werden:', err);
+      }
+    }
+
+    // Precisely pins the viewport (pan + zoom only — never touches any element's own x/y/width/
+    // height) so a PDF-origin drawing reopens in a consistent, predictable place every time: 100%
+    // zoom, content's top-left flush with the canvas' left edge and just below the toolbar. Doing
+    // this as a pure camera move, rather than rescaling elements the way scaleSelectedExcalidraw
+    // Image() does for a single freshly-dropped image, is deliberate: a reopened, already-
+    // annotated drawing can carry any number/type of elements on top of the base page image
+    // (freedraw strokes, text, arrows, ...), and those don't all rescale safely via a blind
+    // x/y/width/height rewrite the way a single, aspect-locked image does. Panning/zooming the
+    // camera instead leaves every element's own geometry — and therefore every annotation's
+    // position relative to the base image — completely untouched. The trade-off: this only stays
+    // "full width" for as long as the browser's own canvas width hasn't changed since the image
+    // was originally scaled to fill it (see scaleSelectedExcalidrawImage()) — an accepted,
+    // narrow gap consistent with the rest of this file's Excalidraw automation.
+    //
+    // Reads/writes the Excalidraw App component's own React state directly (found by walking up
+    // from the canvas node's React fiber) rather than another driven-through-the-UI trick like
+    // the rest of this file's Excalidraw automation — there's no safe DOM-driven equivalent for
+    // "pan/zoom to an exact scene coordinate": Shift+1 (zoomToFitExcalidrawScene, used for a
+    // non-PDF drawing reopen) only zooms *to fit*, never to a guaranteed 100%, and the Stats
+    // panel's X/Y/W/H fields (scaleSelectedExcalidrawImage()'s approach) go "Mixed" — effectively
+    // read-only — the moment more than one element is selected, which a reopened, annotated
+    // drawing always has. setState() on a class component's own state is a completely standard,
+    // public React mechanism, not a private-internals hack the way e.g. reaching into a bundler's
+    // module cache would be — the only non-standard part is locating the component instance at
+    // all, which is why this is still wrapped in the same best-effort try/catch as every other
+    // Excalidraw automation in this file.
+    async function positionPdfDrawingViewport(win, leftClearance) {
+      leftClearance = leftClearance || 0;
+      try {
+        const doc = win.document;
+        const canvas = doc.querySelector('canvas.excalidraw__canvas.interactive');
+        if (!canvas) return;
+
+        const reactKey = Object.keys(canvas).find((k) => k.startsWith('__reactFiber'));
+        if (!reactKey) return;
+        let fiber = canvas[reactKey];
+        let app = null;
+        let depth = 0;
+        while (fiber && depth < 40) {
+          const node = fiber.stateNode;
+          if (node && node.scene && typeof node.scene.getNonDeletedElements === 'function' && typeof node.setState === 'function') {
+            app = node;
+            break;
+          }
+          fiber = fiber.return;
+          depth++;
+        }
+        if (!app) return;
+
+        const applyTargetViewport = () => {
+          const elements = app.scene.getNonDeletedElements();
+          if (!elements.length) return null;
+
+          const minX = Math.min(...elements.map((e) => e.x));
+          const minY = Math.min(...elements.map((e) => e.y));
+
+          const canvasRect = canvas.getBoundingClientRect();
+          const toolbarEl = doc.querySelector('.Island.App-toolbar') || doc.querySelector('[class*="App-toolbar"]');
+          const toolbarBottom = toolbarEl ? toolbarEl.getBoundingClientRect().bottom : 76;
+
+          // leftClearance shifts the target right by the Text tool's own panel width (see
+          // presetPdfDrawingToolDefaults()) so the panel — always showing now, since Text is the
+          // default, locked-active tool for a PDF-origin drawing — doesn't land on top of the
+          // content's left edge on reopen, same reasoning as scaleSelectedExcalidrawImage()'s own
+          // leftClearance use for the very first positioning.
+          const target = { scrollX: leftClearance - minX, scrollY: (toolbarBottom - canvasRect.top + 20) - minY, zoom: { value: 1 } };
+          app.setState(target);
+          return target;
+        };
+
+        // A drop that restores an embedded scene (any reopen of an already-saved drawing) isn't
+        // fully settled the instant dropFileOntoExcalidraw()'s drop event returns -- Excalidraw
+        // asynchronously decodes the dropped PNG and then applies its own embedded appState
+        // (including *its* saved scrollX/scrollY/zoom, from whatever view was active at export
+        // time), which can still land *after* an initial setState() call here and silently
+        // overwrite it. Confirmed directly: setting the viewport once immediately after the drop
+        // reliably got clobbered a few hundred ms later back to the embedded scene's own
+        // (typically off-screen) scroll position. Re-asserting a couple more times after short
+        // delays is what actually wins the race, rather than chasing an exact "restore is done"
+        // event that Excalidraw doesn't expose.
+        const first = applyTargetViewport();
+        if (!first) return;
+        for (let i = 0; i < 3; i++) {
+          await new Promise((r) => setTimeout(r, 250));
+          const target = applyTargetViewport();
+          if (
+            target &&
+            Math.abs(app.state.scrollX - target.scrollX) < 0.5 &&
+            Math.abs(app.state.scrollY - target.scrollY) < 0.5 &&
+            app.state.zoom.value === 1
+          ) {
+            break;
+          }
+        }
+      } catch (err) {
+        console.warn('Ansicht der PDF-Zeichnung konnte nicht angepasst werden:', err);
       }
     }
 
@@ -9690,6 +10014,62 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         await new Promise((r) => setTimeout(r, 100));
       } catch (err) {
         console.warn('Standard-Strichstärke konnte nicht gesetzt werden:', err);
+      }
+    }
+
+    // PDF-specific defaults, applied only for a PDF-origin drawing (see openDrawingModal()'s
+    // isPdfOrigin check) — unlike presetThinStrokeWidth() above (every drawing, PDF or not), a
+    // PDF annotation workflow is overwhelmingly "add a handful of text labels onto the page", so
+    // this leaves the Text tool selected and *locked* (data-testid="toolbar-lock" — Excalidraw's
+    // own "keep selected tool active after drawing" toggle) instead of reverting to the selection
+    // tool after every single label, and defaults the font size to "L" (Excalidraw's own default,
+    // M, reads small next to a full page render; XL, this app's own prior default before this
+    // existed, reads oversized for a short label).
+    //
+    // Order matters and was confirmed empirically, not assumed: clicking a fontSize-* option only
+    // actually updates the current tool's own default while the Text tool's "nothing selected yet"
+    // panel is showing — i.e. *before* the page image is dropped and selected. Once the dropped
+    // image is selected instead, the same fontSize-* radios stop responding to a click at all (no
+    // exception, no `checked` change) even though "Schriftgröße" is still rendered on screen,
+    // stacked underneath the image's own "Kanten" section — some other, non-tool-default panel
+    // context takes over there that this app doesn't attempt to drive. So this must run — and the
+    // panel width below must be measured — before dropFileOntoExcalidraw() ever runs for a
+    // PDF-origin asset, not after.
+    //
+    // Returns the on-screen width of the resulting left-hand properties panel (0 if none
+    // rendered), measured live rather than hardcoded since it isn't a fixed pixel value across
+    // window sizes/DPI. openDrawingModal() then treats that as a left margin the scale/position
+    // steps must clear — the Text tool's own panel is on screen for the rest of this session
+    // (it's now the locked-active tool), and would otherwise sit directly on top of the page
+    // image's left edge, per the report that prompted this.
+    async function presetPdfDrawingToolDefaults(win) {
+      try {
+        const doc = win.document;
+        const canvas = doc.querySelector('canvas.excalidraw__canvas.interactive');
+        if (!canvas) return 0;
+
+        const textToolBtn = await waitFor(() => doc.querySelector('[data-testid="toolbar-text"]'));
+        textToolBtn.click();
+        await new Promise((r) => setTimeout(r, 150));
+
+        const fontLargeInput = await waitFor(() => doc.querySelector('[data-testid="fontSize-large"]'));
+        fontLargeInput.click();
+        await new Promise((r) => setTimeout(r, 150));
+
+        const lockInput = doc.querySelector('[data-testid="toolbar-lock"]');
+        if (lockInput && !lockInput.checked) {
+          lockInput.click();
+          await new Promise((r) => setTimeout(r, 100));
+        }
+
+        const panel = doc.querySelector('.panelColumn');
+        if (!panel) return 0;
+        const canvasRect = canvas.getBoundingClientRect();
+        const panelRect = panel.getBoundingClientRect();
+        return Math.max(0, panelRect.right - canvasRect.left);
+      } catch (err) {
+        console.warn('Standardwerkzeuge für PDF-Zeichnung konnten nicht gesetzt werden:', err);
+        return 0;
       }
     }
 
@@ -9776,6 +10156,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         let isFreshImageDrop = false;
         let isReopenOfProcessedDrawing = false;
         const tab = getCurrentTab();
+        // Unlike isFreshImageDrop (tab.rawDrawingAssetIds, cleared by saveDrawing() the moment
+        // this asset is first saved), tab.pdfDrawingAssetIds is never cleared — it keeps
+        // identifying a drawing as PDF-origin for its whole life, including every reopen *after*
+        // it's been annotated and saved. That's what lets the isReopenOfProcessedDrawing branch
+        // below still single out PDF-origin drawings for the forced 100%-zoom/full-width
+        // treatment instead of the regular zoom-to-fit every hand-drawn reopen gets.
+        const isPdfOrigin = !!(tab && tab.pdfDrawingAssetIds && currentDrawingAssetId && tab.pdfDrawingAssetIds[currentDrawingAssetId]);
         if (currentDrawingAssetId) {
           const dataUrl = tab && tab.assets && tab.assets[currentDrawingAssetId];
           if (dataUrl) fileToDrop = dataUrlToFile(dataUrl, 'zeichnung.png');
@@ -9789,13 +10176,41 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
         if (fileToDrop) {
           await new Promise((r) => setTimeout(r, 300));
+
+          // Must run *before* the drop, not after -- see presetPdfDrawingToolDefaults()'s own
+          // comment on why (the font-size default only actually applies while the Text tool's
+          // own "nothing selected yet" panel is showing, and this is also what measures the
+          // resulting panel's width so the scale/position calls below can steer clear of it).
+          // isFreshImageDrop implies isPdfOrigin today (see the isRaw comment above), but this is
+          // deliberately keyed on isPdfOrigin directly so a future non-PDF isFreshImageDrop path
+          // wouldn't silently inherit PDF-only tool defaults.
+          let pdfLeftClearance = 0;
+          if (isPdfOrigin) {
+            pdfLeftClearance = await presetPdfDrawingToolDefaults(win);
+          }
+
           dropFileOntoExcalidraw(win, fileToDrop);
           if (isFreshImageDrop) {
             await new Promise((r) => setTimeout(r, 400));
-            await scaleSelectedExcalidrawImage(win, 3);
+            await scaleSelectedExcalidrawImage(win, pdfLeftClearance);
+            if (isPdfOrigin) {
+              // Only here, on the very first positioning -- see lockSelectedExcalidrawImage()'s
+              // own comment on why this isn't repeated on every later reopen.
+              await lockSelectedExcalidrawImage(win);
+            }
+            // Belt-and-suspenders: scaleSelectedExcalidrawImage() already leaves a fresh session
+            // at exactly 100% zoom with the image positioned correctly, but re-running the same
+            // viewport pin used for a later reopen (below) guarantees the same end state via the
+            // same code path every single time ("jedesmal"), rather than relying on two different
+            // mechanisms to happen to agree.
+            await positionPdfDrawingViewport(win, pdfLeftClearance);
           } else if (isReopenOfProcessedDrawing) {
             await new Promise((r) => setTimeout(r, 400));
-            await zoomToFitExcalidrawScene(win);
+            if (isPdfOrigin) {
+              await positionPdfDrawingViewport(win, pdfLeftClearance);
+            } else {
+              await zoomToFitExcalidrawScene(win);
+            }
           }
         }
       } catch (err) {
@@ -10117,23 +10532,35 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // isRaw marks the asset in tab.rawDrawingAssetIds — set true only for confirmPdfImport()'s
     // path (an unedited PDF-page PNG with no embedded Excalidraw scene at all, since it was never
     // exported by Excalidraw). openDrawingModal() checks this map to know that reopening such an
-    // asset still means "insert a fresh image" (apply the same 3x scale/reposition treatment a
+    // asset still means "insert a fresh image" (apply the same scale/reposition treatment a
     // brand-new PDF page gets — see scaleSelectedExcalidrawImage()), not "restore a saved scene" —
     // otherwise it would land at Excalidraw's tiny default drop size on every reopen, since a plain
     // PNG carries no size/position of its own to restore. saveDrawing() clears the marker (see
     // below) the moment the asset actually goes through a real Excalidraw export, at which point it
-    // behaves like any other saved drawing.
+    // behaves like any other saved drawing as far as the drop-a-fresh-image-vs-restore-a-scene
+    // choice goes.
+    //
+    // tab.pdfDrawingAssetIds is a *second*, permanent marker set alongside rawDrawingAssetIds for
+    // the same isRaw asset, but — unlike rawDrawingAssetIds — never cleared by saveDrawing(). A
+    // PDF-origin drawing needs to keep behaving differently from a hand-drawn one (forced 100%
+    // zoom / full-width / positioned-below-the-toolbar on every future reopen — see
+    // openDrawingModal()) even after it's been annotated and saved once, at which point
+    // rawDrawingAssetIds alone can no longer tell the two apart.
     function insertNewDrawingAsset(dataUrl, isRaw) {
       const tab = getCurrentTab();
       if (!tab) return null;
       if (!tab.assets) tab.assets = {};
       if (!tab.drawingAssetIds) tab.drawingAssetIds = {};
       if (!tab.rawDrawingAssetIds) tab.rawDrawingAssetIds = {};
+      if (!tab.pdfDrawingAssetIds) tab.pdfDrawingAssetIds = {};
       tab.assetCounter = (tab.assetCounter || 0) + 1;
       const assetId = 'img_' + tab.assetCounter;
       tab.assets[assetId] = dataUrl;
       tab.drawingAssetIds[assetId] = true;
-      if (isRaw) tab.rawDrawingAssetIds[assetId] = true;
+      if (isRaw) {
+        tab.rawDrawingAssetIds[assetId] = true;
+        tab.pdfDrawingAssetIds[assetId] = true;
+      }
 
       const defaultAlt = isRaw ? 'Das ist ein PDF.' : 'Das ist eine Zeichnung.';
       // Trailing \n\n — see the matching comment in insertImageAsset() — also what lets
@@ -10175,6 +10602,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           // This asset has now gone through a real Excalidraw export — it carries its own embedded
           // scene (size/position) from here on, so it no longer needs the "insert as fresh image"
           // treatment on a future reopen. See insertNewDrawingAsset()'s isRaw comment above.
+          // Deliberately NOT clearing tab.pdfDrawingAssetIds here too, unlike rawDrawingAssetIds —
+          // that marker's whole purpose is to keep identifying this as PDF-origin for the rest of
+          // its life, specifically so it still gets the forced 100%-zoom/full-width reopen
+          // treatment (see openDrawingModal()) after this and every future save, not just before it.
           if (tab.rawDrawingAssetIds) delete tab.rawDrawingAssetIds[currentDrawingAssetId];
         } else {
           insertNewDrawingAsset(dataUrl);
