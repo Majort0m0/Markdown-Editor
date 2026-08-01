@@ -2561,25 +2561,32 @@ return He}()
     html.is-file-protocol .video-embed-live { display: none; }
     html.is-file-protocol .video-embed-fallback { display: flex; }
 
-    .drawing-wrapper {
+    /* Positioning context for every rendered image's hover-revealed overlay button(s) — not
+       just drawings, see hljsRenderer.image(). .drawing is an additional modifier only a
+       Zeichnung/PDF-page image gets (click-to-edit only makes sense there, not for a plain
+       photo, so the pointer cursor and edit-affordance hover glow stay scoped to it). */
+    .image-wrapper {
       position: relative;
       display: inline-block;
-      cursor: pointer;
       max-width: 100%;
     }
 
-    .drawing-wrapper img {
+    .image-wrapper.drawing {
+      cursor: pointer;
+    }
+
+    .image-wrapper img {
       display: block;
       transition: box-shadow 0.15s ease;
     }
 
-    .drawing-wrapper:hover img {
+    .image-wrapper.drawing:hover img {
       box-shadow: 0 0 0 2px var(--accent);
     }
 
-    .drawing-edit-btn {
+    .drawing-edit-btn,
+    .alt-text-btn {
       position: absolute;
-      top: 8px;
       right: 8px;
       opacity: 0;
       transition: opacity 0.15s ease;
@@ -2593,7 +2600,18 @@ return He}()
       color: var(--text-main);
     }
 
-    .drawing-wrapper:hover .drawing-edit-btn {
+    .drawing-edit-btn {
+      top: 8px;
+    }
+
+    /* Bottom-right, opposite the drawing's own edit button — both can be visible on the same
+       drawing at once (see hljsRenderer.image()), so they need to sit in different corners. */
+    .alt-text-btn {
+      bottom: 8px;
+    }
+
+    .image-wrapper.drawing:hover .drawing-edit-btn,
+    .image-wrapper:hover .alt-text-btn {
       opacity: 1;
     }
 
@@ -4172,18 +4190,25 @@ return He}()
       }
 
       const titleAttr = title ? ' title="' + title.replace(/"/g, '&quot;') + '"' : '';
-      // data-tts-kind is stamped unconditionally (unlike the .drawing-wrapper edit-button
+      // data-tts-kind is stamped unconditionally (unlike the .image-wrapper edit/alt-text button
       // markup below, which is skipped under suppressDrawingControls) so "is this a Zeichnung"
       // stays detectable in presentation mode and both HTML exports, not just the live
       // preview — the Vorlesen (TTS) engine's DOM walker relies on this to announce "Hier ist
       // eine Zeichnung" vs. "Hier ist ein Bild" everywhere, not only where the edit button renders.
       const imgTag = '<img src="' + resolvedHref + '" alt="' + altAttr + '"' + titleAttr + (isDrawing ? ' data-tts-kind="drawing"' : '') + '>';
 
-      if (isDrawing && !suppressDrawingControls) {
-        return '<span class="drawing-wrapper" data-asset-id="' + assetId + '">' + imgTag +
-          '<button type="button" class="drawing-edit-btn">✏️ Bearbeiten</button></span>';
-      }
-      return imgTag;
+      if (suppressDrawingControls) return imgTag;
+
+      // Every image (not just drawings) gets wrapped in .image-wrapper so it has a positioning
+      // context for the hover-revealed "Alt-Text" button (jumps the editor to where the alt text
+      // for THIS image lives — see selectAltTextForImageIndex()); drawings additionally get the
+      // "Bearbeiten" edit button and a .drawing modifier class (click-to-edit only makes sense
+      // there, not for a plain photo). data-asset-id is only meaningful for asset-map images —
+      // omitted for a plain external-URL image, which has no asset to look up.
+      const editBtn = isDrawing ? '<button type="button" class="drawing-edit-btn">✏️ Bearbeiten</button>' : '';
+      const assetAttr = assetId ? ' data-asset-id="' + assetId + '"' : '';
+      return '<span class="image-wrapper' + (isDrawing ? ' drawing' : '') + '"' + assetAttr + '>' + imgTag + editBtn +
+        '<button type="button" class="alt-text-btn">🏷️ Alt-Text</button></span>';
     };
 
     // Same as marked's default listitem renderer, but tags task items with a "task-list-item"
@@ -5897,8 +5922,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // Pass 1 (read-only): walks the container in document order, building a flat list of
       // segment descriptors. img/.video-embed-wrapper/audio are opaque leaves (never descended
       // into) so their content (e.g. a video's fallback link text) is never read as prose; button
-      // is skipped entirely (covers the drawing-wrapper's "Bearbeiten" edit button, where that
-      // wrapper exists). Everything else recurses normally, so inline formatting (<strong>/<em>/
+      // is skipped entirely (covers the image-wrapper's "Bearbeiten"/"Alt-Text" buttons, where
+      // those exist). Everything else recurses normally, so inline formatting (<strong>/<em>/
       // <code>/<a>) accumulates into the surrounding block's text buffer rather than splitting
       // into its own segment. The buffer flushes into a new text segment whenever a block-level
       // element (see BLOCK_TAGS) finishes closing, or right before a media/audio segment — table
@@ -6063,7 +6088,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         clearMediaHighlight();
         activeMediaEl = seg.el;
         seg.el.classList.add('tts-active-media');
-        const phrase = announcements[seg.kind];
+        // A drawing/image with real alt text (set via the on-image "Alt-Text" button) is read as
+        // that text instead of the generic announcement — video is deliberately excluded here,
+        // per how this was specified, and keeps its fixed phrase regardless of alt text.
+        const altText = (seg.kind === 'drawing' || seg.kind === 'image') ? (seg.el.getAttribute('alt') || '').trim() : '';
+        const phrase = altText || announcements[seg.kind];
         if (!phrase) { segIndex++; playFromCursor(); return; }
         const utter = new SpeechSynthesisUtterance(phrase);
         utter.lang = lang;
@@ -7991,7 +8020,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             editor.value += '\n\n## Seite ' + pageNum + '\n\n';
           }
           editor.setSelectionRange(editor.value.length, editor.value.length);
-          insertNewDrawingAsset(dataUrl, 'Zeichnung', true);
+          insertNewDrawingAsset(dataUrl, true);
         }
         closePdfImportModal();
       } catch (err) {
@@ -8613,7 +8642,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     const IMAGE_MAX_DIMENSION = 1600;
     const IMAGE_JPEG_QUALITY = 0.85;
 
-    function insertImageAsset(dataUrl, name) {
+    // defaultAlt pre-fills alt text with a spoken-friendly description of the media kind (e.g.
+    // "Das ist ein Bild.") rather than leaving it empty — callers pass the right phrase for their
+    // own insertion path (a generic image vs. a camera photo; see the two call sites below). It's
+    // just a starting point: the "Alt-Text" button in the rendered preview (hljsRenderer.image())
+    // selects it in place so the user can type over it with something more specific.
+    function insertImageAsset(dataUrl, defaultAlt) {
       if (editor.disabled) return;
       const tab = getCurrentTab();
       if (!tab) return;
@@ -8622,7 +8656,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const assetId = 'img_' + tab.assetCounter;
       tab.assets[assetId] = dataUrl;
 
-      const markdownImage = '![' + name + '](asset:' + assetId + ')';
+      const markdownImage = '![' + (defaultAlt || '') + '](asset:' + assetId + ')';
       const start = editor.selectionStart;
       const end = editor.selectionEnd;
       editor.value = editor.value.substring(0, start) + markdownImage + editor.value.substring(end);
@@ -8645,7 +8679,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       event.target.value = '';
       if (!file) return;
       const choice = await requestImageInsertChoice(file);
-      if (choice) insertImageAsset(choice.dataUrl, choice.name);
+      if (choice) insertImageAsset(choice.dataUrl, 'Das ist ein Bild.');
     }
 
     // --- CAMERA (live capture + crop, feeds into the same insert-choice flow as image insert) ---
@@ -8881,7 +8915,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       closeCameraModal();
       const file = new File([blob], 'Foto_' + Date.now() + '.jpg', { type: 'image/jpeg' });
       const choice = await requestImageInsertChoice(file);
-      if (choice) insertImageAsset(choice.dataUrl, choice.name);
+      if (choice) insertImageAsset(choice.dataUrl, 'Das ist ein Foto.');
     }
 
     setupCropInteractions();
@@ -9338,11 +9372,55 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       currentDrawingAssetId = null;
     }
 
-    // Delegated once on the (stable) preview container rather than re-bound on every render —
-    // clicking either the drawing image itself or its hover-revealed "Bearbeiten" button reopens
-    // the drawing modal for that asset.
+    // Maps a rendered image's ordinal position (the Nth .image-wrapper in the live preview,
+    // matching however many .alt-text-btn buttons preceded the one that was clicked) back to the
+    // exact alt-text span in the raw markdown source, and selects it — same "render order matches
+    // source order" idiom toggleTaskInMarkdown() already relies on for checkboxes. Skips any
+    // !()[]-syntax match that's actually a video or audio embed (using the exact same
+    // classification hljsRenderer.image()/getVideoEmbedHtml() do, just re-run against raw text
+    // instead of parsed tokens) so the count only advances on genuine image/drawing occurrences —
+    // exactly the set that gets an .image-wrapper at render time. A trailing quoted title
+    // (`![alt](url "title")`) is stripped before the video-URL regexes see the href, since those
+    // are anchored/suffix-sensitive and a title left attached would throw off a match.
+    function selectAltTextForImageIndex(index) {
+      if (editor.disabled || index < 0) return;
+      const tab = getCurrentTab();
+      const audioAssetIds = (tab && tab.audioAssetIds) || {};
+      const text = editor.value;
+      const re = /!\[([^\]]*)\]\(([^)]*)\)/g;
+      let match;
+      let count = 0;
+      while ((match = re.exec(text))) {
+        const href = match[2].replace(/\s+["'][^"']*["']\s*$/, '');
+        const isVideo = YOUTUBE_URL_RE.test(href) || VIMEO_URL_RE.test(href) || VIDEO_FILE_URL_RE.test(href);
+        if (isVideo) continue;
+        const isAudio = href.indexOf('asset:') === 0 && !!audioAssetIds[href.slice('asset:'.length)];
+        if (isAudio) continue;
+
+        if (count === index) {
+          const altStart = match.index + 2; // past "!["
+          const altEnd = altStart + match[1].length;
+          if (!showEditor) { showEditor = true; applyPaneVisibility(); saveStateToLocalStorage(); }
+          editor.focus();
+          editor.setSelectionRange(altStart, altEnd);
+          return;
+        }
+        count++;
+      }
+    }
+
+    // Delegated once on the (stable) preview container rather than re-bound on every render.
+    // Checked first/separately from the drawing-open branch below since the alt-text button can
+    // sit inside a .drawing-classed wrapper too (a drawing has both buttons at once) — without
+    // this branch a click on it would also bubble into "open the drawing modal".
     preview.addEventListener('click', (e) => {
-      const wrapper = e.target.closest('.drawing-wrapper');
+      const altBtn = e.target.closest('.alt-text-btn');
+      if (altBtn) {
+        const wrapper = altBtn.closest('.image-wrapper');
+        selectAltTextForImageIndex(Array.from(preview.querySelectorAll('.image-wrapper')).indexOf(wrapper));
+        return;
+      }
+      const wrapper = e.target.closest('.image-wrapper.drawing');
       if (!wrapper) return;
       openDrawingModal(wrapper.dataset.assetId);
     });
@@ -9390,7 +9468,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return el ? el.closest('td[data-start], th[data-start]') : null;
     }
 
-    // Same delegated-on-`preview` pattern as the drawing-wrapper listener above. Only cells
+    // Same delegated-on-`preview` pattern as the image-wrapper listener above. Only cells
     // tagged by renderCsvPreview/attachMarkdownTableCellPositions ever carry data-start, so this
     // is implicitly a no-op everywhere else without needing its own fileType guard.
     preview.addEventListener('pointerdown', (e) => {
@@ -9588,10 +9666,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     // Registers a fresh drawing asset (tab.assets + tab.drawingAssetIds, so it's reopenable via
-    // openDrawingModal later) and inserts its markdown reference at the current cursor position.
-    // Shared by saveDrawing()'s "new drawing" branch and confirmPdfImport() (which calls this once
-    // per imported page) — both need identical asset-map bookkeeping, just with different image
-    // content (an edited Excalidraw export vs. an unedited PDF-page render) and alt text.
+    // openDrawingModal later) and inserts its markdown reference at the current cursor position,
+    // pre-filled with a spoken-friendly default alt text that already distinguishes the two cases
+    // isRaw itself exists to distinguish (see below) — "Das ist ein PDF." for an imported PDF
+    // page, "Das ist eine Zeichnung." for an actual drawing. Just a starting point: the
+    // "Alt-Text" button in the rendered preview selects it in place for editing. Shared by
+    // saveDrawing()'s "new drawing" branch and confirmPdfImport() (which calls this once per
+    // imported page) — both need identical asset-map bookkeeping, just with different image
+    // content (an edited Excalidraw export vs. an unedited PDF-page render).
     //
     // isRaw marks the asset in tab.rawDrawingAssetIds — set true only for confirmPdfImport()'s
     // path (an unedited PDF-page PNG with no embedded Excalidraw scene at all, since it was never
@@ -9602,7 +9684,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // PNG carries no size/position of its own to restore. saveDrawing() clears the marker (see
     // below) the moment the asset actually goes through a real Excalidraw export, at which point it
     // behaves like any other saved drawing.
-    function insertNewDrawingAsset(dataUrl, altText, isRaw) {
+    function insertNewDrawingAsset(dataUrl, isRaw) {
       const tab = getCurrentTab();
       if (!tab) return null;
       if (!tab.assets) tab.assets = {};
@@ -9614,7 +9696,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       tab.drawingAssetIds[assetId] = true;
       if (isRaw) tab.rawDrawingAssetIds[assetId] = true;
 
-      const markdownImage = '![' + altText + '](asset:' + assetId + ')';
+      const defaultAlt = isRaw ? 'Das ist ein PDF.' : 'Das ist eine Zeichnung.';
+      const markdownImage = '![' + defaultAlt + '](asset:' + assetId + ')';
       const start = editor.selectionStart;
       const end = editor.selectionEnd;
       editor.value = editor.value.substring(0, start) + markdownImage + editor.value.substring(end);
@@ -9651,7 +9734,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           // treatment on a future reopen. See insertNewDrawingAsset()'s isRaw comment above.
           if (tab.rawDrawingAssetIds) delete tab.rawDrawingAssetIds[currentDrawingAssetId];
         } else {
-          insertNewDrawingAsset(dataUrl, 'Zeichnung');
+          insertNewDrawingAsset(dataUrl);
         }
 
         recordHistory();
@@ -9752,7 +9835,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (item.kind === 'file' && item.type.startsWith('image/')) {
           e.preventDefault();
           const choice = await requestImageInsertChoice(item.getAsFile());
-          if (choice) insertImageAsset(choice.dataUrl, choice.name);
+          if (choice) insertImageAsset(choice.dataUrl, 'Das ist ein Bild.');
           return;
         }
       }
@@ -9774,7 +9857,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             if (file.type.startsWith('image/')) {
               if (activeTabId) {
                 const choice = await requestImageInsertChoice(file);
-                if (choice) insertImageAsset(choice.dataUrl, choice.name);
+                if (choice) insertImageAsset(choice.dataUrl, 'Das ist ein Bild.');
               }
               continue;
             }
