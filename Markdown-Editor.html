@@ -4640,6 +4640,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       };
     }
 
+    // Mac app only: a silent pull (see applyRemoteTabToLocal() below — the common "no conflict,
+    // remote changed, local didn't" case) deliberately leaves isModified false, since nothing
+    // here is "unsaved" from sync's own perspective — but that also means a tab linked to a local
+    // file (nativeFilePath) gets no isModified flip and thus no obvious reason for the user to
+    // ever hit "Speichern" again, even though the file on disk is now stale relative to what just
+    // landed in this tab. Rewriting the linked file here keeps it current without waiting for an
+    // edit or an explicit save. Fire-and-forget deliberately: a failed local write shouldn't fail
+    // or interrupt the sync itself (a real save failure is what "Speichern" itself already
+    // surfaces to the user) — it just gets retried the next time this tab is pulled or explicitly
+    // saved again.
+    function syncNativeFileIfLinked(tab) {
+      if (!isMacApp() || !tab.nativeFilePath) return;
+      const content = inlineAssetsIntoContent(tab.content, tab.assets);
+      callMdNative('save', { path: tab.nativeFilePath, content: content }).catch(err => {
+        console.warn('Automatisches Aktualisieren der verknüpften Datei fehlgeschlagen:', err);
+      });
+    }
+
     function applyRemoteTabToLocal(t, rt) {
       t.name = rt.name;
       t.content = rt.content;
@@ -4664,6 +4682,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // made. Reproduced directly with two genuinely concurrent devices (one continuously
       // editing, one only ever pulling) before this fix, and confirmed gone after it.
       t.lastSyncedSnapshot = remoteTabSnapshot(rt);
+      syncNativeFileIfLinked(t);
     }
 
     function appendNameSuffix(name, suffix) {
