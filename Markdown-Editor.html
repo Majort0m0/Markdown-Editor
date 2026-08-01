@@ -1396,11 +1396,11 @@ return He}()
       display: none;
       position: fixed;
       top: 16px;
-      /* #tocToggleBtn sits at right:28px and is 34px wide (occupying the 28px-62px range from
-         the edge) and can be visible at the same time as this button (both show whenever the
-         preview pane isn't hidden, fullscreen or not) — 70px keeps a clear gap to its left
-         instead of the two overlapping in the same corner. */
-      right: 70px;
+      /* #tocToggleBtn sits at right:28px (28-62px) and #ttsToggleBtn immediately right of it at
+         right:70px (70-104px) — both 34px wide, both can be visible at the same time as this
+         button (all three show whenever the preview pane isn't hidden, fullscreen or not).
+         112px keeps a clear 8px gap past ttsToggleBtn instead of overlapping it in the corner. */
+      right: 112px;
       z-index: 10000;
       width: 34px;
       height: 34px;
@@ -1959,6 +1959,63 @@ return He}()
     main.preview-hidden .toc-panel,
     main.html-tab-active .toc-toggle-btn,
     main.html-tab-active .toc-panel {
+      display: none;
+    }
+
+    /* Vorlesen (TTS) — sits immediately right of #tocToggleBtn ("neben dem Inhaltsverzeichnis"),
+       same floating-circle look, gated by the same visibility/print rules. Only .active/.paused
+       (toggled by markdownTtsEngine()) convey state, since there's a single speaker icon for
+       every state — no separate play/pause/stop glyph. */
+    .tts-toggle-btn {
+      position: absolute;
+      top: 16px;
+      right: 70px;
+      z-index: 10;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .tts-toggle-btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .tts-toggle-btn:hover {
+      background-color: #eceff2;
+    }
+
+    .tts-toggle-btn.active {
+      background-color: #e4ecf9;
+      border-color: var(--accent);
+    }
+
+    .tts-toggle-btn.active svg {
+      animation: tts-pulse 1.4s ease-in-out infinite;
+    }
+
+    .tts-toggle-btn.paused svg {
+      animation: none;
+      opacity: .5;
+    }
+
+    @keyframes tts-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .55; }
+    }
+
+    main.preview-hidden .tts-toggle-btn,
+    main.html-tab-active .tts-toggle-btn {
       display: none;
     }
 
@@ -2538,6 +2595,26 @@ return He}()
 
     .drawing-wrapper:hover .drawing-edit-btn {
       opacity: 1;
+    }
+
+    /* Vorlesen (TTS) highlight — the currently-spoken word (wrapped in a <span class="tts-word">
+       by markdownTtsEngine() at read time) and the currently-active drawing/image/video/audio
+       element (while its announcement phrase or, for audio, the clip itself is playing). Both use
+       var(--preview-link) rather than the chrome-level --accent specifically because --preview-link
+       is the one accent color available in every context this engine runs in, including the two
+       standalone HTML exports (which only carry the --preview-* vars, not chrome vars) — see
+       getMarkdownTypographyCss() below for the exported-document copy of these same two rules. */
+    .tts-word-active {
+      background-color: var(--preview-link);
+      color: var(--preview-bg);
+      border-radius: 3px;
+      box-shadow: 0 0 0 2px var(--preview-link);
+    }
+
+    .tts-active-media {
+      outline: 3px solid var(--preview-link);
+      outline-offset: 2px;
+      border-radius: 6px;
     }
 
     .markdown-body ul, .markdown-body ol {
@@ -3233,9 +3310,55 @@ return He}()
       opacity: 1;
     }
 
+    /* Vorlesen (TTS) inside presentation mode — top-left ("oben links") per how this was
+       specified, mirroring .presentation-close-btn's own top-right placement/look but on the
+       opposite corner; nothing else currently occupies top-left here. This is a second,
+       independent button + markdownTtsEngine() instance from the live preview's own
+       #ttsToggleBtn — the preview pane isn't visible during presentation mode (header/toolbars
+       are hidden via :fullscreen/.pseudo-fullscreen, and the overlay sits on top of everything
+       else), so a standalone instance bound to presentationSlideEl is required, same reasoning
+       as .presentation-close-btn being its own close button rather than reusing the header's. */
+    .presentation-tts-btn {
+      position: absolute;
+      top: 18px;
+      left: 22px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      cursor: pointer;
+      opacity: 0.45;
+    }
+
+    .presentation-tts-btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .presentation-tts-btn:hover,
+    .presentation-tts-btn.active {
+      opacity: 1;
+    }
+
+    .presentation-tts-btn.active svg {
+      animation: tts-pulse 1.4s ease-in-out infinite;
+    }
+
+    .presentation-tts-btn.paused svg {
+      animation: none;
+      opacity: .5;
+    }
+
     /* Print / PDF export */
     @media print {
-      header, .tab-bar-container, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel, .fullscreen-exit-btn {
+      header, .tab-bar-container, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel, .fullscreen-exit-btn, .tts-toggle-btn {
         display: none !important;
       }
 
@@ -3329,6 +3452,10 @@ return He}()
 
       .toc-toggle-btn {
         right: 16px;
+      }
+
+      .tts-toggle-btn {
+        right: 58px;
       }
 
       .template-grid {
@@ -3566,7 +3693,7 @@ return He}()
   <!-- Tableiste -->
   <div class="tab-bar-container">
     <div class="tab-list" id="tabList"></div>
-    <button class="add-tab-btn" onclick="openTemplateModal()" title="Neuer Tab">+</button>
+    <button class="add-tab-btn" onclick="createNewTab()" title="Neuer Tab">+</button>
   </div>
 
   <!-- Formatierungsmenüleiste -->
@@ -3645,6 +3772,7 @@ return He}()
 
     <button id="tocToggleBtn" class="toc-toggle-btn" onclick="toggleToc()" title="Inhaltsverzeichnis anzeigen/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7L4 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 12L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 17H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     <div class="toc-panel" id="tocPanel"></div>
+    <button id="ttsToggleBtn" class="tts-toggle-btn" title="Vorlesen starten"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.15" d="M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" fill="currentColor"/><path d="M16 8.99998C16.5 9.49999 17 10.5 17 12C17 13.5 16.5 14.5 16 15M19 6C20.5 7.5 21 10 21 12C21 14 20.5 16.5 19 18M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </main>
 
   <footer class="app-footer">
@@ -3883,6 +4011,7 @@ return He}()
     <div class="presentation-slide markdown-body" id="presentationSlide"></div>
     <span class="presentation-counter" id="presentationCounter"></span>
     <button class="presentation-close-btn" onclick="event.stopPropagation(); exitPresentation()" title="Präsentation beenden (Esc)" type="button">✕</button>
+    <button id="presentationTtsToggleBtn" class="presentation-tts-btn" onclick="event.stopPropagation()" title="Vorlesen starten" type="button"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.15" d="M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" fill="currentColor"/><path d="M16 8.99998C16.5 9.49999 17 10.5 17 12C17 13.5 16.5 14.5 16 15M19 6C20.5 7.5 21 10 21 12C21 14 20.5 16.5 19 18M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
 
   <script>
@@ -4043,7 +4172,12 @@ return He}()
       }
 
       const titleAttr = title ? ' title="' + title.replace(/"/g, '&quot;') + '"' : '';
-      const imgTag = '<img src="' + resolvedHref + '" alt="' + altAttr + '"' + titleAttr + '>';
+      // data-tts-kind is stamped unconditionally (unlike the .drawing-wrapper edit-button
+      // markup below, which is skipped under suppressDrawingControls) so "is this a Zeichnung"
+      // stays detectable in presentation mode and both HTML exports, not just the live
+      // preview — the Vorlesen (TTS) engine's DOM walker relies on this to announce "Hier ist
+      // eine Zeichnung" vs. "Hier ist ein Bild" everywhere, not only where the edit button renders.
+      const imgTag = '<img src="' + resolvedHref + '" alt="' + altAttr + '"' + titleAttr + (isDrawing ? ' data-tts-kind="drawing"' : '') + '>';
 
       if (isDrawing && !suppressDrawingControls) {
         return '<span class="drawing-wrapper" data-asset-id="' + assetId + '">' + imgTag +
@@ -5581,11 +5715,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (e.key === 'Escape') { exitPresentation(); return; }
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
           e.preventDefault();
+          presentationTts.stop();
           presentationNext();
           return;
         }
         if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
           e.preventDefault();
+          presentationTts.stop();
           presentationPrev();
           return;
         }
@@ -5675,6 +5811,369 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         closeToc();
       }
     });
+
+    // --- VORLESEN (TTS read-aloud with word highlighting) ---
+    //
+    // markdownTtsEngine() is deliberately closure-free — it references only standard browser
+    // globals (document, window, speechSynthesis, SpeechSynthesisUtterance), never an outer
+    // variable from this app's own scope. That's not a style preference: this exact function is
+    // reused, unmodified, in FOUR places — instantiated directly here for the live preview pane
+    // and the presentation overlay, and embedded via Function.prototype.toString() into both
+    // standalone HTML exports (see performHtmlExport()/exportAsEbookWidget()), which have zero
+    // runtime dependency on this app once downloaded. A mistake that closes over an app-only
+    // helper (showToast, getCurrentTab, ...) works perfectly here and only breaks inside the
+    // downloaded export file — so any future edit to this function must stay self-contained.
+    // toString() preserves source text verbatim (comments included, per spec since ES2018) —
+    // never write the literal sequence "</scr" + "ipt" inside this function's body (comments or
+    // strings), since that would prematurely close the <script> tag it gets embedded into in the
+    // exports. Keep this function a plain `function` declaration (not an arrow function) so
+    // `(markdownTtsEngine.toString())(...)` reads as a normal IIFE at the embed site.
+    //
+    // Reads a rendered .markdown-body-shaped container in document order and speaks it via the
+    // Web Speech API, word-by-word-highlighting each token as it's spoken. Drawings/images/videos
+    // are announced with a fixed phrase instead of being read; audio embeds are actually played
+    // back inline, then reading resumes. See CLAUDE.md's "Vorlesen (TTS)" section for the full
+    // design rationale (two-pass DOM walk, chunking to dodge Chrome's ~15s utterance cutoff bug,
+    // the play/pause/stop state machine).
+    function markdownTtsEngine(container, buttonEl, options) {
+      const lang = (options && options.lang) || 'de-DE';
+      const announcements = (options && options.announcements) || {};
+      const onSlideComplete = (options && options.onSlideComplete) || null;
+
+      // Soft/hard chunk-length limits (characters): a text segment longer than the soft limit is
+      // split into multiple utterances at the next sentence-ending word: this is required, not
+      // cosmetic — Chrome silently cuts off a speechSynthesis utterance that takes longer than
+      // ~15s to speak, with no error event at all. The hard limit forces a break even mid-sentence
+      // for a long run with no punctuation (e.g. a pasted URL), so no chunk can ever grow unbounded.
+      const CHUNK_SOFT_LIMIT = 160;
+      const CHUNK_HARD_LIMIT = 240;
+      const BLOCK_TAGS = { P: 1, H1: 1, H2: 1, H3: 1, H4: 1, H5: 1, H6: 1, LI: 1, TR: 1, PRE: 1, BLOCKQUOTE: 1, DIV: 1 };
+
+      let state = 'idle'; // 'idle' | 'speaking' | 'paused'
+      let segments = [];
+      let segIndex = -1;
+      let chunkIndex = -1;
+      let currentAudioEl = null;
+      let activeWordSpan = null;
+      let activeMediaEl = null;
+      let voices = [];
+
+      function loadVoices() {
+        voices = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+      }
+      loadVoices();
+      if (window.speechSynthesis) speechSynthesis.addEventListener('voiceschanged', loadVoices);
+
+      function pickVoice() {
+        const wanted = lang.slice(0, 2).toLowerCase();
+        for (let i = 0; i < voices.length; i++) {
+          if (voices[i].lang && voices[i].lang.toLowerCase().indexOf(wanted) === 0) return voices[i];
+        }
+        return null;
+      }
+
+      function clearWordHighlight() {
+        if (activeWordSpan) { activeWordSpan.classList.remove('tts-word-active'); activeWordSpan = null; }
+      }
+      function clearMediaHighlight() {
+        if (activeMediaEl) { activeMediaEl.classList.remove('tts-active-media'); activeMediaEl = null; }
+      }
+
+      function setButtonState(next) {
+        state = next;
+        buttonEl.classList.toggle('active', state !== 'idle');
+        buttonEl.classList.toggle('paused', state === 'paused');
+        buttonEl.title = state === 'idle' ? 'Vorlesen starten' : (state === 'paused' ? 'Vorlesen fortsetzen' : 'Vorlesen pausieren');
+      }
+
+      // Undoes a previous read's word-span wrapping before re-walking the container — makes
+      // start() safe to call repeatedly against the same container (e.g. the user reads to the
+      // end, then clicks again) without nesting <span class="tts-word"> inside itself.
+      function unwrapPreviousWords() {
+        container.querySelectorAll('.tts-word').forEach(span => span.replaceWith(document.createTextNode(span.textContent)));
+        container.normalize();
+      }
+
+      // Pass 1 (read-only): walks the container in document order, building a flat list of
+      // segment descriptors. img/.video-embed-wrapper/audio are opaque leaves (never descended
+      // into) so their content (e.g. a video's fallback link text) is never read as prose; button
+      // is skipped entirely (covers the drawing-wrapper's "Bearbeiten" edit button, where that
+      // wrapper exists). Everything else recurses normally, so inline formatting (<strong>/<em>/
+      // <code>/<a>) accumulates into the surrounding block's text buffer rather than splitting
+      // into its own segment. The buffer flushes into a new text segment whenever a block-level
+      // element (see BLOCK_TAGS) finishes closing, or right before a media/audio segment — table
+      // rows are grouped at the TR level (a whole row as one utterance), not per-cell, for
+      // smoother speech than choppy per-cell pauses.
+      function buildSegments() {
+        const segs = [];
+        let buffer = [];
+
+        function flushText() {
+          if (buffer.length && buffer.some(n => n.textContent && n.textContent.trim())) {
+            segs.push({ type: 'text', nodes: buffer });
+          }
+          buffer = [];
+        }
+
+        function walk(node) {
+          if (node.nodeType === Node.TEXT_NODE) {
+            if (node.textContent) buffer.push(node);
+            return;
+          }
+          if (node.nodeType !== Node.ELEMENT_NODE) return;
+          const tag = node.tagName;
+          if (tag === 'BUTTON' || tag === 'SVG') return;
+          if (tag === 'IMG') {
+            flushText();
+            segs.push({ type: 'media', kind: node.getAttribute('data-tts-kind') === 'drawing' ? 'drawing' : 'image', el: node });
+            return;
+          }
+          if (node.classList && node.classList.contains('video-embed-wrapper')) {
+            flushText();
+            segs.push({ type: 'media', kind: 'video', el: node });
+            return;
+          }
+          if (tag === 'AUDIO') {
+            flushText();
+            segs.push({ type: 'audio', el: node });
+            return;
+          }
+          node.childNodes.forEach(walk);
+          if (BLOCK_TAGS[tag]) flushText();
+        }
+
+        container.childNodes.forEach(walk);
+        flushText();
+        return segs;
+      }
+
+      // Pass 2 (mutating): replaces each text segment's original text nodes with a fragment
+      // alternating plain whitespace and <span class="tts-word"> per non-space run. Done as a
+      // separate pass over the already-collected node references from Pass 1 (not interleaved
+      // with that walk) so a live DOM mutation never confuses an in-progress traversal.
+      function wrapWordsForSegment(seg) {
+        const words = [];
+        seg.nodes.forEach(textNode => {
+          const text = textNode.textContent;
+          const re = /\S+/g;
+          const frag = document.createDocumentFragment();
+          let lastIndex = 0;
+          let m;
+          let any = false;
+          while ((m = re.exec(text))) {
+            any = true;
+            if (m.index > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, m.index)));
+            const span = document.createElement('span');
+            span.className = 'tts-word';
+            span.textContent = m[0];
+            words.push(span);
+            frag.appendChild(span);
+            lastIndex = m.index + m[0].length;
+          }
+          if (lastIndex < text.length) frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+          if (any) textNode.replaceWith(frag);
+        });
+        seg.words = words;
+      }
+
+      // Groups a segment's word spans into utterance-sized chunks (see CHUNK_SOFT_LIMIT/
+      // CHUNK_HARD_LIMIT above), breaking after a sentence-ending word once the soft limit is
+      // reached, or unconditionally once the hard limit is reached.
+      function chunkWords(words) {
+        const chunks = [];
+        let current = [];
+        let len = 0;
+        for (let i = 0; i < words.length; i++) {
+          current.push(words[i]);
+          len += words[i].textContent.length + 1;
+          const endsSentence = /[.!?]$/.test(words[i].textContent);
+          if ((len >= CHUNK_SOFT_LIMIT && endsSentence) || len >= CHUNK_HARD_LIMIT) {
+            chunks.push(current);
+            current = [];
+            len = 0;
+          }
+        }
+        if (current.length) chunks.push(current);
+        return chunks;
+      }
+
+      // Cumulative character offsets of each word within its chunk's joined utterance text — the
+      // basis for mapping a speechSynthesis 'boundary' event's charIndex back to a word span.
+      function computeOffsets(words) {
+        const offsets = [];
+        let pos = 0;
+        words.forEach(span => {
+          const t = span.textContent;
+          offsets.push({ start: pos, end: pos + t.length, span });
+          pos += t.length + 1;
+        });
+        return offsets;
+      }
+
+      function prepareSegments() {
+        unwrapPreviousWords();
+        const segs = buildSegments();
+        segs.forEach(seg => {
+          if (seg.type !== 'text') return;
+          wrapWordsForSegment(seg);
+          seg.chunks = chunkWords(seg.words).map(words => ({ text: words.map(w => w.textContent).join(' '), offsets: computeOffsets(words) }));
+        });
+        return segs;
+      }
+
+      function resetCursor() {
+        segIndex = 0;
+        chunkIndex = 0;
+      }
+
+      // Speaks one utterance chunk of a text segment. Word-highlight progression (via the
+      // 'boundary' event) is entirely decoupled from playback progression (which only ever
+      // depends on 'end'/'error') — Safari/Firefox voice engines frequently never fire
+      // 'boundary' at all, and reading must keep working audibly even where per-word
+      // highlighting can't, so there's no fallback timer needed: onend fires regardless.
+      function speakChunk(chunk) {
+        clearWordHighlight();
+        const utter = new SpeechSynthesisUtterance(chunk.text);
+        utter.lang = lang;
+        const voice = pickVoice();
+        if (voice) utter.voice = voice;
+        utter.onboundary = (e) => {
+          const idx = e.charIndex;
+          let target = null;
+          for (let i = chunk.offsets.length - 1; i >= 0; i--) {
+            if (chunk.offsets[i].start <= idx) { target = chunk.offsets[i].span; break; }
+          }
+          if (target && target !== activeWordSpan) {
+            clearWordHighlight();
+            target.classList.add('tts-word-active');
+            activeWordSpan = target;
+            if (target.scrollIntoView) target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+          }
+        };
+        utter.onend = utter.onerror = () => {
+          clearWordHighlight();
+          if (state !== 'speaking') return;
+          chunkIndex++;
+          playFromCursor();
+        };
+        speechSynthesis.speak(utter);
+      }
+
+      function speakAnnouncement(seg) {
+        clearMediaHighlight();
+        activeMediaEl = seg.el;
+        seg.el.classList.add('tts-active-media');
+        const phrase = announcements[seg.kind];
+        if (!phrase) { segIndex++; playFromCursor(); return; }
+        const utter = new SpeechSynthesisUtterance(phrase);
+        utter.lang = lang;
+        const voice = pickVoice();
+        if (voice) utter.voice = voice;
+        utter.onend = utter.onerror = () => {
+          clearMediaHighlight();
+          if (state !== 'speaking') return;
+          segIndex++;
+          playFromCursor();
+        };
+        speechSynthesis.speak(utter);
+      }
+
+      function playAudioSegment(seg) {
+        clearMediaHighlight();
+        activeMediaEl = seg.el;
+        seg.el.classList.add('tts-active-media');
+        currentAudioEl = seg.el;
+        const onSettled = () => {
+          seg.el.removeEventListener('ended', onSettled);
+          currentAudioEl = null;
+          clearMediaHighlight();
+          if (state !== 'speaking') return;
+          segIndex++;
+          playFromCursor();
+        };
+        seg.el.addEventListener('ended', onSettled);
+        const playResult = seg.el.play();
+        // Autoplay/gesture restrictions can reject programmatic playback — skip the segment
+        // rather than stall the whole reading indefinitely with no visible feedback.
+        if (playResult && playResult.catch) playResult.catch(onSettled);
+      }
+
+      function playFromCursor() {
+        if (state !== 'speaking') return;
+        if (segIndex >= segments.length) { finishReading(); return; }
+        const seg = segments[segIndex];
+        if (seg.type === 'text') {
+          if (chunkIndex >= seg.chunks.length) { segIndex++; chunkIndex = 0; playFromCursor(); return; }
+          speakChunk(seg.chunks[chunkIndex]);
+        } else if (seg.type === 'media') {
+          speakAnnouncement(seg);
+        } else if (seg.type === 'audio') {
+          playAudioSegment(seg);
+        }
+      }
+
+      // Called once the current container's segments are all done. onSlideComplete (presentation
+      // mode / eBook export only) advances to the next slide and returns true if it did — the
+      // engine then re-scans the (now-updated) container and keeps reading; false/no-callback
+      // means there's nothing further, so reading just stops.
+      function finishReading() {
+        let advanced = false;
+        try { advanced = !!(onSlideComplete && onSlideComplete()); } catch (e) { advanced = false; }
+        if (!advanced) { stop(); return; }
+        segments = prepareSegments();
+        resetCursor();
+        playFromCursor();
+      }
+
+      function start() {
+        segments = prepareSegments();
+        const hasContent = segments.some(s => s.type !== 'text' || s.chunks.length);
+        if (!hasContent) return;
+        resetCursor();
+        setButtonState('speaking');
+        playFromCursor();
+      }
+
+      function pause() {
+        if (state !== 'speaking') return;
+        setButtonState('paused');
+        if (currentAudioEl) currentAudioEl.pause();
+        else speechSynthesis.pause();
+      }
+
+      function resumePlayback() {
+        if (state !== 'paused') return;
+        setButtonState('speaking');
+        if (currentAudioEl) currentAudioEl.play();
+        else speechSynthesis.resume();
+      }
+
+      function stop() {
+        if (state === 'idle') return;
+        setButtonState('idle');
+        speechSynthesis.cancel();
+        if (currentAudioEl) { currentAudioEl.pause(); currentAudioEl = null; }
+        clearWordHighlight();
+        clearMediaHighlight();
+        segments = [];
+        segIndex = -1;
+        chunkIndex = -1;
+      }
+
+      function toggle() {
+        if (state === 'idle') start();
+        else if (state === 'speaking') pause();
+        else resumePlayback();
+      }
+
+      buttonEl.addEventListener('click', toggle);
+      return { toggle, stop };
+    }
+
+    const TTS_ANNOUNCEMENTS = { drawing: 'Hier ist eine Zeichnung.', image: 'Hier ist ein Bild.', video: 'Hier ist ein Video.' };
+
+    const ttsToggleBtn = document.getElementById('ttsToggleBtn');
+    const previewTts = markdownTtsEngine(preview, ttsToggleBtn, { lang: 'de-DE', announcements: TTS_ANNOUNCEMENTS, onSlideComplete: null });
 
     // --- SEARCH & REPLACE ---
 
@@ -5840,6 +6339,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     function applyPaneVisibility() {
+      if (!showPreview) previewTts.stop();
       mainContainer.classList.toggle('editor-hidden', !showEditor);
       mainContainer.classList.toggle('preview-hidden', !showPreview);
       toggleEditBtn.classList.toggle('active', showEditor);
@@ -5959,6 +6459,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     const presentationOverlay = document.getElementById('presentationOverlay');
     const presentationSlideEl = document.getElementById('presentationSlide');
     const presentationCounter = document.getElementById('presentationCounter');
+    // Instantiated once here (not per-slide) — the engine re-scans presentationSlideEl's current
+    // innerHTML fresh at every start()/advance, so it doesn't need to be recreated when
+    // renderPresentationSlide() swaps that content. onSlideComplete is wired to
+    // presentationTtsAdvance() further down, once that function exists.
+    const presentationTts = markdownTtsEngine(presentationSlideEl, document.getElementById('presentationTtsToggleBtn'), {
+      lang: 'de-DE',
+      announcements: TTS_ANNOUNCEMENTS,
+      onSlideComplete: () => presentationTtsAdvance()
+    });
 
     // A "---"/"***"/"___" line only counts as a slide break if it's preceded by a blank line
     // (or is the very first line) — the same rule CommonMark uses to tell a thematic break
@@ -6053,6 +6562,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
     }
 
+    // The markdownTtsEngine() onSlideComplete callback for presentation mode — deliberately a
+    // separate function from presentationNext(), not a reuse of it, so the stop-calls in
+    // presentationHandleClick()/the keydown handler below (for genuine user-driven navigation)
+    // don't also fire here and cancel the very read that's calling this. Returns whether it
+    // actually advanced, so the engine knows whether to keep reading or go idle.
+    function presentationTtsAdvance() {
+      if (presentationIndex < presentationSlides.length - 1) {
+        presentationIndex++;
+        renderPresentationSlide();
+        return true;
+      }
+      return false;
+    }
+
     // Tapping/clicking the left half of the overlay goes back, the right half advances —
     // this is what lets touch users (no arrow keys) navigate backward at all.
     // A tap on a native <audio>/<video> element's own controls (play button, scrubber, ...) is
@@ -6063,6 +6586,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // browsing context whose internal clicks never bubble into this document at all.
     function presentationHandleClick(e) {
       if (e.target.closest('audio, video')) return;
+      presentationTts.stop();
       const rect = presentationOverlay.getBoundingClientRect();
       if (e.clientX - rect.left < rect.width / 2) {
         presentationPrev();
@@ -6110,6 +6634,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function startPresentation() {
       if (editor.disabled) return;
+      // Presentation mode doesn't go through updatePreview(), so its own auto-stop hook there
+      // never fires here — and both this and the live-preview engine ultimately share one global
+      // speechSynthesis queue, so a read left running in the preview would otherwise fight the
+      // presentation instance for it the moment presentation mode starts its own reading.
+      previewTts.stop();
       presentationSlides = splitIntoSlides(editor.value);
       presentationIndex = 0;
       presentationActive = true;
@@ -6126,6 +6655,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     function exitPresentation() {
+      presentationTts.stop();
       presentationActive = false;
       presentationOverlay.classList.remove('active');
       exitPresentationFullscreen();
@@ -6267,6 +6797,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function updatePreview() {
       if (!activeTabId) return;
+      // preview.innerHTML is about to be fully replaced below, which would leave any active
+      // TTS read's word-span DOM refs and pending utterance callbacks pointing at stale nodes —
+      // this is the single re-render chokepoint (also reached via switchTab()), so stopping here
+      // covers both the "user edited the text" and "user switched tabs" auto-stop triggers.
+      previewTts.stop();
       // Any live cell-selection refers to DOM nodes that preview.innerHTML below is about to
       // destroy — no need to also strip .cell-selected off them first, they're going away anyway.
       cellSelection = null;
@@ -7613,7 +8148,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .markdown-body table { display: block; overflow-x: auto; border-collapse: collapse; width: 100%; margin-bottom: 16px; }\n' +
         '  .markdown-body table th, .markdown-body table td { padding: 8px 13px; border: 1px solid var(--preview-header-border); }\n' +
         '  .markdown-body table th { font-weight: 600; background-color: var(--preview-code-bg); }\n' +
-        '  .markdown-body hr { height: 2px; margin: 24px 0; background-color: var(--preview-header-border); border: 0; }\n'
+        '  .markdown-body hr { height: 2px; margin: 24px 0; background-color: var(--preview-header-border); border: 0; }\n' +
+        // Vorlesen (TTS) highlight — same two rules as the live app's own .tts-word-active/
+        // .tts-active-media (see the CSS comment there), duplicated here since this function's
+        // output is shared by both exports and neither has the live app's own <style> block.
+        '  .tts-word-active { background-color: var(--preview-link); color: var(--preview-bg); border-radius: 3px; box-shadow: 0 0 0 2px var(--preview-link); }\n' +
+        '  .tts-active-media { outline: 3px solid var(--preview-link); outline-offset: 2px; border-radius: 6px; }\n'
       );
     }
 
@@ -7624,6 +8164,47 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       link.download = filename;
       link.click();
       URL.revokeObjectURL(link.href);
+    }
+
+    // Vorlesen (TTS) button CSS for both standalone exports — shared here (not hand-duplicated
+    // twice) since the two exports differ only in the button's fixed position. Uses only
+    // --preview-* vars: the chrome-level vars the live app's own .tts-toggle-btn/.presentation-
+    // tts-btn read (--border-color/--bg-surface/--accent/--text-main, declared once on the live
+    // document's :root) are never exported, only the six --preview-* ones performHtmlExport()/
+    // exportAsEbookWidget() already copy in.
+    function getTtsButtonExportCss(topPx, leftPx) {
+      return (
+        '  .tts-toggle-btn { position: fixed; top: ' + topPx + 'px; left: ' + leftPx + 'px; z-index: 20; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--preview-border); background-color: var(--preview-bg); color: var(--preview-text); box-shadow: 0 2px 6px rgba(0,0,0,.15); cursor: pointer; opacity: .55; display: flex; align-items: center; justify-content: center; padding: 0; }\n' +
+        '  .tts-toggle-btn svg { width: 18px; height: 18px; flex-shrink: 0; }\n' +
+        '  .tts-toggle-btn:hover, .tts-toggle-btn.active { opacity: 1; }\n' +
+        '  .tts-toggle-btn.active { background-color: var(--preview-code-bg); }\n' +
+        '  .tts-toggle-btn.active svg { animation: tts-pulse 1.4s ease-in-out infinite; }\n' +
+        '  .tts-toggle-btn.paused svg { animation: none; opacity: .5; }\n' +
+        '  @keyframes tts-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }\n'
+      );
+    }
+
+    // Button markup + the markdownTtsEngine() source embedded via Function.prototype.toString()
+    // (see the big comment above that function's own definition for why this reuse is safe: the
+    // engine is deliberately closure-free, referencing only standard browser globals, so its
+    // exact source text runs identically once pasted into a document with zero dependency on this
+    // app). containerExpr/onSlideCompleteExpr are raw JS source snippets (not values) spliced
+    // directly into the generated <script> — e.g. 'document.querySelector(".markdown-body")' and
+    // 'null', or (for the eBook export) a reference to that export's own already-declared
+    // ttsAdvance function. Must be placed AFTER any script in the exported document that declares
+    // onSlideCompleteExpr's function (both share the page's one global scope across script tags,
+    // but only after that earlier tag has actually run). The engine instance is assigned (not
+    // declared — no var/let/const) to a bare "markdownTts" so the eBook export's own click/keydown
+    // handlers, defined in the earlier script tag, can call markdownTts.stop() on genuine
+    // user-driven navigation; performHtmlExport() has nothing else that needs to reference it, so
+    // there it just becomes an unused implicit global — harmless in a non-strict classic script.
+    function getTtsButtonExportHtml(containerExpr, onSlideCompleteExpr) {
+      return (
+        '<button id="ttsToggleBtn" class="tts-toggle-btn" title="Vorlesen starten"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.15" d="M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" fill="currentColor"/><path d="M16 8.99998C16.5 9.49999 17 10.5 17 12C17 13.5 16.5 14.5 16 15M19 6C20.5 7.5 21 10 21 12C21 14 20.5 16.5 19 18M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>\n' +
+        '<script>\n' +
+        'markdownTts = (' + markdownTtsEngine.toString() + ')(' + containerExpr + ', document.getElementById("ttsToggleBtn"), { lang: "de-DE", announcements: ' + JSON.stringify(TTS_ANNOUNCEMENTS) + ', onSlideComplete: ' + onSlideCompleteExpr + ' });\n' +
+        '</scr' + 'ipt>\n'
+      );
     }
 
     // Entry point for the 🖨️→HTML export button. Only markdown documents that actually contain
@@ -7699,13 +8280,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '    max-width: 850px; margin: 0 auto; line-height: 1.7; font-size: 1rem; border-radius: 8px; padding: 20px;\n' +
         '  }\n' +
         getMarkdownTypographyCss() +
-        hljsCss + '\n';
+        hljsCss + '\n' +
+        getTtsButtonExportCss(16, 16);
 
       suppressDrawingControls = true;
       const bodyHtml = renderContentForTab(currentTab, editor.value);
       suppressDrawingControls = false;
 
-      html += '</style>\n</head>\n<body>\n<div class="markdown-body">\n' + bodyHtml + '\n</div>\n</body>\n</html>';
+      // No onSlideComplete — a single-page export has no slides to advance through.
+      html += '</style>\n</head>\n<body>\n<div class="markdown-body">\n' + bodyHtml + '\n</div>\n' +
+        getTtsButtonExportHtml('document.querySelector(".markdown-body")', 'null') +
+        '\n</body>\n</html>';
 
       downloadHtmlBlob(html, title + '.html');
     }
@@ -7777,6 +8362,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .nav-arrow.hidden { display: none; }\n' +
         '  @keyframes navArrowPulse { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.45; } }\n' +
         hljsCss + '\n' +
+        getTtsButtonExportCss(14, 18) +
         '</style>\n</head>\n<body>\n' +
         '<div class="overlay" id="overlay"><div class="slide markdown-body ' + currentTheme + '" id="stage"></div></div>\n' +
         '<div class="page-counter" id="counter"></div>\n' +
@@ -7792,6 +8378,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '    return { layout: el.dataset.layout, html: el.innerHTML };\n' +
         '  });\n' +
         '  let idx = 0;\n' +
+        // Set by the button-embed script appended below (after this one runs) — declared here,
+        // ahead of time, purely so the click/keydown handlers below can reference it by name;
+        // it's only ever actually read once a user can click/press a key, by which point both
+        // script tags have already run in document order.
+        '  let markdownTts = null;\n' +
         '  const stage = document.getElementById("stage");\n' +
         '  const counter = document.getElementById("counter");\n' +
         '  const arrowLeft = document.getElementById("arrowLeft");\n' +
@@ -7805,7 +8396,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '    arrowLeft.classList.toggle("hidden", idx === 0);\n' +
         '    arrowRight.classList.toggle("hidden", idx === SLIDES.length - 1);\n' +
         '  }\n' +
-        '  function goTo(newIdx, dir) {\n' +
+        // skipAnimation (only ever passed by ttsAdvance, below) swaps the slide immediately with
+        // no fade/slide transition — the TTS engine's onSlideComplete contract needs the DOM swap
+        // to have already happened by the time this call returns, so it can re-scan the new
+        // slide's content right away; the normal 280ms deferred-via-setTimeout path (next()/
+        // prev()) would otherwise have it read the outgoing slide's stale content.
+        '  function goTo(newIdx, dir, skipAnimation) {\n' +
+        '    if (skipAnimation) { idx = newIdx; paint(); return; }\n' +
         '    stage.style.transition = "opacity " + DURATION + "ms ease, transform " + DURATION + "ms ease";\n' +
         '    stage.style.opacity = "0";\n' +
         '    stage.style.transform = "translateX(" + (dir > 0 ? "-24px" : "24px") + ")";\n' +
@@ -7822,17 +8419,23 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  }\n' +
         '  function next() { if (idx < SLIDES.length - 1) goTo(idx + 1, 1); }\n' +
         '  function prev() { if (idx > 0) goTo(idx - 1, -1); }\n' +
+        // markdownTtsEngine()'s onSlideComplete for this export — kept separate from next()/
+        // prev() (not a reuse of either) so the stop-calls below, for genuine user-driven
+        // navigation, don't also cancel the very read that is calling this.
+        '  function ttsAdvance() { if (idx < SLIDES.length - 1) { goTo(idx + 1, 1, true); return true; } return false; }\n' +
         '  document.addEventListener("keydown", function (e) {\n' +
-        '    if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") { e.preventDefault(); next(); }\n' +
-        '    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); prev(); }\n' +
+        '    if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") { e.preventDefault(); if (markdownTts) markdownTts.stop(); next(); }\n' +
+        '    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); if (markdownTts) markdownTts.stop(); prev(); }\n' +
         '  });\n' +
         '  document.getElementById("overlay").addEventListener("click", function (e) {\n' +
         '    if (e.target.closest("audio, video")) return;\n' +
+        '    if (markdownTts) markdownTts.stop();\n' +
         '    const rect = document.getElementById("overlay").getBoundingClientRect();\n' +
         '    if (e.clientX - rect.left < rect.width / 2) prev(); else next();\n' +
         '  });\n' +
         '  paint();\n' +
         '</scr' + 'ipt>\n' +
+        getTtsButtonExportHtml('document.getElementById("stage")', 'ttsAdvance') +
         '</body>\n</html>';
 
       downloadHtmlBlob(html, title + '-ebook.html');
