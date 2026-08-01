@@ -4745,7 +4745,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           historyIndex: 0,
           assets: t.assets || {},
           assetCounter: t.assetCounter || 0,
-          isDefaultName: t.isDefaultName !== undefined ? t.isDefaultName : /^Unbenannt \d+\.md$/.test(t.name),
+          // "Unbenannt N.md" was the default-name pattern before it was renamed to "Notiz N.md"
+          // below (in createNewTab()) -- kept here too so tabs saved by an older version of the
+          // app before isDefaultName was persisted still correctly resume live-renaming from
+          // the first heading (see updateTabNameFromFirstHeading()) instead of being mistaken
+          // for a user-chosen name.
+          isDefaultName: t.isDefaultName !== undefined ? t.isDefaultName : /^(Unbenannt|Notiz) \d+\.md$/.test(t.name),
           drawingAssetIds: t.drawingAssetIds || {},
           rawDrawingAssetIds: t.rawDrawingAssetIds || {},
           audioAssetIds: t.audioAssetIds || {},
@@ -5487,7 +5492,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function createNewTab(name = null, content = null, fileHandle = null, nativeFilePath = null) {
       const tabId = 'tab_' + tabIdCounter++;
-      const tabName = name || 'Unbenannt ' + (tabs.length + 1) + '.md';
+      const tabName = name || 'Notiz ' + (tabs.length + 1) + '.md';
       const rawContent = content !== null ? content : (tabs.length === 0 ? defaultContent : '# ' + tabName.replace('.md', '') + '\n\n');
       const fileType = getFileTypeFromName(tabName);
 
