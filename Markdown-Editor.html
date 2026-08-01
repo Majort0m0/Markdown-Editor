@@ -7251,15 +7251,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // embedding itself works end to end).
     let pdfImportState = null; // { pdf, fileName, numPages }
 
-    // Set only while a multi-page import is actively chaining through pages (Phase 5) — the
-    // pages still to open after the one currently in Excalidraw. null the rest of the time,
-    // including for a single-page import, which never needs this at all (see confirmPdfImport()).
-    let pdfImportQueue = null; // { remainingPages: [2, 3, ...] }
-
-    function cleanupPdfImportSequence() {
+    function cleanupPdfImportState() {
       if (pdfImportState && pdfImportState.pdf) pdfImportState.pdf.destroy();
       pdfImportState = null;
-      pdfImportQueue = null;
     }
 
     async function handlePdfFile(file) {
@@ -7289,12 +7283,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // PDF.js documents hold onto real resources (parsed structure, cached pages) until told
       // otherwise — destroy() releases them now that this import attempt is done, rather than
       // leaving them for garbage collection alone, since a user opening several PDFs across a
-      // session would otherwise accumulate them. Only relevant when the user cancels/closes this
-      // dialog outright — once confirmPdfImport() hands off to Excalidraw for a multi-page
-      // import, the pdf needs to stay alive for the still-queued pages (see pdfImportQueue) and
-      // this function is no longer the one responsible for cleaning it up (see
-      // cleanupPdfImportSequence(), called instead once the whole sequence is actually done).
-      cleanupPdfImportSequence();
+      // session would otherwise accumulate them.
+      cleanupPdfImportState();
     }
 
     // Typing into the page-range field implies "I want the range option", without also requiring
@@ -7353,15 +7343,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return dataUrl;
     }
 
-    // Renders the first chosen page and opens it straight in Excalidraw for annotation, inside a
-    // fresh note created just for this import (see openDrawingModal()'s initialImageFile param
-    // from Phase 3) — replacing Phase 2's placeholder behavior of inserting a flat image into
-    // whatever tab happened to be open. Phase 4 of the "PDF als Arbeitsblatt öffnen" feature.
+    // Renders every selected page up front and inserts each one directly as a plain,
+    // not-yet-annotated drawing asset (tab.rawDrawingAssetIds — see insertNewDrawingAsset()) into
+    // a fresh note, one "## Seite N" heading per page immediately followed by its image. Nothing
+    // here ever opens the drawing modal — the user opens whichever page they actually want to
+    // annotate later via the existing ✏️ "Bearbeiten" button on that image, the same as any other
+    // drawing (openDrawingModal() already knows how to treat a raw/unedited asset as a fresh image
+    // drop — see its isFreshImageDrop handling).
     //
-    // Any further selected pages are queued (pdfImportQueue) rather than processed here — see
-    // continuePdfImportSequence(), called from saveDrawing() once this first page is saved, which
-    // is what actually chains through them one save at a time ("alle Seiten untereinander" in the
-    // same note, per how this was specified). Phase 5.
+    // This replaced an earlier design that auto-opened each page straight into Excalidraw and
+    // auto-advanced to the next one on save. That reloaded the same Excalidraw iframe once per
+    // page in quick succession and proved unreliable in practice — an initially-missing `await`
+    // on the auto-advance handoff caused a real, reproduced race (the "Speichern" button
+    // re-enabling before the next page had finished loading), and even after fixing that race,
+    // save failures on later pages persisted on the web and the very *first* page consistently
+    // failed inside the packaged WKWebView-based Mac app. Rendering everything as inert images up
+    // front and only ever driving Excalidraw for one, explicitly user-initiated edit at a time —
+    // exactly the already-solid single-drawing-edit path — sidesteps that whole class of problem
+    // rather than patching the auto-chaining further.
     async function confirmPdfImport() {
       if (!pdfImportState) return;
       const mode = document.querySelector('input[name="pdfImportMode"]:checked').value;
@@ -7383,84 +7382,43 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const confirmBtn = document.getElementById('pdfImportConfirmBtn');
       const statusEl = document.getElementById('pdfImportStatus');
       confirmBtn.disabled = true;
+      let tabCreated = false;
 
       try {
         const baseName = fileName.replace(/\.pdf$/i, '');
-        const firstPage = pageNumbers[0];
-        statusEl.textContent = 'Seite ' + firstPage + ' wird vorbereitet…';
-        const dataUrl = await renderPdfPageToDataUrl(pdf, firstPage);
+        for (let i = 0; i < pageNumbers.length; i++) {
+          const pageNum = pageNumbers[i];
+          statusEl.textContent = pageNumbers.length > 1
+            ? 'Seite ' + pageNum + ' wird vorbereitet… (' + (i + 1) + ' von ' + pageNumbers.length + ')'
+            : 'Seite ' + pageNum + ' wird vorbereitet…';
+          const dataUrl = await renderPdfPageToDataUrl(pdf, pageNum);
 
-        // isDefaultName ends up false (an explicit name was given), so this title can't later be
-        // silently overwritten by the first-heading auto-rename the way an untitled tab would be.
-        createNewTab(baseName + '.md', '# ' + baseName + '\n\n## Seite ' + firstPage + '\n\n');
-        editor.setSelectionRange(editor.value.length, editor.value.length);
-
-        const remainingPages = pageNumbers.slice(1);
-        if (remainingPages.length > 0) {
-          // pdfImportState (and its pdf) has to stay alive for continuePdfImportSequence() to
-          // render the rest — only hide the dialog here, don't run the full
-          // closePdfImportModal()/cleanupPdfImportSequence() teardown yet.
-          pdfImportQueue = { remainingPages };
-          document.getElementById('pdfImportModal').classList.remove('active');
-        } else {
-          closePdfImportModal();
+          if (!tabCreated) {
+            // isDefaultName ends up false (an explicit name was given), so this title can't later
+            // be silently overwritten by the first-heading auto-rename the way an untitled tab
+            // would be.
+            createNewTab(baseName + '.md', '# ' + baseName + '\n\n## Seite ' + pageNum + '\n\n');
+            tabCreated = true;
+          } else {
+            editor.value += '\n\n## Seite ' + pageNum + '\n\n';
+          }
+          editor.setSelectionRange(editor.value.length, editor.value.length);
+          insertNewDrawingAsset(dataUrl, 'Zeichnung', true);
         }
-
-        // Awaited deliberately (see continuePdfImportSequence() below for why this matters even
-        // though nothing here currently races against it): openDrawingModal() is what drops the
-        // page image and scales it into place, and letting either of this function's callers
-        // observe "the PDF import finished" before that's actually done is exactly the bug that
-        // continuePdfImportSequence() used to have.
-        await openDrawingModal(null, dataUrlToFile(dataUrl, 'seite-' + firstPage + '.png'));
+        closePdfImportModal();
       } catch (err) {
-        console.warn('PDF-Seite konnte nicht gerendert werden:', err);
+        console.warn('PDF-Seite(n) konnten nicht gerendert werden:', err);
         statusEl.textContent = 'Rendern fehlgeschlagen — bitte erneut versuchen.';
       } finally {
+        // Guarded on tabCreated so a failure on the very first page (nothing inserted yet) doesn't
+        // record a no-op history entry — but a failure partway through a multi-page import still
+        // persists whatever pages *did* make it in, rather than losing them.
+        if (tabCreated) {
+          recordHistory();
+          updatePreview();
+          saveStateToLocalStorage();
+        }
         confirmBtn.disabled = false;
-      }
-    }
-
-    // Called from saveDrawing() instead of closeDrawingModal() whenever pdfImportQueue has more
-    // pages left: renders the next one, appends its "## Seite N" heading to the note that's
-    // already open (the same note every page in this import lands in), and reopens Excalidraw
-    // with it — the drawing modal itself never actually closes between pages, it just gets
-    // reloaded with fresh content, which is what makes this read as one continuous flow rather
-    // than N separate dialogs.
-    async function continuePdfImportSequence() {
-      const nextPage = pdfImportQueue.remainingPages.shift();
-      const isLastPage = pdfImportQueue.remainingPages.length === 0;
-
-      try {
-        showToast('Seite ' + nextPage + ' wird geöffnet…');
-        const dataUrl = await renderPdfPageToDataUrl(pdfImportState.pdf, nextPage);
-
-        editor.value += '\n\n## Seite ' + nextPage + '\n\n';
-        editor.setSelectionRange(editor.value.length, editor.value.length);
-        markActiveTabModified();
-        recordHistory();
-        updatePreview();
-        saveStateToLocalStorage();
-
-        // The pdf itself is only needed to render pages still queued — safe to release right
-        // after rendering the last one, before the user has even started drawing on it.
-        if (isLastPage) cleanupPdfImportSequence();
-
-        // MUST be awaited: this used to be a fire-and-forget call, which let saveDrawing() (the
-        // only caller of this function) resolve — and re-enable its "Speichern" button — the
-        // instant this line merely *started* the next page's load, not once it actually finished
-        // (openDrawingModal() itself takes ~1-2s: iframe reload, canvas mount, then the drop/scale
-        // delays below). A save click landing in that window ran exportDrawingBlob() against
-        // whatever the canvas happened to contain yet (still the previous page, or nothing) —
-        // reproduced directly, and it's exactly what caused pages/assets to end up duplicated or
-        // out of order. Awaiting here closes the window: saveDrawing()'s own `await
-        // continuePdfImportSequence()` now only resolves (and re-enables the button) once this
-        // page is genuinely ready to be drawn on and saved.
-        await openDrawingModal(null, dataUrlToFile(dataUrl, 'seite-' + nextPage + '.png'));
-      } catch (err) {
-        console.warn('Nächste PDF-Seite konnte nicht gerendert werden:', err);
-        showToast('Weitere Seiten konnten nicht eingefügt werden');
-        cleanupPdfImportSequence();
-        closeDrawingModal();
       }
     }
 
@@ -8367,11 +8325,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     let cachedExcalidrawHtml = null;
     let currentDrawingAssetId = null;
-    // Set only while a freshly-dropped (never-yet-saved) image — i.e. a PDF page — is open in the
-    // drawing modal; see openDrawingModal()'s initialImageFile branch and closeDrawingModal() below.
-    // { dataUrl, name } of that unedited image, so cancelling instead of saving still preserves the
-    // page in the document rather than silently discarding it.
-    let pendingCancelFallbackImage = null;
 
     function getExcalidrawHtml() {
       if (cachedExcalidrawHtml !== null) return cachedExcalidrawHtml;
@@ -8439,43 +8392,41 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       fire('drop');
     }
 
-    // `initialImageFile`, when given (and there's no assetId to look up instead), is dropped onto
-    // the canvas the same way a saved drawing's own asset would be — the only difference is
-    // *what* gets dropped. Excalidraw decides for itself whether that means "restore an embedded
-    // scene" (a previously-saved drawing's own export, which carries one) or "insert as a plain,
-    // editable image" (anything else — e.g. a freshly rendered PDF page, see handlePdfFile() /
-    // the "PDF als Arbeitsblatt öffnen" feature this exists for): it inspects the dropped PNG's
-    // own metadata for embedded scene data, so this function never has to know or care which
-    // case it is — same dropFileOntoExcalidraw() call either way. currentDrawingAssetId is only
-    // ever set from `assetId`, so saveDrawing() already does the right thing unmodified for a
-    // fresh image too: no matching asset to update means it creates a new one and inserts a
-    // markdown reference, exactly the "new drawing" path this needs.
+    // A tab.rawDrawingAssetIds asset (see insertNewDrawingAsset()'s isRaw param — currently only
+    // ever true for a not-yet-annotated PDF page, see confirmPdfImport()) is dropped onto the
+    // canvas the same way a saved drawing's own asset would be — the only difference is *what*
+    // gets dropped. Excalidraw decides for itself whether that means "restore an embedded scene"
+    // (a previously-saved drawing's own export, which carries one) or "insert as a plain, editable
+    // image" (anything else, e.g. a plain PDF-page render with no embedded scene): it inspects the
+    // dropped PNG's own metadata for embedded scene data, so openDrawingModal() never has to know
+    // or care which case it is — same dropFileOntoExcalidraw() call either way.
     // Excalidraw drops a fresh image onto the canvas at a fixed, small default footprint (~186x264
     // canvas units) regardless of the source image's actual pixel resolution — confirmed
     // empirically by dropping both a 1272x1800px and a 3816x5400px render of the same page and
     // getting the identical on-canvas size both times, which rules out "just render PDFs at a
     // higher DPI" as a fix. A full PDF page at that size reads as far too small to comfortably
-    // annotate, so freshly-dropped PDF-page images are scaled up (and repositioned, see below)
-    // right after the drop (see the initialImageFile branch below) using the same "drive the real
-    // UI" approach every other Excalidraw interaction in this file uses (there's no official API
-    // for the standalone app — see the comments around dropFileOntoExcalidraw/exportDrawingBlob):
-    // open the "Statistiken für Nerds" panel (Alt+/, which only registers when dispatched on the
-    // canvas element itself — dispatching on window/document/document.body was silently ignored in
-    // testing), drive its editable Shape-properties fields for the currently-selected (just-
-    // dropped) element via the native input-value setter (a plain `.value =` assignment doesn't
-    // trigger React's onChange on a controlled input), then close the panel again the same way it
-    // was opened. The whole dance runs while openDrawingModal()'s own "Lädt Zeichenfläche…" overlay
-    // is still showing, so nothing of it is ever visible to the user. Deliberately best-effort: if
-    // Excalidraw's DOM structure ever changes and this stops finding what it expects, the image is
-    // simply left wherever it landed rather than blocking the drawing flow. Never applied when
-    // reopening a drawing that's already gone through a real Excalidraw export (currentDrawingAssetId
-    // with the asset absent from tab.rawDrawingAssetIds, see openDrawingModal()) — that drop restores
-    // a whole previously-sized/positioned scene via embedded PNG metadata, not a single fresh
-    // element, and redoing this on every reopen would compound the size (3x, then 9x, then 27x, ...)
-    // and fight the user's own subsequent repositioning. It IS applied when reopening a
-    // tab.rawDrawingAssetIds entry (a PDF page that was cancelled instead of saved, see
-    // closeDrawingModal()) — that asset is a plain PNG with no embedded scene at all, so dropping it
-    // again lands at the same tiny default footprint as any other fresh image and needs the same fix.
+    // annotate, so a raw, freshly-dropped PDF-page image is scaled up (and repositioned, see below)
+    // right after the drop (see openDrawingModal()'s isFreshImageDrop branch) using the same "drive
+    // the real UI" approach every other Excalidraw interaction in this file uses (there's no
+    // official API for the standalone app — see the comments around
+    // dropFileOntoExcalidraw/exportDrawingBlob): open the "Statistiken für Nerds" panel (Alt+/,
+    // which only registers when dispatched on the canvas element itself — dispatching on
+    // window/document/document.body was silently ignored in testing), drive its editable
+    // Shape-properties fields for the currently-selected (just-dropped) element via the native
+    // input-value setter (a plain `.value =` assignment doesn't trigger React's onChange on a
+    // controlled input), then close the panel again the same way it was opened. The whole dance
+    // runs while openDrawingModal()'s own "Lädt Zeichenfläche…" overlay is still showing, so
+    // nothing of it is ever visible to the user. Deliberately best-effort: if Excalidraw's DOM
+    // structure ever changes and this stops finding what it expects, the image is simply left
+    // wherever it landed rather than blocking the drawing flow. Never applied when reopening a
+    // drawing that's already gone through a real Excalidraw export (currentDrawingAssetId with the
+    // asset absent from tab.rawDrawingAssetIds, see openDrawingModal()) — that drop restores a
+    // whole previously-sized/positioned scene via embedded PNG metadata, not a single fresh
+    // element, and redoing this on every reopen would compound the size (3x, then 9x, then 27x,
+    // ...) and fight the user's own subsequent repositioning. It IS applied every time a
+    // tab.rawDrawingAssetIds entry is opened — that asset is a plain PNG with no embedded scene at
+    // all, so dropping it lands at the same tiny default footprint every time until it's actually
+    // saved through Excalidraw once (see saveDrawing(), which then clears the raw marker).
     async function scaleSelectedExcalidrawImage(win, factor) {
       try {
         const doc = win.document;
@@ -8605,7 +8556,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
     }
 
-    async function openDrawingModal(assetId, initialImageFile) {
+    async function openDrawingModal(assetId) {
       currentDrawingAssetId = assetId || null;
       const modal = document.getElementById('drawingModal');
       const frame = document.getElementById('drawingFrame');
@@ -8649,15 +8600,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         await presetThinStrokeWidth(win);
 
         let fileToDrop = null;
-        // True for a genuinely fresh image (never touched Excalidraw) — a brand-new PDF page, or
-        // an existing tab.rawDrawingAssetIds entry (a PDF page whose modal was cancelled instead of
-        // saved, see closeDrawingModal(): the plain, unedited PNG landed in tab.assets without ever
-        // being exported by Excalidraw, so reopening it via assetId still means "insert a fresh
-        // image", not "restore a scene") — as opposed to a real previously-exported drawing, which
-        // carries its own embedded scene/size/position and must not be rescaled again.
+        // True for a genuinely fresh image (never touched Excalidraw) — a tab.rawDrawingAssetIds
+        // entry (currently only ever an unedited PDF-page render, see confirmPdfImport(): the
+        // plain PNG landed in tab.assets without ever being exported by Excalidraw, so opening it
+        // means "insert a fresh image", not "restore a scene") — as opposed to a real
+        // previously-exported drawing, which carries its own embedded scene/size/position and must
+        // not be rescaled again.
         let isFreshImageDrop = false;
         let isReopenOfProcessedDrawing = false;
-        pendingCancelFallbackImage = null;
         const tab = getCurrentTab();
         if (currentDrawingAssetId) {
           const dataUrl = tab && tab.assets && tab.assets[currentDrawingAssetId];
@@ -8667,14 +8617,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             isFreshImageDrop = true;
           } else {
             isReopenOfProcessedDrawing = true;
-          }
-        } else if (initialImageFile) {
-          fileToDrop = initialImageFile;
-          isFreshImageDrop = true;
-          try {
-            pendingCancelFallbackImage = { dataUrl: await fileToDataUrl(initialImageFile), name: 'Zeichnung' };
-          } catch (e) {
-            pendingCancelFallbackImage = null;
           }
         }
 
@@ -8700,27 +8642,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       document.getElementById('drawingModal').classList.remove('active');
       document.getElementById('drawingFrame').src = 'about:blank';
       currentDrawingAssetId = null;
-      // Cancelling (✕/backdrop/Escape) a freshly-dropped PDF page instead of saving used to
-      // discard the page entirely — the whole point of importing it was to have it available to
-      // annotate, possibly later rather than right now, so losing it on a plain cancel isn't
-      // wanted. pendingCancelFallbackImage (set in openDrawingModal()'s initialImageFile branch,
-      // cleared by saveDrawing() on a successful save) holds exactly that unedited page image for
-      // this case; insert it as a normal drawing asset — same asset-map bookkeeping a real save
-      // would produce — so it still ends up in the document and stays reopenable/editable later.
-      if (pendingCancelFallbackImage) {
-        insertNewDrawingAsset(pendingCancelFallbackImage.dataUrl, pendingCancelFallbackImage.name, true);
-        pendingCancelFallbackImage = null;
-        recordHistory();
-        updatePreview();
-        saveStateToLocalStorage();
-      }
-      // Reached via the ✕ button when a multi-page PDF import is mid-sequence (saveDrawing()
-      // itself only ever calls closeDrawingModal() once the queue is already empty — see there)
-      // — the user cancelled instead of saving, so whatever pages were still queued are
-      // abandoned rather than resumed later. Without this, the still-alive pdf/queue would
-      // otherwise be sitting there the next time *any* unrelated drawing gets saved, and
-      // saveDrawing() would wrongly treat that as "continue the PDF import".
-      if (pdfImportQueue) cleanupPdfImportSequence();
     }
 
     // Delegated once on the (stable) preview container rather than re-bound on every render —
@@ -8974,12 +8895,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // Registers a fresh drawing asset (tab.assets + tab.drawingAssetIds, so it's reopenable via
     // openDrawingModal later) and inserts its markdown reference at the current cursor position.
-    // Shared by saveDrawing()'s "new drawing" branch and the PDF-import cancel fallback in
-    // closeDrawingModal() — both need identical asset-map bookkeeping, just with different image
+    // Shared by saveDrawing()'s "new drawing" branch and confirmPdfImport() (which calls this once
+    // per imported page) — both need identical asset-map bookkeeping, just with different image
     // content (an edited Excalidraw export vs. an unedited PDF-page render) and alt text.
     //
-    // isRaw marks the asset in tab.rawDrawingAssetIds — set true only for the cancel-fallback path
-    // (an unedited PDF-page PNG with no embedded Excalidraw scene at all, since it was never
+    // isRaw marks the asset in tab.rawDrawingAssetIds — set true only for confirmPdfImport()'s
+    // path (an unedited PDF-page PNG with no embedded Excalidraw scene at all, since it was never
     // exported by Excalidraw). openDrawingModal() checks this map to know that reopening such an
     // asset still means "insert a fresh image" (apply the same 3x scale/reposition treatment a
     // brand-new PDF page gets — see scaleSelectedExcalidrawImage()), not "restore a saved scene" —
@@ -9038,24 +8959,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         } else {
           insertNewDrawingAsset(dataUrl, 'Zeichnung');
         }
-        // A successful save always supersedes the cancel-fallback (see closeDrawingModal()) — this
-        // page is now saved as a real drawing asset, so there's nothing left to fall back to.
-        pendingCancelFallbackImage = null;
 
         recordHistory();
         updatePreview();
         saveStateToLocalStorage();
-
-        // A non-null pdfImportQueue means there are more PDF pages still to go (Phase 5) — keep
-        // the drawing modal open and move straight to the next one instead of closing here.
-        // continuePdfImportSequence() nulls the queue itself once it renders the *last* queued
-        // page, so by the time saveDrawing() runs for that final page, this is already back to
-        // the plain "just close" path below — no separate "is this the last one" check needed.
-        if (pdfImportQueue) {
-          await continuePdfImportSequence();
-        } else {
-          closeDrawingModal();
-        }
+        closeDrawingModal();
       } catch (err) {
         console.warn('Zeichnung konnte nicht gespeichert werden:', err);
         if (statusEl) statusEl.textContent = 'Speichern fehlgeschlagen — bitte erneut versuchen.';
