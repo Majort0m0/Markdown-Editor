@@ -2866,6 +2866,22 @@ return He}()
       width: 1%;
     }
 
+    .shortcuts-help-link {
+      display: block;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border-color);
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .shortcuts-help-link:hover {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+
     .shortcuts-table tr:last-child td {
       border-bottom: none;
     }
@@ -3894,6 +3910,7 @@ return He}()
         <tr><td><kbd>Enter</kbd> auf leerem Listenpunkt</td><td>Liste beenden</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Dieses Fenster schließen</td></tr>
       </table>
+      <a class="shortcuts-help-link" href="https://github.com/Majort0m0/Markdown-Editor#readme" target="_blank" rel="noopener noreferrer">❓ Hilfe &amp; Dokumentation (README auf GitHub)</a>
     </div>
   </div>
 
@@ -4666,6 +4683,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         audioAssetIds: t.audioAssetIds || {},
         fileType: t.fileType || 'markdown',
         csvDelimiter: t.csvDelimiter || null,
+        theme: t.theme || 'theme-github-light',
         // Mac app only (see isMacApp()) — deliberately device-local like fileHandle itself (never
         // included in the WebDAV sync payload functions below), since a native filesystem path is
         // meaningless on another device. Persisting it here (unlike fileHandle, which genuinely
@@ -4756,6 +4774,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           audioAssetIds: t.audioAssetIds || {},
           fileType: t.fileType || 'markdown',
           csvDelimiter: t.csvDelimiter || null,
+          theme: t.theme || 'theme-github-light',
           // Tabs saved before WebDAV sync existed have no syncId yet; ensureSyncId() below
           // mints one on first use rather than every tab needing a migration pass here.
           syncId: t.syncId || null,
@@ -4775,7 +4794,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         webdavPendingDeletions = state.webdavPendingDeletions || [];
 
         themeSelector.value = currentTheme;
-        changeTheme(currentTheme);
+        // Just an initial paint before switchTab() below applies the actual active tab's own
+        // theme (or Simple Modus's preset) -- must not use changeTheme(), which would otherwise
+        // stamp this device-level fallback value onto whatever tab happens to be restored.
+        applyTheme(currentTheme);
         setSpellcheckState(spellcheckEnabled);
         applyPaneVisibility();
         applySplitRatio();
@@ -4864,11 +4886,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     function tabSyncSnapshot(tab) {
-      return JSON.stringify({ name: tab.name, content: tab.content, assets: tab.assets || {}, drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null });
+      return JSON.stringify({ name: tab.name, content: tab.content, assets: tab.assets || {}, drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light' });
     }
 
     function remoteTabSnapshot(rt) {
-      return JSON.stringify({ name: rt.name, content: rt.content, assets: rt.assets || {}, drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null });
+      return JSON.stringify({ name: rt.name, content: rt.content, assets: rt.assets || {}, drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light' });
     }
 
     function tabToSyncPayload(t) {
@@ -4882,7 +4904,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         rawDrawingAssetIds: t.rawDrawingAssetIds || {},
         audioAssetIds: t.audioAssetIds || {},
         fileType: t.fileType || 'markdown',
-        csvDelimiter: t.csvDelimiter || null
+        csvDelimiter: t.csvDelimiter || null,
+        theme: t.theme || 'theme-github-light'
       };
     }
 
@@ -4914,6 +4937,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       t.audioAssetIds = rt.audioAssetIds || {};
       t.fileType = rt.fileType || 'markdown';
       t.csvDelimiter = rt.csvDelimiter || null;
+      t.theme = rt.theme || 'theme-github-light';
       t.isModified = false;
       t.history = [t.content];
       t.historyIndex = 0;
@@ -4958,6 +4982,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         audioAssetIds: remoteTabData.audioAssetIds || {},
         fileType: remoteTabData.fileType || 'markdown',
         csvDelimiter: remoteTabData.csvDelimiter || null,
+        theme: remoteTabData.theme || 'theme-github-light',
         syncId: nameSuffix ? null : remoteTabData.syncId,
         lastSyncedSnapshot: nameSuffix ? null : remoteTabSnapshot(remoteTabData)
       };
@@ -5206,6 +5231,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (current && editor.value !== current.content) {
           editor.value = current.content;
           updatePreview();
+        }
+        // A silently-pulled remote change (applyRemoteTabToLocal above) can include a theme
+        // picked on another device -- reapply it live if it's the tab currently on screen,
+        // same reasoning as the content refresh just above. Simple Modus's forced theme takes
+        // priority regardless, same as everywhere else theme application is gated on it.
+        if (current && !simpleMode && currentTheme !== (current.theme || 'theme-github-light')) {
+          const tabTheme = current.theme || 'theme-github-light';
+          themeSelector.value = tabTheme;
+          applyTheme(tabTheme);
         }
         renderTabs();
 
@@ -5535,7 +5569,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         syncId: null,
         lastSyncedSnapshot: null,
         fileType: fileType,
-        csvDelimiter: fileType === 'csv' ? detectCsvDelimiter(tabContent) : null
+        csvDelimiter: fileType === 'csv' ? detectCsvDelimiter(tabContent) : null,
+        // Inherits whatever tab was active when this one was created (getCurrentTab() here is
+        // still the *old* active tab -- switchTab(tabId) below hasn't run yet), not the
+        // possibly Simple-Modus-forced currentTheme, so a new tab never picks up 'theme-clean'
+        // just because it happened to be created while Simple Modus was on.
+        theme: (getCurrentTab() && getCurrentTab().theme) || currentTheme
       };
 
       tabs.push(newTab);
@@ -5555,6 +5594,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (targetTab) {
         enableEditorUI();
         editor.value = targetTab.content;
+        // Themes are per-tab (see changeTheme()/tab.theme); Simple Modus overrides this with a
+        // fixed 'theme-clean' regardless of tab, so switching tabs while it's on deliberately
+        // doesn't touch the visible theme -- each tab's own theme still applies the moment
+        // Simple Modus is turned back off (see toggleSimpleMode()).
+        if (!simpleMode) {
+          const tabTheme = targetTab.theme || 'theme-github-light';
+          themeSelector.value = tabTheme;
+          applyTheme(tabTheme);
+        }
         updatePreview();
         updateUndoRedoButtons();
       } else {
@@ -6483,13 +6531,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // control set (see the simple-hide class + body.simple-mode CSS above), and collapses the
     // editor/preview split into a single exclusive view. Only the ON/OFF flag itself is
     // persisted (see save/loadStateFromLocalStorage) -- re-entering the mode (via the checkbox,
-    // a page reload with it already on, or the ?simple=true URL param) always resets the theme/
-    // zoom/view-mode preset fresh rather than remembering where the user last left it.
+    // a page reload with it already on, or the ?simple=true URL param) always resets the zoom/
+    // view-mode preset fresh rather than remembering where the user last left it. The theme is
+    // the one exception: applyTheme() (not changeTheme()) is used here specifically so the
+    // active tab's own tab.theme is left untouched, and toggleSimpleMode()'s off-branch below
+    // restores exactly that value -- themes are per-tab (see tab.theme / changeTheme()), so
+    // "the last-chosen theme" always means the *current* tab's, not a single device-wide value.
     function enterSimpleMode() {
       simpleMode = true;
-      currentTheme = 'theme-clean';
-      themeSelector.value = currentTheme;
-      changeTheme(currentTheme);
+      themeSelector.value = 'theme-clean';
+      applyTheme('theme-clean');
       zoomLevel = 130; // three ZOOM_STEP clicks above the 100 default
       applyZoomLevel();
       showEditor = true;
@@ -6505,7 +6556,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         document.body.classList.remove('simple-mode');
         simpleModeToggle.checked = false;
         // Leaving Simple Modus always lands back on the normal 50/50 split view at 100% zoom,
-        // regardless of which single pane/zoom level was active while the mode was on.
+        // regardless of which single pane/zoom level was active while the mode was on -- but the
+        // theme goes back to whatever this specific tab last had selected, not a fixed default.
         showEditor = true;
         showPreview = true;
         applyPaneVisibility();
@@ -6513,6 +6565,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         applySplitRatio();
         zoomLevel = 100;
         applyZoomLevel();
+        const tab = getCurrentTab();
+        const restoredTheme = (tab && tab.theme) || 'theme-github-light';
+        themeSelector.value = restoredTheme;
+        applyTheme(restoredTheme);
       } else {
         enterSimpleMode();
       }
@@ -6536,8 +6592,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // --- ZOOM (Schriftgröße von Editor und Vorschau) ---
 
-    const ZOOM_MIN = 60;
-    const ZOOM_MAX = 200;
+    const ZOOM_MIN = 40;
+    const ZOOM_MAX = 250;
     const ZOOM_STEP = 10;
 
     // Scoped on :root (not #mainContainer, like --split-ratio) since it has to reach both
@@ -6862,7 +6918,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     editor.addEventListener('scroll', () => { syncScrollFrom('editor'); syncEditorHighlightScroll(); });
     previewPane.addEventListener('scroll', () => syncScrollFrom('preview'));
 
-    function changeTheme(themeClass) {
+    // Pure DOM application -- swaps the preview's theme class and the active hljs stylesheet,
+    // and persists app state, but deliberately does NOT touch any tab's own remembered theme.
+    // Used for every *programmatic* theme change (loading a tab via switchTab(), the Simple
+    // Modus preset, restoring a tab's theme when Simple Modus is turned back off) where writing
+    // to tab.theme would be wrong -- e.g. entering Simple Modus applies 'theme-clean' without
+    // overwriting what the active tab actually had selected, so it can be restored afterward.
+    function applyTheme(themeClass) {
       currentTheme = themeClass;
       preview.className = 'markdown-body ' + themeClass;
       const lightStyle = document.getElementById('hljs-theme-light');
@@ -6875,6 +6937,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         darkStyle.media = 'not all';
       }
       saveStateToLocalStorage();
+    }
+
+    // The #themeSelector's onchange handler -- i.e. the one place a *user* actually picks a
+    // theme (the selector itself is hidden during Simple Modus, so this can only ever fire
+    // outside it). Persists the choice onto the current tab (themes are per-tab, and sync with
+    // the document via the WebDAV payload functions below) in addition to applying it.
+    function changeTheme(themeClass) {
+      const tab = getCurrentTab();
+      if (tab) tab.theme = themeClass;
+      applyTheme(themeClass);
     }
 
     // --- CSV / JSON / TXT preview rendering ---
