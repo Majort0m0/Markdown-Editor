@@ -76,6 +76,13 @@ cp "$ROOT/Markdown-Editor.html" "$APP/Contents/Resources/Markdown-Editor.html"
 chmod +x "$APP/Contents/MacOS/MarkdownStudio"
 
 echo "==> Ad-hoc code signing (required for the app to launch at all on Apple Silicon)"
+# codesign refuses to sign a bundle containing files with a resource fork/Finder-info/other
+# extended attributes ("resource fork, Finder information, or similar detritus not allowed") —
+# a real, common failure here specifically because Markdown-Editor.html and the Icons/*.svg files
+# get downloaded/edited through browsers and other tools that routinely attach xattrs like
+# com.apple.quarantine. Safe to strip unconditionally: this only touches the just-assembled copies
+# inside $BUILD, never the original source files in the repo.
+xattr -cr "$APP"
 codesign --force --deep --sign - "$APP"
 
 echo "==> Building disk image"
