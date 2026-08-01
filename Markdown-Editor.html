@@ -3420,7 +3420,6 @@ return He}()
       <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageFileSelect(event)">
 
       <button id="saveBtn" class="icon-btn" onclick="saveCurrentFile()" title="Speichern (Strg+S)"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg></button>
-      <button id="saveAsBtn" class="icon-btn" onclick="saveCurrentFileAs()" title="Speichern unter..."><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 4.5 0 c -0.277344 0 -0.5 0.222656 -0.5 0.5 v 1 c 0 0.277344 0.222656 0.5 0.5 0.5 h 1 c 0.277344 0 0.5 -0.222656 0.5 -0.5 v -1 c 0 -0.277344 -0.222656 -0.5 -0.5 -0.5 z m 3 0 c -0.277344 0 -0.5 0.222656 -0.5 0.5 v 1 c 0 0.277344 0.222656 0.5 0.5 0.5 h 1 c 0.277344 0 0.5 -0.222656 0.5 -0.5 v -1 c 0 -0.277344 -0.222656 -0.5 -0.5 -0.5 z m 3 0 c -0.277344 0 -0.5 0.222656 -0.5 0.5 v 1 c 0 0.277344 0.222656 0.5 0.5 0.5 h 1 c 0.277344 0 0.5 -0.222656 0.5 -0.5 v -1 c 0 -0.277344 -0.222656 -0.5 -0.5 -0.5 z m -3.5 3 v 6.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -6.585938 z m -6 11 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg></button>
 
       <div class="action-divider"></div>
 
@@ -3925,7 +3924,6 @@ return He}()
     const undoBtn = document.getElementById('undoBtn');
     const redoBtn = document.getElementById('redoBtn');
     const saveBtn = document.getElementById('saveBtn');
-    const saveAsBtn = document.getElementById('saveAsBtn');
     const exportHtmlBtn = document.getElementById('exportHtmlBtn');
     const copyFormattedBtn = document.getElementById('copyFormattedBtn');
     const printBtn = document.getElementById('printBtn');
@@ -5176,7 +5174,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       preview.innerHTML = '<div class="empty-state"><h3>Kein Dokument geöffnet</h3><p>Klicke oben auf <strong>✨ Neu</strong> oder <strong>📂 Öffnen</strong>, um ein Dokument zu erstellen oder zu laden.</p></div>';
 
       saveBtn.disabled = true;
-      saveAsBtn.disabled = true;
       undoBtn.disabled = true;
       redoBtn.disabled = true;
       exportHtmlBtn.disabled = true;
@@ -5191,7 +5188,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function enableEditorUI() {
       editor.disabled = false;
       saveBtn.disabled = false;
-      saveAsBtn.disabled = false;
       exportHtmlBtn.disabled = false;
       copyFormattedBtn.disabled = false;
       printBtn.disabled = false;
