@@ -3,13 +3,14 @@
 Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft — keine Installation, kein Build, keine Serverseite. Die gesamte App steckt in einer einzigen HTML-Datei.
 
 **🔗 Direkt ausprobieren:** [majort0m0.github.io/Markdown-Editor](https://majort0m0.github.io/Markdown-Editor/)
+**📖 Ausführliche Anleitung:** [Anleitung.md](./Anleitung.md) — Schritt-für-Schritt-Beschreibungen aller Funktionen (auch in der App selbst über das ⌨️-Symbol verlinkt)
 
 ![Screenshot des Markdown Studio Editors mit mehreren Tabs, Formatierungsleiste und Live-Vorschau](./docs/screenshot.png)
 
 ## ✨ Funktionen
 
 ### Dokumente & Dateiformate
-- **Mehrere Tabs** — beliebig viele Dokumente gleichzeitig offen, mit Autospeicherung im Browser (LocalStorage)
+- **Mehrere Tabs** — beliebig viele Dokumente gleichzeitig offen, mit Autospeicherung im Browser (Text/Metadaten in LocalStorage, größere Anhänge wie Bilder/PDFs in IndexedDB für deutlich mehr Speicherplatz); ein Prozentbalken in der Fußleiste zeigt den belegten Speicherplatz sowie die Größe aller aktuell geöffneten Notizen zusammen an
 - **Markdown, CSV, JSON, HTML und TXT** in derselben App: CSV und JSON werden als Tabelle bzw. hübsch formatiert mit Syntax-Hervorhebung angezeigt; HTML-Dateien bekommen eine echte Syntax-Hervorhebung im Editor **und** eine echte gerenderte Web-Vorschau (in einer abgeschotteten Sandbox, damit fremder HTML/JS-Code nichts im Editor selbst anrichten kann); TXT-Dateien werden unverändert als reiner Text angezeigt
 - **Tabs umbenennen & Format wechseln** — Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit Format-Dropdown (Markdown/TXT/CSV/JSON/HTML), um ein Dokument gezielt in ein anderes Format zu konvertieren
 - **14 Dokumentvorlagen** über den ✨-Button — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan und eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt)
@@ -42,7 +43,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **Simple Modus** — ein „Simple"-Schalter in der Kopfzeile reduziert Kopf- und Werkzeugleiste auf das Nötigste (Öffnen, Speichern, Rückgängig/Wiederherstellen, Quelltext/Vorschau als reiner Umschalter, Zoom, Vollbild sowie Überschrift/Bild/Foto/Zeichnung/Audio), stellt automatisch das Design „Clean" und eine größere Zoomstufe ein und springt beim Einfügen von Bild, Foto, Zeichnung oder Audioaufnahme direkt in die Vorschau — praktisch für Tablets, jüngere Nutzer:innen oder eine aufgeräumte Schreibumgebung. Bleibt geräteweit gespeichert und lässt sich auch per Link mit `?simple=true` direkt aktiviert öffnen
 
 ### Synchronisation & Export
-- **WebDAV-Synchronisierung** zwischen mehreren Geräten — automatisch bei Änderungen, in Intervallen oder manuell, inkl. Konfliktbehandlung (lokale Version behalten, Server-Version übernehmen oder beide als getrennte Dokumente behalten)
+- **WebDAV-Synchronisierung** zwischen mehreren Geräten — automatisch bei Änderungen, in Intervallen oder manuell, inkl. Konfliktbehandlung (lokale Version behalten, Server-Version übernehmen oder beide als getrennte Dokumente behalten); der Sync-Button färbt sich hellgrün bei erfolgreich bestehender Verbindung, mit einem dunkelgrünen Ring als Countdown bis zur nächsten automatischen Synchronisierung, und erfolgreich synchronisierte Tabs bekommen einen grünen Rand in der Tableiste
 - **Export** als eigenständige HTML-Datei oder direkt **Drucken/als PDF speichern**
 - **Formatierte Notiz in die Zwischenablage kopieren** (zum Einfügen in Word, Outlook, Gmail, …)
 
