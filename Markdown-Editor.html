@@ -6145,8 +6145,60 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // --- IMAGE ASSET MAP (keeps the markdown source free of giant inline base64 strings) ---
 
+    // A PNG exported by Excalidraw with "Szene einbetten" on (which exportDrawingBlob() always
+    // forces, see the Drawing section) carries its full editable scene inside a PNG tEXt chunk --
+    // confirmed directly from the bundled excalidraw.html source: it encodes the chunk via
+    // eu.encode(Gu.excalidraw, ...) where Gu.excalidraw === "application/vnd.excalidraw+json", so
+    // that literal string is the chunk's keyword. This function only needs to detect *presence* of
+    // that chunk, not decode the scene itself -- restoring it already happens for free via the
+    // existing drag-and-drop-onto-the-canvas flow (dropFileOntoExcalidraw()), which is Excalidraw's
+    // own built-in scene-restore behavior, not something this app implements.
+    //
+    // Why this exists: saveCurrentFile()/saveCurrentFileAs() write a drawing's real data: URI
+    // straight into the .md file (via inlineAssetsIntoContent()) -- there was no way to also carry
+    // along the *app-level* bookkeeping (tab.drawingAssetIds) that marks an asset as "reopen this
+    // in Excalidraw" for the ✏️ button, so a saved-then-reopened .md file's drawings/PDF pages
+    // silently lost their editability, looking like plain, uneditable images. Scanning for this
+    // chunk on reimport (see extractInlineImagesToAssets() below) is what restores it -- this was
+    // previously an accepted, documented limitation; turns out it's fixable after all.
+    function pngHasEmbeddedExcalidrawScene(dataUrl) {
+      if (typeof dataUrl !== 'string' || dataUrl.indexOf('data:image/png') !== 0) return false;
+      const commaIdx = dataUrl.indexOf(',');
+      if (commaIdx === -1) return false;
+      let bytes;
+      try {
+        const binaryStr = atob(dataUrl.slice(commaIdx + 1));
+        bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+      } catch (err) {
+        return false;
+      }
+      // 8-byte PNG signature, then a sequence of length-prefixed chunks (4-byte big-endian
+      // length, 4-byte ASCII type, `length` bytes of data, 4-byte CRC) until IEND.
+      if (bytes.length < 8 || bytes[0] !== 0x89 || bytes[1] !== 0x50 || bytes[2] !== 0x4E || bytes[3] !== 0x47) return false;
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      let offset = 8;
+      while (offset + 8 <= bytes.length) {
+        const length = view.getUint32(offset);
+        const type = String.fromCharCode(bytes[offset + 4], bytes[offset + 5], bytes[offset + 6], bytes[offset + 7]);
+        const dataStart = offset + 8;
+        if (type === 'tEXt') {
+          const chunkEnd = Math.min(dataStart + length, bytes.length);
+          const nullIdx = bytes.subarray(dataStart, chunkEnd).indexOf(0);
+          if (nullIdx !== -1) {
+            const keyword = String.fromCharCode.apply(null, bytes.subarray(dataStart, dataStart + nullIdx));
+            if (keyword === 'application/vnd.excalidraw+json') return true;
+          }
+        }
+        if (type === 'IEND') break;
+        offset = dataStart + length + 4; // skip this chunk's data + its trailing 4-byte CRC
+      }
+      return false;
+    }
+
     function extractInlineImagesToAssets(content) {
       const assets = {};
+      const drawingAssetIds = {};
       let counter = 0;
       const newContent = content.replace(
         /!\[([^\]]*)\]\((data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[^)\s]+)\)/g,
@@ -6154,10 +6206,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           counter++;
           const assetId = 'img_' + counter;
           assets[assetId] = dataUrl;
+          // Deliberately not also marked in rawDrawingAssetIds/pdfDrawingAssetIds: this scene
+          // already went through a real Excalidraw export (it has its own embedded position/
+          // zoom), so it must take the "reopen an already-processed drawing" path in
+          // openDrawingModal() (plain zoomToFitExcalidrawScene()), not the "fresh PDF import"
+          // path (which would forcibly rescale/reposition it as if it were a brand-new page).
+          // There's no reliable way to tell a reimported PDF-derived page apart from a reimported
+          // hand-drawn one at this point -- both get treated the same, ordinary way here.
+          if (pngHasEmbeddedExcalidrawScene(dataUrl)) {
+            drawingAssetIds[assetId] = true;
+          }
           return '![' + alt + '](asset:' + assetId + ')';
         }
       );
-      return { content: newContent, assets };
+      return { content: newContent, assets, drawingAssetIds };
     }
 
     function inlineAssetsIntoContent(content, assets) {
@@ -6220,9 +6282,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // elsewhere, or from before this app stored images out-of-line) into the asset map too,
       // so the source stays manageable regardless of where the content came from. Doesn't apply
       // to CSV/JSON — there's no markdown image syntax to extract there.
-      const { content: tabContent, assets } = fileType === 'markdown'
+      const { content: tabContent, assets, drawingAssetIds: extractedDrawingAssetIds } = fileType === 'markdown'
         ? extractInlineImagesToAssets(rawContent)
-        : { content: rawContent, assets: {} };
+        : { content: rawContent, assets: {}, drawingAssetIds: {} };
 
       const newTab = {
         id: tabId,
@@ -6241,7 +6303,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         assets: assets,
         assetCounter: Object.keys(assets).length,
         isDefaultName: name === null,
-        drawingAssetIds: {},
+        // Restores editability for a drawing/PDF-page image that was previously saved to a real
+        // .md file and is now being reopened -- see extractInlineImagesToAssets()'s own comment
+        // on how this is detected (an embedded Excalidraw scene inside the PNG itself) and why
+        // rawDrawingAssetIds/pdfDrawingAssetIds are deliberately left empty here.
+        drawingAssetIds: extractedDrawingAssetIds,
         rawDrawingAssetIds: {},
         pdfDrawingAssetIds: {},
         audioAssetIds: {},
