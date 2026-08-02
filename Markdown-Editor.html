@@ -1339,6 +1339,11 @@ return He}()
       --text-muted: #656d76;
       --accent: #0969da;
       --accent-hover: #0451a5;
+      /* Dedicated accent for the Quelltext/Vorschau view toggles only (see #toggleEditBtn/
+         #togglePreviewBtn below) -- deliberately a different hue from --accent so this specific
+         pair stands out from every other icon-btn's active/hover state. */
+      --accent-view: #f97316;
+      --accent-view-bg: #fff2e5;
       --active-tab-bg: #ffffff;
       --inactive-tab-bg: #eaeef2;
       --toolbar-bg: #f3f4f6;
@@ -1432,7 +1437,12 @@ return He}()
       padding: 8px 16px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      /* flex-start (not space-between) + .actions-group's own margin-left:auto below --
+         mathematically identical to space-between for the previous two-child layout (title,
+         actions-group), but now that .view-toggle-group is a third child sitting between them,
+         space-between would spread slack space evenly across all three instead of keeping the
+         new group flush against the title on wide viewports. */
+      justify-content: flex-start;
       gap: 12px;
       flex-wrap: wrap;
     }
@@ -1453,11 +1463,24 @@ return He}()
       flex-shrink: 0;
     }
 
+    /* Quelltext/Vorschau toggles, pulled out of .actions-group to sit left-aligned right after
+       the title (see #toggleEditBtn/#togglePreviewBtn's orange accent below) -- a dedicated
+       group rather than just reordering within .actions-group so it can't drift apart from the
+       title again if unrelated buttons are added/removed around it later. */
+    .view-toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
     .actions-group {
       display: flex;
       align-items: center;
       gap: 2px;
       flex-wrap: wrap;
+      /* Pushes the rest of the toolbar to the far right, same visual result the old
+         justify-content:space-between produced when this was header's only other child. */
+      margin-left: auto;
     }
 
     button, .btn-label {
@@ -1522,6 +1545,22 @@ return He}()
       flex-shrink: 0;
     }
 
+    /* Orange accent for the two view-toggle buttons, overriding the generic blue
+       button.active/button:hover rules above via ID selector specificity -- always orange,
+       active or not, so this pair reads as a distinct group from every other icon-btn. */
+    #toggleEditBtn, #togglePreviewBtn {
+      color: var(--accent-view);
+    }
+
+    #toggleEditBtn.active, #togglePreviewBtn.active {
+      background-color: var(--accent-view-bg);
+      color: var(--accent-view);
+    }
+
+    #toggleEditBtn:hover:not(:disabled), #togglePreviewBtn:hover:not(:disabled) {
+      background-color: var(--accent-view-bg);
+    }
+
     .action-divider {
       width: 1px;
       height: 22px;
@@ -1565,17 +1604,21 @@ return He}()
 
     /* Simple Modus header layout: the remaining action buttons move to the left edge, the
        app title/logo moves to the right, and the Simple toggle itself stays pinned at the very
-       right -- past the title. order swaps which of header's two direct flex children (.app-
-       title, .actions-group) sits on which side; .simple-mode-toggle can't be reordered the
-       same way since it's nested inside .actions-group (order only reorders siblings within
-       their own flex container, not across nesting), so it's pulled out of the flex flow with
-       position: absolute instead, positioned relative to header. .app-title gets a matching
-       reserved right margin so its text never runs under the absolutely-positioned toggle. */
+       right -- past the title. order swaps which of header's three direct flex children (.app-
+       title, .view-toggle-group, .actions-group) sits on which side; .simple-mode-toggle can't
+       be reordered the same way since it's nested inside .actions-group (order only reorders
+       siblings within their own flex container, not across nesting), so it's pulled out of the
+       flex flow with position: absolute instead, positioned relative to header. .app-title gets
+       a matching reserved right margin so its text never runs under the absolutely-positioned
+       toggle. .view-toggle-group shares .actions-group's order (1) so Quelltext/Vorschau -- kept
+       visible in Simple Modus like the rest of that left-aligned set -- stay grouped with it;
+       DOM order (view-toggle-group before actions-group) puts it just left of the other buttons. */
     body.simple-mode header {
       position: relative;
     }
 
-    body.simple-mode .actions-group {
+    body.simple-mode .actions-group,
+    body.simple-mode .view-toggle-group {
       order: 1;
     }
 
@@ -2712,6 +2755,22 @@ return He}()
       max-width: 100%;
     }
 
+    /* Visible caption from an image's optional markdown title (![alt](href "title")) -- see
+       hljsRenderer.image(). A sibling of .image-wrapper (inline-block), not nested inside it, so
+       block display here naturally starts it on its own line right under the image. Uses
+       --preview-text (not the chrome-level --text-muted) with reduced opacity -- same "muted
+       text via opacity on the theme's own color" idiom .markdown-body blockquote already uses
+       below, since there's no dedicated --preview-text-muted var and the fixed chrome gray would
+       read poorly against a dark preview theme's background. */
+    .image-caption {
+      display: block;
+      max-width: 100%;
+      margin-top: 4px;
+      font-size: 0.85em;
+      color: var(--preview-text);
+      opacity: 0.7;
+    }
+
     .image-wrapper.drawing {
       cursor: pointer;
     }
@@ -3028,6 +3087,87 @@ return He}()
       font-weight: 400;
       font-size: 0.78rem;
       color: var(--text-muted);
+    }
+
+    /* Clipart Modal (ARASAAC pictogram search) */
+    .clipart-modal-card {
+      max-width: 640px;
+    }
+
+    .clipart-search-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .clipart-search-row input {
+      flex: 1;
+      min-width: 0;
+      padding: 6px 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      color: var(--text-main);
+      background-color: var(--bg-surface);
+    }
+
+    .clipart-status {
+      min-height: 1.2em;
+      margin: 0 0 8px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .clipart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: 8px;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+
+    .clipart-result {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 8px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background-color: var(--bg-surface);
+      text-align: center;
+    }
+
+    .clipart-result:hover {
+      background-color: #eceff2;
+      border-color: var(--accent);
+    }
+
+    .clipart-result img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+    }
+
+    .clipart-result span {
+      width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 0.75rem;
+      color: var(--text-main);
+    }
+
+    .clipart-attribution-note {
+      margin: 10px 0 0;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-color);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .clipart-attribution-note a {
+      color: var(--accent);
     }
 
     /* Camera Modal (live preview + crop) */
@@ -3685,11 +3825,21 @@ return He}()
     /* Responsive layout (phones / narrow viewports) */
     @media (max-width: 640px) {
       .actions-group,
+      .view-toggle-group,
       .formatting-toolbar,
       .table-controls {
         flex-wrap: nowrap;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
+      }
+
+      /* .actions-group's margin-left:auto (see header CSS) is what keeps it flush against the
+         far right edge on a wide, single-line header -- once header wraps it onto its own line
+         here, that auto margin would instead push it flush *right* on that line, unlike its
+         previous (pre-view-toggle-group) space-between-derived flush-left wrap behavior. Reset
+         it back to flush-left, consistent with how .view-toggle-group/.app-title wrap too. */
+      .actions-group {
+        margin-left: 0;
       }
 
       .tab-bar-container {
@@ -3832,6 +3982,15 @@ return He}()
       Markdown Studio
     </div>
 
+    <!-- Quelltext/Vorschau: prominent, orange-accented view toggles right after the title -->
+    <div class="view-toggle-group">
+      <div class="action-divider"></div>
+      <button id="toggleEditBtn" class="icon-btn active" onclick="toggleEditor()" title="Quelltext/Bearbeiten-Ansicht ein-/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.0184 7.36446C14.1256 6.96436 13.8882 6.55311 13.4881 6.4459C13.088 6.3387 12.6767 6.57614 12.5695 6.97623L9.98131 16.6355C9.8741 17.0356 10.1115 17.4468 10.5116 17.5541C10.9117 17.6613 11.323 17.4238 11.4302 17.0237L14.0184 7.36446Z" fill="currentColor"/><path d="M16.0303 8.46967C15.7374 8.17678 15.2626 8.17678 14.9697 8.46967C14.6768 8.76256 14.6768 9.23744 14.9697 9.53033L15.1412 9.7019C15.8229 10.3836 16.2797 10.8426 16.5753 11.2301C16.8577 11.6002 16.9216 11.8157 16.9216 12C16.9216 12.1843 16.8577 12.3998 16.5753 12.7699C16.2797 13.1574 15.8229 13.6164 15.1412 14.2981L14.9697 14.4697C14.6768 14.7626 14.6768 15.2374 14.9697 15.5303C15.2626 15.8232 15.7374 15.8232 16.0303 15.5303L16.2387 15.322C16.874 14.6867 17.4038 14.1569 17.7678 13.6798C18.1521 13.1762 18.4216 12.6441 18.4216 12C18.4216 11.3559 18.1521 10.8238 17.7678 10.3202C17.4038 9.84307 16.874 9.31331 16.2387 8.67801L16.0303 8.46967Z" fill="currentColor"/><path d="M7.96986 8.46967C8.26275 8.17678 8.73762 8.17678 9.03052 8.46967C9.32341 8.76256 9.32341 9.23744 9.03052 9.53033L8.85894 9.7019C8.17729 10.3836 7.72052 10.8426 7.42488 11.2301C7.14245 11.6002 7.07861 11.8157 7.07861 12C7.07861 12.1843 7.14245 12.3998 7.42488 12.7699C7.72052 13.1574 8.17729 13.6164 8.85894 14.2981L9.03052 14.4697C9.32341 14.7626 9.32341 15.2374 9.03052 15.5303C8.73762 15.8232 8.26275 15.8232 7.96986 15.5303L7.76151 15.322C7.12618 14.6867 6.59637 14.1569 6.23235 13.6798C5.84811 13.1762 5.57861 12.6441 5.57861 12C5.57861 11.3559 5.84811 10.8238 6.23235 10.3202C6.59637 9.84307 7.12617 9.31332 7.7615 8.67802L7.96986 8.46967Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11.9426 1.25C9.63423 1.24999 7.82519 1.24998 6.41371 1.43975C4.96897 1.63399 3.82895 2.03933 2.93414 2.93414C2.03933 3.82895 1.63399 4.96897 1.43975 6.41371C1.24998 7.82519 1.24999 9.63423 1.25 11.9426V12.0574C1.24999 14.3658 1.24998 16.1748 1.43975 17.5863C1.63399 19.031 2.03933 20.1711 2.93414 21.0659C3.82895 21.9607 4.96897 22.366 6.41371 22.5603C7.82519 22.75 9.63423 22.75 11.9426 22.75H12.0574C14.3658 22.75 16.1748 22.75 17.5863 22.5603C19.031 22.366 20.1711 21.9607 21.0659 21.0659C21.9607 20.1711 22.366 19.031 22.5603 17.5863C22.75 16.1748 22.75 14.3658 22.75 12.0574V11.9426C22.75 9.63423 22.75 7.82519 22.5603 6.41371C22.366 4.96897 21.9607 3.82895 21.0659 2.93414C20.1711 2.03933 19.031 1.63399 17.5863 1.43975C16.1748 1.24998 14.3658 1.24999 12.0574 1.25H11.9426ZM3.9948 3.9948C4.56445 3.42514 5.33517 3.09825 6.61358 2.92637C7.91356 2.75159 9.62178 2.75 12 2.75C14.3782 2.75 16.0864 2.75159 17.3864 2.92637C18.6648 3.09825 19.4355 3.42514 20.0052 3.9948C20.5749 4.56445 20.9018 5.33517 21.0736 6.61358C21.2484 7.91356 21.25 9.62178 21.25 12C21.25 14.3782 21.2484 16.0864 21.0736 17.3864C20.9018 18.6648 20.5749 19.4355 20.0052 20.0052C19.4355 20.5749 18.6648 20.9018 17.3864 21.0736C16.0864 21.2484 14.3782 21.25 12 21.25C9.62178 21.25 7.91356 21.2484 6.61358 21.0736C5.33517 20.9018 4.56445 20.5749 3.9948 20.0052C3.42514 19.4355 3.09825 18.6648 2.92637 17.3864C2.75159 16.0864 2.75 14.3782 2.75 12C2.75 9.62178 2.75159 7.91356 2.92637 6.61358C3.09825 5.33517 3.42514 4.56445 3.9948 3.9948Z" fill="currentColor"/></svg></button>
+      <button id="togglePreviewBtn" class="icon-btn active" onclick="togglePreview()" title="Vorschau ein-/ausblenden"><svg fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" enable-background="new 0 0 52 52" xml:space="preserve"><g><path d="M51.8,25.1C47.1,15.6,37.3,9,26,9S4.9,15.6,0.2,25.1c-0.3,0.6-0.3,1.3,0,1.8C4.9,36.4,14.7,43,26,43
+		s21.1-6.6,25.8-16.1C52.1,26.3,52.1,25.7,51.8,25.1z M26,37c-6.1,0-11-4.9-11-11s4.9-11,11-11s11,4.9,11,11S32.1,37,26,37z"/><path d="M26,19c-3.9,0-7,3.1-7,7s3.1,7,7,7s7-3.1,7-7S29.9,19,26,19z"/></g></svg></button>
+      <div class="action-divider"></div>
+    </div>
+
     <div class="actions-group">
       <!-- Button Neu -->
       <button class="icon-btn simple-hide" onclick="openTemplateModal()" title="Neu (neue Datei erstellen)"><svg viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><title>new-indicator</title><g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g id="scheduler" fill="currentColor" transform="translate(85.333333, 85.333333)"><path d="M170.666667,1.42108547e-14 C264.923264,-3.10380131e-15 341.333333,76.4100694 341.333333,170.666667 C341.333333,264.923264 264.923264,341.333333 170.666667,341.333333 C76.4100694,341.333333 2.57539587e-14,264.923264 1.42108547e-14,170.666667 C2.6677507e-15,76.4100694 76.4100694,3.15255107e-14 170.666667,1.42108547e-14 Z M170.666667,42.6666667 C99.9742187,42.6666667 42.6666667,99.9742187 42.6666667,170.666667 C42.6666667,241.359115 99.9742187,298.666667 170.666667,298.666667 C241.359115,298.666667 298.666667,241.359115 298.666667,170.666667 C298.666667,99.9742187 241.359115,42.6666667 170.666667,42.6666667 Z M192,85.3333333 L191.999333,149.333333 L256,149.333333 L256,192 L191.999333,191.999333 L192,256 L149.333333,256 L149.333333,191.999333 L85.3333333,192 L85.3333333,149.333333 L149.333333,149.333333 L149.333333,85.3333333 L192,85.3333333 Z" id="Combined-Shape"></path></g></g></svg></button>
@@ -3842,6 +4001,7 @@ return He}()
       <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageFileSelect(event)">
 
       <button id="saveBtn" class="icon-btn" onclick="saveCurrentFile()" title="Speichern (Strg+S)"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg></button>
+      <button id="copyFormattedBtn" class="icon-btn" onclick="copyFormattedToClipboard()" title="Formatierte Notiz in die Zwischenablage kopieren (zum Einfügen in Word, E-Mail, ...)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Copy"><path id="Vector" d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
 
       <div class="action-divider"></div>
 
@@ -3865,13 +4025,6 @@ return He}()
 
       <!-- Spellcheck Toggle Button -->
       <button id="spellcheckBtn" class="icon-btn simple-hide" onclick="toggleSpellcheck()" title="Rechtschreibprüfung aktivieren/deaktivieren"><svg fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M 7.3320312 5 L 3 18 L 5.1074219 18 L 6.1074219 15 L 10.667969 15 L 11.667969 18 L 13.775391 18 L 9.4414062 5 L 7.3320312 5 z M 15 5 L 15 10 L 15 12 L 15 18 L 21 18 C 23.206 18 25 16.206 25 14 C 25 12.321849 23.958205 10.887833 22.490234 10.294922 C 22.807718 9.7682918 23 9.1585118 23 8.5 C 23 6.57 21.43 5 19.5 5 L 15 5 z M 17 7 L 19.5 7 C 20.327 7 21 7.673 21 8.5 C 21 9.327 20.327 10 19.5 10 L 17 10 L 17 7 z M 8.3886719 8.1621094 L 10.001953 13 L 6.7753906 13 L 8.3886719 8.1621094 z M 17 12 L 19.5 12 L 21 12 C 22.103 12 23 12.897 23 14 C 23 15.103 22.103 16 21 16 L 17 16 L 17 12 z M 27.808594 17.777344 L 19.117188 26.113281 L 15.193359 22.335938 L 13.806641 23.775391 L 19.113281 28.886719 L 29.191406 19.222656 L 27.808594 17.777344 z"/></svg></button>
-
-      <!-- Bearbeiten Toggle Button -->
-      <button id="toggleEditBtn" class="icon-btn active" onclick="toggleEditor()" title="Quelltext/Bearbeiten-Ansicht ein-/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.0184 7.36446C14.1256 6.96436 13.8882 6.55311 13.4881 6.4459C13.088 6.3387 12.6767 6.57614 12.5695 6.97623L9.98131 16.6355C9.8741 17.0356 10.1115 17.4468 10.5116 17.5541C10.9117 17.6613 11.323 17.4238 11.4302 17.0237L14.0184 7.36446Z" fill="currentColor"/><path d="M16.0303 8.46967C15.7374 8.17678 15.2626 8.17678 14.9697 8.46967C14.6768 8.76256 14.6768 9.23744 14.9697 9.53033L15.1412 9.7019C15.8229 10.3836 16.2797 10.8426 16.5753 11.2301C16.8577 11.6002 16.9216 11.8157 16.9216 12C16.9216 12.1843 16.8577 12.3998 16.5753 12.7699C16.2797 13.1574 15.8229 13.6164 15.1412 14.2981L14.9697 14.4697C14.6768 14.7626 14.6768 15.2374 14.9697 15.5303C15.2626 15.8232 15.7374 15.8232 16.0303 15.5303L16.2387 15.322C16.874 14.6867 17.4038 14.1569 17.7678 13.6798C18.1521 13.1762 18.4216 12.6441 18.4216 12C18.4216 11.3559 18.1521 10.8238 17.7678 10.3202C17.4038 9.84307 16.874 9.31331 16.2387 8.67801L16.0303 8.46967Z" fill="currentColor"/><path d="M7.96986 8.46967C8.26275 8.17678 8.73762 8.17678 9.03052 8.46967C9.32341 8.76256 9.32341 9.23744 9.03052 9.53033L8.85894 9.7019C8.17729 10.3836 7.72052 10.8426 7.42488 11.2301C7.14245 11.6002 7.07861 11.8157 7.07861 12C7.07861 12.1843 7.14245 12.3998 7.42488 12.7699C7.72052 13.1574 8.17729 13.6164 8.85894 14.2981L9.03052 14.4697C9.32341 14.7626 9.32341 15.2374 9.03052 15.5303C8.73762 15.8232 8.26275 15.8232 7.96986 15.5303L7.76151 15.322C7.12618 14.6867 6.59637 14.1569 6.23235 13.6798C5.84811 13.1762 5.57861 12.6441 5.57861 12C5.57861 11.3559 5.84811 10.8238 6.23235 10.3202C6.59637 9.84307 7.12617 9.31332 7.7615 8.67802L7.96986 8.46967Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11.9426 1.25C9.63423 1.24999 7.82519 1.24998 6.41371 1.43975C4.96897 1.63399 3.82895 2.03933 2.93414 2.93414C2.03933 3.82895 1.63399 4.96897 1.43975 6.41371C1.24998 7.82519 1.24999 9.63423 1.25 11.9426V12.0574C1.24999 14.3658 1.24998 16.1748 1.43975 17.5863C1.63399 19.031 2.03933 20.1711 2.93414 21.0659C3.82895 21.9607 4.96897 22.366 6.41371 22.5603C7.82519 22.75 9.63423 22.75 11.9426 22.75H12.0574C14.3658 22.75 16.1748 22.75 17.5863 22.5603C19.031 22.366 20.1711 21.9607 21.0659 21.0659C21.9607 20.1711 22.366 19.031 22.5603 17.5863C22.75 16.1748 22.75 14.3658 22.75 12.0574V11.9426C22.75 9.63423 22.75 7.82519 22.5603 6.41371C22.366 4.96897 21.9607 3.82895 21.0659 2.93414C20.1711 2.03933 19.031 1.63399 17.5863 1.43975C16.1748 1.24998 14.3658 1.24999 12.0574 1.25H11.9426ZM3.9948 3.9948C4.56445 3.42514 5.33517 3.09825 6.61358 2.92637C7.91356 2.75159 9.62178 2.75 12 2.75C14.3782 2.75 16.0864 2.75159 17.3864 2.92637C18.6648 3.09825 19.4355 3.42514 20.0052 3.9948C20.5749 4.56445 20.9018 5.33517 21.0736 6.61358C21.2484 7.91356 21.25 9.62178 21.25 12C21.25 14.3782 21.2484 16.0864 21.0736 17.3864C20.9018 18.6648 20.5749 19.4355 20.0052 20.0052C19.4355 20.5749 18.6648 20.9018 17.3864 21.0736C16.0864 21.2484 14.3782 21.25 12 21.25C9.62178 21.25 7.91356 21.2484 6.61358 21.0736C5.33517 20.9018 4.56445 20.5749 3.9948 20.0052C3.42514 19.4355 3.09825 18.6648 2.92637 17.3864C2.75159 16.0864 2.75 14.3782 2.75 12C2.75 9.62178 2.75159 7.91356 2.92637 6.61358C3.09825 5.33517 3.42514 4.56445 3.9948 3.9948Z" fill="currentColor"/></svg></button>
-
-      <!-- Vorschau Toggle Button (Fokus-Modus) -->
-      <button id="togglePreviewBtn" class="icon-btn active" onclick="togglePreview()" title="Vorschau ein-/ausblenden"><svg fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" enable-background="new 0 0 52 52" xml:space="preserve"><g><path d="M51.8,25.1C47.1,15.6,37.3,9,26,9S4.9,15.6,0.2,25.1c-0.3,0.6-0.3,1.3,0,1.8C4.9,36.4,14.7,43,26,43
-		s21.1-6.6,25.8-16.1C52.1,26.3,52.1,25.7,51.8,25.1z M26,37c-6.1,0-11-4.9-11-11s4.9-11,11-11s11,4.9,11,11S32.1,37,26,37z"/><path d="M26,19c-3.9,0-7,3.1-7,7s3.1,7,7,7s7-3.1,7-7S29.9,19,26,19z"/></g></svg></button>
 
       <!-- Synchrones Scrollen Toggle Button -->
       <button id="syncScrollBtn" class="icon-btn active simple-hide" onclick="toggleSyncScroll()" title="Synchrones Scrollen ein-/ausblenden"><svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7.293,8.707a1,1,0,0,1,0-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,1,1-1.414,1.414L12,5.414,8.707,8.707A1,1,0,0,1,7.293,8.707Zm0,8,4,4a1,1,0,0,0,1.414,0l4-4a1,1,0,0,0-1.414-1.414L12,18.586,8.707,15.293a1,1,0,1,0-1.414,1.414Z"/></svg></button>
@@ -3925,7 +4078,6 @@ return He}()
 		c5.697,0,9.914-4.21,9.914-10.599v-26.351c0-0.538,0.265-0.81,0.81-0.81h26.086c5.837,0,9.23-3.532,9.23-8.56
 		c0-5.028-3.393-8.553-9.23-8.553h-26.086c-0.545,0-0.81-0.272-0.81-0.817v-19.425c0-0.545,0.265-0.816,0.81-0.816h32.733
 		c5.572,0,9.245-3.666,9.245-8.553C370.411,256.45,366.738,252.785,361.167,252.785z"/></g></svg></button>
-      <button id="copyFormattedBtn" class="icon-btn simple-hide" onclick="copyFormattedToClipboard()" title="Formatierte Notiz in die Zwischenablage kopieren (zum Einfügen in Word, E-Mail, ...)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Copy"><path id="Vector" d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
 
       <div class="action-divider"></div>
 
@@ -4035,6 +4187,7 @@ return He}()
     <button class="toolbar-btn fmt-btn" onclick="triggerImageFileInsert()" title="Bild einfügen"><svg fill="currentColor" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M30 2.497h-28c-1.099 0-2 0.901-2 2v23.006c0 1.099 0.9 2 2 2h28c1.099 0 2-0.901 2-2v-23.006c0-1.099-0.901-2-2-2zM30 27.503l-28-0v-5.892l8.027-7.779 8.275 8.265c0.341 0.414 0.948 0.361 1.379 0.035l3.652-3.306 6.587 6.762c0.025 0.025 0.053 0.044 0.080 0.065v1.85zM30 22.806l-5.876-6.013c-0.357-0.352-0.915-0.387-1.311-0.086l-3.768 3.282-8.28-8.19c-0.177-0.214-0.432-0.344-0.709-0.363-0.275-0.010-0.547 0.080-0.749 0.27l-7.309 7.112v-14.322h28v18.309zM23 12.504c1.102 0 1.995-0.894 1.995-1.995s-0.892-1.995-1.995-1.995-1.995 0.894-1.995 1.995c0 1.101 0.892 1.995 1.995 1.995z"></path></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="openCameraModal()" title="Foto aufnehmen"><svg viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g fill="currentColor" transform="translate(42.666667, 64.000000)"><path d="M277.333333,1.42108547e-14 C277.333333,1.42108547e-14 277.681778,0.557511111 278.378667,1.67253333 L278.698667,2.18453333 C279.438222,3.36782222 280.478222,5.03182222 281.818667,7.17653333 L282.458667,8.20053333 C283.891556,10.4931556 285.624889,13.2664889 287.658667,16.5205333 L288.618667,18.0565333 C290.744889,21.4584889 293.171556,25.3411556 295.898667,29.7045333 L297.178667,31.7525333 C299.998222,36.2638222 303.118222,41.2558222 306.538667,46.7285333 L308.138667,49.2885333 C311.003462,53.8722052 314.068069,58.775577 317.332489,63.9986486 L426.666667,64 L426.666667,362.666667 L7.10542736e-15,362.666667 L7.10542736e-15,64 L109.333,64 L149.333333,1.42108547e-14 L277.333333,1.42108547e-14 L277.333333,1.42108547e-14 Z M213.333333,85.3333333 C148.531923,85.3333333 96,137.865256 96,202.666667 C96,267.468077 148.531923,320 213.333333,320 C278.134744,320 330.666667,267.468077 330.666667,202.666667 C330.666667,137.865256 278.134744,85.3333333 213.333333,85.3333333 Z M213.333333,128 C254.570595,128 288,161.429405 288,202.666667 C288,243.903928 254.570595,277.333333 213.333333,277.333333 C172.096072,277.333333 138.666667,243.903928 138.666667,202.666667 C138.666667,161.429405 172.096072,128 213.333333,128 Z M384,106.666667 C372.217925,106.666667 362.666667,116.217925 362.666667,128 C362.666667,139.782075 372.217925,149.333333 384,149.333333 C395.782075,149.333333 405.333333,139.782075 405.333333,128 C405.333333,116.217925 395.782075,106.666667 384,106.666667 Z"></path></g></g></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="openDrawingModal()" title="Zeichnung einfügen"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><style>.cls-1{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:2px;}</style></defs><g data-name="Layer 2" id="Layer_2"><polyline class="cls-1" points="16 22 1 22 1 4 31 4 31 22 28 22"/><path class="cls-1" d="M19,22V18H17.6A1.6,1.6,0,0,0,16,19.6v5.2A3.2,3.2,0,0,0,19.2,28h5.6A3.2,3.2,0,0,0,28,24.8V21.2A3.2,3.2,0,0,0,24.8,18H22V12.3a1.5,1.5,0,0,0-1.5-1.5h0A1.5,1.5,0,0,0,19,12.3V22"/><path class="cls-1" d="M16,13c-2,0-2-2-4-2s-2,2-4,2-2-2-4-2"/></g></svg></button>
+    <button class="toolbar-btn fmt-btn" onclick="openClipartModal()" title="Clipart einfügen (ARASAAC-Piktogramme)"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><title>image--search</title><path fill="currentColor" d="M24,14a5.99,5.99,0,0,0-4.885,9.4712L14,28.5859,15.4141,30l5.1147-5.1147A5.9971,5.9971,0,1,0,24,14Zm0,10a4,4,0,1,1,4-4A4.0045,4.0045,0,0,1,24,24Z"/><path fill="currentColor" d="M17,12a3,3,0,1,0-3-3A3.0033,3.0033,0,0,0,17,12Zm0-4a1,1,0,1,1-1,1A1.0009,1.0009,0,0,1,17,8Z"/><path fill="currentColor" d="M12,24H4V17.9966L9,13l5.5859,5.5859L16,17.168l-5.5859-5.5855a2,2,0,0,0-2.8282,0L4,15.168V4H24v6h2V4a2.0023,2.0023,0,0,0-2-2H4A2.002,2.002,0,0,0,2,4V24a2.0023,2.0023,0,0,0,2,2h8Z"/></svg></button>
     <button id="audioRecordBtn" class="toolbar-btn fmt-btn" onclick="toggleAudioRecording()" title="Sprachaufnahme einfügen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5C8 2.79086 9.79086 1 12 1C14.2091 1 16 2.79086 16 5V12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12V5Z" fill="currentColor"/><path d="M6.25 11.8438V12C6.25 13.525 6.8558 14.9875 7.93414 16.0659C9.01247 17.1442 10.475 17.75 12 17.75C13.525 17.75 14.9875 17.1442 16.0659 16.0659C17.1442 14.9875 17.75 13.525 17.75 12V11.8438C17.75 11.2915 18.1977 10.8438 18.75 10.8438H19.25C19.8023 10.8438 20.25 11.2915 20.25 11.8437V12C20.25 14.188 19.3808 16.2865 17.8336 17.8336C16.5842 19.0831 14.9753 19.8903 13.25 20.1548V22C13.25 22.5523 12.8023 23 12.25 23H11.75C11.1977 23 10.75 22.5523 10.75 22V20.1548C9.02471 19.8903 7.41579 19.0831 6.16637 17.8336C4.61919 16.2865 3.75 14.188 3.75 12V11.8438C3.75 11.2915 4.19772 10.8438 4.75 10.8438H5.25C5.80228 10.8438 6.25 11.2915 6.25 11.8438Z" fill="currentColor"/></svg></button>
     <button class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('video')" title="Video einbetten (YouTube/Vimeo-Link oder Videodatei-URL)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.49614 7.13176C9.18664 6.9549 8.80639 6.95617 8.49807 7.13509C8.18976 7.31401 8 7.64353 8 8V16C8 16.3565 8.18976 16.686 8.49807 16.8649C8.80639 17.0438 9.18664 17.0451 9.49614 16.8682L16.4961 12.8682C16.8077 12.6902 17 12.3589 17 12C17 11.6411 16.8077 11.3098 16.4961 11.1318L9.49614 7.13176ZM13.9844 12L10 14.2768V9.72318L13.9844 12Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M0 12C0 8.25027 0 6.3754 0.954915 5.06107C1.26331 4.6366 1.6366 4.26331 2.06107 3.95491C3.3754 3 5.25027 3 9 3H15C18.7497 3 20.6246 3 21.9389 3.95491C22.3634 4.26331 22.7367 4.6366 23.0451 5.06107C24 6.3754 24 8.25027 24 12C24 15.7497 24 17.6246 23.0451 18.9389C22.7367 19.3634 22.3634 19.7367 21.9389 20.0451C20.6246 21 18.7497 21 15 21H9C5.25027 21 3.3754 21 2.06107 20.0451C1.6366 19.7367 1.26331 19.3634 0.954915 18.9389C0 17.6246 0 15.7497 0 12ZM9 5H15C16.9194 5 18.1983 5.00275 19.1673 5.10773C20.0989 5.20866 20.504 5.38448 20.7634 5.57295C21.018 5.75799 21.242 5.98196 21.4271 6.23664C21.6155 6.49605 21.7913 6.90113 21.8923 7.83269C21.9973 8.80167 22 10.0806 22 12C22 13.9194 21.9973 15.1983 21.8923 16.1673C21.7913 17.0989 21.6155 17.504 21.4271 17.7634C21.242 18.018 21.018 18.242 20.7634 18.4271C20.504 18.6155 20.0989 18.7913 19.1673 18.8923C18.1983 18.9973 16.9194 19 15 19H9C7.08058 19 5.80167 18.9973 4.83269 18.8923C3.90113 18.7913 3.49605 18.6155 3.23664 18.4271C2.98196 18.242 2.75799 18.018 2.57295 17.7634C2.38448 17.504 2.20866 17.0989 2.10773 16.1673C2.00275 15.1983 2 13.9194 2 12C2 10.0806 2.00275 8.80167 2.10773 7.83269C2.20866 6.90113 2.38448 6.49605 2.57295 6.23664C2.75799 5.98196 2.98196 5.75799 3.23664 5.57295C3.49605 5.38448 3.90113 5.20866 4.83269 5.10773C5.80167 5.00275 7.08058 5 9 5Z" fill="currentColor"/></svg></button>
     <button class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('table')" title="Tabelle"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M1740 0c99.24 0 180 80.76 180 180v1560c0 99.24-80.76 180-180 180H180c-99.24 0-180-80.76-180-180V180C0 80.76 80.76 0 180 0h1560Zm-420 1200h480V720h-480v480Zm480 540v-420h-480v480h420c33 0 60-27 60-60ZM720 1200h480V720H720v480Zm0 600h480v-480H720v480Zm-600-600h480V720H120v480Zm480 600v-480H120v420c0 33 27 60 60 60h420Z" fill-rule="evenodd"/></svg></button>
@@ -4127,6 +4280,23 @@ return He}()
           <span class="img-dialog-detail"></span>
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- Clipart Modal (ARASAAC pictogram search) -->
+  <div class="modal-overlay" id="clipartModal" onclick="if (event.target === this) closeClipartModal()">
+    <div class="modal-card clipart-modal-card">
+      <div class="modal-header">
+        <h2>🔎 Clipart einfügen</h2>
+        <button class="icon-btn" onclick="closeClipartModal()" title="Abbrechen">✕</button>
+      </div>
+      <div class="clipart-search-row">
+        <input type="text" id="clipartSearchInput" placeholder="Suchbegriff (z. B. Haus, Auto, Familie) …" onkeydown="if (event.key === 'Enter') { event.preventDefault(); searchClipart(); }">
+        <button type="button" class="btn-primary" onclick="searchClipart()">Suchen</button>
+      </div>
+      <p id="clipartStatus" class="clipart-status"></p>
+      <div class="clipart-grid" id="clipartGrid"></div>
+      <p class="clipart-attribution-note">Piktogramme von <a href="https://arasaac.org" target="_blank" rel="noopener noreferrer">ARASAAC</a> (Autor: Sergio Palao, Lizenz: CC BY-NC-SA) — die Quellenangabe wird beim Einfügen automatisch als Bildunterschrift ergänzt.</p>
     </div>
   </div>
 
@@ -4334,6 +4504,11 @@ return He}()
     let splitRatio = 50;
     let zoomLevel = 100;
     let simpleMode = false;
+    // Set from the ?view=kiosk URL param (see INITIALIZATION below) -- unlike ?localstorage=false,
+    // which only skips the initial *read* of localStorage, kiosk mode also suppresses every
+    // later *write* (see saveStateToLocalStorage()) so a session on a shared/public device leaves
+    // no trace at all, not just a hidden-at-startup one.
+    let kioskMode = false;
     const DARK_THEMES = new Set(['theme-github-dark', 'theme-dracula', 'theme-gruvbox', 'theme-tokyo-night']);
 
     // Set once localStorage.setItem() fails (almost always QuotaExceededError from a tab
@@ -4500,7 +4675,18 @@ return He}()
       // eine Zeichnung" vs. "Hier ist ein Bild" everywhere, not only where the edit button renders.
       const imgTag = '<img src="' + resolvedHref + '" alt="' + altAttr + '"' + titleAttr + (isDrawing ? ' data-tts-kind="drawing"' : '') + '>';
 
-      if (suppressDrawingControls) return imgTag;
+      // The optional markdown title (![alt](href "title")) doubles as a visible caption — e.g.
+      // for license/attribution text that should sit right under an image, not just show up on
+      // hover. A block-level sibling *after* .image-wrapper (not nested inside it — .image-wrapper
+      // stays exactly what click-delegation/edit-button code elsewhere expects), which naturally
+      // starts its own line since .image-wrapper is inline-block (see its CSS). Rendered even
+      // under suppressDrawingControls (exports/presentation/clipboard all still want a visible
+      // caption) — only the edit/alt-text buttons below are skipped there. escapeHtmlText (not the
+      // quote-only replace used for attributes above) since this becomes HTML text content, where
+      // an unescaped "<"/">" in the caption would be parsed as markup.
+      const captionHtml = title ? '<span class="image-caption">' + escapeHtmlText(title) + '</span>' : '';
+
+      if (suppressDrawingControls) return imgTag + captionHtml;
 
       // Every image (not just drawings) gets wrapped in .image-wrapper so it has a positioning
       // context for the hover-revealed "Alt-Text" button (jumps the editor to where the alt text
@@ -4511,7 +4697,7 @@ return He}()
       const editBtn = isDrawing ? '<button type="button" class="drawing-edit-btn">✏️ Bearbeiten</button>' : '';
       const assetAttr = assetId ? ' data-asset-id="' + assetId + '"' : '';
       return '<span class="image-wrapper' + (isDrawing ? ' drawing' : '') + '"' + assetAttr + '>' + imgTag + editBtn +
-        '<button type="button" class="alt-text-btn">🏷️ Alt-Text</button></span>';
+        '<button type="button" class="alt-text-btn">🏷️ Alt-Text</button></span>' + captionHtml;
     };
 
     // Same as marked's default listitem renderer, but tags task items with a "task-list-item"
@@ -5236,23 +5422,33 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // tab switch aborted at the same spot — looking exactly like the whole app had frozen.
       // Catching it here instead means a full-storage tab keeps behaving normally in memory; it
       // just stops persisting until the offending assets are removed.
-      try {
-        localStorage.setItem('md_studio_state', JSON.stringify(state));
-        localStorageQuotaWarned = false;
-        // A failed save previously flagged every open tab (see the catch branch) since this one
-        // blob covers all of them at once -- clear that flag again now that a save actually went
-        // through. Assets have their own, per-tab/per-asset IndexedDB failure tracking (see
-        // persistAssetToIndexedDb()) and are untouched here.
-        tabs.forEach(t => { if (t._localSaveIssue === LOCAL_STORAGE_ISSUE_TEXT) clearTabLocalSaveIssue(t); });
-      } catch (err) {
-        console.warn('Lokales Speichern (localStorage) fehlgeschlagen:', err);
-        if (!localStorageQuotaWarned) {
-          localStorageQuotaWarned = true;
-          showToast('Lokales Speichern fehlgeschlagen — Speicherplatz voll. Große Bilder/PDF-Seiten entfernen oder per WebDAV auslagern.');
+      //
+      // Skipped entirely under kioskMode (?view=kiosk -- see INITIALIZATION below): the whole
+      // point of that mode is that nothing typed/changed during the session is ever written to
+      // localStorage, not just that the previous session's notes are hidden at startup (that
+      // weaker guarantee is what ?localstorage=false alone already provides, and still does --
+      // it only skips loadStateFromLocalStorage()'s initial read, this is the complementary
+      // write-side guard). scheduleWebdavDebouncedSync()/scheduleStorageIndicatorUpdate() below
+      // still run as normal; only the actual localStorage write is suppressed.
+      if (!kioskMode) {
+        try {
+          localStorage.setItem('md_studio_state', JSON.stringify(state));
+          localStorageQuotaWarned = false;
+          // A failed save previously flagged every open tab (see the catch branch) since this one
+          // blob covers all of them at once -- clear that flag again now that a save actually went
+          // through. Assets have their own, per-tab/per-asset IndexedDB failure tracking (see
+          // persistAssetToIndexedDb()) and are untouched here.
+          tabs.forEach(t => { if (t._localSaveIssue === LOCAL_STORAGE_ISSUE_TEXT) clearTabLocalSaveIssue(t); });
+        } catch (err) {
+          console.warn('Lokales Speichern (localStorage) fehlgeschlagen:', err);
+          if (!localStorageQuotaWarned) {
+            localStorageQuotaWarned = true;
+            showToast('Lokales Speichern fehlgeschlagen — Speicherplatz voll. Große Bilder/PDF-Seiten entfernen oder per WebDAV auslagern.');
+          }
+          // Affects every open tab at once (one shared blob) -- see markTabLocalSaveIssue()'s own
+          // comment on why this is deliberately separate from tab.isModified.
+          tabs.forEach(t => markTabLocalSaveIssue(t, LOCAL_STORAGE_ISSUE_TEXT));
         }
-        // Affects every open tab at once (one shared blob) -- see markTabLocalSaveIssue()'s own
-        // comment on why this is deliberately separate from tab.isModified.
-        tabs.forEach(t => markTabLocalSaveIssue(t, LOCAL_STORAGE_ISSUE_TEXT));
       }
       // performWebdavSync() itself calls this to persist sync bookkeeping (lastSyncedSnapshot,
       // flushing the editor into tab.content) — without this guard, every sync would reschedule
@@ -6220,8 +6416,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           } else if (alt === 'Das ist ein PDF.') {
             // A PDF page that was imported but never actually opened in Excalidraw before saving
             // never went through a real export -- confirmPdfImport() inserts the plain rendered
-            // page PNG directly (see insertNewDrawingAsset()'s isRaw branch), so there's no scene
-            // to detect above. Its default, not-yet-overwritten alt text is the only remaining
+            // page PNG directly (see insertNewDrawingAsset()'s 'pdf' origin branch), so there's no
+            // scene to detect above. Its default, not-yet-overwritten alt text is the only remaining
             // signal that it came from this app's PDF import specifically, used here as a
             // fallback -- imperfect (a manually authored image that happens to reuse this exact
             // phrase would be misdetected; an alt text the user has since edited via the "Alt-
@@ -6756,6 +6952,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (e.key === 'Escape') {
         closeShortcutsModal();
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
+        if (document.getElementById('clipartModal').classList.contains('active')) closeClipartModal();
         if (document.getElementById('cameraModal').classList.contains('active')) closeCameraModal();
         closeExportChoiceModal();
         closeTemplateModal();
@@ -9282,7 +9479,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             editor.value += '## Seite ' + pageNum + '\n\n';
           }
           editor.setSelectionRange(editor.value.length, editor.value.length);
-          insertNewDrawingAsset(dataUrl, true);
+          insertNewDrawingAsset(dataUrl, 'pdf');
         }
         closePdfImportModal();
         // 3MB is comfortably under a typical browser's localStorage quota on its own, but this
@@ -9427,6 +9624,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .markdown-body a { color: var(--preview-link); text-decoration: none; }\n' +
         '  .markdown-body a:hover { text-decoration: underline; }\n' +
         '  .markdown-body img { max-width: 100%; height: auto; border-radius: 4px; }\n' +
+        // Same rule/reasoning as the live app's own .image-caption (see the CSS comment there) --
+        // shared here so both HTML exports and the eBook widget render a caption identically
+        // instead of a hand-duplicated copy that could drift.
+        '  .image-caption { display: block; max-width: 100%; margin-top: 4px; font-size: .85em; color: var(--preview-text); opacity: .7; }\n' +
         '  .markdown-body .audio-asset-player { display: block; width: 100%; max-width: 420px; margin: 8px 0; }\n' +
         '  .video-embed-wrapper { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: 8px; overflow: hidden; background-color: var(--preview-code-bg); align-self: stretch; }\n' +
         '  .video-embed-wrapper iframe, .video-embed-wrapper video { display: block; width: 100%; height: 100%; border: 0; }\n' +
@@ -10571,12 +10772,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       fire('drop');
     }
 
-    // A tab.rawDrawingAssetIds asset (see insertNewDrawingAsset()'s isRaw param — currently only
-    // ever true for a not-yet-annotated PDF page, see confirmPdfImport()) is dropped onto the
-    // canvas the same way a saved drawing's own asset would be — the only difference is *what*
-    // gets dropped. Excalidraw decides for itself whether that means "restore an embedded scene"
-    // (a previously-saved drawing's own export, which carries one) or "insert as a plain, editable
-    // image" (anything else, e.g. a plain PDF-page render with no embedded scene): it inspects the
+    // A tab.rawDrawingAssetIds asset (see insertNewDrawingAsset()'s origin param — a not-yet-
+    // annotated PDF page from confirmPdfImport() or an ARASAAC clipart from insertClipartResult())
+    // is dropped onto the canvas the same way a saved drawing's own asset would be — the only
+    // difference is *what* gets dropped. Excalidraw decides for itself whether that means
+    // "restore an embedded scene" (a previously-saved drawing's own export, which carries one) or
+    // "insert as a plain, editable image" (anything else, e.g. a plain PDF-page render with no
+    // embedded scene, or a downloaded pictogram): it inspects the
     // dropped PNG's own metadata for embedded scene data, so openDrawingModal() never has to know
     // or care which case it is — same dropFileOntoExcalidraw() call either way.
     // Excalidraw drops a fresh image onto the canvas at a fixed, small default footprint (~186x264
@@ -11007,9 +11209,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           // comment on why (the font-size default only actually applies while the Text tool's
           // own "nothing selected yet" panel is showing, and this is also what measures the
           // resulting panel's width so the scale/position calls below can steer clear of it).
-          // isFreshImageDrop implies isPdfOrigin today (see the isRaw comment above), but this is
-          // deliberately keyed on isPdfOrigin directly so a future non-PDF isFreshImageDrop path
-          // wouldn't silently inherit PDF-only tool defaults.
+          // isFreshImageDrop no longer implies isPdfOrigin (see the isRaw comment above) now that
+          // insertNewDrawingAsset()'s 'clipart' origin also lands in rawDrawingAssetIds without
+          // pdfDrawingAssetIds -- this is deliberately keyed on isPdfOrigin directly (not
+          // isFreshImageDrop) specifically so a non-PDF fresh drop like an ARASAAC clipart doesn't
+          // inherit PDF-only tool defaults (forced Text tool, full-canvas-width scale, locked
+          // position). A clipart drop still gets scaleSelectedExcalidrawImage() below (so it's not
+          // Excalidraw's tiny default drop size), just none of the PDF-specific steps.
           let pdfLeftClearance = 0;
           if (isPdfOrigin) {
             pdfLeftClearance = await presetPdfDrawingToolDefaults(win);
@@ -11357,32 +11563,39 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // Registers a fresh drawing asset (tab.assets + tab.drawingAssetIds, so it's reopenable via
     // openDrawingModal later) and inserts its markdown reference at the current cursor position,
-    // pre-filled with a spoken-friendly default alt text that already distinguishes the two cases
-    // isRaw itself exists to distinguish (see below) — "Das ist ein PDF." for an imported PDF
-    // page, "Das ist eine Zeichnung." for an actual drawing. Just a starting point: the
-    // "Alt-Text" button in the rendered preview selects it in place for editing. Shared by
-    // saveDrawing()'s "new drawing" branch and confirmPdfImport() (which calls this once per
-    // imported page) — both need identical asset-map bookkeeping, just with different image
-    // content (an edited Excalidraw export vs. an unedited PDF-page render).
+    // pre-filled with a spoken-friendly default alt text that already distinguishes the three
+    // cases `origin` exists to distinguish (see below) — "Das ist ein PDF." for an imported PDF
+    // page, "Das ist ein Piktogramm." for an ARASAAC clipart insert, "Das ist eine Zeichnung."
+    // for an actual hand-drawn drawing. Just a starting point: the "Alt-Text" button in the
+    // rendered preview selects it in place for editing. Shared by saveDrawing()'s "new drawing"
+    // branch (origin omitted), confirmPdfImport() (origin 'pdf', called once per imported page),
+    // and insertClipartResult() (origin 'clipart') — all three need identical asset-map
+    // bookkeeping, just with different image content and default labeling.
     //
-    // isRaw marks the asset in tab.rawDrawingAssetIds — set true only for confirmPdfImport()'s
-    // path (an unedited PDF-page PNG with no embedded Excalidraw scene at all, since it was never
-    // exported by Excalidraw). openDrawingModal() checks this map to know that reopening such an
-    // asset still means "insert a fresh image" (apply the same scale/reposition treatment a
-    // brand-new PDF page gets — see scaleSelectedExcalidrawImage()), not "restore a saved scene" —
-    // otherwise it would land at Excalidraw's tiny default drop size on every reopen, since a plain
-    // PNG carries no size/position of its own to restore. saveDrawing() clears the marker (see
-    // below) the moment the asset actually goes through a real Excalidraw export, at which point it
-    // behaves like any other saved drawing as far as the drop-a-fresh-image-vs-restore-a-scene
-    // choice goes.
+    // origin 'pdf' or 'clipart' marks the asset in tab.rawDrawingAssetIds — i.e. any image that
+    // never went through a real Excalidraw export (an unedited PDF-page render or a downloaded
+    // ARASAAC pictogram). openDrawingModal() checks this map to know that reopening such an asset
+    // still means "insert a fresh image" (apply the same scale/reposition treatment a brand-new
+    // drop gets — see scaleSelectedExcalidrawImage()), not "restore a saved scene" — otherwise it
+    // would land at Excalidraw's tiny default drop size on every reopen, since a plain PNG carries
+    // no size/position of its own to restore. saveDrawing() clears the marker (see below) the
+    // moment the asset actually goes through a real Excalidraw export, at which point it behaves
+    // like any other saved drawing as far as the drop-a-fresh-image-vs-restore-a-scene choice goes.
     //
-    // tab.pdfDrawingAssetIds is a *second*, permanent marker set alongside rawDrawingAssetIds for
-    // the same isRaw asset, but — unlike rawDrawingAssetIds — never cleared by saveDrawing(). A
-    // PDF-origin drawing needs to keep behaving differently from a hand-drawn one (forced 100%
-    // zoom / full-width / positioned-below-the-toolbar on every future reopen — see
-    // openDrawingModal()) even after it's been annotated and saved once, at which point
-    // rawDrawingAssetIds alone can no longer tell the two apart.
-    function insertNewDrawingAsset(dataUrl, isRaw) {
+    // tab.pdfDrawingAssetIds is a *second*, permanent marker set alongside rawDrawingAssetIds only
+    // for origin 'pdf' (deliberately *not* for 'clipart' — see openDrawingModal()'s own comment on
+    // why isFreshImageDrop is kept separate from isPdfOrigin: a small pictogram shouldn't get the
+    // PDF-specific forced-Text-tool/full-canvas-width/locked-position treatment, only the
+    // PDF-origin `pdfDrawingAssetIds` case does). Unlike rawDrawingAssetIds, this one is never
+    // cleared by saveDrawing() — a PDF-origin drawing needs to keep behaving differently from a
+    // hand-drawn (or clipart) one (forced 100% zoom / full-width / positioned-below-the-toolbar on
+    // every future reopen — see openDrawingModal()) even after it's been annotated and saved once,
+    // at which point rawDrawingAssetIds alone can no longer tell PDF and clipart origins apart.
+    //
+    // `caption` (optional) is appended as the markdown image's title (![alt](href "title")),
+    // rendered as a visible caption under the image (see hljsRenderer.image()'s .image-caption
+    // handling) — used by insertClipartResult() for the required ARASAAC license attribution.
+    function insertNewDrawingAsset(dataUrl, origin, caption) {
       const tab = getCurrentTab();
       if (!tab) return null;
       if (!tab.assets) tab.assets = {};
@@ -11394,16 +11607,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       tab.assets[assetId] = dataUrl;
       persistAssetToIndexedDb(tab, assetId);
       tab.drawingAssetIds[assetId] = true;
-      if (isRaw) {
+      if (origin === 'pdf' || origin === 'clipart') {
         tab.rawDrawingAssetIds[assetId] = true;
+      }
+      if (origin === 'pdf') {
         tab.pdfDrawingAssetIds[assetId] = true;
       }
 
-      const defaultAlt = isRaw ? 'Das ist ein PDF.' : 'Das ist eine Zeichnung.';
+      const defaultAlt = origin === 'pdf' ? 'Das ist ein PDF.' : origin === 'clipart' ? 'Das ist ein Piktogramm.' : 'Das ist eine Zeichnung.';
+      // CommonMark title syntax needs its own quotes backslash-escaped, not HTML-entity-escaped
+      // (that happens separately, at render time, in hljsRenderer.image()).
+      const titlePart = caption ? ' "' + caption.replace(/"/g, '\\"') + '"' : '';
       // Trailing \n\n — see the matching comment in insertImageAsset() — also what lets
       // confirmPdfImport()'s multi-page loop below simply append the next page's own heading
       // without a leading blank-line separator of its own; this call already left one behind.
-      const markdownImage = '![' + defaultAlt + '](asset:' + assetId + ')\n\n';
+      const markdownImage = '![' + defaultAlt + '](asset:' + assetId + titlePart + ')\n\n';
       const start = editor.selectionStart;
       const end = editor.selectionEnd;
       editor.value = editor.value.substring(0, start) + markdownImage + editor.value.substring(end);
@@ -11412,6 +11630,116 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       markActiveTabModified();
       switchToPreviewIfSimpleMode();
       return assetId;
+    }
+
+    // --- CLIPART (ARASAAC pictogram search) ---
+    // ARASAAC (arasaac.org) is a free pictogram library maintained by the Aragón regional
+    // government, aimed at augmentative/alternative communication (AAC) — the German-language
+    // search here (locale "de") is its own REST API, not something bundled into this app (unlike
+    // marked/highlight.js/Excalidraw — see Dependencies): both the search endpoint and the image
+    // server were confirmed live to send `access-control-allow-origin: *`, so a plain fetch()
+    // works cross-origin from file:// the same way WebDAV sync and ?url= import already do.
+    // Requires an internet connection (same caveat as those two features) — there is no offline
+    // fallback, since the whole point is searching a remote, regularly-updated pictogram library.
+    //
+    // ARASAAC pictograms are CC BY-NC-SA — Autor: Sergio Palao, Eigentümer: Gobierno de Aragón —
+    // so every inserted pictogram carries this fixed attribution as its markdown image *title*,
+    // which hljsRenderer.image() renders as a visible caption right under the image (see the
+    // "Alt text for images/drawings" / .image-caption sections) rather than leaving it as an
+    // invisible hover tooltip or something the user has to remember to add by hand.
+    const ARASAAC_ATTRIBUTION = 'Piktogramm: ARASAAC (arasaac.org) · Autor: Sergio Palao · Lizenz: CC BY-NC-SA';
+    // Not a hard technical limit -- just keeps one search result set from turning into an
+    // unwieldy multi-hundred-item grid. searchClipart() surfaces the truncation in clipartStatus
+    // rather than silently dropping the rest.
+    const CLIPART_RESULTS_LIMIT = 30;
+
+    function openClipartModal() {
+      document.getElementById('clipartModal').classList.add('active');
+      document.getElementById('clipartGrid').innerHTML = '';
+      document.getElementById('clipartStatus').textContent = '';
+      const input = document.getElementById('clipartSearchInput');
+      input.value = '';
+      input.focus();
+    }
+
+    function closeClipartModal() {
+      document.getElementById('clipartModal').classList.remove('active');
+    }
+
+    async function searchClipart() {
+      const term = document.getElementById('clipartSearchInput').value.trim();
+      const statusEl = document.getElementById('clipartStatus');
+      const gridEl = document.getElementById('clipartGrid');
+      gridEl.innerHTML = '';
+      if (!term) {
+        statusEl.textContent = 'Bitte einen Suchbegriff eingeben.';
+        return;
+      }
+      statusEl.textContent = 'Suche läuft…';
+      try {
+        const response = await fetch('https://api.arasaac.org/v1/pictograms/de/search/' + encodeURIComponent(term));
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const results = await response.json();
+        if (!Array.isArray(results) || results.length === 0) {
+          statusEl.textContent = 'Keine Treffer für "' + term + '".';
+          return;
+        }
+        const shown = results.slice(0, CLIPART_RESULTS_LIMIT);
+        statusEl.textContent = results.length > shown.length
+          ? 'Zeige die ersten ' + shown.length + ' von ' + results.length + ' Treffern.'
+          : shown.length + ' Treffer.';
+        // Built via DOM APIs (createElement/textContent), not string-concatenated innerHTML like
+        // hljsRenderer.image() elsewhere — label text comes straight from ARASAAC's own response
+        // and textContent/title-property assignment is inherently escape-safe, no manual
+        // HTML-escaping needed here the way that string-based renderer requires.
+        shown.forEach((pictogram) => {
+          const label = (pictogram.keywords && pictogram.keywords[0] && pictogram.keywords[0].keyword) || term;
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'clipart-result';
+          btn.title = label + ' — ' + ARASAAC_ATTRIBUTION;
+          btn.onclick = () => insertClipartResult(pictogram._id);
+          const img = document.createElement('img');
+          img.src = 'https://static.arasaac.org/pictograms/' + pictogram._id + '/' + pictogram._id + '_300.png';
+          img.alt = label;
+          img.loading = 'lazy';
+          const labelEl = document.createElement('span');
+          labelEl.textContent = label;
+          btn.appendChild(img);
+          btn.appendChild(labelEl);
+          gridEl.appendChild(btn);
+        });
+      } catch (err) {
+        console.warn('ARASAAC-Suche fehlgeschlagen:', err);
+        statusEl.textContent = 'Suche fehlgeschlagen — keine Internetverbindung oder ARASAAC nicht erreichbar.';
+      }
+    }
+
+    // Downloads the full-resolution pictogram (separately from the _300 thumbnail already shown
+    // in the gallery, so the inserted/asset-stored copy isn't needlessly low-res) and hands it to
+    // insertNewDrawingAsset() with origin 'clipart' — same asset-map bookkeeping as any other
+    // drawing (see insertNewDrawingAsset()'s own comment above), just sourced from a downloaded
+    // image instead of a local Excalidraw export or PDF render. Editable afterward via the usual
+    // "✏️ Bearbeiten" button like any other drawing (e.g. to combine several pictograms or add a
+    // handwritten label), since a fresh 'clipart' asset still opens through the same Excalidraw
+    // drop flow as a fresh PDF import — see openDrawingModal()'s isFreshImageDrop branch.
+    async function insertClipartResult(id) {
+      const statusEl = document.getElementById('clipartStatus');
+      statusEl.textContent = 'Wird eingefügt…';
+      try {
+        const url = 'https://static.arasaac.org/pictograms/' + id + '/' + id + '_500.png';
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const dataUrl = await fileToDataUrl(await response.blob());
+        insertNewDrawingAsset(dataUrl, 'clipart', ARASAAC_ATTRIBUTION);
+        recordHistory();
+        updatePreview();
+        saveStateToLocalStorage();
+        closeClipartModal();
+      } catch (err) {
+        console.warn('Clipart konnte nicht eingefügt werden:', err);
+        statusEl.textContent = 'Bild konnte nicht geladen werden — bitte erneut versuchen.';
+      }
     }
 
     async function saveDrawing() {
@@ -11637,13 +11965,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // INITIALIZATION
     const initUrlParams = new URLSearchParams(location.search);
+    // Read once, up front, since both skipLocalStorage below and the pane-visibility check
+    // further down need it -- see the "?view=kiosk" and "?view=source/preview/split" comments
+    // at their respective use sites.
+    const viewParam = initUrlParams.get('view');
+    // "?view=kiosk" -- a genuine no-trace mode for a shared/public device: starts blank/split
+    // like "?localstorage=false" (folded into skipLocalStorage below) *and* additionally
+    // suppresses every write for the rest of the session (see the kioskMode guard inside
+    // saveStateToLocalStorage()), not just the initial read. "?localstorage=false" alone still
+    // saves normally once something is typed -- kiosk mode never does.
+    kioskMode = viewParam === 'kiosk';
     // "?localstorage=false" -- a deliberately blank/isolated start, ignoring every note this
     // browser has saved (e.g. for a demo, a shared kiosk link, or a clean testing session)
     // without that being a *destructive* look -- nothing already in localStorage is read, let
     // alone touched or overwritten; it just isn't loaded into this particular page load. Checked
     // up front, before loadStateFromLocalStorage() would otherwise run, since the whole point is
-    // to skip that call outright rather than load-then-discard.
-    const skipLocalStorage = initUrlParams.get('localstorage') === 'false';
+    // to skip that call outright rather than load-then-discard. kioskMode implies this too (a
+    // kiosk session starts blank the same way).
+    const skipLocalStorage = initUrlParams.get('localstorage') === 'false' || kioskMode;
     const hasUrlImportParam = !!initUrlParams.get('url');
 
     loadWebdavConfig();
@@ -11673,18 +12012,25 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     handleUrlParamImport();
     updateStorageIndicator();
     // Lets Simple Modus be set as the start mode via a URL query param (e.g. an installed/
-    // bookmarked link with "?simple=true"), independent of whatever was last persisted.
+    // bookmarked link with "?simple=true"), independent of whatever was last persisted. The
+    // "?simple=false" mirror forces it off the same way -- reuses toggleSimpleMode()'s existing
+    // "turn off" branch (50/50 split, zoom 100, restore the active tab's own theme) rather than
+    // duplicating that reset logic here; it's only invoked when simpleMode is actually on, since
+    // toggleSimpleMode() is a plain toggle and would otherwise turn it back *on*.
     if (initUrlParams.get('simple') === 'true' && !simpleMode) {
       enterSimpleMode();
       saveStateToLocalStorage();
+    } else if (initUrlParams.get('simple') === 'false' && simpleMode) {
+      toggleSimpleMode(); // already calls saveStateToLocalStorage() itself
     }
     // Sets the initial pane visibility independent of whatever was last persisted -- e.g. a
-    // read-only-feeling share link with "?view=preview", or a distraction-free writing link with
-    // "?view=source". Applied *after* the Simple-Modus check above so it has the final say even
-    // when combined with "?simple=true" in the same link (Simple Modus's own showEditor/
-    // showPreview preset would otherwise win if this ran first).
-    const viewParam = initUrlParams.get('view');
-    if (viewParam === 'source' || viewParam === 'preview' || viewParam === 'split') {
+    // read-only-feeling share link with "?view=preview", a distraction-free writing link with
+    // "?view=source", or the kiosk mode above ("?view=kiosk" is neither "preview" nor "source",
+    // so it lands on the same split-view result as "?view=split" here for free). Applied *after*
+    // the Simple-Modus check above so it has the final say even when combined with "?simple=true"
+    // in the same link (Simple Modus's own showEditor/showPreview preset would otherwise win if
+    // this ran first).
+    if (viewParam === 'source' || viewParam === 'preview' || viewParam === 'split' || viewParam === 'kiosk') {
       showEditor = viewParam !== 'preview';
       showPreview = viewParam !== 'source';
       applyPaneVisibility();

@@ -207,7 +207,7 @@ Blendet Kopf-, Fuß- und Tableiste sowie alle Menüs aus. Auf den meisten Gerät
 
 ### Simple Modus
 
-Der „Simple"-Schalter oben rechts reduziert die Werkzeugleisten auf das Nötigste (Öffnen, Speichern, Rückgängig/Wiederherstellen, Quelltext/Vorschau als einfacher Umschalter statt Splitscreen, Zoom, Vollbild sowie Überschrift/Bild/Foto/Zeichnung/Audio), stellt automatisch das Design „Clean" und eine größere Zoomstufe ein und springt beim Einfügen von Medien direkt in die Vorschau. Praktisch für Tablets, jüngere Nutzer:innen oder eine bewusst aufgeräumte Schreibumgebung. Lässt sich auch direkt per Link mit angehängtem `?simple=true` aktiviert öffnen.
+Der „Simple"-Schalter oben rechts reduziert die Werkzeugleisten auf das Nötigste (Öffnen, Speichern, Rückgängig/Wiederherstellen, Quelltext/Vorschau als einfacher Umschalter statt Splitscreen, Zoom, Vollbild sowie Überschrift/Bild/Foto/Zeichnung/Audio), stellt automatisch das Design „Clean" und eine größere Zoomstufe ein und springt beim Einfügen von Medien direkt in die Vorschau. Praktisch für Tablets, jüngere Nutzer:innen oder eine bewusst aufgeräumte Schreibumgebung. Lässt sich auch direkt per Link mit angehängtem `?simple=true` aktiviert (bzw. `?simple=false` deaktiviert) öffnen — siehe [Abschnitt 18](#18-direktlinks-mit-url-parametern).
 
 ## 12. Suchen und Ersetzen
 
@@ -292,6 +292,7 @@ Legt fest, welcher Bereich beim Öffnen sichtbar ist — unabhängig davon, was 
 | `?view=source` | Nur der Quelltext-Editor |
 | `?view=preview` | Nur die Vorschau |
 | `?view=split` | Editor und Vorschau nebeneinander (geteilte Ansicht) |
+| `?view=kiosk` | Geteilte Ansicht, aber zusätzlich ein vollständiger „Ohne Spuren"-Modus — siehe [eigener Abschnitt weiter unten](#kiosk-modus-ohne-spuren-viewkiosk) |
 
 Beispiel: `https://majort0m0.github.io/Markdown-Editor/?view=preview` öffnet die App direkt in der reinen Lesevorschau.
 
@@ -327,6 +328,30 @@ https://majort0m0.github.io/Markdown-Editor/?localstorage=false
 - Eine automatische WebDAV-Synchronisierung beim Start wird in diesem Modus ebenfalls übersprungen (sie würde sonst die eigenen Notizen ohnehin gleich wieder in die „leere" Sitzung hineinsynchronisieren) — ein manueller Klick auf „🔄 Jetzt synchronisieren" funktioniert aber weiterhin normal.
 
 **Wichtig zu wissen:** Dieser Modus ist nicht wie ein „Inkognito-Fenster", das nichts speichert — er blendet beim Start lediglich die vorhandenen Notizen aus. Wird während einer solchen Sitzung etwas geschrieben oder verändert, speichert die App das ganz normal wie immer; beim nächsten Öffnen der App **ohne** diesen Parameter erscheinen dann sowohl die ursprünglichen Notizen als auch alles, was währenddessen neu entstanden ist.
+
+### Kiosk-Modus (ohne Spuren): `?view=kiosk`
+
+Anders als `?localstorage=false` ist dieser Modus tatsächlich wie ein „Inkognito-Fenster": Die App startet leer im geteilten Editor/Vorschau-Ansicht (auch wenn zuvor der Simple Modus aktiv war — der wird für diese Sitzung deaktiviert), und **alles, was während der Sitzung geschrieben oder verändert wird, wird zu keinem Zeitpunkt in `localStorage` abgelegt** — nicht nur beim Start, sondern durchgehend:
+
+```
+https://majort0m0.github.io/Markdown-Editor/?view=kiosk
+```
+
+- Praktisch für einen wirklich öffentlichen Rechner (Bibliothek, Messestand, gemeinsam genutztes Tablet), auf dem nichts von dem, was jemand dort tippt, danach im Browser zurückbleiben soll.
+- Ein Neuladen derselben `?view=kiosk`-Adresse startet immer wieder komplett leer — auch alles, was in der vorherigen Kiosk-Sitzung geschrieben wurde, ist weg. Ein späteres Öffnen der App **ohne** diesen Parameter zeigt unverändert die eigenen, „normal" gespeicherten Notizen, exakt wie vor der Kiosk-Sitzung.
+- Wie bei `?localstorage=false` wird auch hier eine automatische WebDAV-Synchronisierung beim Start übersprungen; ein manueller Klick auf „🔄 Jetzt synchronisieren" funktioniert weiterhin normal — ist auf diesem Gerät bereits eine WebDAV-Verbindung eingerichtet, kann eine währenddessen laufende automatische Synchronisierung Änderungen trotzdem auf den Server übertragen (nur die lokale Speicherung im Browser ist betroffen).
+- Lässt sich mit `?url=` kombinieren (`?view=kiosk&url=https://beispiel.de/notiz.md`), um die Sitzung direkt mit einer bestimmten Notiz zu starten, statt komplett leer.
+
+### Simple Modus per Link erzwingen: `?simple=true` / `?simple=false`
+
+Aktiviert bzw. deaktiviert den [Simple Modus](#11-designs-ansicht-und-fokus-modi) beim Öffnen, unabhängig davon, was zuletzt in diesem Browser eingestellt war — genau wie bei `?view=` bleibt die so gewählte Einstellung anschließend als neuer Stand gespeichert:
+
+```
+https://majort0m0.github.io/Markdown-Editor/?simple=true
+https://majort0m0.github.io/Markdown-Editor/?simple=false
+```
+
+Praktisch z. B. für einen Lesezeichen-Link auf einem Tablet, der immer im reduzierten Simple Modus startet, oder umgekehrt einen Link, der ihn zuverlässig wieder ausschaltet.
 
 ---
 
