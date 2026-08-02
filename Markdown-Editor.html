@@ -5163,6 +5163,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // can't survive serialization) means "Speichern" keeps silently overwriting the right file
         // even across app restarts.
         nativeFilePath: t.nativeFilePath || null,
+        // Set only for a tab opened via the ?url= param (see handleUrlParamImport()) -- like
+        // nativeFilePath above, deliberately device-local and never part of the WebDAV sync
+        // payload; its only job is letting a later visit to the same ?url= link recognize "this
+        // was already imported" instead of creating a duplicate tab every time the link is opened.
+        sourceUrl: t.sourceUrl || null,
         syncId: t.syncId,
         lastSyncedSnapshot: t.lastSyncedSnapshot || null
       }));
@@ -5290,6 +5295,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           // mints one on first use rather than every tab needing a migration pass here.
           syncId: t.syncId || null,
           lastSyncedSnapshot: t.lastSyncedSnapshot || null,
+          sourceUrl: t.sourceUrl || null,
           _localSaveIssue: null
         }));
         // Backfills a permanent syncId for tabs saved before it became eager (see createNewTab)
@@ -11486,6 +11492,59 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
     });
 
+    // ?url=<link-to-a-.md-file> lets a bookmarked/shared link auto-open a specific document on
+    // load (e.g. "…/Markdown-Editor.html?url=https://raw.githubusercontent.com/.../notiz.md") --
+    // see the ?view=/?simple= URL-param handling in INITIALIZATION below for the sibling params
+    // this is meant to compose with. Fetches the file's raw text and opens it through the exact
+    // same createNewTab() pipeline as any other opened document -- no special-cased handling of
+    // its content, so it's normalized (inline images extracted to assets, etc.) exactly the same
+    // way a locally opened .md file would be.
+    //
+    // Skips re-fetching if a tab from this *exact* URL is already open -- tab.sourceUrl, set right
+    // after a successful import below and persisted like nativeFilePath (device-local, never part
+    // of the WebDAV sync payload) -- and just switches to it instead, so repeatedly opening the
+    // same link doesn't pile up duplicate tabs on every visit.
+    //
+    // Subject to the same cross-origin restriction as WebDAV sync (see describeWebdavError()):
+    // fetch() only succeeds if the target server sends CORS headers allowing this page's origin,
+    // which most arbitrary hosts don't opt into by default -- works reliably against something
+    // CORS-friendly (a GitHub raw file/Gist, or a server configured for it), not against an
+    // arbitrary link handed out at random.
+    async function handleUrlParamImport() {
+      const url = new URLSearchParams(location.search).get('url');
+      if (!url) return;
+
+      const existing = tabs.find(t => t.sourceUrl === url);
+      if (existing) {
+        switchTab(existing.id);
+        return;
+      }
+
+      let resolvedUrl;
+      try {
+        resolvedUrl = new URL(url, location.href);
+      } catch (err) {
+        showToast('Ungültige Adresse im ?url=-Parameter.');
+        return;
+      }
+
+      try {
+        const response = await fetch(resolvedUrl.href);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const content = await response.text();
+        const name = decodeURIComponent(resolvedUrl.pathname.split('/').filter(Boolean).pop() || '') || 'Importiert.md';
+        await createNewTab(name, content);
+        const tab = getCurrentTab();
+        if (tab) {
+          tab.sourceUrl = url;
+          saveStateToLocalStorage();
+        }
+      } catch (err) {
+        console.warn('Datei über ?url= konnte nicht geladen werden:', err);
+        showToast('Datei konnte über den ?url=-Link nicht geladen werden — Adresse falsch, nicht erreichbar oder der Server erlaubt keinen Zugriff von hier aus (CORS).');
+      }
+    }
+
     // INITIALIZATION
     loadWebdavConfig();
     // Paints the button's "connected" (hellgrün) state from the persisted lastSyncAt/error
@@ -11496,11 +11555,27 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     if (!loadStateFromLocalStorage()) {
       createNewTab();
     }
+    // Not awaited -- fire-and-forget like the delayed WebDAV startup sync below; switchTab()'s own
+    // staleness guard (see its comment) already makes it safe regardless of exactly when this
+    // settles relative to the rest of this init sequence.
+    handleUrlParamImport();
     updateStorageIndicator();
     // Lets Simple Modus be set as the start mode via a URL query param (e.g. an installed/
     // bookmarked link with "?simple=true"), independent of whatever was last persisted.
     if (new URLSearchParams(location.search).get('simple') === 'true' && !simpleMode) {
       enterSimpleMode();
+      saveStateToLocalStorage();
+    }
+    // Sets the initial pane visibility independent of whatever was last persisted -- e.g. a
+    // read-only-feeling share link with "?view=preview", or a distraction-free writing link with
+    // "?view=source". Applied *after* the Simple-Modus check above so it has the final say even
+    // when combined with "?simple=true" in the same link (Simple Modus's own showEditor/
+    // showPreview preset would otherwise win if this ran first).
+    const viewParam = new URLSearchParams(location.search).get('view');
+    if (viewParam === 'source' || viewParam === 'preview' || viewParam === 'split') {
+      showEditor = viewParam !== 'preview';
+      showPreview = viewParam !== 'source';
+      applyPaneVisibility();
       saveStateToLocalStorage();
     }
     if (isWebdavConfigured()) {
