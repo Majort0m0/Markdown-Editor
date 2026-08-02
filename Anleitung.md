@@ -10,7 +10,7 @@ Markdown Studio läuft komplett im Browser, ohne Installation und ohne Server �
 2. [Dokumente und Tabs](#2-dokumente-und-tabs)
 3. [Text formatieren](#3-text-formatieren)
 4. [Tabellen und CSV](#4-tabellen-und-csv)
-5. [Bilder, Fotos und Zeichnungen einfügen](#5-bilder-fotos-und-zeichnungen-einfügen)
+5. [Bilder, Fotos, Zeichnungen und Piktogramme einfügen](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)
 6. [PDF-Dateien als Arbeitsblatt bearbeiten](#6-pdf-dateien-als-arbeitsblatt-bearbeiten)
 7. [Audio und Video einbetten](#7-audio-und-video-einbetten)
 8. [Inhaltsverzeichnis-Panel in der Vorschau](#8-inhaltsverzeichnis-panel-in-der-vorschau)
@@ -100,7 +100,9 @@ Eine Tabelle über den **Tabelle**-Button in der Formatierungsleiste einfügen (
 
 **CSV-Dateien** werden automatisch als Tabelle dargestellt und lassen sich mit genau denselben Werkzeugen bearbeiten wie eine Markdown-Tabelle — das gesamte Dokument zählt dabei als eine Tabelle (kein Trennzeichen zwischen Kopf- und Datenzeilen nötig, im Gegensatz zu Markdown).
 
-## 5. Bilder, Fotos und Zeichnungen einfügen
+**Medien in Tabellenzellen:** Wird ein Bild, Foto, eine Zeichnung, ein Piktogramm oder eine Sprachaufnahme eingefügt, während der Cursor in einer Tabellenzelle (oder in einer CSV-Datei) steht, lässt die App die sonst übliche Leerzeile danach weg — so bleibt die Tabellenstruktur erhalten, statt durch zusätzliche Zeilenumbrüche zu zerbrechen.
+
+## 5. Bilder, Fotos, Zeichnungen und Piktogramme einfügen
 
 ### Bilder einfügen
 
@@ -122,9 +124,24 @@ In allen drei Fällen erscheint ein Dialog mit der Wahl zwischen „📉 Verklei
 
 **Eine bestehende Zeichnung weiterbearbeiten:** In der Vorschau beim Überfahren einer eingefügten Zeichnung mit der Maus erscheint ein „✏️ Bearbeiten"-Button — er öffnet die Zeichnung wieder im selben Editor, exakt so, wie sie zuletzt gespeichert wurde, bereit zum Weiterzeichnen.
 
+### Clipart / Piktogramme einfügen (ARASAAC)
+
+Der **🪪 Clipart**-Button (zwischen Zeichnung und Sprachaufnahme) öffnet einen Suchdialog für die freie Piktogramm-Bibliothek [ARASAAC](https://arasaac.org) — tausende einfache, leicht verständliche Symbolbilder, z. B. für Kommunikationshilfen, Arbeitsblätter oder Leichte Sprache, auf Deutsch durchsuchbar:
+
+1. Suchbegriff eingeben (z. B. „Haus", „Auto", „Familie") und mit Enter oder „Suchen" bestätigen.
+2. In der Ergebnisgalerie auf ein Piktogramm klicken — es wird sofort eingefügt, genau wie eine Zeichnung (siehe oben): weiterhin über „✏️ Bearbeiten" veränderbar, z. B. um mehrere Piktogramme zu kombinieren oder eine eigene Beschriftung zu ergänzen.
+
+Braucht anders als der Rest der App eine Internetverbindung, da die Suche live bei ARASAAC läuft.
+
+**Lizenzangabe:** ARASAAC-Piktogramme stehen unter CC BY-NC-SA und verlangen eine Quellenangabe. Die Checkbox „Lizenzangabe hinzufügen" im Suchdialog ist standardmäßig **deaktiviert** — nicht jede Einfügung (z. B. ein schnelles Symbol in einem internen Arbeitsblatt) braucht sichtbar eine Quellenzeile. Wird sie vor dem Einfügen aktiviert, ergänzt die App automatisch Autor, Lizenz und Quelle als sichtbare [Bildunterschrift](#bildunterschriften) unter dem Piktogramm.
+
+### Bildunterschriften
+
+Jedes Bild kann einen sichtbaren Text darunter bekommen — über die optionale Titel-Angabe der Markdown-Bildsyntax: `![Alt-Text](Adresse "Bildunterschrift")`. Der Teil in Anführungszeichen erscheint als kleine, dezente Beschriftung direkt unter dem Bild — in der Live-Vorschau, im Präsentationsmodus und in beiden HTML-Exporten. Praktisch für Quellen- oder Lizenzangaben (siehe Clipart oben) oder kurze Bildunterschriften, funktioniert bei jedem Bild, nicht nur bei ARASAAC-Piktogrammen.
+
 ### Alt-Text bearbeiten
 
-Jedes eingefügte Bild/Foto/jede Zeichnung bekommt automatisch einen sprechfreundlichen Standard-Alt-Text („Das ist ein Bild." / „Das ist ein Foto." / „Das ist eine Zeichnung."), der z. B. im [Vorlesemodus](#9-vorlesemodus) vorgelesen wird. Beim Überfahren eines Bildes in der Vorschau erscheint unten rechts ein „🏷️ Alt-Text"-Button — er markiert den Alt-Text direkt im Quelltext zum Überschreiben.
+Jedes eingefügte Bild/Foto/jede Zeichnung/jedes Piktogramm bekommt automatisch einen sprechfreundlichen Standard-Alt-Text („Das ist ein Bild." / „Das ist ein Foto." / „Das ist eine Zeichnung." / „Das ist ein Piktogramm."), der z. B. im [Vorlesemodus](#9-vorlesemodus) vorgelesen wird. Beim Überfahren eines Bildes in der Vorschau erscheint unten rechts ein „🏷️ Alt-Text"-Button — er markiert den Alt-Text direkt im Quelltext zum Überschreiben.
 
 ## 6. PDF-Dateien als Arbeitsblatt bearbeiten
 
@@ -135,7 +152,7 @@ Eine sehr nützliche Funktion für Arbeitsblätter, Formulare oder gescannte Dok
 1. Eine PDF-Datei über **📂 Öffnen** auswählen oder direkt ins Fenster ziehen — der Dialog „📄 PDF öffnen" erscheint.
 2. Auswählen, welche Seiten geladen werden sollen: „Nur die erste Seite", „Alle Seiten" oder „Bestimmte Seiten" (z. B. `1-3,5`).
 3. **📥 Öffnen** klicken. Es wird eine neue, eigene Notiz erstellt; jede gewählte Seite landet dort als eigener Abschnitt („## Seite 1", „## Seite 2", …) mit dem Seitenbild direkt darunter.
-4. Eine Seite anklicken (bzw. „✏️ Bearbeiten" beim Überfahren) öffnet sie im Zeichen-Editor — dort lässt sich direkt auf dem Arbeitsblatt schreiben, markieren oder zeichnen, genau wie bei einer normalen Zeichnung (siehe [Abschnitt 5](#5-bilder-fotos-und-zeichnungen-einfügen)). Beim ersten Öffnen wird die Seite automatisch passend positioniert und skaliert.
+4. Eine Seite anklicken (bzw. „✏️ Bearbeiten" beim Überfahren) öffnet sie im Zeichen-Editor — dort lässt sich direkt auf dem Arbeitsblatt schreiben, markieren oder zeichnen, genau wie bei einer normalen Zeichnung (siehe [Abschnitt 5](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)). Beim ersten Öffnen wird die Seite automatisch passend positioniert und skaliert.
 5. **💾 Speichern** im Zeichen-Editor sichert die Beschriftung in genau dieser Seite.
 
 **Hinweis bei großen/mehrseitigen PDFs:** Da jede Seite als Bild eingebettet wird, kann das Speichern einer sehr großen, mit vielen Anmerkungen versehenen Seite spürbar länger dauern — die App wartet in diesem Fall bis zu 30 Sekunden, bevor sie einen Fehler meldet; ein erneuter Klick auf „Speichern" hilft, falls es doch einmal zu einer Fehlermeldung kommt. Bei sehr vielen/großen importierten Seiten weist die App zusätzlich per Hinweis auf hohen Speicherbedarf hin und empfiehlt, die Notiz per WebDAV zu sichern (siehe [Abschnitt 13](#13-webdav-synchronisierung-zwischen-mehreren-geräten) und [Abschnitt 16](#16-speicherplatz-und-datenschutz)).
@@ -165,7 +182,7 @@ Der schwebende Button oben rechts über der Vorschau (Listen-Symbol) öffnet ein
 Der 🔊-Button (oben rechts neben dem Inhaltsverzeichnis-Button) liest das aktuelle Dokument laut vor und hebt dabei Wort für Wort den gerade gesprochenen Text hervor.
 
 - **Klick** startet das Vorlesen, **erneuter Klick** pausiert an derselben Stelle, **noch ein Klick** setzt fort.
-- Bilder, Fotos und Zeichnungen werden mit ihrem Alt-Text (siehe [Abschnitt 5](#5-bilder-fotos-und-zeichnungen-einfügen)) angekündigt, sofern einer gesetzt ist — sonst mit einer generischen Ankündigung („Hier ist ein Bild." usw.). Videos werden immer als „Hier ist ein Video." angekündigt.
+- Bilder, Fotos, Zeichnungen und Piktogramme werden mit ihrem Alt-Text (siehe [Abschnitt 5](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)) angekündigt, sofern einer gesetzt ist — sonst mit einer generischen Ankündigung („Hier ist ein Bild." usw.). Videos werden immer als „Hier ist ein Video." angekündigt.
 - Sprachaufnahmen werden während des Vorlesens tatsächlich abgespielt.
 - Das Vorlesen stoppt automatisch beim Tab-Wechsel, beim Bearbeiten des Texts oder wenn die Vorschau ausgeblendet wird — nie mitten im Text unbemerkt weiterlaufend im Hintergrund.
 - Steht der Vorlesemodus innerhalb einer Präsentation (siehe [Abschnitt 10](#10-präsentationen-erstellen)) am Ende einer Folie an, blättert er automatisch zur nächsten Folie weiter und liest dort fort.
@@ -270,7 +287,7 @@ Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere An
 
 **Bleibt eine Zeichnung nach dem Speichern der Datei weiter bearbeitbar?** Ja, solange die Notiz innerhalb dieser App geöffnet bleibt oder als `.md`-Datei wieder in dieser App geöffnet wird. Wird die Datei dagegen extern bearbeitet oder in einer anderen Markdown-App geöffnet, geht diese Information verloren — sie erscheint dann als normales, nicht mehr per Doppelklick bearbeitbares Bild.
 
-**Funktioniert die App ohne Internetverbindung?** Ja — sowohl die online gehostete Version (nach dem ersten Laden) als auch besonders die lokal heruntergeladene `Markdown-Editor.html` funktionieren komplett offline. Nur Kamera, Mikrofon und WebDAV-Synchronisierung benötigen die jeweilige Geräteberechtigung bzw. eine Verbindung zum eigenen Server.
+**Funktioniert die App ohne Internetverbindung?** Ja — sowohl die online gehostete Version (nach dem ersten Laden) als auch besonders die lokal heruntergeladene `Markdown-Editor.html` funktionieren komplett offline. Nur Kamera, Mikrofon, WebDAV-Synchronisierung und die Clipart-Suche (siehe [Abschnitt 5](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)) benötigen die jeweilige Geräteberechtigung bzw. eine Verbindung zum eigenen Server bzw. zu ARASAAC.
 
 **Wo werden Video-Links abgespielt?** Eingebettete YouTube-/Vimeo-Videos benötigen zum Abspielen eine echte Internetverbindung sowie einen Aufruf über `http(s)://` (nicht `file://`) — beim lokalen Öffnen der Datei direkt vom Dateisystem wird stattdessen ein Hinweis mit Link zum Original angezeigt.
 
