@@ -23,6 +23,7 @@ Markdown Studio läuft komplett im Browser, ohne Installation und ohne Server �
 15. [Tastenkürzel](#15-tastenkürzel)
 16. [Speicherplatz und Datenschutz](#16-speicherplatz-und-datenschutz)
 17. [Tipps und häufige Fragen](#17-tipps-und-häufige-fragen)
+18. [Direktlinks mit URL-Parametern](#18-direktlinks-mit-url-parametern)
 
 ---
 
@@ -272,6 +273,41 @@ Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere An
 **Funktioniert die App ohne Internetverbindung?** Ja — sowohl die online gehostete Version (nach dem ersten Laden) als auch besonders die lokal heruntergeladene `Markdown-Editor.html` funktionieren komplett offline. Nur Kamera, Mikrofon und WebDAV-Synchronisierung benötigen die jeweilige Geräteberechtigung bzw. eine Verbindung zum eigenen Server.
 
 **Wo werden Video-Links abgespielt?** Eingebettete YouTube-/Vimeo-Videos benötigen zum Abspielen eine echte Internetverbindung sowie einen Aufruf über `http(s)://` (nicht `file://`) — beim lokalen Öffnen der Datei direkt vom Dateisystem wird stattdessen ein Hinweis mit Link zum Original angezeigt.
+
+## 18. Direktlinks mit URL-Parametern
+
+An die Adresse der App lassen sich Parameter anhängen, um sie in einem bestimmten Zustand zu öffnen — praktisch für Lesezeichen, geteilte Links oder eigene Verknüpfungen (z. B. auf dem Startbildschirm eines Tablets). Alle drei Parameter lassen sich auch kombinieren (`?view=preview&url=...`).
+
+### Startansicht festlegen: `?view=`
+
+Legt fest, welcher Bereich beim Öffnen sichtbar ist — unabhängig davon, was zuletzt in diesem Browser eingestellt war:
+
+| Wert | Ergebnis |
+|---|---|
+| `?view=source` | Nur der Quelltext-Editor |
+| `?view=preview` | Nur die Vorschau |
+| `?view=split` | Editor und Vorschau nebeneinander (geteilte Ansicht) |
+
+Beispiel: `https://majort0m0.github.io/Markdown-Editor/?view=preview` öffnet die App direkt in der reinen Lesevorschau.
+
+**Hinweis:** Wie bei `?simple=true` (siehe [Abschnitt 11](#11-designs-ansicht-und-fokus-modi)) wird die so gewählte Ansicht als neuer Stand gespeichert und bleibt auch bei einem späteren Öffnen ohne den Parameter bestehen — bis sie manuell oder über einen erneuten `?view=`-Link geändert wird.
+
+### Ein Dokument automatisch öffnen: `?url=`
+
+Öffnet eine Markdown-Datei automatisch von einer beliebigen Web-Adresse aus, sobald die App lädt — z. B. um einen direkten „Diese eine Notiz öffnen"-Link zu verschicken oder eine Vorlage von einer eigenen Website automatisch bereitzustellen:
+
+```
+https://majort0m0.github.io/Markdown-Editor/?url=https://beispiel.de/pfad/notiz.md
+```
+
+**Schritt für Schritt:**
+
+1. Die `.md`-Datei muss über eine normale, direkt abrufbare Web-Adresse erreichbar sein (z. B. eine „raw"-Datei-Adresse bei GitHub oder ein eigener Webserver).
+2. Diese Adresse hinter `?url=` an den App-Link anhängen.
+3. Beim Öffnen des Links wird die Datei automatisch geladen und als neue, eigene Notiz geöffnet — der Dateiname aus der Adresse wird dabei als Tab-Name übernommen.
+4. Wird derselbe Link später erneut geöffnet, erkennt die App anhand der bereits im Browser gespeicherten Notizen, dass diese Datei schon einmal importiert wurde, und öffnet stattdessen einfach den bestehenden Tab — es wird also nicht bei jedem Klick eine neue Kopie angelegt.
+
+**Wichtige Einschränkung:** Das automatische Laden funktioniert nur, wenn der Server, auf dem die Datei liegt, Zugriffe von anderen Webseiten aus erlaubt (CORS-Header). Die meisten normalen Webserver tun das standardmäßig nicht — zuverlässig funktioniert es z. B. mit einer GitHub-„raw"-Datei-Adresse oder einem selbst dafür eingerichteten Server. Schlägt das Laden fehl (falsche Adresse, Datei nicht erreichbar, kein Zugriff erlaubt), erscheint eine entsprechende Fehlermeldung und die App startet stattdessen normal.
 
 ---
 
