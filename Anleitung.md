@@ -278,6 +278,11 @@ Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere An
 
 An die Adresse der App lassen sich Parameter anhängen, um sie in einem bestimmten Zustand zu öffnen — praktisch für Lesezeichen, geteilte Links oder eigene Verknüpfungen (z. B. auf dem Startbildschirm eines Tablets). Alle Parameter lassen sich auch kombinieren (`?localstorage=false&view=preview&url=...`).
 
+**Wichtig:** Nur vor dem *ersten* Parameter steht ein `?` — jeder weitere Parameter wird mit `&` angehängt, nicht mit einem erneuten `?`. Ein zweites `?` beendet die Parameterliste nicht neu, sondern wird als ganz normales Zeichen behandelt und landet im Wert des vorherigen Parameters, wodurch keiner der Parameter mehr wie erwartet erkannt wird.
+
+- ✅ Richtig: `?localstorage=false&simple=true&view=preview`
+- ❌ Falsch: `?localstorage=false?simple=true?view=preview`
+
 ### Startansicht festlegen: `?view=`
 
 Legt fest, welcher Bereich beim Öffnen sichtbar ist — unabhängig davon, was zuletzt in diesem Browser eingestellt war:
