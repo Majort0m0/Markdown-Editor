@@ -1692,9 +1692,31 @@ return He}()
       margin-bottom: -1px;
     }
 
+    /* Narrow accent rather than a full background tint (see isTabSynced()) -- composes cleanly
+       with .tab.active's own background and with the '*'/warning-badge indicators, which a
+       full-background treatment would otherwise visually compete with. padding-left is reduced by
+       the same 2px the border grows by (1px -> 3px) so the tab's content doesn't visibly shift
+       when this class is toggled on/off. */
+    .tab.synced {
+      border-left: 3px solid #1a7f37;
+      padding-left: 10px;
+    }
+
     .tab .tab-name {
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .tab .tab-local-save-warning {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      color: #bf6a02;
+    }
+
+    .tab .tab-local-save-warning svg {
+      width: 13px;
+      height: 13px;
     }
 
     .tab .close-btn {
@@ -1949,15 +1971,19 @@ return He}()
       display: none;
     }
 
+    /* Three explicit columns rather than flex + space-between: docStats (left) describes only
+       the *current* document, while #storageIndicator (center) covers *all* open tabs together --
+       a different enough scope that it gets its own, visually distinct, centered slot instead of
+       sitting bunched up next to docStats the way it used to (see the separators either side of
+       it, .footer-separator below). The attribution link keeps the right slot it always had. */
     .app-footer {
       flex-shrink: 0;
       background-color: var(--bg-surface);
       border-top: 1px solid var(--border-color);
       padding: 4px 16px;
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
       gap: 4px 12px;
       font-size: 0.72rem;
       color: var(--text-muted);
@@ -1966,6 +1992,47 @@ return He}()
     .app-footer a {
       color: var(--text-muted);
       text-decoration: none;
+      justify-self: end;
+    }
+
+    .footer-separator {
+      width: 1px;
+      height: 12px;
+      background-color: var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .footer-storage {
+      justify-self: center;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .footer-storage-bar {
+      display: inline-block;
+      width: 46px;
+      height: 6px;
+      border-radius: 3px;
+      background-color: var(--border-color);
+      overflow: hidden;
+    }
+
+    .footer-storage-bar-fill {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background-color: #1a7f37;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+
+    /* Getting close to the browser's storage quota -- see updateStorageIndicator(). */
+    .footer-storage-bar-fill.warn {
+      background-color: #bf6a02;
+    }
+
+    .footer-storage-bar-fill.critical {
+      background-color: #d92626;
     }
 
     .app-footer a:hover {
@@ -2866,18 +2933,23 @@ return He}()
       width: 1%;
     }
 
-    .shortcuts-help-link {
-      display: block;
+    .shortcuts-help-links {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
       margin-top: 12px;
       padding-top: 12px;
       border-top: 1px solid var(--border-color);
-      text-align: center;
+    }
+
+    .shortcuts-help-links a {
       font-size: 0.85rem;
       color: var(--text-muted);
       text-decoration: none;
     }
 
-    .shortcuts-help-link:hover {
+    .shortcuts-help-links a:hover {
       color: var(--accent);
       text-decoration: underline;
     }
@@ -3155,6 +3227,65 @@ return He}()
 
     #webdavSyncBtn.syncing svg {
       animation: webdav-spin 1s linear infinite;
+    }
+
+    /* Hellgrün = at least one sync has actually succeeded and nothing has failed since --
+       see updateWebdavSyncUi()'s comment on why this means more than just "credentials saved".
+       Mirrors .toolbar-btn.recording's existing light-bg/dark-icon pattern above for a
+       state-colored icon button. .syncing (mid-transition) intentionally overrides this so the
+       spin animation isn't fighting a green background while a sync is actively in flight. */
+    #webdavSyncBtn.connected {
+      background-color: #d7f5df;
+      color: #1a7f37;
+    }
+
+    #webdavSyncBtn.connected.syncing {
+      background-color: transparent;
+    }
+
+    /* Countdown ring toward the next automatic interval sync -- see updateWebdavSyncRing().
+       The wrapper takes over #webdavSyncBtn's old place as a flex item in .actions-group; the
+       ring itself is centered on top of it via absolute positioning so it doesn't affect layout
+       (the button keeps its usual 34x34px .icon-btn footprint, the ring just bleeds a few px
+       past its edge). Sized 40x40 so a 2px stroke on a r=17 circle clears the button's own
+       rounded-square edge/hover background instead of overlapping it. */
+    .webdav-btn-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .webdav-sync-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    /* stroke-dasharray/-dashoffset are set from JS (updateWebdavSyncRing()), which knows the
+       real circumference (2*pi*r) -- these are just safe empty-circle defaults so nothing flashes
+       full-circle for a frame before the first JS tick. rotate(-90deg) around the circle's own
+       center moves the empty->full sweep's start point from 3 o'clock (SVG's default) to 12
+       o'clock, per how this was specified; the sweep still runs clockwise from there since
+       rotating the circle doesn't change which way stroke-dashoffset draws it in.
+       Dunkelgrün (darker than the button's own #1a7f37 "connected" tint) for contrast against
+       both the plain and the light-green "connected" button background. */
+    .webdav-sync-ring-progress {
+      fill: none;
+      stroke: #0f5323;
+      stroke-width: 2;
+      stroke-linecap: round;
+      transform-origin: 20px 20px;
+      transform: rotate(-90deg);
+      stroke-dasharray: 106.81;
+      stroke-dashoffset: 106.81;
+      transition: stroke-dashoffset 0.4s linear;
+    }
+
+    .webdav-sync-ring-progress.hidden {
+      opacity: 0;
     }
 
     /* WebDAV Sync conflict resolution */
@@ -3799,7 +3930,10 @@ return He}()
       <div class="action-divider"></div>
 
       <!-- WebDAV-Synchronisierung -->
-      <button id="webdavSyncBtn" class="icon-btn simple-hide" onclick="openWebdavModal()" title="WebDAV-Synchronisierung"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V11M12 11L9 14M12 11L15 14M7 16.8184C4.69636 16.2074 3 14.1246 3 11.6493C3 9.20008 4.8 6.9375 7.5 6.5C8.34694 4.48637 10.3514 3 12.6893 3C15.684 3 18.1317 5.32251 18.3 8.25C19.8893 8.94488 21 10.6503 21 12.4969C21 14.8148 19.25 16.7236 17 16.9725" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <span class="webdav-btn-wrap simple-hide">
+        <svg class="webdav-sync-ring" viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><circle id="webdavSyncRingProgress" class="webdav-sync-ring-progress" cx="20" cy="20" r="17" /></svg>
+        <button id="webdavSyncBtn" class="icon-btn" onclick="openWebdavModal()" title="WebDAV-Synchronisierung"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21V11M12 11L9 14M12 11L15 14M7 16.8184C4.69636 16.2074 3 14.1246 3 11.6493C3 9.20008 4.8 6.9375 7.5 6.5C8.34694 4.48637 10.3514 3 12.6893 3C15.684 3 18.1317 5.32251 18.3 8.25C19.8893 8.94488 21 10.6503 21 12.4969C21 14.8148 19.25 16.7236 17 16.9725" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      </span>
 
       <div class="action-divider"></div>
 
@@ -3942,6 +4076,7 @@ return He}()
 
   <footer class="app-footer">
     <span id="docStats" class="footer-stats"></span>
+    <span id="storageIndicator" class="footer-storage"><span class="footer-separator"></span><span class="footer-storage-bar"><span class="footer-storage-bar-fill"></span></span><span class="footer-storage-text"></span><span class="footer-separator"></span></span>
     <a href="https://lernsachen.blog" target="_blank" rel="noopener noreferrer">CC-BY-NC Lernsachen.blog</a>
   </footer>
 
@@ -3966,7 +4101,10 @@ return He}()
         <tr><td><kbd>Enter</kbd> auf leerem Listenpunkt</td><td>Liste beenden</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Dieses Fenster schließen</td></tr>
       </table>
-      <a class="shortcuts-help-link" href="https://github.com/Majort0m0/Markdown-Editor#readme" target="_blank" rel="noopener noreferrer">❓ Hilfe &amp; Dokumentation (README auf GitHub)</a>
+      <div class="shortcuts-help-links">
+        <a href="https://github.com/Majort0m0/Markdown-Editor#readme" target="_blank" rel="noopener noreferrer">❓ Hilfe &amp; Dokumentation (README auf GitHub)</a>
+        <a href="https://github.com/Majort0m0/Markdown-Editor/blob/main/Anleitung.md" target="_blank" rel="noopener noreferrer">📖 Ausführliche Anleitung mit Schritt-für-Schritt-Beispielen</a>
+      </div>
     </div>
   </div>
 
@@ -4197,6 +4335,19 @@ return He}()
     let zoomLevel = 100;
     let simpleMode = false;
     const DARK_THEMES = new Set(['theme-github-dark', 'theme-dracula', 'theme-gruvbox', 'theme-tokyo-night']);
+
+    // Set once localStorage.setItem() fails (almost always QuotaExceededError from a tab
+    // carrying several MB of embedded PDF/image assets) so saveStateToLocalStorage() only
+    // toasts the warning once instead of on every subsequent keystroke/action, and cleared again
+    // the moment a save actually succeeds so a later warning (a different tab hitting the same
+    // problem) isn't permanently suppressed for the rest of the session.
+    let localStorageQuotaWarned = false;
+
+    // The reason string markTabLocalSaveIssue()/saveStateToLocalStorage() use specifically for a
+    // failed localStorage write (as opposed to a failed per-asset IndexedDB write) -- a shared
+    // constant so the "is this tab's issue the shared localStorage one?" check in
+    // saveStateToLocalStorage()'s success branch can't drift out of sync with the message text.
+    const LOCAL_STORAGE_ISSUE_TEXT = 'Notiz-Text/Metadaten konnten nicht lokal gespeichert werden (Speicherplatz?).';
 
     // YouTube/Vimeo iframes (see getVideoEmbedHtml() below) render as a plain black box and never
     // actually play when the embedding document has an opaque/"null" origin — confirmed empirically
@@ -4718,6 +4869,264 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       createNewTab(tpl.filename || null, tpl.content);
     }
 
+    // --- ASSET STORAGE (IndexedDB) ---
+    // tab.assets (the base64 image/PDF/drawing/audio data) used to be serialized straight into
+    // the same localStorage JSON blob as everything else -- fine for a few small pasted images,
+    // but a multi-page PDF import easily produces tens of MB of base64, which pushed the whole
+    // blob past the browser's localStorage quota (a handful of MB, non-negotiable, not even a
+    // fixed number across browsers). IndexedDB gets a per-origin quota that's a share of free
+    // disk space (typically hundreds of MB to GB), so assets live there instead. Everything that
+    // *reads* tab.assets elsewhere in this app (the renderer, exports, alt-text editing, TTS
+    // image announcements, ...) is completely unchanged -- tab.assets is still a plain in-memory
+    // object at all times, just no longer what saveStateToLocalStorage() persists. Only two things
+    // had to change: hydrating it lazily from IndexedDB (see ensureTabAssetsHydrated(), called
+    // from switchTab()) instead of it always already being there from the localStorage blob, and
+    // writing to IndexedDB instead of relying on the localStorage blob to carry it forward.
+    const ASSET_DB_NAME = 'md_studio_assets_db';
+    const ASSET_DB_VERSION = 1;
+    const ASSET_STORE = 'assets';
+    let assetDbPromise = null;
+
+    function openAssetDb() {
+      if (assetDbPromise) return assetDbPromise;
+      assetDbPromise = new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) { reject(new Error('IndexedDB nicht verfügbar')); return; }
+        const req = indexedDB.open(ASSET_DB_NAME, ASSET_DB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          const store = db.objectStoreNames.contains(ASSET_STORE)
+            ? req.transaction.objectStore(ASSET_STORE)
+            : db.createObjectStore(ASSET_STORE, { keyPath: 'key' });
+          if (!store.indexNames.contains('syncId')) {
+            store.createIndex('syncId', 'syncId', { unique: false });
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      return assetDbPromise;
+    }
+
+    function assetDbKey(syncId, assetId) {
+      return syncId + '::' + assetId;
+    }
+
+    // Fire-and-forget from every asset-write call site (insertImageAsset, insertNewDrawingAsset,
+    // saveDrawing, insertAudioAsset, and the WebDAV pull paths below) -- never awaited by its
+    // caller, so a slow or failing IndexedDB write never blocks typing/inserting. Failures are
+    // reported through markTabLocalSaveIssue() (see below) rather than thrown, mirroring
+    // saveStateToLocalStorage()'s own quota-error handling.
+    async function persistAssetToIndexedDb(tab, assetId) {
+      if (!tab || !tab.syncId || !tab.assets) return;
+      const dataUrl = tab.assets[assetId];
+      if (dataUrl === undefined) return;
+      // Keeps the sync-snapshot fingerprint cache (see getAssetFingerprint()/tabSyncSnapshot()
+      // below) in sync with the in-memory truth right away, synchronously, before the IndexedDB
+      // write below even starts -- the cache describes "what's in tab.assets right now", which is
+      // true regardless of whether that write ends up succeeding.
+      if (!tab._cachedAssetFingerprint) tab._cachedAssetFingerprint = {};
+      tab._cachedAssetFingerprint[assetId] = cheapHash(dataUrl);
+      try {
+        const db = await openAssetDb();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(ASSET_STORE, 'readwrite');
+          tx.objectStore(ASSET_STORE).put({ key: assetDbKey(tab.syncId, assetId), syncId: tab.syncId, dataUrl });
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+        clearTabLocalSaveIssue(tab);
+      } catch (err) {
+        console.warn('Asset konnte nicht in IndexedDB gespeichert werden:', err);
+        markTabLocalSaveIssue(tab, 'Bild-/Anhangsdaten konnten nicht lokal gespeichert werden (Speicherplatz?).');
+      }
+    }
+
+    async function idbLoadAssetsForTab(syncId) {
+      const db = await openAssetDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(ASSET_STORE, 'readonly');
+        const index = tx.objectStore(ASSET_STORE).index('syncId');
+        const req = index.openCursor(IDBKeyRange.only(syncId));
+        const result = {};
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (cursor) {
+            const assetId = cursor.value.key.slice((syncId + '::').length);
+            result[assetId] = cursor.value.dataUrl;
+            cursor.continue();
+          } else {
+            resolve(result);
+          }
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // Like idbLoadAssetsForTab() but only sums byte sizes instead of keeping the actual data --
+    // used by computeOpenTabsDataSize() (see updateStorageIndicator()) to report a not-yet-
+    // hydrated tab's asset size without pulling potentially many MB permanently into tab.assets
+    // just to answer a footer stat (that's the whole point ensureTabAssetsHydrated() avoids doing
+    // upfront for tabs the user hasn't actually opened this session).
+    async function idbGetAssetsSizeForTab(syncId) {
+      if (!syncId) return 0;
+      try {
+        const db = await openAssetDb();
+        return await new Promise((resolve, reject) => {
+          const tx = db.transaction(ASSET_STORE, 'readonly');
+          const index = tx.objectStore(ASSET_STORE).index('syncId');
+          const req = index.openCursor(IDBKeyRange.only(syncId));
+          let total = 0;
+          req.onsuccess = () => {
+            const cursor = req.result;
+            if (cursor) {
+              total += estimateDataUrlBytes(cursor.value.dataUrl || '');
+              cursor.continue();
+            } else {
+              resolve(total);
+            }
+          };
+          req.onerror = () => reject(req.error);
+        });
+      } catch (err) {
+        console.warn('Asset-Größe konnte nicht aus IndexedDB ermittelt werden:', err);
+        return 0;
+      }
+    }
+
+    async function idbDeleteAssetsForTab(syncId) {
+      if (!syncId) return;
+      try {
+        const db = await openAssetDb();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(ASSET_STORE, 'readwrite');
+          const index = tx.objectStore(ASSET_STORE).index('syncId');
+          const req = index.openCursor(IDBKeyRange.only(syncId));
+          req.onsuccess = () => {
+            const cursor = req.result;
+            if (cursor) { cursor.delete(); cursor.continue(); }
+          };
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch (err) {
+        console.warn('Assets eines geschlossenen Tabs konnten nicht aus IndexedDB entfernt werden:', err);
+      }
+    }
+
+    // Used by the WebDAV pull paths (applyRemoteTabToLocal/addRemoteTabAsNewLocalTab), which set
+    // tab.assets wholesale from a freshly-pulled remote payload rather than adding one asset at a
+    // time -- clears out this tab's previous IndexedDB entries first (the pulled version may have
+    // dropped an asset the old local version had) and writes the current set fresh, rather than
+    // reusing persistAssetToIndexedDb() per key and risking stale leftovers.
+    async function persistAllAssetsToIndexedDb(tab) {
+      if (!tab || !tab.syncId) return;
+      // Reset rather than incrementally patch -- a wholesale replacement (this is only ever
+      // called after tab.assets was just replaced entirely from a remote pull) can drop assets
+      // the old local version had, and a stale leftover fingerprint would make tabSyncSnapshot()
+      // think an asset the tab no longer even has is still there.
+      tab._cachedAssetFingerprint = {};
+      await idbDeleteAssetsForTab(tab.syncId);
+      await Promise.all(Object.keys(tab.assets || {}).map(assetId => persistAssetToIndexedDb(tab, assetId)));
+    }
+
+    // Lazily loads a tab's assets from IndexedDB the first time it's actually switched to (see
+    // switchTab()), rather than upfront for every tab at startup -- a session with many
+    // image-heavy documents shouldn't have to load all of them just to show the first one.
+    // Concurrent callers (e.g. switching to the same tab twice in quick succession before the
+    // first load finishes) all await the same in-flight promise rather than racing separate loads.
+    async function ensureTabAssetsHydrated(tab) {
+      if (!tab || tab._assetsHydrated) return;
+      if (!tab._hydratingPromise) {
+        tab._hydratingPromise = (async () => {
+          if (tab.syncId) {
+            try {
+              const loaded = await idbLoadAssetsForTab(tab.syncId);
+              // Merge with whatever's already in memory (should normally be empty pre-hydration,
+              // but favors in-memory content on the off chance something raced ahead of us).
+              tab.assets = Object.assign({}, loaded, tab.assets);
+            } catch (err) {
+              console.warn('Assets konnten nicht aus IndexedDB geladen werden:', err);
+              markTabLocalSaveIssue(tab, 'Bild-/Anhangsdaten konnten nicht geladen werden.');
+            }
+          }
+          tab._assetsHydrated = true;
+        })();
+      }
+      await tab._hydratingPromise;
+    }
+
+    // Cheap, fast, non-cryptographic string hash (FNV-1a) -- used only to fingerprint an asset's
+    // content for WebDAV's lastSyncedSnapshot change-detection (see tabSyncSnapshot() below), not
+    // for anything security-relevant. Good enough to tell "this asset's bytes probably changed"
+    // without embedding the actual multi-MB bytes into the snapshot string itself.
+    function cheapHash(str) {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = (h * 0x01000193) >>> 0;
+      }
+      return h.toString(36) + '_' + str.length;
+    }
+
+    // Reduces an assets map ({assetId: dataUrl, ...}, easily several MB per entry for a
+    // PDF-derived drawing) down to {assetId: cheapHash(dataUrl), ...} -- a few bytes per entry.
+    // Used by tabSyncSnapshot()/remoteTabSnapshot() below so lastSyncedSnapshot (which
+    // saveStateToLocalStorage() persists to localStorage) only ever needs to detect *whether* an
+    // asset changed, not carry a full copy of it -- carrying the full copy would defeat the whole
+    // point of moving assets to IndexedDB the moment WebDAV sync is turned on, since this exact
+    // string is what used to smuggle every asset's real bytes right back into localStorage. Keys
+    // are sorted so two functionally-identical assets maps always fingerprint to the same string
+    // regardless of insertion order -- both tabSyncSnapshot() and remoteTabSnapshot() call this
+    // same helper, so a local and a remote copy of the same content always compare equal.
+    function fingerprintAssets(assets) {
+      const out = {};
+      Object.keys(assets || {}).sort().forEach(id => { out[id] = cheapHash(assets[id] || ''); });
+      return out;
+    }
+
+    // tabSyncSnapshot() below is called on every WebDAV sync attempt *and* on every tab-bar
+    // render (to show the green "synced" accent -- see renderTabs()), the latter of which fires
+    // on essentially every keystroke. Re-hashing every asset's full data on every keystroke would
+    // reintroduce a per-keystroke performance cliff on any tab with a large embedded PDF/drawing,
+    // so tab._cachedAssetFingerprint (kept current by persistAssetToIndexedDb()/
+    // persistAllAssetsToIndexedDb() at the handful of places tab.assets actually changes) is used
+    // instead of recomputing from scratch -- this lazily computes-and-caches it once (e.g. for a
+    // freshly hydrated tab whose cache hasn't been touched yet this session) and reuses it after.
+    function getAssetFingerprint(tab) {
+      if (!tab._cachedAssetFingerprint) {
+        tab._cachedAssetFingerprint = {};
+        Object.keys(tab.assets || {}).forEach(id => { tab._cachedAssetFingerprint[id] = cheapHash(tab.assets[id] || ''); });
+      }
+      return tab._cachedAssetFingerprint;
+    }
+
+    // Same key-sorting fingerprintAssets() does, just applied to an already-computed fingerprint
+    // object (from the cache above) instead of hashing a raw assets map from scratch.
+    function sortedFingerprint(fp) {
+      const out = {};
+      Object.keys(fp || {}).sort().forEach(id => { out[id] = fp[id]; });
+      return out;
+    }
+
+    // In-memory-only (never persisted) per-tab flag for the tab-bar warning badge -- set whenever
+    // this tab's own data (its localStorage-side fields, or one of its IndexedDB-side assets)
+    // most recently failed to save locally, cleared the moment a subsequent save for it succeeds.
+    // Deliberately separate from tab.isModified (the existing "*", which tracks unsaved changes
+    // against the file the user opened/last hit "Speichern" on) -- a document can be fully saved
+    // to its file and still fail to persist in the browser's local cache, or vice versa, and
+    // conflating the two would hide one problem behind the other.
+    function markTabLocalSaveIssue(tab, reason) {
+      if (!tab || tab._localSaveIssue === reason) return;
+      tab._localSaveIssue = reason;
+      renderTabs();
+    }
+
+    function clearTabLocalSaveIssue(tab) {
+      if (!tab || !tab._localSaveIssue) return;
+      tab._localSaveIssue = null;
+      renderTabs();
+    }
+
     // --- LOCAL STORAGE PERSISTENCE ---
 
     function saveStateToLocalStorage(opts) {
@@ -4728,12 +5137,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         }
       }
 
+      // Deliberately no `assets` field here anymore -- tab.assets (the actual base64 image/PDF/
+      // drawing/audio bytes) lives in IndexedDB now (see the "ASSET STORAGE" block above), keyed
+      // by syncId. This blob only carries assetCounter/the id-marker-maps (all tiny) so a
+      // multi-page PDF import no longer risks pushing this single JSON string past localStorage's
+      // quota. loadStateFromLocalStorage() reads the missing field as `{}` and lazily rehydrates
+      // the real content from IndexedDB the first time each tab is switched to.
       const myTabsPayload = tabs.map(t => ({
         id: t.id,
         name: t.name,
         content: t.content,
         isModified: t.isModified,
-        assets: t.assets || {},
         assetCounter: t.assetCounter || 0,
         isDefaultName: !!t.isDefaultName,
         drawingAssetIds: t.drawingAssetIds || {},
@@ -4805,13 +5219,43 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         lastTemplateId: lastTemplateId,
         webdavPendingDeletions: webdavPendingDeletions
       };
-      localStorage.setItem('md_studio_state', JSON.stringify(state));
+      // localStorage.setItem() can throw (almost always QuotaExceededError — a tab with several
+      // embedded PDF-page/image assets easily pushes the whole serialized state past the
+      // browser's per-origin quota, which itself isn't a fixed number, hence this being
+      // intermittent). This function is called from dozens of places that never expect it to
+      // throw — including applyTheme(), which switchTab() calls *before* its own
+      // updatePreview()/renderTabs() — so letting this propagate used to silently abort whatever
+      // caller was mid-flight right at this point. In switchTab() specifically, that meant the
+      // new tab's content was already flushed into the editor but the preview and tab bar never
+      // re-rendered, and since the quota problem doesn't go away on its own, *every* subsequent
+      // tab switch aborted at the same spot — looking exactly like the whole app had frozen.
+      // Catching it here instead means a full-storage tab keeps behaving normally in memory; it
+      // just stops persisting until the offending assets are removed.
+      try {
+        localStorage.setItem('md_studio_state', JSON.stringify(state));
+        localStorageQuotaWarned = false;
+        // A failed save previously flagged every open tab (see the catch branch) since this one
+        // blob covers all of them at once -- clear that flag again now that a save actually went
+        // through. Assets have their own, per-tab/per-asset IndexedDB failure tracking (see
+        // persistAssetToIndexedDb()) and are untouched here.
+        tabs.forEach(t => { if (t._localSaveIssue === LOCAL_STORAGE_ISSUE_TEXT) clearTabLocalSaveIssue(t); });
+      } catch (err) {
+        console.warn('Lokales Speichern (localStorage) fehlgeschlagen:', err);
+        if (!localStorageQuotaWarned) {
+          localStorageQuotaWarned = true;
+          showToast('Lokales Speichern fehlgeschlagen — Speicherplatz voll. Große Bilder/PDF-Seiten entfernen oder per WebDAV auslagern.');
+        }
+        // Affects every open tab at once (one shared blob) -- see markTabLocalSaveIssue()'s own
+        // comment on why this is deliberately separate from tab.isModified.
+        tabs.forEach(t => markTabLocalSaveIssue(t, LOCAL_STORAGE_ISSUE_TEXT));
+      }
       // performWebdavSync() itself calls this to persist sync bookkeeping (lastSyncedSnapshot,
       // flushing the editor into tab.content) — without this guard, every sync would reschedule
       // another sync 10s later even when nothing changed, looping against the server forever.
       if (!(opts && opts.skipWebdavDebounce)) {
         scheduleWebdavDebouncedSync();
       }
+      scheduleStorageIndicatorUpdate();
     }
 
     function loadStateFromLocalStorage() {
@@ -4845,13 +5289,37 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           // Tabs saved before WebDAV sync existed have no syncId yet; ensureSyncId() below
           // mints one on first use rather than every tab needing a migration pass here.
           syncId: t.syncId || null,
-          lastSyncedSnapshot: t.lastSyncedSnapshot || null
+          lastSyncedSnapshot: t.lastSyncedSnapshot || null,
+          _localSaveIssue: null
         }));
         // Backfills a permanent syncId for tabs saved before it became eager (see createNewTab)
         // -- without this, a tab from before this fix would stay syncId-less, and therefore
         // exempt from saveStateToLocalStorage()'s cross-session collision guard, until it
         // happened to go through an actual WebDAV sync.
         tabs.forEach(ensureSyncId);
+
+        // Since saveStateToLocalStorage() no longer writes `assets` at all, this field is `{}`
+        // for any tab saved by the current version -- those need lazy IndexedDB hydration on
+        // first switch (see ensureTabAssetsHydrated(), called from switchTab()). A tab saved by a
+        // *pre-migration* version of the app, though, still has its real asset data sitting right
+        // here in `t.assets` (from the localStorage blob read above) -- that data is already
+        // fully in memory, so it's marked hydrated immediately (no IndexedDB read needed), and is
+        // copied into IndexedDB in the background so it's available there from now on. Either way
+        // this pass is what "migrates" a pre-existing installation: nothing else has to run once,
+        // the very next saveStateToLocalStorage() call simply stops re-writing the (now redundant)
+        // assets field, and this same branch on an empty `assets` naturally becomes the normal
+        // steady-state path for every future load.
+        tabs.forEach(t => {
+          if (t.assets && Object.keys(t.assets).length > 0) {
+            t._assetsHydrated = true;
+            Object.keys(t.assets).forEach(assetId => {
+              persistAssetToIndexedDb(t, assetId);
+            });
+          } else {
+            t.assets = {};
+            t._assetsHydrated = false;
+          }
+        });
 
         tabIdCounter = state.tabIdCounter || (tabs.length + 1);
         currentTheme = state.currentTheme || 'theme-github-light';
@@ -4930,6 +5398,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     const WEBDAV_CONFIG_KEY = 'md_studio_webdav_config';
     let webdavConfig = null;
     let webdavSyncTimer = null;
+    // Timestamp (Date.now()-scale) the *interval-based* autosync (scheduleWebdavAutosyncTimer's
+    // own setInterval, not the debounced-on-edit or manual sync paths) is next due to fire --
+    // drives the countdown ring around #webdavSyncBtn, see updateWebdavSyncRing(). null whenever
+    // that timer isn't currently armed (autosync off, or not configured at all).
+    let webdavNextAutosyncAt = null;
     let webdavDebounceTimer = null;
     let webdavSyncInProgress = false;
     let webdavLastError = null;
@@ -4961,12 +5434,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return tab.syncId;
     }
 
+    // NOTE: `assets` here is a fingerprint map (see fingerprintAssets() above), not the real
+    // asset data -- this string is only ever used to detect *whether something changed* for the
+    // 3-way merge (see attemptWebdavSync()), never to reconstruct content from. tabToSyncPayload()
+    // below is the one that carries the real bytes to the server, deliberately unfingerprinted.
     function tabSyncSnapshot(tab) {
-      return JSON.stringify({ name: tab.name, content: tab.content, assets: tab.assets || {}, drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, pdfDrawingAssetIds: tab.pdfDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light' });
+      return JSON.stringify({ name: tab.name, content: tab.content, assets: sortedFingerprint(getAssetFingerprint(tab)), drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, pdfDrawingAssetIds: tab.pdfDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light' });
     }
 
     function remoteTabSnapshot(rt) {
-      return JSON.stringify({ name: rt.name, content: rt.content, assets: rt.assets || {}, drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, pdfDrawingAssetIds: rt.pdfDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light' });
+      return JSON.stringify({ name: rt.name, content: rt.content, assets: fingerprintAssets(rt.assets), drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, pdfDrawingAssetIds: rt.pdfDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light' });
     }
 
     function tabToSyncPayload(t) {
@@ -5030,6 +5507,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // made. Reproduced directly with two genuinely concurrent devices (one continuously
       // editing, one only ever pulling) before this fix, and confirmed gone after it.
       t.lastSyncedSnapshot = remoteTabSnapshot(rt);
+      t._assetsHydrated = true; // already fully in memory from rt.assets above, nothing to fetch
+      persistAllAssetsToIndexedDb(t);
       syncNativeFileIfLinked(t);
     }
 
@@ -5063,12 +5542,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         csvDelimiter: remoteTabData.csvDelimiter || null,
         theme: remoteTabData.theme || 'theme-github-light',
         syncId: nameSuffix ? null : remoteTabData.syncId,
-        lastSyncedSnapshot: nameSuffix ? null : remoteTabSnapshot(remoteTabData)
+        lastSyncedSnapshot: nameSuffix ? null : remoteTabSnapshot(remoteTabData),
+        _assetsHydrated: true, // already fully in memory from remoteTabData.assets above
+        _localSaveIssue: null
       };
       // See createNewTab()'s matching call -- a 'both'-decision fork (nameSuffix given) would
       // otherwise sit with syncId: null until its first sync, vulnerable in the meantime to the
       // same cross-session tab.id collision saveStateToLocalStorage() guards against.
       ensureSyncId(newTab);
+      persistAllAssetsToIndexedDb(newTab);
       tabs.push(newTab);
       return newTab;
     }
@@ -5184,6 +5666,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // after a *successful* push, never mid-attempt, so re-running this against the now-current
     // local tabs and a fresh remote fetch is just another sync pass, not a partial/inconsistent one.
     async function attemptWebdavSync() {
+      // tabToSyncPayload()/tabSyncSnapshot() below read t.assets for *every* open tab, including
+      // ones the user never switched to since the last page load -- those still have t.assets ===
+      // {} until ensureTabAssetsHydrated() lazily fills it in (see switchTab()). Without hydrating
+      // everything up front here, a background sync could push an empty assets object for such a
+      // tab and silently wipe out its real data on the server. One-time cost per session: after
+      // this, every open tab stays hydrated for the rest of the session (ensureTabAssetsHydrated
+      // is a no-op once tab._assetsHydrated is true), so this only actually does work once.
+      await Promise.all(tabs.map(ensureTabAssetsHydrated));
+
       const remoteFetch = await fetchRemoteWebdavState();
       const remoteTabs = (remoteFetch.state && remoteFetch.state.tabs) || [];
       const remoteById = new Map(remoteTabs.map(rt => [rt.syncId, rt]));
@@ -5360,7 +5851,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (!silent) showToast('Synchronisierung abgeschlossen');
       } catch (err) {
         console.warn('WebDAV-Sync fehlgeschlagen:', err);
-        updateWebdavSyncUi('error', describeWebdavError(err));
+        const message = describeWebdavError(err);
+        // Persisted (unlike the plain webdavLastError JS variable) so the sync button's
+        // "connected" state -- see updateWebdavSyncUi() -- reflects a failure even right after a
+        // page reload, before the next autosync attempt has had a chance to run and rediscover it.
+        if (webdavConfig) {
+          webdavConfig.lastSyncError = message;
+          saveWebdavConfig();
+        }
+        updateWebdavSyncUi('error', message);
         if (!silent) showToast('Sync fehlgeschlagen');
       } finally {
         webdavSyncInProgress = false;
@@ -5420,8 +5919,42 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const btn = document.getElementById('webdavSyncBtn');
       if (btn) btn.classList.toggle('syncing', state === 'syncing');
       webdavLastError = state === 'error' ? errorMsg : null;
+      // "connected" (the hellgrün state) deliberately means "verified working", not just
+      // "credentials saved" -- isWebdavConfigured() alone would also turn green for a wrong
+      // password or an unreachable server. Requires at least one sync to have actually gone
+      // through (lastSyncAt) *and* no error since -- a fresh failure after a long healthy streak
+      // immediately turns it back off rather than trusting a stale lastSyncAt.
+      if (btn) {
+        btn.classList.toggle('connected', !!(isWebdavConfigured() && webdavConfig && webdavConfig.lastSyncAt && !webdavLastError));
+      }
       updateWebdavStatusText();
     }
+
+    const WEBDAV_SYNC_RING_CIRCUMFERENCE = 2 * Math.PI * 17; // matches the r=17 <circle> in the header markup
+
+    // Draws how far through the current autosync interval we are, as a ring around
+    // #webdavSyncBtn -- full circle = an interval-based autosync is about to fire. Ticked once a
+    // second by a single always-on interval (see below); cheap to call when there's nothing to
+    // show (autosync off/unconfigured), so no separate start/stop bookkeeping is needed for that
+    // timer itself, unlike scheduleWebdavAutosyncTimer()'s own setInterval.
+    function updateWebdavSyncRing() {
+      const ring = document.getElementById('webdavSyncRingProgress');
+      if (!ring) return;
+
+      if (!(isWebdavConfigured() && webdavConfig && webdavConfig.autosyncEnabled && webdavNextAutosyncAt)) {
+        ring.classList.add('hidden');
+        return;
+      }
+
+      const ms = Math.max(1, webdavConfig.autosyncIntervalMinutes || 5) * 60 * 1000;
+      const remaining = webdavNextAutosyncAt - Date.now();
+      const elapsedFraction = Math.min(1, Math.max(0, 1 - remaining / ms));
+      ring.classList.remove('hidden');
+      ring.style.strokeDasharray = String(WEBDAV_SYNC_RING_CIRCUMFERENCE);
+      ring.style.strokeDashoffset = String(WEBDAV_SYNC_RING_CIRCUMFERENCE * (1 - elapsedFraction));
+    }
+
+    setInterval(updateWebdavSyncRing, 1000);
 
     function updateWebdavStatusText() {
       const el = document.getElementById('webdavStatusText');
@@ -5490,10 +6023,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         clearInterval(webdavSyncTimer);
         webdavSyncTimer = null;
       }
+      webdavNextAutosyncAt = null;
       if (webdavConfig && webdavConfig.autosyncEnabled && isWebdavConfigured()) {
         const ms = Math.max(1, webdavConfig.autosyncIntervalMinutes || 5) * 60 * 1000;
-        webdavSyncTimer = setInterval(() => performWebdavSync({ silent: true }), ms);
+        webdavNextAutosyncAt = Date.now() + ms;
+        webdavSyncTimer = setInterval(() => {
+          // Re-armed here (not just once above) so the ring's countdown accurately restarts
+          // every cycle, not just the first one after (re)configuring sync.
+          webdavNextAutosyncAt = Date.now() + ms;
+          performWebdavSync({ silent: true });
+        }, ms);
       }
+      updateWebdavSyncRing();
     }
 
     // Debounced "sync on change": saveStateToLocalStorage() already runs after essentially every
@@ -5558,6 +6099,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // --- EMPTY STATE MANAGEMENT ---
 
     function setEmptyState() {
+      // Invalidates any switchTab() call still awaiting hydration -- e.g. the last tab was
+      // closed (removeTabFromList calls this directly, not through switchTab) while a switch to
+      // some other, now-gone tab was still in flight. See switchTab()'s own comment on why this
+      // guard matters.
+      switchTabSeq++;
       activeTabId = null;
       editor.value = '';
       editor.disabled = true;
@@ -5633,7 +6179,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return 'markdown';
     }
 
-    function createNewTab(name = null, content = null, fileHandle = null, nativeFilePath = null) {
+    // async (returns switchTab()'s own promise) specifically so a caller that needs the new tab
+    // to actually be live in the editor before doing more work -- e.g. confirmPdfImport() below,
+    // which calls insertNewDrawingAsset() (reads/writes editor.value and getCurrentTab()) right
+    // after creating the tab for a PDF's first page -- can `await createNewTab(...)`. Every other
+    // call site (the '+' button, template picker, drag-and-drop) doesn't need to and doesn't --
+    // calling an async function without awaiting it is perfectly fine, it just runs to completion
+    // in the background exactly as it always did before this was async at all.
+    //
+    // This existing as a real bug is exactly what happened here: switchTab() (below) is itself
+    // async, and confirmPdfImport() used to call createNewTab() without awaiting -- its very next
+    // lines (editor.setSelectionRange/insertNewDrawingAsset) ran synchronously, before switchTab()
+    // had gotten past its own hydration await to actually set activeTabId/editor.value to the new
+    // tab. Every asset-write call reading getCurrentTab()/editor.value in between landed on
+    // whatever tab was active *before* the import, not the new one -- reproduced directly: a
+    // multi-page PDF import's first page consistently ended up in the previously-open tab instead
+    // of the new one, while every later page (each preceded by a real `await
+    // renderPdfPageToDataUrl()`, giving switchTab() time to actually finish) landed correctly.
+    async function createNewTab(name = null, content = null, fileHandle = null, nativeFilePath = null) {
       const tabId = 'tab_' + tabIdCounter++;
       const tabName = name || 'Notiz ' + (tabs.length + 1) + '.md';
       const rawContent = content !== null ? content : (tabs.length === 0 ? defaultContent : '# ' + tabName.replace('.md', '') + '\n\n');
@@ -5684,7 +6247,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // still the *old* active tab -- switchTab(tabId) below hasn't run yet), not the
         // possibly Simple-Modus-forced currentTheme, so a new tab never picks up 'theme-clean'
         // just because it happened to be created while Simple Modus was on.
-        theme: (getCurrentTab() && getCurrentTab().theme) || currentTheme
+        theme: (getCurrentTab() && getCurrentTab().theme) || currentTheme,
+        // A brand-new tab's assets (empty, or already extracted from a pasted/opened document
+        // with inline images -- see extractInlineImagesToAssets() above) are already fully in
+        // memory, so there's nothing for switchTab()'s lazy hydration to fetch.
+        _assetsHydrated: true,
+        _localSaveIssue: null
       };
 
       // Minted eagerly, not lazily on first WebDAV sync -- see ensureSyncId() and the
@@ -5692,12 +6260,42 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // tab needs a real cross-session-unique identity from the moment it's created, not just
       // once it's actually synced.
       ensureSyncId(newTab);
+      // Any images extracted above still need to actually land in IndexedDB, not just in memory.
+      Object.keys(assets).forEach(assetId => persistAssetToIndexedDb(newTab, assetId));
       tabs.push(newTab);
       enableEditorUI();
-      switchTab(tabId);
+      return switchTab(tabId);
     }
 
-    function switchTab(id) {
+    // Bumped by every switchTab() call (and setEmptyState()) so an in-flight call can tell it's
+    // been superseded by a newer one issued while it was awaiting hydration (see below) -- e.g.
+    // two rapid clicks on different tabs before the first click's async work finishes.
+    let switchTabSeq = 0;
+
+    // async since a tab's assets may need a lazy IndexedDB fetch (see ensureTabAssetsHydrated())
+    // before there's anything meaningful to render. Most call sites don't depend on completion
+    // (the tab-bar onclick, the '+' button) and are fine leaving this as fire-and-forget; a few
+    // (createNewTab() above, when its own caller needs the new tab to actually be live before
+    // doing more -- see its comment) instead `await` it or return its promise onward. Two
+    // overlapping calls (e.g. a second click before the first's hydration settles) need careful
+    // handling regardless: activeTabId/editor.value must never be touched until *after* the
+    // await, all in one synchronous block, and only by whichever call is still current by then.
+    // An earlier version set activeTabId synchronously *before* the hydration await and only
+    // flushed editor.value into the outgoing tab *after* it -- for a brief window activeTabId
+    // pointed at the new tab while editor.value still held the old tab's text, and a second
+    // switchTab() call landing in that window would flush that stale editor.value into whatever
+    // tab activeTabId now named, corrupting it. Reproduced directly by firing two switchTab()
+    // calls back to back without awaiting either. Fixed by doing nothing observable (no
+    // activeTabId/editor.value/tab.content writes) until past the guard below.
+    async function switchTab(id) {
+      const mySeq = ++switchTabSeq;
+      const targetTab = tabs.find(t => t.id === id);
+
+      if (targetTab) {
+        await ensureTabAssetsHydrated(targetTab);
+      }
+      if (mySeq !== switchTabSeq) return; // a newer switchTab()/setEmptyState() call took over
+
       if (activeTabId) {
         // Flushes a pending debounced history snapshot (see the editor's 'input' listener) before
         // leaving this tab. markActiveTabModified() already copied editor.value into
@@ -5715,7 +6313,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
 
       activeTabId = id;
-      const targetTab = getCurrentTab();
 
       if (targetTab) {
         enableEditorUI();
@@ -5746,7 +6343,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const tabIndex = tabs.findIndex(t => t.id === id);
       if (tabIndex === -1) return;
 
+      const removedTab = tabs[tabIndex];
       tabs.splice(tabIndex, 1);
+      // Its assets no longer belong to any open tab -- both call sites (an explicit close and a
+      // remote-deletion-follow) mean the same thing here: this document is gone, so its IndexedDB
+      // entries should go with it rather than lingering as orphaned data forever.
+      idbDeleteAssetsForTab(removedTab.syncId);
 
       if (tabs.length === 0) {
         setEmptyState();
@@ -5900,11 +6502,27 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return form;
     }
 
+    // True once this tab has actually been synced (not just "sync is configured") and nothing
+    // has changed locally since -- see tabSyncSnapshot()'s comment on why this comparison is
+    // cheap enough to call on every tab-bar render despite involving asset fingerprints.
+    // Gated on isWebdavConfigured() too: a tab keeps its syncId/lastSyncedSnapshot from before
+    // even if WebDAV is later disabled, and showing "synced" green while sync is off would
+    // wrongly imply it's still being kept up to date.
+    function isTabSynced(tab) {
+      return !!(isWebdavConfigured() && tab.syncId && tab.lastSyncedSnapshot && tabSyncSnapshot(tab) === tab.lastSyncedSnapshot);
+    }
+
+    const TAB_LOCAL_SAVE_WARNING_SVG = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 3L2 20H22L12 3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><line x1="12" y1="10" x2="12" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>';
+
     function renderTabs() {
       tabList.innerHTML = '';
       tabs.forEach(tab => {
         const tabEl = document.createElement('div');
-        tabEl.className = 'tab ' + (tab.id === activeTabId ? 'active' : '') + (tab.id === renamingTabId ? ' renaming' : '');
+        const classes = ['tab'];
+        if (tab.id === activeTabId) classes.push('active');
+        if (tab.id === renamingTabId) classes.push('renaming');
+        if (isTabSynced(tab)) classes.push('synced');
+        tabEl.className = classes.join(' ');
 
         if (tab.id === renamingTabId) {
           tabEl.appendChild(buildTabRenameForm(tab));
@@ -5918,14 +6536,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         const nameSpan = document.createElement('span');
         nameSpan.className = 'tab-name';
         nameSpan.textContent = tab.name + (tab.isModified ? ' *' : '');
+        tabEl.appendChild(nameSpan);
+
+        // Deliberately separate from the '*' above (tab.isModified, unsaved-vs-file) -- see
+        // markTabLocalSaveIssue()'s own comment on why the two are never conflated into one glyph.
+        if (tab._localSaveIssue) {
+          const warnEl = document.createElement('span');
+          warnEl.className = 'tab-local-save-warning';
+          warnEl.title = tab._localSaveIssue;
+          warnEl.innerHTML = TAB_LOCAL_SAVE_WARNING_SVG;
+          tabEl.appendChild(warnEl);
+        }
 
         const closeBtn = document.createElement('button');
         closeBtn.className = 'close-btn';
         closeBtn.innerHTML = '✕';
         closeBtn.onclick = (e) => closeTab(tab.id, e);
-
-        tabEl.appendChild(nameSpan);
         tabEl.appendChild(closeBtn);
+
         tabList.appendChild(tabEl);
       });
     }
@@ -7313,6 +7941,88 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       docStats.textContent = `${words} Wörter · ${chars} Zeichen`;
     }
 
+    let storageIndicatorUpdateTimeout = null;
+    // Debounced rather than called directly from saveStateToLocalStorage() (which runs after
+    // essentially every mutating action, i.e. potentially every keystroke) -- navigator.storage.
+    // estimate() is async and there's no reason to re-run it that often; this settles ~1s after
+    // the last mutation instead.
+    function scheduleStorageIndicatorUpdate() {
+      clearTimeout(storageIndicatorUpdateTimeout);
+      storageIndicatorUpdateTimeout = setTimeout(updateStorageIndicator, 1000);
+    }
+
+    // Sums the size of every currently open tab's own content (text + assets) -- distinct from
+    // navigator.storage.estimate()'s `usage` above, which reports the whole origin's storage and
+    // can include stale IndexedDB leftovers or unrelated data, not specifically "what's open in
+    // my tabs right now". For an already-hydrated tab (has been switched to this session, or was
+    // just created/pulled), tab.assets is already in memory, so summing it directly is free; a
+    // tab that's never been opened this session is queried from IndexedDB for its size only (see
+    // idbGetAssetsSizeForTab()) rather than forcing a full hydration (which would defeat the
+    // point of hydrating lazily in the first place) just to answer this footer stat.
+    async function computeOpenTabsDataSize() {
+      let total = 0;
+      for (const tab of tabs) {
+        total += new Blob([tab.content || '']).size;
+        if (tab._assetsHydrated) {
+          total += Object.values(tab.assets || {}).reduce((sum, dataUrl) => sum + estimateDataUrlBytes(dataUrl), 0);
+        } else {
+          total += await idbGetAssetsSizeForTab(tab.syncId);
+        }
+      }
+      return total;
+    }
+
+    // Shows used/total storage as a percent bar in the footer, after the word/char stats.
+    // Prefers navigator.storage.estimate(), which reports usage+quota across *all* of this
+    // origin's storage (localStorage AND IndexedDB together) against the browser's real quota --
+    // the meaningful number now that assets live in IndexedDB (see the "ASSET STORAGE" comment
+    // above), not just the small localStorage remainder. Falls back to a conservative, clearly-
+    // marked (~) estimate against localStorage's own content alone when the API isn't available
+    // (not verifiable under every context this app runs in, e.g. some file:// setups) -- no exact
+    // quota to compare against there, so this is deliberately labeled as approximate rather than
+    // presented with the same confidence as a real API-reported number.
+    async function updateStorageIndicator() {
+      const el = document.getElementById('storageIndicator');
+      if (!el) return;
+      const fillEl = el.querySelector('.footer-storage-bar-fill');
+      const textEl = el.querySelector('.footer-storage-text');
+
+      let usage = null;
+      let quota = null;
+      let approximate = false;
+
+      if (navigator.storage && navigator.storage.estimate) {
+        try {
+          const est = await navigator.storage.estimate();
+          if (typeof est.usage === 'number' && typeof est.quota === 'number' && est.quota > 0) {
+            usage = est.usage;
+            quota = est.quota;
+          }
+        } catch (err) {
+          console.warn('navigator.storage.estimate() fehlgeschlagen:', err);
+        }
+      }
+
+      if (usage === null) {
+        approximate = true;
+        const raw = localStorage.getItem('md_studio_state') || '';
+        usage = new Blob([raw]).size;
+        quota = 5 * 1024 * 1024; // conservative assumed localStorage-only quota, see comment above
+      }
+
+      const pct = quota > 0 ? Math.min(100, Math.round((usage / quota) * 100)) : 0;
+      fillEl.style.width = pct + '%';
+      fillEl.classList.toggle('warn', pct >= 70 && pct < 90);
+      fillEl.classList.toggle('critical', pct >= 90);
+
+      const openTabsSize = await computeOpenTabsDataSize();
+      textEl.textContent = (approximate ? '~' : '') + pct + '% · ' + formatBytes(openTabsSize);
+      el.title = (approximate
+        ? 'Geschätzter Speicherplatz (' + formatBytes(usage) + ' von ~' + formatBytes(quota) + ') -- genaue Browser-Speicherquote hier nicht ermittelbar.\n'
+        : 'Belegter Speicherplatz (localStorage + IndexedDB): ' + formatBytes(usage) + ' von ' + formatBytes(quota) + '\n')
+        + formatBytes(openTabsSize) + ' in ' + tabs.length + ' offenen Tab' + (tabs.length === 1 ? '' : 's') + '.';
+    }
+
     function attachTaskCheckboxListeners() {
       const checkboxes = preview.querySelectorAll('input[type="checkbox"]');
       checkboxes.forEach((cb, index) => {
@@ -8442,6 +9152,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const statusEl = document.getElementById('pdfImportStatus');
       confirmBtn.disabled = true;
       let tabCreated = false;
+      // Every page lands in tab.assets as a base64 PNG, and saveStateToLocalStorage() serializes
+      // *all* of a tab's assets into one JSON blob on every save — a many-page import can push
+      // that well past the browser's localStorage quota (a handful of MB, and not a fixed
+      // number). Rendering is already capped per-page (see PDF_PAGE_MAX_DIMENSION above), so this
+      // can't be prevented outright without hurting legibility; just add up what actually got
+      // imported and warn afterward so a since-silent quota failure (saveStateToLocalStorage()
+      // now degrades gracefully instead of throwing, see there) doesn't go unnoticed.
+      let importedBytes = 0;
 
       try {
         const baseName = fileName.replace(/\.pdf$/i, '');
@@ -8451,12 +9169,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             ? 'Seite ' + pageNum + ' wird vorbereitet… (' + (i + 1) + ' von ' + pageNumbers.length + ')'
             : 'Seite ' + pageNum + ' wird vorbereitet…';
           const dataUrl = await renderPdfPageToDataUrl(pdf, pageNum);
+          importedBytes += estimateDataUrlBytes(dataUrl);
 
           if (!tabCreated) {
             // isDefaultName ends up false (an explicit name was given), so this title can't later
             // be silently overwritten by the first-heading auto-rename the way an untitled tab
-            // would be.
-            createNewTab(baseName + '.md', '# ' + baseName + '\n\n## Seite ' + pageNum + '\n\n');
+            // would be. Must be awaited -- see createNewTab()'s own comment on the bug this
+            // fixes: without it, the insertNewDrawingAsset() call below (which reads/writes
+            // editor.value and getCurrentTab()) could run before the new tab actually becomes
+            // active, landing the first page in whatever tab was open beforehand instead.
+            await createNewTab(baseName + '.md', '# ' + baseName + '\n\n## Seite ' + pageNum + '\n\n');
             tabCreated = true;
           } else {
             // No leading blank line needed here — the previous iteration's insertNewDrawingAsset()
@@ -8467,6 +9189,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           insertNewDrawingAsset(dataUrl, true);
         }
         closePdfImportModal();
+        // 3MB is comfortably under a typical browser's localStorage quota on its own, but this
+        // tab's assets add to whatever else is already stored (other tabs, other images) — so
+        // this is a heads-up at "large enough to matter," not a hard per-import ceiling.
+        if (importedBytes > 3 * 1024 * 1024) {
+          showToast('Import umfasst ' + formatBytes(importedBytes) + ' an Bilddaten — bei vielen/großen PDF-Seiten kann die lokale Speicherung an ihre Grenze stoßen. Per WebDAV sichern empfohlen.');
+        }
       } catch (err) {
         console.warn('PDF-Seite(n) konnten nicht gerendert werden:', err);
         statusEl.textContent = 'Rendern fehlgeschlagen — bitte erneut versuchen.';
@@ -9269,6 +9997,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       tab.assetCounter = (tab.assetCounter || 0) + 1;
       const assetId = 'img_' + tab.assetCounter;
       tab.assets[assetId] = dataUrl;
+      persistAssetToIndexedDb(tab, assetId);
 
       // Trailing \n\n guarantees whatever the user types next starts on its own paragraph
       // instead of running onto the same line as the image reference (or, worse, into a
@@ -9625,6 +10354,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       tab.assetCounter = (tab.assetCounter || 0) + 1;
       const assetId = 'audio_' + tab.assetCounter;
       tab.assets[assetId] = dataUrl;
+      persistAssetToIndexedDb(tab, assetId);
       if (!tab.audioAssetIds) tab.audioAssetIds = {};
       tab.audioAssetIds[assetId] = true;
 
@@ -10511,7 +11241,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       try {
         const pngBtn = await waitFor(() => doc.querySelector('button[aria-label="Als PNG exportieren"]'));
         pngBtn.click();
-        await waitFor(() => capturedBlob !== null, 5000);
+        // Embedding the scene means Excalidraw has to serialize the *entire* scene (every
+        // embedded image's own base64 data included) into the PNG's tEXt metadata before
+        // URL.createObjectURL ever fires — for a multi-page PDF-derived drawing (each page
+        // already a several-hundred-KB-to-multi-MB image, see PDF_PAGE_MAX_DIMENSION above) that
+        // routinely takes several seconds longer than a hand-drawn scene ever would. A short
+        // timeout here doesn't stop the export — Excalidraw keeps working in the background
+        // regardless — it just makes this promise (and therefore saveDrawing()'s catch branch)
+        // give up on waiting for it too early, surfacing a spurious "Speichern fehlgeschlagen"
+        // for a save that would have succeeded seconds later. 30s comfortably covers that case
+        // while still failing fast for a genuinely broken export (missing button, crashed frame).
+        await waitFor(() => capturedBlob !== null, 30000);
       } finally {
         win.URL.createObjectURL = originalCreateObjectURL;
       }
@@ -10556,6 +11296,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       tab.assetCounter = (tab.assetCounter || 0) + 1;
       const assetId = 'img_' + tab.assetCounter;
       tab.assets[assetId] = dataUrl;
+      persistAssetToIndexedDb(tab, assetId);
       tab.drawingAssetIds[assetId] = true;
       if (isRaw) {
         tab.rawDrawingAssetIds[assetId] = true;
@@ -10599,6 +11340,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
         if (currentDrawingAssetId) {
           tab.assets[currentDrawingAssetId] = dataUrl;
+          persistAssetToIndexedDb(tab, currentDrawingAssetId);
           // This asset has now gone through a real Excalidraw export — it carries its own embedded
           // scene (size/position) from here on, so it no longer needs the "insert as fresh image"
           // treatment on a future reopen. See insertNewDrawingAsset()'s isRaw comment above.
@@ -10746,10 +11488,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // INITIALIZATION
     loadWebdavConfig();
+    // Paints the button's "connected" (hellgrün) state from the persisted lastSyncAt/error
+    // immediately, rather than leaving it in the default look until the delayed startup sync
+    // below actually completes a few seconds from now.
+    updateWebdavSyncUi(webdavConfig && webdavConfig.lastSyncError ? 'error' : 'idle', webdavConfig && webdavConfig.lastSyncError);
     scheduleWebdavAutosyncTimer();
     if (!loadStateFromLocalStorage()) {
       createNewTab();
     }
+    updateStorageIndicator();
     // Lets Simple Modus be set as the start mode via a URL query param (e.g. an installed/
     // bookmarked link with "?simple=true"), independent of whatever was last persisted.
     if (new URLSearchParams(location.search).get('simple') === 'true' && !simpleMode) {
