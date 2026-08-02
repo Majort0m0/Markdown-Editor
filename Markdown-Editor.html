@@ -6199,6 +6199,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function extractInlineImagesToAssets(content) {
       const assets = {};
       const drawingAssetIds = {};
+      const rawDrawingAssetIds = {};
+      const pdfDrawingAssetIds = {};
       let counter = 0;
       const newContent = content.replace(
         /!\[([^\]]*)\]\((data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[^)\s]+)\)/g,
@@ -6206,20 +6208,36 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           counter++;
           const assetId = 'img_' + counter;
           assets[assetId] = dataUrl;
-          // Deliberately not also marked in rawDrawingAssetIds/pdfDrawingAssetIds: this scene
-          // already went through a real Excalidraw export (it has its own embedded position/
-          // zoom), so it must take the "reopen an already-processed drawing" path in
-          // openDrawingModal() (plain zoomToFitExcalidrawScene()), not the "fresh PDF import"
-          // path (which would forcibly rescale/reposition it as if it were a brand-new page).
-          // There's no reliable way to tell a reimported PDF-derived page apart from a reimported
-          // hand-drawn one at this point -- both get treated the same, ordinary way here.
           if (pngHasEmbeddedExcalidrawScene(dataUrl)) {
+            // Already went through a real Excalidraw export at least once (it has its own
+            // embedded position/zoom), so it must take openDrawingModal()'s "reopen an already-
+            // processed drawing" path (plain zoomToFitExcalidrawScene()), not the "fresh import"
+            // path, which would forcibly rescale/reposition it as if it were brand new. There's
+            // no reliable way to tell a reimported PDF-derived page apart from a reimported
+            // hand-drawn one at this point (both are indistinguishable: "a PNG with a scene") --
+            // both get treated the same, ordinary way here.
             drawingAssetIds[assetId] = true;
+          } else if (alt === 'Das ist ein PDF.') {
+            // A PDF page that was imported but never actually opened in Excalidraw before saving
+            // never went through a real export -- confirmPdfImport() inserts the plain rendered
+            // page PNG directly (see insertNewDrawingAsset()'s isRaw branch), so there's no scene
+            // to detect above. Its default, not-yet-overwritten alt text is the only remaining
+            // signal that it came from this app's PDF import specifically, used here as a
+            // fallback -- imperfect (a manually authored image that happens to reuse this exact
+            // phrase would be misdetected; an alt text the user has since edited via the "Alt-
+            // Text" button would fall through undetected, same as any other plain image), but the
+            // closest available approximation, and correctly gets the *fresh*-import treatment
+            // (isFreshImageDrop in openDrawingModal(), i.e. forced scale/position) rather than the
+            // reopen-a-processed-drawing one, since Excalidraw has genuinely never touched this
+            // asset yet -- it's still in exactly the state confirmPdfImport() first produced.
+            drawingAssetIds[assetId] = true;
+            rawDrawingAssetIds[assetId] = true;
+            pdfDrawingAssetIds[assetId] = true;
           }
           return '![' + alt + '](asset:' + assetId + ')';
         }
       );
-      return { content: newContent, assets, drawingAssetIds };
+      return { content: newContent, assets, drawingAssetIds, rawDrawingAssetIds, pdfDrawingAssetIds };
     }
 
     function inlineAssetsIntoContent(content, assets) {
@@ -6282,9 +6300,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // elsewhere, or from before this app stored images out-of-line) into the asset map too,
       // so the source stays manageable regardless of where the content came from. Doesn't apply
       // to CSV/JSON — there's no markdown image syntax to extract there.
-      const { content: tabContent, assets, drawingAssetIds: extractedDrawingAssetIds } = fileType === 'markdown'
+      const {
+        content: tabContent, assets,
+        drawingAssetIds: extractedDrawingAssetIds,
+        rawDrawingAssetIds: extractedRawDrawingAssetIds,
+        pdfDrawingAssetIds: extractedPdfDrawingAssetIds
+      } = fileType === 'markdown'
         ? extractInlineImagesToAssets(rawContent)
-        : { content: rawContent, assets: {}, drawingAssetIds: {} };
+        : { content: rawContent, assets: {}, drawingAssetIds: {}, rawDrawingAssetIds: {}, pdfDrawingAssetIds: {} };
 
       const newTab = {
         id: tabId,
@@ -6305,11 +6328,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         isDefaultName: name === null,
         // Restores editability for a drawing/PDF-page image that was previously saved to a real
         // .md file and is now being reopened -- see extractInlineImagesToAssets()'s own comment
-        // on how this is detected (an embedded Excalidraw scene inside the PNG itself) and why
-        // rawDrawingAssetIds/pdfDrawingAssetIds are deliberately left empty here.
+        // on how this is detected (an embedded Excalidraw scene inside the PNG itself, or --
+        // for a PDF page never yet opened in Excalidraw at all, which has no scene to detect --
+        // its default, unedited alt text as a fallback signal).
         drawingAssetIds: extractedDrawingAssetIds,
-        rawDrawingAssetIds: {},
-        pdfDrawingAssetIds: {},
+        rawDrawingAssetIds: extractedRawDrawingAssetIds,
+        pdfDrawingAssetIds: extractedPdfDrawingAssetIds,
         audioAssetIds: {},
         syncId: null,
         lastSyncedSnapshot: null,
