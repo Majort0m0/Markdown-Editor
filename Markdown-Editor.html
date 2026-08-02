@@ -11546,13 +11546,35 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     // INITIALIZATION
+    const initUrlParams = new URLSearchParams(location.search);
+    // "?localstorage=false" -- a deliberately blank/isolated start, ignoring every note this
+    // browser has saved (e.g. for a demo, a shared kiosk link, or a clean testing session)
+    // without that being a *destructive* look -- nothing already in localStorage is read, let
+    // alone touched or overwritten; it just isn't loaded into this particular page load. Checked
+    // up front, before loadStateFromLocalStorage() would otherwise run, since the whole point is
+    // to skip that call outright rather than load-then-discard.
+    const skipLocalStorage = initUrlParams.get('localstorage') === 'false';
+    const hasUrlImportParam = !!initUrlParams.get('url');
+
     loadWebdavConfig();
     // Paints the button's "connected" (hellgrün) state from the persisted lastSyncAt/error
     // immediately, rather than leaving it in the default look until the delayed startup sync
     // below actually completes a few seconds from now.
     updateWebdavSyncUi(webdavConfig && webdavConfig.lastSyncError ? 'error' : 'idle', webdavConfig && webdavConfig.lastSyncError);
     scheduleWebdavAutosyncTimer();
-    if (!loadStateFromLocalStorage()) {
+    if (skipLocalStorage) {
+      // "...außer über den Parameter url wird eine Notiz übergeben, dann wird nur diese geladen":
+      // if a ?url= import is about to happen below, don't also create the normal blank/Willkommen
+      // fallback tab first -- setEmptyState() (no tabs, editor disabled) is the correct in-between
+      // state until handleUrlParamImport() populates the one tab it fetches. Without an ?url=,
+      // the blank fallback *is* the whole point of this param, so it's the same createNewTab()
+      // call a genuinely first-ever visit (empty localStorage) would already take.
+      if (hasUrlImportParam) {
+        setEmptyState();
+      } else {
+        createNewTab();
+      }
+    } else if (!loadStateFromLocalStorage()) {
       createNewTab();
     }
     // Not awaited -- fire-and-forget like the delayed WebDAV startup sync below; switchTab()'s own
@@ -11562,7 +11584,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     updateStorageIndicator();
     // Lets Simple Modus be set as the start mode via a URL query param (e.g. an installed/
     // bookmarked link with "?simple=true"), independent of whatever was last persisted.
-    if (new URLSearchParams(location.search).get('simple') === 'true' && !simpleMode) {
+    if (initUrlParams.get('simple') === 'true' && !simpleMode) {
       enterSimpleMode();
       saveStateToLocalStorage();
     }
@@ -11571,14 +11593,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // "?view=source". Applied *after* the Simple-Modus check above so it has the final say even
     // when combined with "?simple=true" in the same link (Simple Modus's own showEditor/
     // showPreview preset would otherwise win if this ran first).
-    const viewParam = new URLSearchParams(location.search).get('view');
+    const viewParam = initUrlParams.get('view');
     if (viewParam === 'source' || viewParam === 'preview' || viewParam === 'split') {
       showEditor = viewParam !== 'preview';
       showPreview = viewParam !== 'source';
       applyPaneVisibility();
       saveStateToLocalStorage();
     }
-    if (isWebdavConfigured()) {
+    // Also skipped under skipLocalStorage: an automatic pull here would otherwise repopulate a
+    // deliberately blank/isolated session with every note synced to this WebDAV account within
+    // seconds of it loading, defeating the entire point of the param. A manual sync click still
+    // works as normal -- only this passive, load-time pull is suppressed.
+    if (isWebdavConfigured() && !skipLocalStorage) {
       // Slight delay so a silent startup sync doesn't compete with the rest of the app
       // still wiring itself up (theme, pane visibility, etc.).
       setTimeout(() => performWebdavSync({ silent: true }), 1500);

@@ -276,7 +276,7 @@ Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere An
 
 ## 18. Direktlinks mit URL-Parametern
 
-An die Adresse der App lassen sich Parameter anhängen, um sie in einem bestimmten Zustand zu öffnen — praktisch für Lesezeichen, geteilte Links oder eigene Verknüpfungen (z. B. auf dem Startbildschirm eines Tablets). Alle drei Parameter lassen sich auch kombinieren (`?view=preview&url=...`).
+An die Adresse der App lassen sich Parameter anhängen, um sie in einem bestimmten Zustand zu öffnen — praktisch für Lesezeichen, geteilte Links oder eigene Verknüpfungen (z. B. auf dem Startbildschirm eines Tablets). Alle Parameter lassen sich auch kombinieren (`?localstorage=false&view=preview&url=...`).
 
 ### Startansicht festlegen: `?view=`
 
@@ -308,6 +308,20 @@ https://majort0m0.github.io/Markdown-Editor/?url=https://beispiel.de/pfad/notiz.
 4. Wird derselbe Link später erneut geöffnet, erkennt die App anhand der bereits im Browser gespeicherten Notizen, dass diese Datei schon einmal importiert wurde, und öffnet stattdessen einfach den bestehenden Tab — es wird also nicht bei jedem Klick eine neue Kopie angelegt.
 
 **Wichtige Einschränkung:** Das automatische Laden funktioniert nur, wenn der Server, auf dem die Datei liegt, Zugriffe von anderen Webseiten aus erlaubt (CORS-Header). Die meisten normalen Webserver tun das standardmäßig nicht — zuverlässig funktioniert es z. B. mit einer GitHub-„raw"-Datei-Adresse oder einem selbst dafür eingerichteten Server. Schlägt das Laden fehl (falsche Adresse, Datei nicht erreichbar, kein Zugriff erlaubt), erscheint eine entsprechende Fehlermeldung und die App startet stattdessen normal.
+
+### Blank starten, ohne gespeicherte Notizen: `?localstorage=false`
+
+Startet die App bewusst „leer", ohne die im Browser gespeicherten Notizen zu laden — praktisch für eine Vorführung, einen gemeinsam genutzten Rechner/Kiosk-Link oder einen sauberen Testlauf, bei dem die eigenen Notizen nicht in der Tableiste auftauchen sollen:
+
+```
+https://majort0m0.github.io/Markdown-Editor/?localstorage=false
+```
+
+- **Allein verwendet** (`?localstorage=false`) startet die App genau wie bei einem allerersten Besuch, mit der leeren „Willkommen"-Notiz — die eigenen gespeicherten Notizen werden dabei **nicht gelesen**, bleiben aber vollständig unangetastet im Browser gespeichert.
+- **Zusammen mit `?url=`** (`?localstorage=false&url=https://beispiel.de/notiz.md`) wird ausschließlich die über `?url=` angegebene Notiz geöffnet — auch die „Willkommen"-Notiz erscheint in diesem Fall nicht.
+- Eine automatische WebDAV-Synchronisierung beim Start wird in diesem Modus ebenfalls übersprungen (sie würde sonst die eigenen Notizen ohnehin gleich wieder in die „leere" Sitzung hineinsynchronisieren) — ein manueller Klick auf „🔄 Jetzt synchronisieren" funktioniert aber weiterhin normal.
+
+**Wichtig zu wissen:** Dieser Modus ist nicht wie ein „Inkognito-Fenster", das nichts speichert — er blendet beim Start lediglich die vorhandenen Notizen aus. Wird während einer solchen Sitzung etwas geschrieben oder verändert, speichert die App das ganz normal wie immer; beim nächsten Öffnen der App **ohne** diesen Parameter erscheinen dann sowohl die ursprünglichen Notizen als auch alles, was währenddessen neu entstanden ist.
 
 ---
 
