@@ -12,7 +12,7 @@ Markdown Studio läuft komplett im Browser, ohne Installation und ohne Server �
 4. [Tabellen und CSV](#4-tabellen-und-csv)
 5. [Bilder, Fotos, Zeichnungen und Piktogramme einfügen](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)
 6. [PDF-Dateien als Arbeitsblatt bearbeiten](#6-pdf-dateien-als-arbeitsblatt-bearbeiten)
-7. [Audio und Video einbetten](#7-audio-und-video-einbetten)
+7. [Audio, Video und Web-Einbettungen](#7-audio-video-und-web-einbettungen)
 8. [Inhaltsverzeichnis-Panel in der Vorschau](#8-inhaltsverzeichnis-panel-in-der-vorschau)
 9. [Vorlesemodus](#9-vorlesemodus)
 10. [Präsentationen erstellen](#10-präsentationen-erstellen)
@@ -24,6 +24,7 @@ Markdown Studio läuft komplett im Browser, ohne Installation und ohne Server �
 16. [Speicherplatz und Datenschutz](#16-speicherplatz-und-datenschutz)
 17. [Tipps und häufige Fragen](#17-tipps-und-häufige-fragen)
 18. [Direktlinks mit URL-Parametern](#18-direktlinks-mit-url-parametern)
+19. [Canvas-Modus (freie Notizfläche)](#19-canvas-modus-freie-notizfläche)
 
 ---
 
@@ -77,7 +78,7 @@ Die Formatierungsleiste unter der Tableiste bietet:
 | Listen | Aufzählung, Nummerierte Liste, Aufgabenliste (Checkbox) |
 | Einzug | Ausrücken (`Umschalt`+`Tab`), Einzug (`Tab`) |
 | Blockelemente | Zitat, Code (Inline), Code-Block, Trennlinie |
-| Verweise & Medien | Link, Bild, Foto, Zeichnung, Sprachaufnahme, Video, Tabelle |
+| Verweise & Medien | Link, Web-Einbettung, Bild, Foto, Zeichnung, Sprachaufnahme, Video, Tabelle |
 
 **Toggle-Verhalten:** jeder Formatierungs-Button erkennt, ob die Formatierung am Cursor bereits aktiv ist, und hebt sie dann wieder auf, statt sie doppelt anzuwenden — z. B. macht ein zweiter Klick auf „Fett" innerhalb von fettem Text den Text wieder normal. Der aktuell aktive Zustand wird in der Werkzeugleiste farblich hervorgehoben.
 
@@ -157,11 +158,13 @@ Eine sehr nützliche Funktion für Arbeitsblätter, Formulare oder gescannte Dok
 
 **Hinweis bei großen/mehrseitigen PDFs:** Da jede Seite als Bild eingebettet wird, kann das Speichern einer sehr großen, mit vielen Anmerkungen versehenen Seite spürbar länger dauern — die App wartet in diesem Fall bis zu 30 Sekunden, bevor sie einen Fehler meldet; ein erneuter Klick auf „Speichern" hilft, falls es doch einmal zu einer Fehlermeldung kommt. Bei sehr vielen/großen importierten Seiten weist die App zusätzlich per Hinweis auf hohen Speicherbedarf hin und empfiehlt, die Notiz per WebDAV zu sichern (siehe [Abschnitt 13](#13-webdav-synchronisierung-zwischen-mehreren-geräten) und [Abschnitt 16](#16-speicherplatz-und-datenschutz)).
 
-## 7. Audio und Video einbetten
+## 7. Audio, Video und Web-Einbettungen
 
-### Sprachaufnahme
+### Sprachaufnahme und Audiodateien
 
 **🎙️ Sprachaufnahme einfügen** startet eine Audioaufnahme über das Mikrofon des Geräts; erneutes Klicken beendet sie. Die Aufnahme wird an der Cursorposition eingefügt und ist in der Vorschau über einen normalen Audio-Player abspielbar. Auch hier gilt: Mikrofon-Berechtigung und eine sichere Verbindung sind nötig.
+
+Eine bereits vorhandene Audiodatei (`.wav`, `.ogg`, `.mp3`, `.m4a`) lässt sich genauso einfach einfügen wie ein Bild — auf denselben drei Wegen: **Copy-Paste**, **Drag & Drop** ins Editorfenster oder **📂 Öffnen** (Dateidialog). In allen drei Fällen landet die Datei als abspielbarer Audio-Player an der Cursorposition, statt (wie andere Dateiformate) als eigener neuer Tab geöffnet zu werden.
 
 ### Video einbetten
 
@@ -173,6 +176,21 @@ Eine sehr nützliche Funktion für Arbeitsblätter, Formulare oder gescannte Dok
 
 Die Vorschau zeigt automatisch einen eingebetteten Player statt eines einfachen Links.
 
+### Web-Einbettungen (iframe)
+
+**🌐 Web-Einbettung einfügen** (in der Formatierungsleiste zwischen Link und Bild) fügt ein einbettbares Fenster (iframe) ein, mit dem sich eine beliebige Webseite oder ein Web-Widget direkt im Dokument anzeigen lässt — z. B. eine interaktive Karte, ein Online-Formular oder ein anderes einbettbares Element. Der Cursor landet direkt zwischen den Anführungszeichen von `src=""`, bereit für die einzubettende Adresse.
+
+Anders als bei Bildern oder Videos wird hier der vollständige, roh editierbare HTML-Code eingefügt, nicht nur eine kurze Referenz — alle üblicherweise anpassbaren Eigenschaften stehen direkt sichtbar im Quelltext und lassen sich dort von Hand nachträglich ändern, u. a.:
+
+| Eigenschaft | Bedeutung |
+|---|---|
+| `src` | Adresse der einzubetten Seite (leer vorbelegt) |
+| `width` / `height` | Breite und Höhe des eingebetteten Fensters |
+| `title` | Alt-Text-Gegenstück fürs Einbetten — wird im [Vorlesemodus](#9-vorlesemodus) vorgelesen |
+| `allowfullscreen` / `allow="fullscreen"` | erlaubt der eingebetteten Seite, in den Vollbildmodus zu wechseln |
+
+Der voreingestellte `title`-Text „Das ist eine Einbettung." lässt sich wie jeder andere Text direkt im Quelltext überschreiben.
+
 ## 8. Inhaltsverzeichnis-Panel in der Vorschau
 
 Der schwebende Button oben rechts über der Vorschau (Listen-Symbol) öffnet ein Inhaltsverzeichnis aus allen Überschriften (H1–H6) des Dokuments. Ein Klick auf einen Eintrag springt direkt zur passenden Stelle in der Vorschau. Das Panel bleibt beim Scrollen sichtbar an seiner Position und schließt sich automatisch bei Klick daneben, per `Escape` oder wenn die Vorschau ausgeblendet wird.
@@ -182,10 +200,11 @@ Der schwebende Button oben rechts über der Vorschau (Listen-Symbol) öffnet ein
 Der 🔊-Button (oben rechts neben dem Inhaltsverzeichnis-Button) liest das aktuelle Dokument laut vor und hebt dabei Wort für Wort den gerade gesprochenen Text hervor.
 
 - **Klick** startet das Vorlesen, **erneuter Klick** pausiert an derselben Stelle, **noch ein Klick** setzt fort.
-- Bilder, Fotos, Zeichnungen und Piktogramme werden mit ihrem Alt-Text (siehe [Abschnitt 5](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)) angekündigt, sofern einer gesetzt ist — sonst mit einer generischen Ankündigung („Hier ist ein Bild." usw.). Videos werden immer als „Hier ist ein Video." angekündigt.
-- Sprachaufnahmen werden während des Vorlesens tatsächlich abgespielt.
+- Bilder, Fotos, Zeichnungen und Piktogramme werden mit ihrem Alt-Text (siehe [Abschnitt 5](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)) angekündigt, sofern einer gesetzt ist — sonst mit einer generischen Ankündigung („Hier ist ein Bild." usw.). Videos werden immer als „Hier ist ein Video." angekündigt. Eine [Web-Einbettung](#7-audio-video-und-web-einbettungen) wird immer mit ihrem Titel-Text vorgelesen.
+- Sprachaufnahmen und eingefügte Audiodateien werden während des Vorlesens tatsächlich abgespielt.
 - Das Vorlesen stoppt automatisch beim Tab-Wechsel, beim Bearbeiten des Texts oder wenn die Vorschau ausgeblendet wird — nie mitten im Text unbemerkt weiterlaufend im Hintergrund.
 - Steht der Vorlesemodus innerhalb einer Präsentation (siehe [Abschnitt 10](#10-präsentationen-erstellen)) am Ende einer Folie an, blättert er automatisch zur nächsten Folie weiter und liest dort fort.
+- Der [Canvas-Modus](#19-canvas-modus-freie-notizfläche) hat einen eigenen Vorlesen-Button, der alle Notizzettel der Reihe nach vorliest — siehe dort.
 
 Der Vorlesemodus funktioniert identisch in der Live-Vorschau, im Präsentationsmodus und in beiden HTML-Exporten (siehe [Abschnitt 14](#14-export-und-teilen)) — eine exportierte Datei liest sich also auch offline und ohne diese App selbst vor.
 
@@ -369,6 +388,42 @@ https://majort0m0.github.io/Markdown-Editor/?simple=false
 ```
 
 Praktisch z. B. für einen Lesezeichen-Link auf einem Tablet, der immer im reduzierten Simple Modus startet, oder umgekehrt einen Link, der ihn zuverlässig wieder ausschaltet.
+
+## 19. Canvas-Modus (freie Notizfläche)
+
+Der Canvas-Modus ist ein eigener Dokumenttyp (`.canvas`) für eine frei gestaltbare DIN-A4-Seite: statt eines einzelnen, linearen Dokuments lassen sich beliebig viele frei platzierbare, unabhängig voneinander bearbeitbare Notizzettel („Boxen") auf einer Fläche anordnen — z. B. für ein Moodboard, ein visuelles Arbeitsblatt oder eine freie Sammlung von Notizen, Bildern und Zeichnungen.
+
+### Canvas erstellen
+
+Über **✨ Neu** → „Canvas (Hochformat)" oder „Canvas (Querformat)", je nach gewünschter Seitenausrichtung. Es öffnet sich eine leere DIN-A4-Seite.
+
+### Boxen erstellen, verschieben und bearbeiten
+
+- **Box erstellen:** den „+"-Button oben rechts anklicken (aktiviert den Erstellen-Modus, der Mauszeiger wird zum Fadenkreuz), dann auf der Seite eine Box aufziehen. Der Erstellen-Modus schaltet sich danach automatisch wieder aus.
+- **Box auswählen:** einmal auf eine Box klicken — sie bekommt einen Rahmen mit Anfassern an den Ecken sowie einen Löschen-Button (Papierkorb-Symbol) oben rechts.
+- **Box verschieben/skalieren:** bei ausgewählter Box am Rand ziehen zum Verschieben, an einer Eckmarkierung ziehen zum Ändern der Größe.
+- **Box bearbeiten:** eine bereits ausgewählte Box ein zweites Mal anklicken (oder direkt doppelklicken) öffnet sie zur Bearbeitung — mit vollständigem Quelltext-Editor und derselben Formatierungsleiste wie bei einem normalen Dokument. Innerhalb einer Box funktioniert alles genauso wie in einem gewöhnlichen Dokument: Formatierung, Bilder, Fotos, Zeichnungen, Piktogramme, Tabellen, Audio, Video, Web-Einbettungen.
+- **Bearbeitung verlassen:** ausschließlich über den **Quelltext**-Button in der Kopfzeile — ein Klick daneben auf die Canvas-Fläche schließt die Box bewusst *nicht*, damit sich die Fläche bei geöffneter Box weiterhin mit der Maus verschieben lässt (siehe „Navigation" unten).
+
+### Design und Zoom pro Box
+
+Jede Box hat ihr eigenes **Design** (Dropdown in der Kopfzeile, sobald die Box geöffnet ist) — neue Boxen starten immer mit dem Design „Clean". Ebenso hat jede Box ihre eigene **Zoomstufe**: Die Zoom-Buttons in der Kopfzeile wirken sich bei geöffneter Box ausschließlich auf diese eine Box aus (Quelltext und Vorschau gemeinsam) — alle anderen Boxen behalten ihre eigene, unabhängig gespeicherte Zoomstufe. Neue Boxen starten bei 100 %; beim erneuten Öffnen einer Box wird ihre zuletzt eingestellte Zoomstufe exakt wiederhergestellt.
+
+### Navigation: Verschieben und Zoomen der Fläche
+
+Solange keine Box geöffnet ist, ersetzt eine kleine Übersichtskarte unten rechts (mit Pfeil-Buttons zum Verschieben) die normale Formatierungsleiste, und die Zoom-Buttons in der Kopfzeile steuern in diesem Zustand den Zoom der gesamten Fläche statt Editor/Vorschau. Die Fläche lässt sich außerdem direkt mit der Maus verschieben — durch Klicken und Ziehen auf einen leeren Bereich der Canvas, auch während eine Box gerade geöffnet ist.
+
+### Hintergrundfarbe
+
+Ist keine Box geöffnet, erscheint an der Stelle der Design-Auswahl in der Kopfzeile stattdessen ein Farbwähler — damit lässt sich der Canvas selbst (die Seite, nicht eine einzelne Box) mit einer eigenen Hintergrundfarbe versehen.
+
+### Vorlesemodus im Canvas
+
+Ein eigener 🔊-Button oben links über der Canvas-Fläche liest alle Boxen der Reihe nach vor — von oben links beginnend, zeilenweise in Leserichtung. Die gerade vorgelesene Box wird dabei automatisch in den sichtbaren Bereich verschoben und wie im normalen [Vorlesemodus](#9-vorlesemodus) Wort für Wort hervorgehoben; eingebettete Bilder, Zeichnungen, Audiodateien und Web-Einbettungen werden dabei genauso behandelt. Da Boxen frei auf der Fläche platziert sind, gibt es keine hundertprozentig eindeutige Leserichtung — bei unregelmäßig angeordneten oder überlappenden Boxen kann die tatsächliche Reihenfolge daher gelegentlich von der Erwartung abweichen.
+
+### Export
+
+**Als eigenständige HTML-Datei exportieren** (siehe [Abschnitt 14](#14-export-und-teilen)) erzeugt bei einem Canvas-Dokument eine eigenständige Seite mit exakt demselben Layout (Boxen an derselben Position und Größe) und einem eigenen, funktionierenden Vorlesen-Button — auch außerhalb dieser App nutzbar.
 
 ---
 

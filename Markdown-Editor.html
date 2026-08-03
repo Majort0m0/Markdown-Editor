@@ -1692,6 +1692,29 @@ return He}()
       background-color: #eceff2;
     }
 
+    /* Swaps into the theme-picker's slot for a canvas tab's own preview (no box open) -- see the
+       markup comment above .theme-picker and updatePreview()/applyPaneVisibility()'s canvasNoBox
+       branches. Sized/rounded to match .icon-btn/select.style-select's own footprint in the same
+       toolbar row rather than a native color-input's default (larger, square, browser-drawn) look. */
+    .canvas-bg-color-input {
+      width: 30px;
+      height: 30px;
+      padding: 2px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      cursor: pointer;
+      background: none;
+    }
+
+    .canvas-bg-color-input::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    .canvas-bg-color-input::-webkit-color-swatch {
+      border: none;
+      border-radius: 6px;
+    }
+
     input[type="file"] {
       display: none;
     }
@@ -2196,8 +2219,396 @@ return He}()
     }
 
     main.preview-hidden .tts-toggle-btn,
-    main.html-tab-active .tts-toggle-btn {
+    main.html-tab-active .tts-toggle-btn,
+    main.canvas-tab-active .tts-toggle-btn {
       display: none;
+    }
+
+    /* Canvas Mode — a fixed DIN-A4 "page" of freely placed, individually editable markdown
+       boxes. No headings/no speech in the usual sense, so the floating TOC/TTS buttons (hidden
+       above/below) are replaced by a single "+" toggle (add-box mode) in the same top-right
+       slot, and — only while no box is open for editing — a bottom-right pan/zoom overlay
+       stands in for the header zoom buttons, which are re-scoped to whatever box IS open
+       instead (see canvasZoom()/zoomIn()/zoomOut()). */
+    .canvas-add-toggle-btn {
+      position: absolute;
+      top: 16px;
+      right: 28px;
+      z-index: 10;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .canvas-add-toggle-btn svg {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+    }
+
+    .canvas-add-toggle-btn:hover {
+      background-color: #eceff2;
+    }
+
+    /* A solid fill (not the light-tint .active this app's other toggle buttons use, e.g.
+       .toc-toggle-btn.active) -- add-mode changes what a click/drag on the canvas *does*, a
+       more consequential state than a panel toggle, so it earns a harder-to-miss signal. The
+       canvas surface itself also switches to a crosshair cursor while this is on (see
+       .canvas-page.add-mode below), reinforcing the same state a second way. */
+    .canvas-add-toggle-btn.active,
+    .canvas-add-toggle-btn.active:hover {
+      background-color: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .canvas-add-toggle-btn.active:hover {
+      filter: brightness(1.1);
+    }
+
+    .canvas-page.add-mode {
+      cursor: crosshair;
+    }
+
+    main.canvas-tab-active .canvas-add-toggle-btn {
+      display: flex;
+    }
+
+    main.preview-hidden .canvas-add-toggle-btn,
+    main.preview-hidden .canvas-nav-overlay {
+      display: none;
+    }
+
+    /* Vorlesen for the whole canvas (see canvasTts/computeCanvasReadingOrder() further down) --
+       top-right is already the "+" add-box button's slot, so this mirrors the presentation mode's
+       own .presentation-tts-btn placement (top-left) instead. Only makes sense with no box open
+       (reading one box's own markdown is just the ordinary editor/preview Vorlesen, not this) --
+       hidden together with the nav-overlay for the same reason: :not(.canvas-editing-box) below. */
+    .canvas-tts-toggle-btn {
+      position: absolute;
+      top: 16px;
+      left: 28px;
+      z-index: 10;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .canvas-tts-toggle-btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    .canvas-tts-toggle-btn:hover {
+      background-color: #eceff2;
+    }
+
+    .canvas-tts-toggle-btn.active {
+      background-color: #e4ecf9;
+      border-color: var(--accent);
+    }
+
+    .canvas-tts-toggle-btn.active svg {
+      animation: tts-pulse 1.4s ease-in-out infinite;
+    }
+
+    .canvas-tts-toggle-btn.paused svg {
+      animation: none;
+      opacity: .5;
+    }
+
+    main.canvas-tab-active:not(.canvas-editing-box) .canvas-tts-toggle-btn {
+      display: flex;
+    }
+
+    main.preview-hidden .canvas-tts-toggle-btn {
+      display: none;
+    }
+
+    .preview-pane.canvas-active {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* While a box is open for editing (openCanvasBoxEditor()), the real #markdownPreview is
+       repositioned (via inline left/top/width/height, computed in positionCanvasBoxOverlay()) to
+       sit exactly over that box's on-screen rect — its own normal rendering visually *becomes*
+       the box for the duration of the edit, reusing every markdown-preview feature unmodified
+       (see updatePreview()'s isEditingCanvasBox branch). position:fixed escapes .preview-pane's
+       own layout entirely, matching getBoundingClientRect()'s viewport-relative coordinates. */
+    #markdownPreview.canvas-box-overlay {
+      position: fixed;
+      z-index: 20;
+      overflow-y: auto;
+      box-shadow: 0 0 0 2px var(--accent), 0 8px 24px rgba(0, 0, 0, 0.35);
+      /* .markdown-body's own "transition: all 0.2s ease" (meant for a smooth theme-color swap) was
+         also catching left/top/width/height/transform here -- every one of which
+         positionCanvasBoxOverlay() sets explicitly and deliberately, on open and on every
+         move/resize/pan while editing. That meant opening a box (or dragging/panning it) visibly
+         animated its size/position/scale into place over 0.2s instead of snapping there instantly
+         -- most noticeable once positionCanvasBoxOverlay() started also setting `transform` (see
+         its own comment), where it showed up as the box's own text/padding visibly growing or
+         shrinking into place for a fraction of a second, and made getBoundingClientRect() measure
+         a mid-transition size if read immediately after opening rather than the final one. A box
+         being opened/moved/panned should always just *be* at the right place, not ease into it. */
+      transition: none;
+    }
+
+    /* Vorlesen for the whole canvas — positioned/scaled/clipped exactly like #markdownPreview's
+       own box-editing overlay above (see positionOverlayOverCanvasBox(), which both now share),
+       just parked over whichever box canvasTtsAdvance() currently has "current" instead of
+       canvasEditingBoxId. A separate, dedicated element rather than reusing #markdownPreview
+       itself: the idle canvas re-renders (renderCanvasBoxes()) far more often and for far more
+       reasons than the live preview ever does (any box move/resize/create/delete, not just
+       editing one), and would silently wipe an in-progress read's <span class="tts-word"> DOM out
+       from under it — an isolated, TTS-owned element sidesteps that entirely. Same visual
+       treatment (border/shadow) as the editing overlay is fine since the two are never shown at
+       once (opening a box for editing stops any canvas-wide read in progress, see
+       updatePreview()'s canvasTts.stop() call). canvas-box-content (see its own HTML class list)
+       gives it the same padding/font-size/first-child-margin treatment as an idle box for free;
+       overflow-y auto (rather than that class's own hidden) lets a long box's word-highlight
+       scroll into view while being read, matching the editing overlay's own behavior. Hidden by
+       default -- canvasTtsAdvance()/the stop paths toggle display explicitly. */
+    #canvasTtsStage {
+      position: fixed;
+      z-index: 15;
+      overflow-y: auto;
+      overflow-x: hidden;
+      box-shadow: 0 0 0 2px var(--accent), 0 8px 24px rgba(0, 0, 0, 0.35);
+      transition: none;
+      display: none;
+    }
+
+    /* Editor pane/resizer/toolbar are force-hidden (not just toggled via showEditor) whenever a
+       canvas tab is active and no box is open for editing — canvas-editing-box (added once box
+       double-click editing exists) lifts this so the shared editor can reappear positioned over
+       the open box. This is deliberately an additive CSS override rather than touching
+       showEditor/showPreview themselves, so leaving the canvas tab restores the split exactly as
+       the user last left it on any normal tab (mirrors how .html-tab-active only ever adds
+       visibility rules of its own, never touches those two booleans either). */
+    main.canvas-tab-active:not(.canvas-editing-box) .editor-pane,
+    main.canvas-tab-active:not(.canvas-editing-box) .pane-resizer {
+      display: none;
+    }
+
+    main.canvas-tab-active:not(.canvas-editing-box) {
+      grid-template-columns: 0 0 1fr !important;
+    }
+
+    .canvas-preview {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      background-color: #6b7280;
+    }
+
+    .canvas-preview.active {
+      display: block;
+    }
+
+    .canvas-viewport {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      overflow: hidden;
+      /* Horizontally centered, top-anchored with a small margin -- rather than left-aligned
+         with all the leftover space dumped on one side, so the page's real proportions (and
+         where it actually ends) stay visually obvious regardless of how wide the preview pane
+         happens to be. */
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding-top: 24px;
+      box-sizing: border-box;
+    }
+
+    .canvas-page {
+      position: relative; /* containing block for .canvas-box's position:absolute, not itself
+                              taken out of flow -- a flex item can be position:relative and still
+                              participate in the centering above */
+      flex-shrink: 0;
+      background-color: #fff;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+      transform-origin: 0 0;
+    }
+
+    .canvas-box {
+      position: absolute;
+      border: 1px solid #ccc;
+      background-color: #fffef2;
+      box-sizing: border-box;
+    }
+
+    .canvas-box.selected {
+      border: 2px solid var(--accent);
+    }
+
+    .canvas-box.overflowing {
+      border-bottom: 4px solid #e53935;
+    }
+
+    .canvas-box-content {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      padding: 8px;
+      box-sizing: border-box;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #1a1a1a;
+      cursor: default;
+    }
+
+    /* #markdownPreview.canvas-box-overlay (the live editing overlay, see positionCanvasBoxOverlay()
+       below) needs this exact same first-child exemption as the idle .canvas-box-content -- it's
+       the same box's content, just rendered through a different element while being edited. Missing
+       it here (the selector used to only match .canvas-box-content) left the live view with an
+       extra, uncancelled ~1.4em heading margin-top the idle view never had, on top of the box's own
+       20px padding -- reported directly ("die Darstellung... vor allem der Rand drumherum
+       unterscheidet sich gravierend"). Ordinary (non-canvas) tabs deliberately keep the normal,
+       uncancelled margin-top on their own preview -- that extra top breathing room is fine/expected
+       for a regular scrollable document view, only a small canvas box needs it suppressed. */
+    .canvas-box-content :first-child,
+    #markdownPreview.canvas-box-overlay :first-child {
+      margin-top: 0;
+    }
+
+    .canvas-box-handle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: var(--accent);
+      border: 1px solid #fff;
+      border-radius: 50%;
+      z-index: 5;
+    }
+
+    .canvas-box-handle.nw { top: -5px; left: -5px; cursor: nwse-resize; }
+    .canvas-box-handle.ne { top: -5px; right: -5px; cursor: nesw-resize; }
+    .canvas-box-handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
+    .canvas-box-handle.se { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
+    .canvas-box-move-edge {
+      position: absolute;
+      z-index: 4;
+    }
+    .canvas-box-move-edge.top, .canvas-box-move-edge.bottom { left: 8px; right: 8px; height: 8px; cursor: move; }
+    .canvas-box-move-edge.left, .canvas-box-move-edge.right { top: 8px; bottom: 8px; width: 8px; cursor: move; }
+    .canvas-box-move-edge.top { top: -4px; }
+    .canvas-box-move-edge.bottom { bottom: -4px; }
+    .canvas-box-move-edge.left { left: -4px; }
+    .canvas-box-move-edge.right { right: -4px; }
+
+    .canvas-box-delete-btn {
+      position: absolute;
+      top: -14px;
+      right: -14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 6;
+      padding: 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .canvas-box-delete-btn svg {
+      width: 14px;
+      height: 14px;
+    }
+
+    .canvas-nav-overlay {
+      position: absolute;
+      bottom: 16px;
+      right: 16px;
+      z-index: 10;
+      display: none;
+      grid-template-columns: repeat(3, 28px);
+      grid-template-rows: repeat(3, 28px);
+      gap: 2px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+      padding: 6px;
+    }
+
+    main.canvas-tab-active:not(.canvas-editing-box) .canvas-nav-overlay {
+      display: grid;
+    }
+
+    .canvas-nav-overlay button {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      padding: 0;
+      color: var(--text-main);
+    }
+
+    .canvas-nav-overlay button:hover {
+      background-color: #eceff2;
+    }
+
+    .canvas-nav-overlay button svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* The up/down pan buttons reuse the left/right pan icons rotated 90deg clockwise (same
+       "left->up, right->down" idiom the row-move table-control buttons already use elsewhere in
+       this file) -- scoped to *this* bar's own buttons (the existing .toolbar-btn.rotate-90 rule
+       only reaches .toolbar-btn elements, which these aren't). */
+    .canvas-nav-overlay button.rotate-90 svg {
+      transform: rotate(90deg);
+    }
+
+    .canvas-minimap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .canvas-minimap-page {
+      position: relative;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+    }
+
+    .canvas-minimap-view {
+      position: absolute;
+      background-color: var(--accent);
+      opacity: 0.45;
+      pointer-events: none;
     }
 
     .toc-panel {
@@ -3834,6 +4245,51 @@ return He}()
       .markdown-body {
         max-width: 100%;
       }
+
+      /* Canvas Mode: print/PDF-export the page at true DIN-A4 size, editing chrome stripped out
+         and pan/zoom reset to 1:1 (@page can't read the --split-ratio-style CSS var this file
+         uses elsewhere, so the two possible page sizes are named CSS Paged Media pages instead —
+         canvasPage.classList('landscape'), toggled in updateCanvasPreview(), picks between them). */
+      main.canvas-tab-active .canvas-add-toggle-btn,
+      main.canvas-tab-active .canvas-nav-overlay,
+      main.canvas-tab-active .canvas-tts-toggle-btn,
+      #canvasTtsStage,
+      .canvas-box-handle,
+      .canvas-box-move-edge,
+      .canvas-box-delete-btn {
+        display: none !important;
+      }
+
+      main.canvas-tab-active .canvas-preview {
+        display: block !important;
+        background: none !important;
+        overflow: visible !important;
+      }
+
+      main.canvas-tab-active .canvas-viewport {
+        overflow: visible !important;
+      }
+
+      main.canvas-tab-active .canvas-page {
+        position: static !important;
+        transform: none !important;
+        box-shadow: none !important;
+        page: canvas-portrait;
+      }
+
+      main.canvas-tab-active .canvas-page.landscape {
+        page: canvas-landscape;
+      }
+
+      @page canvas-portrait {
+        size: portrait;
+        margin: 0;
+      }
+
+      @page canvas-landscape {
+        size: landscape;
+        margin: 0;
+      }
     }
 
     /* Responsive layout (phones / narrow viewports) */
@@ -4011,7 +4467,7 @@ return He}()
 
       <!-- Dateimanagement -->
       <label class="icon-btn btn-label" for="fileInput" title="Öffnen (Datei öffnen)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M1 5C1 3.34315 2.34315 2 4 2H8.55848C9.84977 2 10.9962 2.82629 11.4045 4.05132L11.7208 5H20C21.1046 5 22 5.89543 22 7V9.00961C23.1475 9.12163 23.9808 10.196 23.7695 11.3578L22.1332 20.3578C21.9603 21.3087 21.132 22 20.1654 22H3C1.89543 22 1 21.1046 1 20V5ZM20 9V7H11.7208C10.8599 7 10.0956 6.44914 9.82339 5.63246L9.50716 4.68377C9.37105 4.27543 8.98891 4 8.55848 4H4C3.44772 4 3 4.44772 3 5V12.2709L3.35429 10.588C3.54913 9.66249 4.36562 9 5.31139 9H20ZM3.36634 20C3.41777 19.9109 3.4562 19.8122 3.47855 19.706L5.31139 11L21 11H21.8018L20.1654 20L3.36634 20Z" fill="currentColor"/></svg></label>
-      <input type="file" id="fileInput" accept=".md,.markdown,.txt,.csv,.json,.html,.htm,.pdf" multiple onchange="handleFileSelect(event)">
+      <input type="file" id="fileInput" accept=".md,.markdown,.txt,.csv,.json,.html,.htm,.pdf,.canvas,.wav,.ogg,.mp3,.m4a" multiple onchange="handleFileSelect(event)">
       <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageFileSelect(event)">
 
       <button id="saveBtn" class="icon-btn" onclick="saveCurrentFile()" title="Speichern (Strg+S)"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg></button>
@@ -4103,7 +4559,11 @@ return He}()
 
       <div class="action-divider"></div>
 
-      <!-- Design Selection -->
+      <!-- Design Selection -- swaps to a canvas background-color picker (same icon, same slot)
+           whenever a canvas tab's own preview is shown with no box open for editing, since "which
+           theme" has no meaning for the canvas chrome itself (only a box has a theme) but "what
+           color is the page" does. See applyPaneVisibility()/updatePreview()'s canvasNoBox
+           branches, which toggle themeSelector/canvasBgColorInput's visibility oppositely. -->
       <div class="theme-picker simple-hide">
         <span class="theme-picker-icon" title="Design wechseln"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" fill-rule="evenodd" d="M524,109 L522.497699,109 C522.214844,109 522,109.223858 522,109.5 C522,109.768066 522.222827,110 522.497699,110 L524,110 L524,111.502301 C524,111.785156 524.223858,112 524.5,112 C524.768066,112 525,111.777173 525,111.502301 L525,110 L526.502301,110 C526.785156,110 527,109.776142 527,109.5 C527,109.231934 526.777173,109 526.502301,109 L525,109 L525,107.497699 C525,107.214844 524.776142,107 524.5,107 C524.231934,107 524,107.222827 524,107.497699 L524,109 Z M519,112 C519,107.581722 522.590712,104 527,104 C531.418278,104 535,107.590712 535,112 C535,116.418278 531.409288,120 527,120 C522.581722,120 519,116.409288 519,112 Z M532,107.100505 C529.26633,104.366835 524.834175,104.366835 522.100505,107.100505 C519.366835,109.834175 519.366835,114.26633 522.100505,117 L532,107.100505 Z M528,114.5 C528,114.223858 528.215057,114 528.490479,114 L531.509521,114 C531.780405,114 532,114.231934 532,114.5 C532,114.776142 531.784943,115 531.509521,115 L528.490479,115 C528.219595,115 528,114.768066 528,114.5 Z" transform="translate(-519 -104)"/></svg></span>
         <select id="themeSelector" class="style-select" title="Design wechseln" onchange="changeTheme(this.value)">
@@ -4123,6 +4583,7 @@ return He}()
           <option value="theme-clean">Clean</option>
           <option value="theme-bunt">Bunt</option>
         </select>
+        <input type="color" id="canvasBgColorInput" class="canvas-bg-color-input" title="Canvas-Hintergrundfarbe" onchange="changeCanvasBackgroundColor(this.value)">
       </div>
 
       <div class="action-divider"></div>
@@ -4198,10 +4659,11 @@ return He}()
   /></svg></button>
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('link')" title="Link"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 12C14 14.7614 11.7614 17 9 17H7C4.23858 17 2 14.7614 2 12C2 9.23858 4.23858 7 7 7H7.5M10 12C10 9.23858 12.2386 7 15 7H17C19.7614 7 22 9.23858 22 12C22 14.7614 19.7614 17 17 17H16.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('embed')" title="Web-Einbettung (iframe) einfügen"><svg viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M17 4H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-3 6.5L12.5 12l1.5 1.5V15l-3-3 3-3v1.5zm1 4.5v-1.5l1.5-1.5-1.5-1.5V9l3 3-3 3z"/></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="triggerImageFileInsert()" title="Bild einfügen"><svg fill="currentColor" viewBox="0 0 32 32" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M30 2.497h-28c-1.099 0-2 0.901-2 2v23.006c0 1.099 0.9 2 2 2h28c1.099 0 2-0.901 2-2v-23.006c0-1.099-0.901-2-2-2zM30 27.503l-28-0v-5.892l8.027-7.779 8.275 8.265c0.341 0.414 0.948 0.361 1.379 0.035l3.652-3.306 6.587 6.762c0.025 0.025 0.053 0.044 0.080 0.065v1.85zM30 22.806l-5.876-6.013c-0.357-0.352-0.915-0.387-1.311-0.086l-3.768 3.282-8.28-8.19c-0.177-0.214-0.432-0.344-0.709-0.363-0.275-0.010-0.547 0.080-0.749 0.27l-7.309 7.112v-14.322h28v18.309zM23 12.504c1.102 0 1.995-0.894 1.995-1.995s-0.892-1.995-1.995-1.995-1.995 0.894-1.995 1.995c0 1.101 0.892 1.995 1.995 1.995z"></path></svg></button>
     <button class="toolbar-btn fmt-btn" onclick="openCameraModal()" title="Foto aufnehmen"><svg viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg"><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g fill="currentColor" transform="translate(42.666667, 64.000000)"><path d="M277.333333,1.42108547e-14 C277.333333,1.42108547e-14 277.681778,0.557511111 278.378667,1.67253333 L278.698667,2.18453333 C279.438222,3.36782222 280.478222,5.03182222 281.818667,7.17653333 L282.458667,8.20053333 C283.891556,10.4931556 285.624889,13.2664889 287.658667,16.5205333 L288.618667,18.0565333 C290.744889,21.4584889 293.171556,25.3411556 295.898667,29.7045333 L297.178667,31.7525333 C299.998222,36.2638222 303.118222,41.2558222 306.538667,46.7285333 L308.138667,49.2885333 C311.003462,53.8722052 314.068069,58.775577 317.332489,63.9986486 L426.666667,64 L426.666667,362.666667 L7.10542736e-15,362.666667 L7.10542736e-15,64 L109.333,64 L149.333333,1.42108547e-14 L277.333333,1.42108547e-14 L277.333333,1.42108547e-14 Z M213.333333,85.3333333 C148.531923,85.3333333 96,137.865256 96,202.666667 C96,267.468077 148.531923,320 213.333333,320 C278.134744,320 330.666667,267.468077 330.666667,202.666667 C330.666667,137.865256 278.134744,85.3333333 213.333333,85.3333333 Z M213.333333,128 C254.570595,128 288,161.429405 288,202.666667 C288,243.903928 254.570595,277.333333 213.333333,277.333333 C172.096072,277.333333 138.666667,243.903928 138.666667,202.666667 C138.666667,161.429405 172.096072,128 213.333333,128 Z M384,106.666667 C372.217925,106.666667 362.666667,116.217925 362.666667,128 C362.666667,139.782075 372.217925,149.333333 384,149.333333 C395.782075,149.333333 405.333333,139.782075 405.333333,128 C405.333333,116.217925 395.782075,106.666667 384,106.666667 Z"></path></g></g></svg></button>
-    <button class="toolbar-btn fmt-btn" onclick="openDrawingModal()" title="Zeichnung einfügen"><svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><defs><style>.cls-1{fill:none;stroke:currentColor;stroke-linecap:round;stroke-linejoin:round;stroke-width:2px;}</style></defs><g data-name="Layer 2" id="Layer_2"><polyline class="cls-1" points="16 22 1 22 1 4 31 4 31 22 28 22"/><path class="cls-1" d="M19,22V18H17.6A1.6,1.6,0,0,0,16,19.6v5.2A3.2,3.2,0,0,0,19.2,28h5.6A3.2,3.2,0,0,0,28,24.8V21.2A3.2,3.2,0,0,0,24.8,18H22V12.3a1.5,1.5,0,0,0-1.5-1.5h0A1.5,1.5,0,0,0,19,12.3V22"/><path class="cls-1" d="M16,13c-2,0-2-2-4-2s-2,2-4,2-2-2-4-2"/></g></svg></button>
-    <button class="toolbar-btn fmt-btn" onclick="openClipartModal()" title="Clipart einfügen (ARASAAC-Piktogramme)"><svg fill="currentColor" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M 15 5 C 13.90625 5 13 5.90625 13 7 L 13 8 L 4 8 L 4 26 L 28 26 L 28 8 L 19 8 L 19 7 C 19 5.90625 18.09375 5 17 5 Z M 15 7 L 17 7 L 17 9 L 15 9 Z M 6 10 L 13 10 L 13 11 L 19 11 L 19 10 L 26 10 L 26 24 L 6 24 Z M 16 12 C 13.800781 12 12 13.800781 12 16 C 12 17.117188 12.46875 18.128906 13.214844 18.855469 C 11.878906 19.757813 11 21.28125 11 23 L 13 23 C 13 21.332031 14.332031 20 16 20 C 17.667969 20 19 21.332031 19 23 L 21 23 C 21 21.28125 20.121094 19.757813 18.785156 18.855469 C 19.53125 18.128906 20 17.117188 20 16 C 20 13.800781 18.199219 12 16 12 Z M 16 14 C 17.117188 14 18 14.882813 18 16 C 18 17.117188 17.117188 18 16 18 C 14.882813 18 14 17.117188 14 16 C 14 14.882813 14.882813 14 16 14 Z"/></svg></button>
+    <button class="toolbar-btn fmt-btn" onclick="openDrawingModal()" title="Zeichnung einfügen"><svg viewBox="0 0 512.002 512.002" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" d="M489.741,100.175H267.132c-12.31,0-22.261,9.973-22.261,22.261v73.038L176.041,46.326 c-3.651-7.88-11.531-12.934-20.213-12.934c-8.682,0-16.562,5.053-20.213,12.934L2.05,335.717 c-3.183,6.901-2.627,14.915,1.447,21.326c4.118,6.389,11.175,10.262,18.766,10.262H135.57 c10.663,63.065,65.514,111.304,131.562,111.304s120.899-48.239,131.562-111.304h91.047c12.31,0,22.261-9.973,22.261-22.261 V122.436C512.002,110.148,502.051,100.175,489.741,100.175z M161.037,264.237c-0.378,0.467-0.735,0.957-1.091,1.447 c-2.649,3.584-5.142,7.279-7.435,11.13c-0.378,0.623-0.757,1.247-1.135,1.87c-5.053,8.771-9.171,18.12-12.132,27.982 c-0.223,0.735-0.356,1.514-0.579,2.248c-1.113,3.962-2.07,7.992-2.827,12.11c-0.089,0.601-0.289,1.158-0.401,1.759H57.034 l98.794-214.016l53.537,116.024C190.288,234.007,173.77,247.564,161.037,264.237z M267.132,434.088 c-49.107,0-89.043-39.936-89.043-89.044c0-5.654,0.668-11.13,1.67-16.473c0.378-1.959,0.979-3.851,1.491-5.766 c0.846-3.25,1.781-6.478,2.983-9.594c0.868-2.248,1.87-4.43,2.938-6.612c1.202-2.493,2.538-4.92,3.962-7.279 c1.402-2.315,2.849-4.608,4.452-6.79c1.336-1.803,2.827-3.473,4.296-5.187c2.07-2.382,4.096-4.808,6.411-6.968 c0.712-0.668,1.514-1.202,2.248-1.848c10.307-9.016,22.706-15.872,36.708-19.411c0.111-0.045,0.2-0.134,0.312-0.178 c6.945-1.736,14.091-2.938,21.571-2.938c49.107,0,89.044,39.936,89.044,89.043S316.24,434.088,267.132,434.088z"/></svg></button>
+    <button class="toolbar-btn fmt-btn" onclick="openClipartModal()" title="Clipart einfügen (ARASAAC-Piktogramme)"><svg viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M9 2c3.9 0 7 3.1 7 7s-3.1 7-7 7-7-3.1-7-7 3.1-7 7-7m0-2C4 0 0 4 0 9s4 9 9 9 9-4 9-9-4-9-9-9z"/><circle cx="6.5" cy="7.5" r="1.5"/><path d="M6.5 6C5.7 6 5 6.7 5 7.5S5.7 9 6.5 9 8 8.3 8 7.5 7.3 6 6.5 6z"/><circle cx="11.5" cy="7.5" r="1.5"/><path d="M11.5 6c-.8 0-1.5.7-1.5 1.5S10.7 9 11.5 9 13 8.3 13 7.5 12.3 6 11.5 6zM14 11c0 1.6-2.8 3-5 3s-5-1.4-5-3c0-.8 2 1 5 1s5-1.8 5-1z"/></svg></button>
     <button id="audioRecordBtn" class="toolbar-btn fmt-btn" onclick="toggleAudioRecording()" title="Sprachaufnahme einfügen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 5C8 2.79086 9.79086 1 12 1C14.2091 1 16 2.79086 16 5V12C16 14.2091 14.2091 16 12 16C9.79086 16 8 14.2091 8 12V5Z" fill="currentColor"/><path d="M6.25 11.8438V12C6.25 13.525 6.8558 14.9875 7.93414 16.0659C9.01247 17.1442 10.475 17.75 12 17.75C13.525 17.75 14.9875 17.1442 16.0659 16.0659C17.1442 14.9875 17.75 13.525 17.75 12V11.8438C17.75 11.2915 18.1977 10.8438 18.75 10.8438H19.25C19.8023 10.8438 20.25 11.2915 20.25 11.8437V12C20.25 14.188 19.3808 16.2865 17.8336 17.8336C16.5842 19.0831 14.9753 19.8903 13.25 20.1548V22C13.25 22.5523 12.8023 23 12.25 23H11.75C11.1977 23 10.75 22.5523 10.75 22V20.1548C9.02471 19.8903 7.41579 19.0831 6.16637 17.8336C4.61919 16.2865 3.75 14.188 3.75 12V11.8438C3.75 11.2915 4.19772 10.8438 4.75 10.8438H5.25C5.80228 10.8438 6.25 11.2915 6.25 11.8438Z" fill="currentColor"/></svg></button>
     <button class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('video')" title="Video einbetten (YouTube/Vimeo-Link oder Videodatei-URL)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.49614 7.13176C9.18664 6.9549 8.80639 6.95617 8.49807 7.13509C8.18976 7.31401 8 7.64353 8 8V16C8 16.3565 8.18976 16.686 8.49807 16.8649C8.80639 17.0438 9.18664 17.0451 9.49614 16.8682L16.4961 12.8682C16.8077 12.6902 17 12.3589 17 12C17 11.6411 16.8077 11.3098 16.4961 11.1318L9.49614 7.13176ZM13.9844 12L10 14.2768V9.72318L13.9844 12Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M0 12C0 8.25027 0 6.3754 0.954915 5.06107C1.26331 4.6366 1.6366 4.26331 2.06107 3.95491C3.3754 3 5.25027 3 9 3H15C18.7497 3 20.6246 3 21.9389 3.95491C22.3634 4.26331 22.7367 4.6366 23.0451 5.06107C24 6.3754 24 8.25027 24 12C24 15.7497 24 17.6246 23.0451 18.9389C22.7367 19.3634 22.3634 19.7367 21.9389 20.0451C20.6246 21 18.7497 21 15 21H9C5.25027 21 3.3754 21 2.06107 20.0451C1.6366 19.7367 1.26331 19.3634 0.954915 18.9389C0 17.6246 0 15.7497 0 12ZM9 5H15C16.9194 5 18.1983 5.00275 19.1673 5.10773C20.0989 5.20866 20.504 5.38448 20.7634 5.57295C21.018 5.75799 21.242 5.98196 21.4271 6.23664C21.6155 6.49605 21.7913 6.90113 21.8923 7.83269C21.9973 8.80167 22 10.0806 22 12C22 13.9194 21.9973 15.1983 21.8923 16.1673C21.7913 17.0989 21.6155 17.504 21.4271 17.7634C21.242 18.018 21.018 18.242 20.7634 18.4271C20.504 18.6155 20.0989 18.7913 19.1673 18.8923C18.1983 18.9973 16.9194 19 15 19H9C7.08058 19 5.80167 18.9973 4.83269 18.8923C3.90113 18.7913 3.49605 18.6155 3.23664 18.4271C2.98196 18.242 2.75799 18.018 2.57295 17.7634C2.38448 17.504 2.20866 17.0989 2.10773 16.1673C2.00275 15.1983 2 13.9194 2 12C2 10.0806 2.00275 8.80167 2.10773 7.83269C2.20866 6.90113 2.38448 6.49605 2.57295 6.23664C2.75799 5.98196 2.98196 5.75799 3.23664 5.57295C3.49605 5.38448 3.90113 5.20866 4.83269 5.10773C5.80167 5.00275 7.08058 5 9 5Z" fill="currentColor"/></svg></button>
     <button class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('table')" title="Tabelle"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M1740 0c99.24 0 180 80.76 180 180v1560c0 99.24-80.76 180-180 180H180c-99.24 0-180-80.76-180-180V180C0 80.76 80.76 0 180 0h1560Zm-420 1200h480V720h-480v480Zm480 540v-420h-480v480h420c33 0 60-27 60-60ZM720 1200h480V720H720v480Zm0 600h480v-480H720v480Zm-600-600h480V720H120v480Zm480 600v-480H120v420c0 33 27 60 60 60h420Z" fill-rule="evenodd"/></svg></button>
@@ -4234,11 +4696,35 @@ return He}()
     <div class="preview-pane" id="previewPane">
       <div id="markdownPreview" class="markdown-body theme-github-light"></div>
       <iframe id="htmlPreviewFrame" class="html-preview-frame" title="HTML-Vorschau" sandbox="allow-scripts"></iframe>
+      <div class="canvas-preview" id="canvasPreview">
+        <div class="canvas-viewport" id="canvasViewport">
+          <div class="canvas-page" id="canvasPage"></div>
+        </div>
+      </div>
     </div>
 
     <button id="tocToggleBtn" class="toc-toggle-btn" onclick="toggleToc()" title="Inhaltsverzeichnis anzeigen/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7L4 7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 12L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M9 17H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     <div class="toc-panel" id="tocPanel"></div>
     <button id="ttsToggleBtn" class="tts-toggle-btn" title="Vorlesen starten"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.15" d="M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" fill="currentColor"/><path d="M16 8.99998C16.5 9.49999 17 10.5 17 12C17 13.5 16.5 14.5 16 15M19 6C20.5 7.5 21 10 21 12C21 14 20.5 16.5 19 18M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
+    <button id="canvasAddToggleBtn" class="canvas-add-toggle-btn" onclick="toggleCanvasAddMode()" title="Box hinzufügen: Klicken und im Canvas aufziehen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+    <button id="canvasTtsToggleBtn" class="canvas-tts-toggle-btn" title="Vorlesen starten"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.15" d="M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" fill="currentColor"/><path d="M16 8.99998C16.5 9.49999 17 10.5 17 12C17 13.5 16.5 14.5 16 15M19 6C20.5 7.5 21 10 21 12C21 14 20.5 16.5 19 18M13 3L7 8H5C3.89543 8 3 8.89543 3 10V14C3 15.1046 3.89543 16 5 16H7L13 21V3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div id="canvasTtsStage" class="canvas-box-content markdown-body"></div>
+    <div class="canvas-nav-overlay" id="canvasNavOverlay">
+      <span></span>
+      <button class="rotate-90" onclick="canvasPan(0, -1)" title="Nach oben verschieben"><svg viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M235.097 255v1410.58H0V255h235.097Zm778.84 34.406 166.331 166.214-387.087 387.087H1920v235.096H793.181l387.087 387.087-166.33 166.214-670.85-670.849 670.85-670.849Z" fill-rule="evenodd"/></svg></button>
+      <span></span>
+      <button onclick="canvasPan(-1, 0)" title="Nach links verschieben"><svg viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M235.097 255v1410.58H0V255h235.097Zm778.84 34.406 166.331 166.214-387.087 387.087H1920v235.096H793.181l387.087 387.087-166.33 166.214-670.85-670.849 670.85-670.849Z" fill-rule="evenodd"/></svg></button>
+      <div class="canvas-minimap" id="canvasMinimap" title="Aktueller Ausschnitt">
+        <div class="canvas-minimap-page" id="canvasMinimapPage">
+          <div class="canvas-minimap-view" id="canvasMinimapView"></div>
+        </div>
+      </div>
+      <button onclick="canvasPan(1, 0)" title="Nach rechts verschieben"><svg viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M1684.903 255v1410.58H1920V255h-235.097Zm-778.84 34.406L739.732 455.62l387.087 387.087H0v235.096h1126.819L739.732 1464.89l166.33 166.214 670.85-670.849-670.85-670.849Z" fill-rule="evenodd"/></svg></button>
+      <span></span>
+      <button class="rotate-90" onclick="canvasPan(0, 1)" title="Nach unten verschieben"><svg viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path d="M1684.903 255v1410.58H1920V255h-235.097Zm-778.84 34.406L739.732 455.62l387.087 387.087H0v235.096h1126.819L739.732 1464.89l166.33 166.214 670.85-670.849-670.85-670.849Z" fill-rule="evenodd"/></svg></button>
+      <span></span>
+    </div>
   </main>
 
   <footer class="app-footer">
@@ -4555,6 +5041,9 @@ return He}()
     const preview = document.getElementById('markdownPreview');
     const previewPane = document.getElementById('previewPane');
     const htmlPreviewFrame = document.getElementById('htmlPreviewFrame');
+    const canvasPreview = document.getElementById('canvasPreview');
+    const canvasViewport = document.getElementById('canvasViewport');
+    const canvasPage = document.getElementById('canvasPage');
     const editorHighlightOverlay = document.getElementById('editorHighlightOverlay');
     const editorHighlightOverlayCode = editorHighlightOverlay.querySelector('code');
     const tabList = document.getElementById('tabList');
@@ -4570,6 +5059,7 @@ return He}()
     const copyFormattedBtn = document.getElementById('copyFormattedBtn');
     const printBtn = document.getElementById('printBtn');
     const themeSelector = document.getElementById('themeSelector');
+    const canvasBgColorInput = document.getElementById('canvasBgColorInput');
     const spellcheckBtn = document.getElementById('spellcheckBtn');
     const searchBar = document.getElementById('searchBar');
     const searchInput = document.getElementById('searchInput');
@@ -4661,6 +5151,22 @@ return He}()
     // openDrawingModal() to call, so it gets a plain <img> instead of a dead edit button.
     let suppressDrawingControls = false;
 
+    // Lets hljsRenderer.image() below resolve asset:ID references against a specific canvas
+    // box's own asset maps instead of getCurrentTab() — needed when rendering a box's *idle*
+    // mini-preview (renderCanvasBoxes()) or exporting one (performCanvasHtmlExport()), neither of
+    // which is "the current tab" (that's only ever the box actually being edited, or no box at
+    // all — see getCurrentTab()'s own comment). Set immediately around a marked.parse() call for
+    // that box's content, then cleared. A first attempt at this instead textually pre-resolved
+    // asset:ID -> data URI via regex before calling marked.parse() at all — which broke audio
+    // playback: hljsRenderer.image() only renders <audio> when it can still see the literal
+    // "asset:ID" href and look up audioAssetIds itself, so by the time it ran against an
+    // already-substituted data: URI, isAudio came back false and it emitted a plain (broken)
+    // <img> for a Sprachaufnahme instead — reported directly ("Eine Sprachaufnahme wird bei
+    // offenem Quelltext mit fehlendem Symbol in der Box Vorschau dargestellt"). This box-context
+    // override preserves the exact same asset:ID href the live-editing path already relies on,
+    // so isAudio/isDrawing detection works identically for an idle box as for one being edited.
+    let canvasIdleRenderBox = null;
+
     hljsRenderer.image = function({ href, title, text }) {
       const videoEmbed = getVideoEmbedHtml(href, text);
       if (videoEmbed) return videoEmbed;
@@ -4670,7 +5176,7 @@ return He}()
       let isAudio = false;
       let assetId = null;
       if (href && href.indexOf('asset:') === 0) {
-        const tab = getCurrentTab();
+        const tab = canvasIdleRenderBox || getCurrentTab();
         assetId = href.slice('asset:'.length);
         resolvedHref = (tab && tab.assets && tab.assets[assetId]) || '';
         isDrawing = !!(tab && tab.drawingAssetIds && tab.drawingAssetIds[assetId]);
@@ -5034,7 +5540,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 ` + '</scr' + 'ipt>' + `
 </body>
 </html>
-` }
+` },
+      // Canvas content is never markdown text -- it's a JSON scene (page size + boxes), stored
+      // in tab.content the same way every other tab type's raw text is (see the Canvas Mode
+      // section), just re-parsed into a live tab.canvasData object once the tab is opened rather
+      // than bound directly to the shared editor textarea. Page dimensions use real physical CSS
+      // units (mm) rather than a chosen px/mm conversion constant, so the on-screen canvas and
+      // the eventual print/PDF export agree on size by construction.
+      { id: 'canvas-portrait', name: 'Canvas (Hochformat)', desc: 'Freie Notizfläche, DIN A4 hoch', filename: 'Canvas.canvas', content: JSON.stringify({ pageWidth: '210mm', pageHeight: '297mm', boxes: [], zCounter: 0, viewport: { zoom: 1, panX: 0, panY: 0 }, pageBackgroundColor: '#ffffff' }) },
+      { id: 'canvas-landscape', name: 'Canvas (Querformat)', desc: 'Freie Notizfläche, DIN A4 quer', filename: 'Canvas.canvas', content: JSON.stringify({ pageWidth: '297mm', pageHeight: '210mm', boxes: [], zCounter: 0, viewport: { zoom: 1, panX: 0, panY: 0 }, pageBackgroundColor: '#ffffff' }) }
     ];
 
     let lastTemplateId = 'blank';
@@ -5336,8 +5850,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function saveStateToLocalStorage(opts) {
       if (activeTabId) {
         const currentTab = getCurrentTab();
-        if (currentTab) {
+        // A canvas tab's editor.value is deliberately blank (or, mid-box-edit, just that one
+        // box's markdown) rather than "the whole document" — see switchTab() and
+        // openCanvasBoxEditor() — so copying it here would stomp the real content, which
+        // syncCanvasContentToTab() already keeps current on every box mutation instead.
+        if (currentTab && currentTab.fileType !== 'canvas') {
           currentTab.content = editor.value;
+        }
+        // A box's own .content is already current (markActiveTabModified writes it on every
+        // keystroke, since a box's fileType is 'markdown' — see makeCanvasBox()), but the real
+        // tab's serialized scene only picks that up via syncCanvasContentToTab(), which box
+        // mutations (create/move/resize/delete/select) already call — merely *typing* inside a
+        // still-open box doesn't otherwise trigger it, so a save fired at just the wrong moment
+        // (before the box editor closes) would persist a one-keystroke-stale scene without this.
+        if (canvasEditingBoxId) {
+          syncCanvasContentToTab(getActiveTabReal());
         }
       }
 
@@ -5704,6 +6231,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function applyRemoteTabToLocal(t, rt) {
       t.name = rt.name;
       t.content = rt.content;
+      // A canvas tab's live t.canvasData (parsed once on first switch-to, see switchTab()) is
+      // now stale relative to the fresh t.content just above — reset it so the next access
+      // (whether that's this same performWebdavSync() call refreshing the active tab, or a
+      // later switchTab() into this one) reparses from the just-synced content instead of
+      // silently continuing to show whatever this session last had in memory.
+      if (t.fileType === 'canvas' || rt.fileType === 'canvas') t.canvasData = null;
       t.assets = rt.assets || {};
       t.assetCounter = Object.keys(t.assets).length;
       t.drawingAssetIds = rt.drawingAssetIds || {};
@@ -6047,10 +6580,26 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           }
         }
 
-        const current = getCurrentTab();
-        if (current && editor.value !== current.content) {
-          editor.value = current.content;
-          updatePreview();
+        // Canvas tabs don't bind editor.value to "the whole document" the way every other tab
+        // type does (see getCurrentTab()'s own comment) -- a silently-pulled tab.content needs a
+        // fresh tab.canvasData reparse instead, and only actually needs to repaint anything if
+        // this canvas happens to be what's on screen right now.
+        const realTabForRefresh = getActiveTabReal();
+        if (realTabForRefresh && realTabForRefresh.fileType === 'canvas') {
+          try {
+            realTabForRefresh.canvasData = JSON.parse(realTabForRefresh.content);
+            repairStrandedCanvasBoxAudioAssets(realTabForRefresh);
+          } catch (err) {
+            // Leave whatever canvasData already exists in memory rather than crash on a
+            // malformed pull -- same defensive fallback switchTab() itself uses.
+          }
+          if (!canvasEditingBoxId) updatePreview();
+        } else {
+          const current = getCurrentTab();
+          if (current && editor.value !== current.content) {
+            editor.value = current.content;
+            updatePreview();
+          }
         }
         // A silently-pulled remote change (applyRemoteTabToLocal above) can include a theme
         // picked on another device -- reapply it live if it's the tab currently on screen,
@@ -6353,8 +6902,27 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // --- TAB & HISTORY SYSTEM ---
 
-    function getCurrentTab() {
+    // The real, always-a-tab lookup — bypasses the canvas-box override below. Used wherever code
+    // needs to know facts about the actual open TAB (its fileType for chrome/layout purposes,
+    // theme, name, ...) regardless of whether a box within it currently stands in for
+    // getCurrentTab() elsewhere.
+    function getActiveTabReal() {
       return tabs.find(t => t.id === activeTabId);
+    }
+
+    // While a canvas box is open for editing (canvasEditingBoxId, see openCanvasBoxEditor()),
+    // this returns that box instead of the real tab — the single indirection point (per this
+    // file's own tab/document architecture) that every existing "act on the current document"
+    // feature already goes through, which is what lets a box reuse the formatting toolbar,
+    // image/drawing/audio insert, table controls, and undo/redo completely unmodified. Falls
+    // back to the real tab whenever no box is being edited, i.e. for every other tab type/mode.
+    function getCurrentTab() {
+      if (canvasEditingBoxId) {
+        const tab = getActiveTabReal();
+        const box = tab && tab.canvasData && tab.canvasData.boxes.find(b => b.id === canvasEditingBoxId);
+        if (box) return box;
+      }
+      return getActiveTabReal();
     }
 
     // --- IMAGE ASSET MAP (keeps the markdown source free of giant inline base64 strings) ---
@@ -6476,6 +7044,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (lower === 'json') return 'json';
       if (lower === 'html' || lower === 'htm') return 'html';
       if (lower === 'txt') return 'txt';
+      if (lower === 'canvas') return 'canvas';
       return 'markdown';
     }
 
@@ -6618,15 +7187,47 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           inputTimeout = null;
           recordHistory();
         }
-        const currentTab = getCurrentTab();
-        if (currentTab) currentTab.content = editor.value;
+        // Flushes the open box's own content into it (already current via markActiveTabModified,
+        // see below) AND re-serializes the whole canvas scene (incl. that box) into the real
+        // tab's own .content, which nothing else does continuously while merely typing inside a
+        // box — without this, switching tabs mid-edit would leave the canvas tab's persisted
+        // content one keystroke stale.
+        if (canvasEditingBoxId) closeCanvasBoxEditor();
+        const currentTab = getActiveTabReal();
+        // A canvas tab's tab.content is kept in sync by syncCanvasContentToTab() (called after
+        // every box mutation, and by closeCanvasBoxEditor() just above) rather than here —
+        // editor.value never represents "the whole canvas document" (only ever a single open
+        // box's markdown while editing, see openCanvasBoxEditor()), so blindly copying it below
+        // would stomp the real content the moment any canvas tab is merely the active one.
+        if (currentTab && currentTab.fileType !== 'canvas') currentTab.content = editor.value;
       }
+      // Selection/edit-mode state is per-visit, not part of the document — leaving any tab
+      // (canvas or not) always starts the next one fresh rather than carrying over a stale
+      // selected/open box from wherever this global state last pointed.
+      canvasSelectedBoxId = null;
+      canvasEditingBoxId = null;
+      setCanvasAddMode(false);
 
       activeTabId = id;
 
       if (targetTab) {
         enableEditorUI();
-        editor.value = targetTab.content;
+        if (targetTab.fileType === 'canvas') {
+          if (!targetTab.canvasData) {
+            try {
+              targetTab.canvasData = JSON.parse(targetTab.content);
+              repairStrandedCanvasBoxAudioAssets(targetTab);
+            } catch (err) {
+              // Malformed/empty content (a corrupted save, or a synced-in file from a build
+              // with a bug) shouldn't hard-crash the whole tab switch — fall back to a blank
+              // A4-portrait scene, same defaults the canvas templates themselves start from.
+              targetTab.canvasData = { pageWidth: '210mm', pageHeight: '297mm', boxes: [], zCounter: 0, viewport: { zoom: 1, panX: 0, panY: 0 }, pageBackgroundColor: '#ffffff' };
+            }
+          }
+          editor.value = '';
+        } else {
+          editor.value = targetTab.content;
+        }
         // Themes are per-tab (see changeTheme()/tab.theme); Simple Modus overrides this with a
         // fixed 'theme-clean' regardless of tab, so switching tabs while it's on deliberately
         // doesn't touch the visible theme -- each tab's own theme still applies the moment
@@ -6637,6 +7238,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           applyTheme(tabTheme);
         }
         updatePreview();
+        applyPaneVisibility(); // toggleEditBtn/togglePreviewBtn must not read "active" for a
+                                // source/preview split a freshly-entered canvas tab isn't showing
         updateUndoRedoButtons();
       } else {
         setEmptyState();
@@ -7160,6 +7763,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             segs.push({ type: 'media', kind: 'video', el: node });
             return;
           }
+          // A user-inserted web embedding (see insertFormatting()'s 'embed' case) -- a plain,
+          // childless <iframe>, so there's nothing to recurse into anyway; its own title
+          // attribute is what speakAnnouncement() reads aloud (see the 'embed' branch there).
+          if (tag === 'IFRAME') {
+            flushText();
+            segs.push({ type: 'media', kind: 'embed', el: node });
+            return;
+          }
           if (tag === 'AUDIO') {
             flushText();
             segs.push({ type: 'audio', el: node });
@@ -7292,8 +7903,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         seg.el.classList.add('tts-active-media');
         // A drawing/image with real alt text (set via the on-image "Alt-Text" button) is read as
         // that text instead of the generic announcement — video is deliberately excluded here,
-        // per how this was specified, and keeps its fixed phrase regardless of alt text.
-        const altText = (seg.kind === 'drawing' || seg.kind === 'image') ? (seg.el.getAttribute('alt') || '').trim() : '';
+        // per how this was specified, and keeps its fixed phrase regardless of alt text. A web
+        // embedding (iframe) always reads its title attribute the same way -- unlike alt text on
+        // an image, which is only a starting point the user may or may not have edited, an
+        // embed's title is the ONLY description it has (there's no separate generic phrase that
+        // would ever make sense on its own), so this isn't an "override the default" case the way
+        // image/drawing are -- it's the sole source of what gets announced.
+        let altText = '';
+        if (seg.kind === 'drawing' || seg.kind === 'image') altText = (seg.el.getAttribute('alt') || '').trim();
+        else if (seg.kind === 'embed') altText = (seg.el.getAttribute('title') || '').trim();
         const phrase = altText || announcements[seg.kind];
         if (!phrase) { segIndex++; playFromCursor(); return; }
         const utter = new SpeechSynthesisUtterance(phrase);
@@ -7401,10 +8019,86 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return { toggle, stop };
     }
 
-    const TTS_ANNOUNCEMENTS = { drawing: 'Hier ist eine Zeichnung.', image: 'Hier ist ein Bild.', video: 'Hier ist ein Video.' };
+    const TTS_ANNOUNCEMENTS = { drawing: 'Hier ist eine Zeichnung.', image: 'Hier ist ein Bild.', video: 'Hier ist ein Video.', embed: 'Hier ist eine Einbettung.' };
 
     const ttsToggleBtn = document.getElementById('ttsToggleBtn');
     const previewTts = markdownTtsEngine(preview, ttsToggleBtn, { lang: 'de-DE', announcements: TTS_ANNOUNCEMENTS, onSlideComplete: null });
+
+    // --- CANVAS-WIDE VORLESEN ---
+    // Reads every box on the canvas in turn, in computeCanvasReadingOrder()'s row-band order, via
+    // #canvasTtsStage (see its own CSS comment for why a dedicated element rather than reusing
+    // #markdownPreview or reading a live box div directly). canvasTtsOrder/canvasTtsIndex are the
+    // canvas equivalent of presentationSlides/presentationIndex -- a snapshot of the reading
+    // sequence taken once when a read starts, not re-derived live (a box dragged mid-read doesn't
+    // reshuffle an already-running read, matching how presentation mode doesn't reshuffle slides
+    // either).
+    const canvasTtsToggleBtn = document.getElementById('canvasTtsToggleBtn');
+    const canvasTtsStageEl = document.getElementById('canvasTtsStage');
+    let canvasTtsOrder = [];
+    let canvasTtsIndex = -1;
+
+    // Renders one box's content into the stage exactly like renderCanvasBoxes() renders it into
+    // an idle .canvas-box-content div (asset resolution + suppressDrawingControls, since this is a
+    // read-only view with no edit/alt-text buttons to wire up), then pans it into view and
+    // positions the stage over it. Returns false (touching nothing) if the box no longer exists --
+    // canvasTtsAdvance() below relies on that to skip a box deleted mid-read rather than crash.
+    function renderCanvasTtsStage(boxId) {
+      const tab = getActiveTabReal();
+      const box = tab && tab.canvasData && tab.canvasData.boxes.find(b => b.id === boxId);
+      if (!box) return false;
+      canvasTtsStageEl.className = 'canvas-box-content markdown-body ' + (box.theme || 'theme-clean');
+      canvasTtsStageEl.style.setProperty('--zoom-scale', (box.zoomLevel || 100) / 100);
+      canvasIdleRenderBox = box;
+      suppressDrawingControls = true;
+      canvasTtsStageEl.innerHTML = marked.parse(box.content || '');
+      suppressDrawingControls = false;
+      canvasIdleRenderBox = null;
+      canvasTtsStageEl.style.display = 'block';
+      const boxEl = canvasPage.querySelector('[data-box-id="' + boxId + '"]');
+      if (boxEl) ensureCanvasBoxVisible(boxEl);
+      positionOverlayOverCanvasBox(canvasTtsStageEl, boxId);
+      return true;
+    }
+
+    // markdownTtsEngine()'s onSlideComplete for the canvas -- called once the current box's
+    // content is fully read. Skips any id whose box was deleted since the read started (rather
+    // than stopping outright) so one removed box doesn't cut a read short; hides the stage and
+    // reports "nothing further" once the order is exhausted, exactly like presentation mode's own
+    // presentationTtsAdvance() reports "no next slide".
+    function canvasTtsAdvance() {
+      while (canvasTtsIndex + 1 < canvasTtsOrder.length) {
+        canvasTtsIndex++;
+        if (renderCanvasTtsStage(canvasTtsOrder[canvasTtsIndex])) return true;
+      }
+      canvasTtsStageEl.style.display = 'none';
+      return false;
+    }
+
+    // Registered *before* markdownTtsEngine() below binds its own click listener to the same
+    // button, so this one fires first on every click (same-phase listeners on one element run in
+    // registration order) -- it only ever does anything on the very first click of a fresh read
+    // (the button doesn't have .active yet, i.e. state is 'idle'): computing the reading order and
+    // populating the stage with box 0 *before* the engine's own toggle()/start() reads it a moment
+    // later in this same click. A click while already reading/paused (.active already set) is left
+    // alone here -- that's the engine's own pause/resume to handle, unchanged.
+    canvasTtsToggleBtn.addEventListener('click', () => {
+      if (canvasTtsToggleBtn.classList.contains('active')) return;
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData || !tab.canvasData.boxes.length) return;
+      canvasTtsOrder = computeCanvasReadingOrder(tab.canvasData.boxes).map(b => b.id);
+      canvasTtsIndex = 0;
+      renderCanvasTtsStage(canvasTtsOrder[0]);
+    });
+
+    const canvasTts = markdownTtsEngine(canvasTtsStageEl, canvasTtsToggleBtn, { lang: 'de-DE', announcements: TTS_ANNOUNCEMENTS, onSlideComplete: canvasTtsAdvance });
+
+    // The one place other code should reach for to force-interrupt a canvas-wide read (mirroring
+    // previewTts.stop()/presentationTts.stop()'s own call sites) -- canvasTts.stop() alone would
+    // leave the now-pointless stage sitting visibly on the canvas.
+    function stopCanvasTts() {
+      canvasTts.stop();
+      canvasTtsStageEl.style.display = 'none';
+    }
 
     // --- SEARCH & REPLACE ---
 
@@ -7560,7 +8254,23 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // --- TOGGLE EDIT / PREVIEW VIEW & THEMES ---
 
+    // On a canvas tab, showEditor/showPreview describe whatever the user last had on some other
+    // tab (see the CSS this bypasses, main.canvas-tab-active:not(.canvas-editing-box)) — the
+    // source/preview split has no meaning until a box is actually open, and only opening one
+    // should ever make the source view appear — "im Canvas Modus soll nicht automatisch die
+    // Quellcode Ansicht aktiviert werden können, nur per Aktivierung über eine Box."
+    function isCanvasWithoutOpenBox() {
+      const tab = getActiveTabReal();
+      return !!(tab && tab.fileType === 'canvas' && !canvasEditingBoxId);
+    }
+
     function toggleEditor() {
+      // This is now the *only* way to leave box-edit mode (the old "click outside the box"
+      // listener was removed — see its former location for why: it made canvas drag-to-pan
+      // impossible while a box was open). "Nur noch mit dem Quelltext-Button in der Symbolleiste
+      // kann der Quellcode-Modus geändert werden."
+      if (canvasEditingBoxId) { closeCanvasBoxEditor(); return; }
+      if (isCanvasWithoutOpenBox()) return;
       if (simpleMode) {
         // Simple Modus has no split view -- Quelltext/Vorschau act as a single exclusive
         // radio pair instead of two independent panes (see togglePreview() below).
@@ -7575,6 +8285,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     function togglePreview() {
+      if (isCanvasWithoutOpenBox()) return;
       if (simpleMode) {
         showPreview = !showPreview;
         showEditor = !showPreview;
@@ -7586,13 +8297,35 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       saveStateToLocalStorage();
     }
 
+    // "Design wechseln" has no meaning for the canvas chrome itself (only a box has a theme, see
+    // makeCanvasBox()) while no box is open -- but "welche Hintergrundfarbe hat die Seite" does,
+    // so the theme-picker's slot swaps from the theme <select> to a canvas background-color
+    // <input type="color"> instead of just disappearing (which it used to). Same icon, same
+    // toolbar position, reused rather than hidden -- see the HTML comment above .theme-picker.
+    // Called from both applyPaneVisibility() and updatePreview(), the two places that already
+    // needed to know canvasNoBox for their own, unrelated reasons.
+    function updateThemePickerForCanvasMode(canvasNoBox) {
+      themeSelector.style.display = canvasNoBox ? 'none' : '';
+      canvasBgColorInput.style.display = canvasNoBox ? '' : 'none';
+      document.querySelector('.theme-picker-icon').title = canvasNoBox ? 'Canvas-Hintergrundfarbe wählen' : 'Design wechseln';
+      if (canvasNoBox) {
+        const tab = getActiveTabReal();
+        canvasBgColorInput.value = (tab && tab.canvasData && tab.canvasData.pageBackgroundColor) || '#ffffff';
+      }
+    }
+
     function applyPaneVisibility() {
       if (!showPreview) previewTts.stop();
       mainContainer.classList.toggle('editor-hidden', !showEditor);
       mainContainer.classList.toggle('preview-hidden', !showPreview);
-      toggleEditBtn.classList.toggle('active', showEditor);
+      // A canvas tab's showEditor is whatever some other tab last left it at (see
+      // isCanvasWithoutOpenBox()'s own comment) -- the Quelltext toggle must not read as "on"
+      // for a source view that isn't actually shown, and only becomes real once a box is open.
+      const canvasNoBox = isCanvasWithoutOpenBox();
+      toggleEditBtn.classList.toggle('active', canvasNoBox ? !!canvasEditingBoxId : showEditor);
       togglePreviewBtn.classList.toggle('active', showPreview);
-      document.getElementById('formattingToolbar').style.display = showEditor ? 'flex' : 'none';
+      document.getElementById('formattingToolbar').style.display = (canvasNoBox || !showEditor) ? 'none' : 'flex';
+      updateThemePickerForCanvasMode(canvasNoBox);
       updateTableControlsVisibility();
     }
 
@@ -7674,13 +8407,68 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       document.documentElement.style.setProperty('--zoom-scale', zoomLevel / 100);
     }
 
+    // On a canvas tab with no box open, the header zoom buttons take over the canvas viewport's
+    // own zoom (the same thing the nav-overlay's now-removed +/- buttons used to do) instead of
+    // the usual editor/preview font-size zoom, which wouldn't be visible anyway (editor/preview
+    // are 0-width until a box is open). Once a box IS open, they revert to the ordinary font-size
+    // zoom -- but scoped to that one box (canvasBoxZoom() below), not the app-wide zoomLevel, so
+    // "Alle anderen Boxen behalten ihre eingestellten Zoom Werte."
+    function isCanvasWithoutOpenBoxForZoom() {
+      const tab = getActiveTabReal();
+      return !!(tab && tab.fileType === 'canvas' && !canvasEditingBoxId);
+    }
+
+    // Applies a box's own zoomLevel as a local --zoom-scale override directly on the live
+    // editor/preview elements (not document.documentElement, which is what the app-wide
+    // applyZoomLevel() sets) -- an inline style on the element itself beats the inherited
+    // documentElement value for that element and its descendants, so this box's source+preview
+    // scale independently of the global zoom without touching or being touched by it. Called both
+    // when opening a box (restore its saved zoom) and after canvasBoxZoom() changes it.
+    //
+    // Deliberately does NOT also factor in the canvas's own viewport zoom here (an earlier version
+    // of this did, multiplying it into the preview's --zoom-scale) -- that only fixed font-size,
+    // while every OTHER fixed-px value in .markdown-body/theme CSS (the 20px box padding, heading
+    // border-bottom thickness, code/table/blockquote padding, ...) stayed a flat, unscaled pixel
+    // value in the live overlay while the exact same values got scaled down for free in the idle
+    // box (which sits inside #canvasPage, itself `transform: scale()`d by the canvas zoom) --
+    // reported directly as the box's padding/heading layout looking "gravierend" different between
+    // the two views. positionCanvasBoxOverlay() now applies an actual `transform: scale()` to the
+    // overlay itself instead, which scales every pixel value inside it uniformly, the same way
+    // #canvasPage already does for the idle box -- so canvas-zoom compounding lives in exactly one
+    // place, not duplicated (and inevitably drifting) between a CSS-var multiplication here and a
+    // real transform there. This function now only ever needs to express the box's OWN zoom.
+    function applyCanvasBoxZoom(box) {
+      const scale = (box.zoomLevel || 100) / 100;
+      editor.style.setProperty('--zoom-scale', scale);
+      preview.style.setProperty('--zoom-scale', scale);
+    }
+
+    // The header zoom buttons' behavior while a box is open: adjusts *that box's* zoomLevel only,
+    // persists it on the box object itself (so "Die Zoomwerte müssen pro Box gespeichert bleiben"
+    // falls out of the same tab-save/WebDAV-sync plumbing every other box field already goes
+    // through -- no new persistence code needed), and re-applies it live.
+    function canvasBoxZoom(dir) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData || !canvasEditingBoxId) return;
+      const box = tab.canvasData.boxes.find(b => b.id === canvasEditingBoxId);
+      if (!box) return;
+      box.zoomLevel = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, (box.zoomLevel || 100) + dir * ZOOM_STEP));
+      applyCanvasBoxZoom(box);
+      syncCanvasContentToTab(tab);
+      saveStateToLocalStorage();
+    }
+
     function zoomIn() {
+      if (canvasEditingBoxId) { canvasBoxZoom(1); return; }
+      if (isCanvasWithoutOpenBoxForZoom()) { canvasZoom(1); return; }
       zoomLevel = Math.min(ZOOM_MAX, zoomLevel + ZOOM_STEP);
       applyZoomLevel();
       saveStateToLocalStorage();
     }
 
     function zoomOut() {
+      if (canvasEditingBoxId) { canvasBoxZoom(-1); return; }
+      if (isCanvasWithoutOpenBoxForZoom()) { canvasZoom(-1); return; }
       zoomLevel = Math.max(ZOOM_MIN, zoomLevel - ZOOM_STEP);
       applyZoomLevel();
       saveStateToLocalStorage();
@@ -7709,6 +8497,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const deltaPercent = (delta / totalSize) * 100;
       splitRatio = Math.min(85, Math.max(15, resizeStartRatio + deltaPercent));
       applySplitRatio();
+      // Changing --split-ratio reflows canvasPreview's own width immediately (pure CSS grid/
+      // flexbox, no JS needed) -- and since .canvas-viewport centers the page, the box being
+      // edited visibly shifts on screen as the divider moves. The overlay's own position/size/
+      // clip-path (positionCanvasBoxOverlay()) only gets computed on demand, though, and nothing
+      // was re-triggering that computation here -- so dragging the divider left the overlay
+      // frozen at wherever it last was while the real canvas underneath kept reflowing out from
+      // under it, showing two visibly offset copies of the same box. Reported directly ("wenn die
+      // Trennlinie verschoben wird... [stimmt] nicht die canvas Darstellung darunter [mit dem
+      // Overlay überein]"). Same fix shape as onCanvasPointerMove()'s own move/resize/pan branches
+      // just below, which already re-call this for the exact same reason.
+      if (canvasEditingBoxId) positionCanvasBoxOverlay();
     });
 
     function endPaneResize(e) {
@@ -7945,8 +8744,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // Presentation mode doesn't go through updatePreview(), so its own auto-stop hook there
       // never fires here — and both this and the live-preview engine ultimately share one global
       // speechSynthesis queue, so a read left running in the preview would otherwise fight the
-      // presentation instance for it the moment presentation mode starts its own reading.
+      // presentation instance for it the moment presentation mode starts its own reading. Same
+      // reasoning for the canvas-wide read (not reachable from a canvas tab today, but cheap and
+      // harmless insurance if that ever changes).
       previewTts.stop();
+      stopCanvasTts();
       presentationSlides = splitIntoSlides(editor.value);
       presentationIndex = 0;
       presentationActive = true;
@@ -8065,7 +8867,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // overwriting what the active tab actually had selected, so it can be restored afterward.
     function applyTheme(themeClass) {
       currentTheme = themeClass;
-      preview.className = 'markdown-body ' + themeClass;
+      // preview.className is a full overwrite (see below) -- canvas-box-overlay (see
+      // updatePreview()'s isEditingCanvasBox branch) is a structural class unrelated to theming
+      // that would otherwise silently get wiped every time a theme is (re-)applied while a box
+      // is open, breaking the overlay's fixed positioning over that box.
+      const isBoxOverlay = preview.classList.contains('canvas-box-overlay');
+      preview.className = 'markdown-body ' + themeClass + (isBoxOverlay ? ' canvas-box-overlay' : '');
       const lightStyle = document.getElementById('hljs-theme-light');
       const darkStyle = document.getElementById('hljs-theme-dark');
       if (DARK_THEMES.has(themeClass)) {
@@ -8086,6 +8893,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const tab = getCurrentTab();
       if (tab) tab.theme = themeClass;
       applyTheme(themeClass);
+    }
+
+    // #canvasBgColorInput's onchange -- the canvas-chrome equivalent of changeTheme() above,
+    // stored on tab.canvasData (see makeCanvasBox()-adjacent canvasData defaults) rather than on
+    // any box, since this colors the page itself, not a note sitting on it. Rides along inside
+    // tab.content (JSON.stringify(canvasData)) exactly like pageWidth/viewport/zCounter already
+    // do -- no separate persistence or WebDAV-sync plumbing needed.
+    function changeCanvasBackgroundColor(hexColor) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      tab.canvasData.pageBackgroundColor = hexColor;
+      updateCanvasPreview();
+      syncCanvasContentToTab(tab);
+      saveStateToLocalStorage();
     }
 
     // --- CSV / JSON / TXT preview rendering ---
@@ -8195,28 +9016,899 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // this is the single re-render chokepoint (also reached via switchTab()), so stopping here
       // covers both the "user edited the text" and "user switched tabs" auto-stop triggers.
       previewTts.stop();
+      // Opening a box for editing (which runs through here too) must also interrupt a canvas-wide
+      // read in progress -- reading the whole canvas and editing one box on it are mutually
+      // exclusive activities, and the box being edited is likely mid-render inside
+      // #canvasTtsStage's own read if a canvas-wide read happened to be going. A no-op the rest of
+      // the time (stop() already early-returns once idle), same as previewTts.stop() above.
+      stopCanvasTts();
       // Any live cell-selection refers to DOM nodes that preview.innerHTML below is about to
       // destroy — no need to also strip .cell-selected off them first, they're going away anyway.
       cellSelection = null;
+      // isHtml/isCanvas describe the real, open TAB (chrome/layout concerns) — deliberately not
+      // derived from getCurrentTab(), which returns a canvas *box* while one is being edited (see
+      // getCurrentTab()'s own comment). `tab` below is the actual document to render, which
+      // during a box edit is that box, not the canvas tab itself.
+      const realTab = getActiveTabReal();
+      const isHtml = !!(realTab && realTab.fileType === 'html');
+      const isCanvas = !!(realTab && realTab.fileType === 'canvas');
+      const isEditingCanvasBox = isCanvas && !!canvasEditingBoxId;
       const tab = getCurrentTab();
-      const isHtml = !!(tab && tab.fileType === 'html');
       previewPane.classList.toggle('html-active', isHtml);
+      previewPane.classList.toggle('canvas-active', isCanvas);
       mainContainer.classList.toggle('html-tab-active', isHtml);
+      mainContainer.classList.toggle('canvas-tab-active', isCanvas);
+      mainContainer.classList.toggle('canvas-editing-box', isEditingCanvasBox);
       htmlPreviewFrame.classList.toggle('active', isHtml);
-      preview.style.display = isHtml ? 'none' : '';
-      if (isHtml) {
+      canvasPreview.classList.toggle('active', isCanvas);
+      preview.classList.toggle('canvas-box-overlay', isEditingCanvasBox);
+      // #formattingToolbar is a sibling of <main>, not a descendant of it (it lives directly
+      // under <body>, alongside the tab bar) -- so the CSS descendant-selector trick that hides
+      // .editor-pane/.pane-resizer via "main.canvas-tab-active ..." can't reach it, unlike those
+      // two. Mirrors applyPaneVisibility()'s own showEditor-based rule for the non-canvas case,
+      // with isCanvas (unless a box is open) forcing it closed regardless of showEditor's actual
+      // (untouched) value.
+      document.getElementById('formattingToolbar').style.display = ((isCanvas && !isEditingCanvasBox) || !showEditor) ? 'none' : 'flex';
+      // Same reasoning, same "sibling of <main>, not a descendant" limitation as the formatting
+      // toolbar above -- see updateThemePickerForCanvasMode()'s own comment for why this swaps to
+      // a background-color picker for the canvas chrome itself rather than just disappearing.
+      updateThemePickerForCanvasMode(isCanvas && !isEditingCanvasBox);
+      if (!isEditingCanvasBox && isCanvas) {
+        preview.style.display = 'none';
+        textWordRanges = [];
+        updateCanvasPreview();
+      } else if (isHtml) {
+        preview.style.display = 'none';
         updateHtmlPreview(editor.value);
       } else {
+        // Either a normal markdown/csv/json tab, or a canvas box currently open for editing
+        // (`tab` is that box, itself always fileType 'markdown' — see makeCanvasBox()) — both
+        // render through this exact same pipeline, which is the whole point: a box gets every
+        // markdown-preview feature (task checkboxes, table/word click-to-source, image wrappers,
+        // ...) for free, with zero per-feature special-casing for "this is inside a box".
+        preview.style.display = '';
         preview.innerHTML = renderContentForTab(tab, editor.value);
         attachTaskCheckboxListeners();
-        updateTocPanel();
-        if (tab && tab.fileType === 'markdown') attachMarkdownTableCellPositions();
+        if (!isEditingCanvasBox) updateTocPanel(); // no meaningful heading outline for one box
+        if (tab && tab.fileType === 'markdown') {
+          attachMarkdownTableCellPositions();
+          textWordRanges = buildTextWordRanges(editor.value);
+        } else {
+          textWordRanges = [];
+        }
+        if (isEditingCanvasBox) {
+          updateCanvasPreview(); // keeps the rest of the canvas (other boxes) in sync too
+          positionCanvasBoxOverlay();
+        }
       }
       updateEditorHighlightOverlay();
       updateStats();
       updateFormatButtonStates();
-      updateTabNameFromFirstHeading();
+      if (!isEditingCanvasBox) updateTabNameFromFirstHeading(); // a box's heading isn't the tab's
       updateTableControlsVisibility();
+    }
+
+    // --- CANVAS MODE (a fixed DIN-A4 page of freely placed, individually editable boxes) ---
+    // A canvas tab's document (tab.content) is a JSON string — never markdown bound to the
+    // shared editor the way every other tab type is — parsed once into a live tab.canvasData
+    // object on first switch into the tab (see switchTab()) and kept there for the rest of the
+    // session; syncCanvasContentToTab() re-serializes it back into tab.content after every box
+    // mutation, the same "always current" role markActiveTabModified()'s per-keystroke copy
+    // plays for ordinary tabs (see the comment on this in switchTab()).
+    //
+    // Box coordinates (x/y/w/h) are plain numbers in millimeters, matching pageWidth/pageHeight
+    // (also CSS mm strings) — real physical units rather than a chosen px/mm constant, so the
+    // on-screen canvas and the eventual print/PDF export (see performCanvasHtmlExport() and the
+    // print CSS) agree on size by construction. clientToCanvasMm() is the only place a screen
+    // pixel position gets converted to this coordinate system, via the CSS spec's fixed 96px/inch
+    // reference pixel (independent of actual monitor DPI, which is exactly why mm/in/cm are safe
+    // to rely on here at all).
+    const CANVAS_BOX_MIN_MM = 20;
+    const CANVAS_PX_PER_MM = 96 / 25.4;
+    const CANVAS_ZOOM_MIN = 0.2;
+    const CANVAS_ZOOM_MAX = 3;
+    const CANVAS_ZOOM_STEP = 0.1;
+    const CANVAS_PAN_STEP_PX = 60;
+    const CANVAS_CLICK_VS_DRAG_THRESHOLD_PX = 4;
+
+    let canvasSelectedBoxId = null; // single-clicked box showing resize handles/delete button
+    let canvasEditingBoxId = null;  // double-clicked box currently open in the shared editor
+    let canvasAddMode = false;      // "+" toggle: next drag on empty canvas draws a new box
+    let canvasDrag = null;          // active pointer-drag state (create/move/resize), or null
+    let canvasRenderGeneration = 0; // bumped by renderCanvasBoxes(), guards its deferred overflow check
+
+    // A box is deliberately shaped like a miniature tab (content/fileType/assets/history/...)
+    // rather than just { markdown } — see openCanvasBoxEditor() below, which makes a box
+    // getCurrentTab()'s return value for the duration of an edit so it transparently receives
+    // every existing markdown-tab feature (formatting toolbar, image/drawing/audio insert, table
+    // controls, undo/redo) with no per-feature special-casing. fileType is always 'markdown': a
+    // box is never itself a CSV/JSON/HTML/canvas document.
+    function makeCanvasBox(id, x, y, w, h, zIndex) {
+      return {
+        id, x, y, w, h, zIndex,
+        content: '',
+        fileType: 'markdown',
+        // Themes are per-box (mirroring tab.theme for ordinary tabs) rather than shared across
+        // the whole canvas — "Es sollen individuelle Designs für jede Box möglich sein." A new
+        // box always starts on Clean regardless of what any other box or tab currently shows —
+        // "Bei einer neuen Box soll immer clean vorausgewählt sein."
+        theme: 'theme-clean',
+        // Zoom (editor+preview font-size scale while this box is open) is likewise per-box, not
+        // shared/global -- "Alle anderen Boxen behalten ihre eingestellten Zoom Werte. Eine neue
+        // Box startet bei Zoom 100%." See canvasBoxZoom()/applyCanvasBoxZoom() below.
+        zoomLevel: 100,
+        assets: {},
+        assetCounter: 0,
+        drawingAssetIds: {},
+        rawDrawingAssetIds: {},
+        pdfDrawingAssetIds: {},
+        audioAssetIds: {},
+        history: [''],
+        historyIndex: 0,
+        isModified: false
+      };
+    }
+
+    function syncCanvasContentToTab(tab) {
+      tab.content = JSON.stringify(tab.canvasData);
+      tab.isModified = true;
+    }
+
+    // One-time repair for documents affected by a real, now-fixed bug in insertAudioAsset(): a
+    // recording made while a canvas box was open used to write its actual asset data onto the
+    // canvas TAB's own top-level .assets/.audioAssetIds instead of the box's — the box's markdown
+    // reference (asset:audio_N) still landed correctly (spliced through the shared editor.value),
+    // so the reference and its data ended up stranded in two different places, rendering as a
+    // broken image ("Eine Sprachaufnahme wird... mit fehlendem Symbol dargestellt"). Called right
+    // after tab.canvasData is (re)parsed from tab.content — a stranded asset is only ever
+    // reachable that way, since insertAudioAsset() itself is already fixed and won't create new
+    // ones. Scans every box's markdown for asset:ID references it doesn't itself have data for,
+    // and reclaims it from the tab's own map when the tab still has it there (tagged as audio).
+    function repairStrandedCanvasBoxAudioAssets(tab) {
+      if (!tab || !tab.canvasData || !tab.assets || !tab.audioAssetIds) return;
+      let migrated = false;
+      (tab.canvasData.boxes || []).forEach(box => {
+        const refs = (box.content || '').match(/asset:[A-Za-z0-9_]+/g) || [];
+        refs.forEach(ref => {
+          const id = ref.slice('asset:'.length);
+          if ((box.assets && box.assets[id] !== undefined) || !tab.audioAssetIds[id] || tab.assets[id] === undefined) return;
+          if (!box.assets) box.assets = {};
+          if (!box.audioAssetIds) box.audioAssetIds = {};
+          box.assets[id] = tab.assets[id];
+          box.audioAssetIds[id] = true;
+          // The migrated ID's numeric suffix came from the TAB's own assetCounter at original
+          // insertion time (that was the whole bug) -- completely disconnected from this box's
+          // own counter sequence. Bumping the box's counter up to at least that number keeps a
+          // future insert into this same box from minting the exact same ID again and silently
+          // overwriting the just-recovered asset.
+          const num = parseInt(id.split('_').pop(), 10);
+          if (!isNaN(num)) box.assetCounter = Math.max(box.assetCounter || 0, num);
+          delete tab.assets[id];
+          delete tab.audioAssetIds[id];
+          migrated = true;
+        });
+      });
+      if (migrated) syncCanvasContentToTab(tab);
+    }
+
+    function clientToCanvasMm(clientX, clientY) {
+      const tab = getActiveTabReal();
+      const zoom = (tab && tab.canvasData && tab.canvasData.viewport.zoom) || 1;
+      const rect = canvasPage.getBoundingClientRect();
+      const pxPerMm = CANVAS_PX_PER_MM * zoom;
+      return { x: (clientX - rect.left) / pxPerMm, y: (clientY - rect.top) / pxPerMm };
+    }
+
+    function applyCanvasViewportTransform() {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const { zoom, panX, panY } = tab.canvasData.viewport;
+      canvasPage.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + ')';
+      updateCanvasMinimap();
+    }
+
+    // The nav-overlay minimap: a small rectangle shaped like the page (portrait/landscape),
+    // with an inner highlight showing which fraction of the page the current pan/zoom actually
+    // shows on screen right now. getBoundingClientRect() already reflects the just-applied
+    // transform synchronously (querying layout geometry flushes any pending style changes), so
+    // this can run immediately after the transform is set rather than waiting a frame.
+    const CANVAS_MINIMAP_BOX_PX = 24;
+    function updateCanvasMinimap() {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const minimapPage = document.getElementById('canvasMinimapPage');
+      const minimapView = document.getElementById('canvasMinimapView');
+      if (!minimapPage || !minimapView) return;
+
+      const pageW = parseFloat(tab.canvasData.pageWidth) || 1;
+      const pageH = parseFloat(tab.canvasData.pageHeight) || 1;
+      const ratio = pageW / pageH;
+      const mw = ratio <= 1 ? CANVAS_MINIMAP_BOX_PX * ratio : CANVAS_MINIMAP_BOX_PX;
+      const mh = ratio <= 1 ? CANVAS_MINIMAP_BOX_PX : CANVAS_MINIMAP_BOX_PX / ratio;
+      minimapPage.style.width = mw + 'px';
+      minimapPage.style.height = mh + 'px';
+
+      const pageRect = canvasPage.getBoundingClientRect();
+      const viewportRect = canvasViewport.getBoundingClientRect();
+      if (pageRect.width <= 0 || pageRect.height <= 0) return;
+      const visLeft = Math.max(0, viewportRect.left - pageRect.left);
+      const visTop = Math.max(0, viewportRect.top - pageRect.top);
+      const visRight = Math.min(pageRect.width, viewportRect.right - pageRect.left);
+      const visBottom = Math.min(pageRect.height, viewportRect.bottom - pageRect.top);
+      const fracLeft = visLeft / pageRect.width;
+      const fracTop = visTop / pageRect.height;
+      const fracW = Math.max(0, (visRight - visLeft) / pageRect.width);
+      const fracH = Math.max(0, (visBottom - visTop) / pageRect.height);
+      minimapView.style.left = (fracLeft * 100) + '%';
+      minimapView.style.top = (fracTop * 100) + '%';
+      minimapView.style.width = (fracW * 100) + '%';
+      minimapView.style.height = (fracH * 100) + '%';
+    }
+
+    function updateCanvasPreview() {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      canvasPage.style.width = tab.canvasData.pageWidth;
+      canvasPage.style.height = tab.canvasData.pageHeight;
+      // Defaults to white -- the same fixed color .canvas-page used before this was made
+      // choosable (see changeCanvasBackgroundColor()) -- so a document saved before this field
+      // existed renders exactly as it always did.
+      canvasPage.style.backgroundColor = tab.canvasData.pageBackgroundColor || '#ffffff';
+      // Drives the @page{size:...} choice in the print CSS below (@page can't read a JS/CSS
+      // variable directly, only this class-based indirection).
+      canvasPage.classList.toggle('landscape', parseFloat(tab.canvasData.pageWidth) > parseFloat(tab.canvasData.pageHeight));
+      applyCanvasViewportTransform();
+      renderCanvasBoxes();
+    }
+
+    // Boxes sit freely in 2D space, not in the one linear list a normal document's headings/
+    // paragraphs come in -- there's no single "obviously correct" reading order for Vorlesen
+    // (below) to fall back on, only a reasonable approximation. This groups boxes into "row
+    // bands" (boxes whose vertical extents meaningfully overlap count as the same row -- a band
+    // expands to cover every box that joins it, so a third box overlapping only that expanded
+    // range still lands in the same row) and reads top-to-bottom by row, left-to-right within a
+    // row -- the same heuristic document-layout/OCR tools use for reading order on a scanned page
+    // with multiple text blocks. Works well for a tidy grid of notes; a deliberately overlapping
+    // or diagonal layout can still produce a surprising order -- accepted, per how this was
+    // discussed ("das lässt sich nicht perfekt lösen, nur vernünftig annähern"). Pure/non-
+    // mutating (sorts copies throughout) so it's safe to call on the live tab.canvasData.boxes
+    // array directly, e.g. from the HTML export, without side effects on the document itself.
+    function computeCanvasReadingOrder(boxes) {
+      const sorted = boxes.slice().sort((a, b) => a.y - b.y);
+      const rows = [];
+      sorted.forEach(box => {
+        const top = box.y, bottom = box.y + box.h, center = box.y + box.h / 2;
+        let row = rows.find(r => center >= r.top && center <= r.bottom);
+        if (!row) {
+          row = { top, bottom, boxes: [] };
+          rows.push(row);
+        } else {
+          row.top = Math.min(row.top, top);
+          row.bottom = Math.max(row.bottom, bottom);
+        }
+        row.boxes.push(box);
+      });
+      rows.sort((a, b) => a.top - b.top);
+      const order = [];
+      rows.forEach(row => {
+        row.boxes.sort((a, b) => a.x - b.x);
+        order.push(...row.boxes);
+      });
+      return order;
+    }
+
+    const CANVAS_TRASH_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M4 7H20M9 7V5C9 4.44772 9.44772 4 10 4H14C14.5523 4 15 4.44772 15 5V7M18 7L17.3 18.3C17.2 19.5 16.2 20 15 20H9C7.8 20 6.8 19.5 6.7 18.3L6 7" ' +
+      'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    // Rebuilds every box <div> from scratch on each call (mirroring how updatePreview() itself
+    // fully replaces preview.innerHTML rather than diffing) — simple and fast enough at the
+    // "handful of boxes on one page" scale this feature is meant for. Only the *selected* box
+    // gets resize handles/move edges/delete button, per the spec ("Wenn die Box nur einmal
+    // angeklickt wird, erhalten die Ränder der Box dynamische Anfasser").
+    function renderCanvasBoxes() {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      canvasPage.querySelectorAll('.canvas-box').forEach(el => el.remove());
+
+      tab.canvasData.boxes.forEach(box => {
+        const el = document.createElement('div');
+        el.className = 'canvas-box' + (box.id === canvasSelectedBoxId ? ' selected' : '');
+        el.style.left = box.x + 'mm';
+        el.style.top = box.y + 'mm';
+        el.style.width = box.w + 'mm';
+        el.style.height = box.h + 'mm';
+        el.style.zIndex = box.zIndex || 0;
+        el.dataset.boxId = box.id;
+        el.title = 'Einmal klicken zum Positionieren. Ein zweiter Klick zum Bearbeiten.';
+
+        const content = document.createElement('div');
+        // Themes are per-box (see makeCanvasBox()) — applying the theme class here is what makes
+        // an idle box's own mini-preview render with its own colors, independent of whichever
+        // theme any other box (or the box currently open for editing) has. The shared hljs
+        // light/dark stylesheet toggle in applyTheme() is a real, accepted exception to this:
+        // it's a single global switch, so code-block syntax colors can't be simultaneously
+        // correct for two differently-themed boxes on screen at once -- only the --preview-*
+        // colors (scoped per element via this class) are guaranteed independent per box.
+        content.className = 'canvas-box-content markdown-body ' + (box.theme || 'theme-clean');
+        // Per-box zoom (see makeCanvasBox()) applies here too, as a local --zoom-scale override
+        // on the box's own element -- .markdown-body's font-size already reads this var (see the
+        // CSS rule above), and a property set directly on an element beats whatever value it
+        // would otherwise inherit from an ancestor (e.g. the app-wide zoom on <html>). This is
+        // also what fixes "der sichtbare Inhalt einer Box Vorschau unterscheidet sich je nachdem,
+        // ob der Quelltext Editor an ist, oder nicht" for zoom specifically: the idle box now
+        // renders at the exact same scale openCanvasBoxEditor()/applyCanvasBoxZoom() apply to the
+        // live editor/preview while editing.
+        content.style.setProperty('--zoom-scale', (box.zoomLevel || 100) / 100);
+        // Assets referenced in a box's markdown (asset:ID) only resolve through
+        // getCurrentTab().assets -- which is only ever the box actually being edited (see
+        // getCurrentTab()'s override). An idle box isn't "the current tab", so without
+        // canvasIdleRenderBox its own images/pictograms/drawings/audio recordings would render
+        // broken the moment editing closes -- see canvasIdleRenderBox's own comment for why this
+        // isn't a plain regex asset:ID -> data-URI substitution (that broke audio playback).
+        // suppressDrawingControls hides the interactive edit/alt-text-button wrappers since this
+        // is a read-only idle preview, not an editable one.
+        canvasIdleRenderBox = box;
+        suppressDrawingControls = true;
+        content.innerHTML = marked.parse(box.content || '');
+        suppressDrawingControls = false;
+        canvasIdleRenderBox = null;
+        el.appendChild(content);
+
+        if (box.id === canvasSelectedBoxId) {
+          ['nw', 'ne', 'sw', 'se'].forEach(pos => {
+            const h = document.createElement('div');
+            h.className = 'canvas-box-handle ' + pos;
+            h.dataset.handle = pos;
+            el.appendChild(h);
+          });
+          ['top', 'bottom', 'left', 'right'].forEach(pos => {
+            const m = document.createElement('div');
+            m.className = 'canvas-box-move-edge ' + pos;
+            el.appendChild(m);
+          });
+          const del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'canvas-box-delete-btn';
+          del.title = 'Box löschen';
+          del.innerHTML = CANVAS_TRASH_ICON;
+          del.onclick = (e) => { e.stopPropagation(); deleteCanvasBox(box.id); };
+          el.appendChild(del);
+        }
+
+        canvasPage.appendChild(el);
+      });
+
+      // Overflow (scrollHeight vs. clientHeight) only reads correctly once the box is actually
+      // laid out in the document, so this runs as a follow-up frame rather than during the
+      // build loop above. Guarded by a generation counter against a real race: renderCanvasBoxes()
+      // runs on every keystroke while editing (via updatePreview()), so a second call can easily
+      // land before the first call's rAF has fired. That stale callback would otherwise measure
+      // whatever box/content elements it captured *at schedule time* — already removed from the
+      // DOM by the newer render — and a detached element's scrollHeight/clientHeight don't mean
+      // "does this content overflow the box" at all, which is exactly the reported bug (the red
+      // border reacting to content that's no longer what's actually shown). Querying box/content
+      // pairs fresh inside the callback (rather than correlating by index against an outer-scope
+      // array captured before the frame) means a stale callback either gets discarded by the
+      // generation check below, or -- if it somehow still ran -- would at least query live,
+      // current elements rather than detached ones.
+      // setTimeout rather than requestAnimationFrame: this only needs the DOM mutations above to
+      // have already happened (querying scrollHeight/clientHeight forces an on-demand layout
+      // flush regardless of whether an actual paint frame has occurred), not a real painted
+      // frame -- and rAF callbacks are throttled/deferred indefinitely for a backgrounded or
+      // otherwise non-painting tab/window, which setTimeout is not subject to in the same way.
+      const myRenderGeneration = ++canvasRenderGeneration;
+      setTimeout(() => {
+        if (myRenderGeneration !== canvasRenderGeneration) return; // superseded by a newer render
+        canvasPage.querySelectorAll('.canvas-box').forEach(el => {
+          const content = el.querySelector('.canvas-box-content');
+          if (!content) return;
+          el.classList.toggle('overflowing', content.scrollHeight > content.clientHeight + 1);
+        });
+      }, 0);
+    }
+
+    function selectCanvasBox(id) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const box = tab.canvasData.boxes.find(b => b.id === id);
+      if (!box) return;
+      canvasSelectedBoxId = id;
+      // Bring-to-front on select, not just on drag-start — "Wenn sich die Box mit einer anderen
+      // überlappt, dann ist immer die Box oben, die zuletzt angeklickt wurde."
+      tab.canvasData.zCounter = (tab.canvasData.zCounter || 0) + 1;
+      box.zIndex = tab.canvasData.zCounter;
+      // Deferred, not synchronous — renderCanvasBoxes() always removes and recreates every box
+      // <div> from scratch, and doing that synchronously inside this pointerdown-triggered call
+      // would detach the exact element the browser's mousedown just landed on before its
+      // matching mouseup/click ever fires. A click (and so a double-click's second click/
+      // dblclick) only fires against an element still attached at mouseup — confirmed directly:
+      // without this deferral, a genuine double-click on a not-yet-selected box never reached
+      // openCanvasBoxEditor()'s dblclick listener at all, since the first click's synchronous
+      // re-render pulled the rug out from under the second one before the browser could pair
+      // them into a dblclick. setTimeout (a macrotask) rather than requestAnimationFrame: this
+      // only needs to run *after* the current click/dblclick event dispatch finishes, which any
+      // deferral achieves — rAF specifically ties to the next paint, which a backgrounded or
+      // otherwise non-rendering tab/window can defer indefinitely (confirmed directly: this rAF
+      // call could go a very long time without ever firing in exactly that situation, silently
+      // leaving a box selection never actually rendered).
+      setTimeout(renderCanvasBoxes, 0);
+      syncCanvasContentToTab(tab);
+      saveStateToLocalStorage();
+    }
+
+    function deleteCanvasBox(id) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      tab.canvasData.boxes = tab.canvasData.boxes.filter(b => b.id !== id);
+      if (canvasSelectedBoxId === id) canvasSelectedBoxId = null;
+      if (canvasEditingBoxId === id) canvasEditingBoxId = null;
+      renderCanvasBoxes();
+      syncCanvasContentToTab(tab);
+      saveStateToLocalStorage();
+    }
+
+    function setCanvasAddMode(on) {
+      canvasAddMode = on;
+      document.getElementById('canvasAddToggleBtn').classList.toggle('active', canvasAddMode);
+      canvasPage.classList.toggle('add-mode', canvasAddMode);
+    }
+
+    function toggleCanvasAddMode() {
+      setCanvasAddMode(!canvasAddMode);
+    }
+
+    function canvasZoom(dir) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const v = tab.canvasData.viewport;
+      v.zoom = Math.max(CANVAS_ZOOM_MIN, Math.min(CANVAS_ZOOM_MAX, v.zoom + dir * CANVAS_ZOOM_STEP));
+      applyCanvasViewportTransform();
+      syncCanvasContentToTab(tab);
+      saveStateToLocalStorage();
+    }
+
+    function canvasPan(dx, dy) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const v = tab.canvasData.viewport;
+      v.panX -= dx * CANVAS_PAN_STEP_PX;
+      v.panY -= dy * CANVAS_PAN_STEP_PX;
+      applyCanvasViewportTransform();
+      syncCanvasContentToTab(tab);
+      saveStateToLocalStorage();
+    }
+
+    // --- Box create/move/resize drags — same Pointer Events technique as #paneResizer/cropBox
+    // elsewhere in this file (uniform mouse/touch/pen handling, no separate touch listeners). All
+    // three share one pointermove/pointerup pair, dispatching on canvasDrag.type.
+
+    function startCanvasBoxCreate(e) {
+      e.preventDefault();
+      const start = clientToCanvasMm(e.clientX, e.clientY);
+      const ghost = document.createElement('div');
+      ghost.className = 'canvas-box';
+      ghost.style.left = start.x + 'mm';
+      ghost.style.top = start.y + 'mm';
+      ghost.style.width = '0mm';
+      ghost.style.height = '0mm';
+      ghost.style.zIndex = 9999;
+      canvasPage.appendChild(ghost);
+      canvasPage.setPointerCapture(e.pointerId);
+      canvasDrag = { type: 'create', start, ghost, startClientX: e.clientX, startClientY: e.clientY };
+      document.addEventListener('pointermove', onCanvasPointerMove);
+      document.addEventListener('pointerup', onCanvasPointerUp);
+    }
+
+    // Click-and-drag panning on empty canvas space (page background or the gray area beyond it)
+    // — "soll per Klicken und Ziehen die Canvas Vorschau... bewegt werden können in alle
+    // Richtungen", the same viewport.panX/panY the nav-overlay arrows already drive, just
+    // continuously instead of in fixed steps. Tracks raw client-pixel deltas directly (not
+    // through clientToCanvasMm) since panX/panY are themselves plain screen pixels, same units
+    // canvasPan() (the arrow-button version) already uses.
+    function startCanvasPan(e) {
+      e.preventDefault();
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      canvasViewport.setPointerCapture(e.pointerId);
+      canvasDrag = {
+        type: 'pan',
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        origPanX: tab.canvasData.viewport.panX,
+        origPanY: tab.canvasData.viewport.panY
+      };
+      document.addEventListener('pointermove', onCanvasPointerMove);
+      document.addEventListener('pointerup', onCanvasPointerUp);
+    }
+
+    function startCanvasBoxMove(e, boxEl) {
+      e.preventDefault();
+      e.stopPropagation();
+      const tab = getActiveTabReal();
+      const box = tab.canvasData.boxes.find(b => b.id === boxEl.dataset.boxId);
+      if (!box) return;
+      canvasPage.setPointerCapture(e.pointerId);
+      canvasDrag = { type: 'move', box, origBox: Object.assign({}, box), startPointer: clientToCanvasMm(e.clientX, e.clientY) };
+      document.addEventListener('pointermove', onCanvasPointerMove);
+      document.addEventListener('pointerup', onCanvasPointerUp);
+    }
+
+    function startCanvasBoxResize(e, handle, boxEl) {
+      e.preventDefault();
+      e.stopPropagation();
+      const tab = getActiveTabReal();
+      const box = tab.canvasData.boxes.find(b => b.id === boxEl.dataset.boxId);
+      if (!box) return;
+      canvasPage.setPointerCapture(e.pointerId);
+      canvasDrag = { type: 'resize', box, origBox: Object.assign({}, box), handle, startPointer: clientToCanvasMm(e.clientX, e.clientY) };
+      document.addEventListener('pointermove', onCanvasPointerMove);
+      document.addEventListener('pointerup', onCanvasPointerUp);
+    }
+
+    // Each axis (n/s vs. w/e) clamps independently against CANVAS_BOX_MIN_MM — same "read the
+    // handle name's own characters as two independent axis flags" idiom the camera crop box
+    // already uses elsewhere in this file, rather than a 4-way switch per corner.
+    function applyCanvasResize(drag, cur) {
+      const dx = cur.x - drag.startPointer.x;
+      const dy = cur.y - drag.startPointer.y;
+      let { x, y, w, h } = drag.origBox;
+      if (drag.handle.includes('e')) w = Math.max(CANVAS_BOX_MIN_MM, drag.origBox.w + dx);
+      if (drag.handle.includes('s')) h = Math.max(CANVAS_BOX_MIN_MM, drag.origBox.h + dy);
+      if (drag.handle.includes('w')) {
+        const newW = Math.max(CANVAS_BOX_MIN_MM, drag.origBox.w - dx);
+        x = drag.origBox.x + (drag.origBox.w - newW);
+        w = newW;
+      }
+      if (drag.handle.includes('n')) {
+        const newH = Math.max(CANVAS_BOX_MIN_MM, drag.origBox.h - dy);
+        y = drag.origBox.y + (drag.origBox.h - newH);
+        h = newH;
+      }
+      Object.assign(drag.box, { x, y, w, h });
+    }
+
+    function onCanvasPointerMove(e) {
+      if (!canvasDrag) return;
+      const cur = clientToCanvasMm(e.clientX, e.clientY);
+      if (canvasDrag.type === 'create') {
+        const x0 = Math.min(canvasDrag.start.x, cur.x), x1 = Math.max(canvasDrag.start.x, cur.x);
+        const y0 = Math.min(canvasDrag.start.y, cur.y), y1 = Math.max(canvasDrag.start.y, cur.y);
+        canvasDrag.ghost.style.left = x0 + 'mm';
+        canvasDrag.ghost.style.top = y0 + 'mm';
+        canvasDrag.ghost.style.width = (x1 - x0) + 'mm';
+        canvasDrag.ghost.style.height = (y1 - y0) + 'mm';
+      } else if (canvasDrag.type === 'move') {
+        canvasDrag.box.x = canvasDrag.origBox.x + (cur.x - canvasDrag.startPointer.x);
+        canvasDrag.box.y = canvasDrag.origBox.y + (cur.y - canvasDrag.startPointer.y);
+        renderCanvasBoxes();
+        // The selected box's handles/edges stay reachable (and so draggable) even while it's
+        // open for editing — its resize handles sit just outside the overlay's own bounds. If
+        // this drag is moving/resizing *that* box, the overlay (positioned once when the editor
+        // opened) needs to follow live, or the visible preview window silently stops matching
+        // the box it's supposed to represent — "Entweder das Vorschau Fenster verändert sich in
+        // gleicher Art und Weise mit (bevorzugt)."
+        if (canvasDrag.box.id === canvasEditingBoxId) positionCanvasBoxOverlay();
+      } else if (canvasDrag.type === 'resize') {
+        applyCanvasResize(canvasDrag, cur);
+        renderCanvasBoxes();
+        if (canvasDrag.box.id === canvasEditingBoxId) positionCanvasBoxOverlay();
+      } else if (canvasDrag.type === 'pan') {
+        const tab = getActiveTabReal();
+        if (!tab || !tab.canvasData) return;
+        const v = tab.canvasData.viewport;
+        v.panX = canvasDrag.origPanX + (e.clientX - canvasDrag.startClientX);
+        v.panY = canvasDrag.origPanY + (e.clientY - canvasDrag.startClientY);
+        applyCanvasViewportTransform();
+        // Panning the canvas moves every box's on-screen position, including whichever one is
+        // currently open for editing — its overlay (positioned once when the box was opened,
+        // now also draggable-while-open since the click-to-close listener was removed, see
+        // toggleEditor()) must keep following it, or the visible preview window silently drifts
+        // away from the box it's supposed to represent as the user pans.
+        if (canvasEditingBoxId) positionCanvasBoxOverlay();
+      }
+    }
+
+    function onCanvasPointerUp(e) {
+      document.removeEventListener('pointermove', onCanvasPointerMove);
+      document.removeEventListener('pointerup', onCanvasPointerUp);
+      if (!canvasDrag) return;
+      const tab = getActiveTabReal();
+      const drag = canvasDrag;
+      canvasDrag = null;
+
+      if (drag.type === 'create') {
+        drag.ghost.remove();
+        // A plain click (no real drag) must not create a box — "Boxen sollen auch ausschließlich
+        // durch klicken und ziehen erstellt werden können, nicht durch einen Einfachklick."
+        // Measured in raw screen pixels (not mm) so the threshold means the same physical
+        // gesture regardless of the current zoom level — a few mm of drag at high zoom could
+        // otherwise be a sub-pixel mouse jitter, and the same few mm at low zoom could be a
+        // deliberate but small drag.
+        const distPx = Math.hypot(e.clientX - drag.startClientX, e.clientY - drag.startClientY);
+        if (distPx >= CANVAS_CLICK_VS_DRAG_THRESHOLD_PX) {
+          const cur = clientToCanvasMm(e.clientX, e.clientY);
+          const x0 = Math.min(drag.start.x, cur.x), x1 = Math.max(drag.start.x, cur.x);
+          const y0 = Math.min(drag.start.y, cur.y), y1 = Math.max(drag.start.y, cur.y);
+          const w = Math.max(CANVAS_BOX_MIN_MM, x1 - x0);
+          const h = Math.max(CANVAS_BOX_MIN_MM, y1 - y0);
+          tab.canvasData.zCounter = (tab.canvasData.zCounter || 0) + 1;
+          tab.canvasData.boxCounter = (tab.canvasData.boxCounter || 0) + 1;
+          const box = makeCanvasBox('box_' + tab.canvasData.boxCounter, x0, y0, w, h, tab.canvasData.zCounter);
+          tab.canvasData.boxes.push(box);
+          canvasSelectedBoxId = box.id;
+          // Auto-off after each box, so a stray follow-up click doesn't draw another one by
+          // accident — "damit nicht durch versehentliche Klicks neue Boxen erstellt werden."
+          setCanvasAddMode(false);
+        }
+      }
+      // 'move'/'resize' already mutated the box object in place via onCanvasPointerMove.
+      renderCanvasBoxes();
+      syncCanvasContentToTab(tab);
+      saveStateToLocalStorage();
+    }
+
+    // Single delegated pointerdown on the page itself dispatches to create/move/resize/select —
+    // rebuilt box elements never need their own per-render listener wiring this way.
+    // Listens on canvasViewport (not just canvasPage) so a click on the gray "desk" area beyond
+    // the page edge is also handled for deselect/pan — canvasPage itself only spans the page's
+    // own DIN-A4 dimensions, not the full scrollable/pannable viewport around it.
+    canvasViewport.addEventListener('pointerdown', (e) => {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+
+      // The delete button sits *inside* .canvas-box (so it can be positioned relative to it),
+      // which would otherwise make the boxEl branch below fire selectCanvasBox() on pointerdown
+      // — re-rendering (and so replacing) this exact button — before its own click/onclick ever
+      // gets a chance to run. Let the button handle its own click untouched, same pattern as the
+      // alt-text-button-before-drawing-wrapper check in the preview's own delegated listener.
+      if (e.target.closest('.canvas-box-delete-btn')) return;
+
+      if (canvasAddMode) {
+        if (e.target !== canvasPage) return; // don't start a create-drag on top of an existing box
+        startCanvasBoxCreate(e);
+        return;
+      }
+
+      const handle = e.target.closest('.canvas-box-handle');
+      const edge = e.target.closest('.canvas-box-move-edge');
+      const boxEl = e.target.closest('.canvas-box');
+
+      if (handle) { startCanvasBoxResize(e, handle.dataset.handle, boxEl); return; }
+      if (edge) { startCanvasBoxMove(e, boxEl); return; }
+      if (boxEl) {
+        // Simplified two-step activation (native dblclick is kept below as a fallback, but this
+        // is the primary path): first click selects (shows handles/border), a second click while
+        // it's already selected opens the box for editing — "Einmal klicken in die Box aktiviert
+        // den Rahmen. Einmal Klicken in die Box bei aktiviertem Rahmen öffnet den Quellcode
+        // Modus." The box body has no other meaning to reassign here — moving/resizing already
+        // requires grabbing an edge/handle specifically, handled above.
+        if (canvasSelectedBoxId === boxEl.dataset.boxId) {
+          openCanvasBoxEditor(boxEl.dataset.boxId);
+        } else {
+          selectCanvasBox(boxEl.dataset.boxId);
+        }
+        return;
+      }
+
+      // Clicked empty space (page background or the gray area beyond it), add-mode off: deselect
+      // whatever was selected, and always start a pan-drag too — "soll per Klicken und Ziehen die
+      // Canvas Vorschau... bewegt werden können in alle Richtungen". A plain click with no actual
+      // movement is simply a deselect with a zero-distance, no-op pan.
+      if (canvasSelectedBoxId) {
+        canvasSelectedBoxId = null;
+        renderCanvasBoxes();
+      }
+      startCanvasPan(e);
+    });
+
+    // Double-click opens a box for editing — "es stehen alle Funktionen einer Markdown Notiz zur
+    // Verfügung". Ignored while add-mode is active (a double-click there would otherwise also
+    // fire two create-drags) and on the handles/edge/delete-button a selected box already shows,
+    // same exclusions the plain-click branch above already needs.
+    canvasViewport.addEventListener('dblclick', (e) => {
+      if (canvasAddMode) return;
+      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-handle, .canvas-box-move-edge')) return;
+      const boxEl = e.target.closest('.canvas-box');
+      if (!boxEl) return;
+      openCanvasBoxEditor(boxEl.dataset.boxId);
+    });
+
+    // There used to be a "click outside the box closes it" listener here. Removed deliberately:
+    // it made the canvas itself impossible to click-and-drag-pan while a box was open (every
+    // such click/drag start immediately closed the box first), which was reported as actively
+    // getting in the way. The box-edit mode is now only ever entered by clicking a box (see the
+    // pointerdown handler above) and only ever *left* via the Quelltext button in the header
+    // toolbar (see toggleEditor()'s own canvasEditingBoxId branch) — clicking elsewhere on the
+    // canvas (a different box, empty space, ...) no longer implicitly closes whatever box is
+    // currently open, matching "nur noch mit dem Quelltext Button... kann der Quellcode Modus
+    // geändert werden."
+
+    // Positions the real #markdownPreview (see the .canvas-box-overlay CSS) to sit exactly over
+    // the edited box's current on-screen rect, so its own rendered content visually *is* the box
+    // for the rest of this edit session. Re-derives the rect from the box's own rendered element
+    // every call (cheap, and correct even though nothing currently changes it mid-edit — the
+    // nav-overlay/pan-zoom controls are hidden during editing, see the CSS, precisely so this
+    // rect can't shift out from under the open editor).
+    //
+    // The overlay is always sized and positioned at the box's own TRUE on-screen rect (never
+    // clamped) -- whatever falls outside canvasPreview's own visible bounds (e.g. the box panned
+    // partway behind the divider/editor pane while editing it) is hidden via clip-path instead of
+    // shrinking width/height. An earlier version clamped width/height directly against
+    // canvasPreview's rect, which kept the overlay from ever covering the editor pane, but did so
+    // by *shrinking* the box -- its content reflowed/wrapped into the smaller box exactly as if
+    // it had really been resized, then visibly snapped back the moment the box panned back into
+    // full view. Reported directly as confusing ("bleibt der linke Rand der Box Preview an der
+    // Trennlinie kleben und verkleinert somit die sichtbare Breite"). clip-path crops purely at
+    // paint time -- layout (and so text wrapping) is always computed against the box's real,
+    // undiminished width, so nothing reflows; the clipped-away portion is simply not painted,
+    // matching the literal request ("Box wird ohne Größenänderung ins Unsichtbare... geschoben").
+    //
+    // Shared between the box-editing overlay (#markdownPreview, below) and the canvas-wide
+    // Vorlesen stage (#canvasTtsStage, see canvasTtsAdvance()) -- both are "a fixed, position:fixed
+    // element that needs to visually stand in for box X, wherever it currently sits on the panned/
+    // zoomed canvas" and so need the exact same scale+clip math; only which box and which element
+    // differs. Returns false (touching nothing) if the box no longer exists, e.g. deleted while
+    // being read/edited.
+    function positionOverlayOverCanvasBox(overlayEl, boxId) {
+      const boxEl = canvasPage.querySelector('[data-box-id="' + boxId + '"]');
+      if (!boxEl) return false;
+      const rect = boxEl.getBoundingClientRect();
+      const paneRect = canvasPreview.getBoundingClientRect();
+      const tab = getActiveTabReal();
+      const canvasZoom = (tab && tab.canvasData && tab.canvasData.viewport.zoom) || 1;
+      overlayEl.style.left = rect.left + 'px';
+      overlayEl.style.top = rect.top + 'px';
+      // The overlay's own layout box is sized in "local" (pre-canvas-zoom) units, then scaled
+      // back up/down to the correct on-screen footprint via `transform: scale()` -- exactly the
+      // same mechanism #canvasPage itself already uses for the idle box (`transform:
+      // scale(viewport.zoom)`). This is what makes every fixed-px value inside the rendered
+      // markdown (the 20px box padding, heading border thickness, code/table padding, ...) scale
+      // uniformly along with the text, matching the idle rendering pixel-for-pixel — a plain
+      // --zoom-scale CSS-variable multiplication (this function's previous approach) only ever
+      // reached font-size (the one property that already reads that variable), leaving every
+      // other fixed-px value a visibly different physical size between the two views ("die
+      // Darstellung... vor allem der Rand drumherum unterscheidet sich gravierend"). transform-
+      // origin: 0 0 anchors the scale at the top-left corner, so left/top above stay plain
+      // on-screen coordinates -- only width/height need converting to local units here.
+      overlayEl.style.transformOrigin = '0 0';
+      overlayEl.style.transform = 'scale(' + canvasZoom + ')';
+      overlayEl.style.width = rect.width / canvasZoom + 'px';
+      overlayEl.style.height = rect.height / canvasZoom + 'px';
+      // clip-path's inset() is resolved against the element's own (untransformed) border box, in
+      // the same local units as width/height above -- so each inset also needs dividing by
+      // canvasZoom, exactly like width/height, to land on the right on-screen edge once the scale
+      // transform is applied on top.
+      const insetLeft = Math.max(0, paneRect.left - rect.left) / canvasZoom;
+      const insetTop = Math.max(0, paneRect.top - rect.top) / canvasZoom;
+      const insetRight = Math.max(0, rect.right - paneRect.right) / canvasZoom;
+      const insetBottom = Math.max(0, rect.bottom - paneRect.bottom) / canvasZoom;
+      overlayEl.style.clipPath = 'inset(' + insetTop + 'px ' + insetRight + 'px ' + insetBottom + 'px ' + insetLeft + 'px)';
+      return true;
+    }
+
+    function positionCanvasBoxOverlay() {
+      positionOverlayOverCanvasBox(preview, canvasEditingBoxId);
+    }
+
+    // Auto-pans the canvas (once, when a box is opened) so the box's left/top edge lands just
+    // inside canvasPreview's own visible bounds rather than being clipped behind the divider —
+    // "ein automatischer Scroll, so dass die linke Seite des Box-Vorschaufensters rechts neben
+    // dem Trenner liegt." Only ever pushes the box *into* view (left/top take priority over
+    // right/bottom when a box is too big to fully fit, matching that same request literally);
+    // positionCanvasBoxOverlay()'s own clamp is the hard backstop for whatever this can't fully
+    // resolve.
+    function ensureCanvasBoxVisible(boxEl) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const paneRect = canvasPreview.getBoundingClientRect();
+      const rect = boxEl.getBoundingClientRect();
+      const margin = 16;
+      const v = tab.canvasData.viewport;
+      let dx = 0, dy = 0;
+      if (rect.left < paneRect.left + margin) dx = (paneRect.left + margin) - rect.left;
+      else if (rect.right > paneRect.right - margin) dx = (paneRect.right - margin) - rect.right;
+      if (rect.top < paneRect.top + margin) dy = (paneRect.top + margin) - rect.top;
+      else if (rect.bottom > paneRect.bottom - margin) dy = (paneRect.bottom - margin) - rect.bottom;
+      if (dx || dy) {
+        v.panX += dx;
+        v.panY += dy;
+        applyCanvasViewportTransform();
+      }
+    }
+
+    function openCanvasBoxEditor(boxId) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const box = tab.canvasData.boxes.find(b => b.id === boxId);
+      if (!box || canvasEditingBoxId === boxId) return;
+      if (canvasEditingBoxId) closeCanvasBoxEditor();
+
+      canvasEditingBoxId = boxId;
+      canvasSelectedBoxId = boxId;
+      // Editing requires the editor pane genuinely visible regardless of whatever showEditor/
+      // showPreview were last left at on some other tab — see the main.canvas-tab-active
+      // :not(.canvas-editing-box) CSS this un-blocks, and the plain main{grid-template-columns:
+      // var(--split-ratio...)} rule it then falls through to once these classes are gone.
+      mainContainer.classList.remove('editor-hidden', 'preview-hidden');
+
+      // editor.value MUST be set to this box's content before anything below can run
+      // saveStateToLocalStorage() (applyTheme() does, via its own persistence call) — that
+      // function writes getCurrentTab().content = editor.value for a fileType !== 'canvas'
+      // document, which a box always is (see makeCanvasBox()). getCurrentTab() already returns
+      // *this* box (canvasEditingBoxId was just set above), so calling applyTheme() first, while
+      // editor.value still held whatever the *previous* box/blank state left it at, silently
+      // wiped this box's real content the instant it was opened — confirmed directly as the
+      // reported bug ("beim Klicken in eine Box... wird aller vorhandene Code herausgelöscht").
+      editor.value = box.content;
+
+      // Themes are per-box (see makeCanvasBox()/changeTheme()) — applying this box's own theme
+      // here, the same way switchTab() applies a tab's theme, is what makes "das gewählte Design
+      // soll... nicht ändern, wenn zwischen Vorschau und Quellcode gewechselt wird" true: this
+      // only ever runs when a *different* box is opened, never on a plain source/preview toggle.
+      // Simple Modus overrides this with its own fixed theme regardless of box, same as it does
+      // for tabs elsewhere.
+      if (!simpleMode) {
+        const boxTheme = box.theme || 'theme-clean';
+        themeSelector.value = boxTheme;
+        applyTheme(boxTheme);
+        // Zoom is per-box the same way theme is (see makeCanvasBox()/canvasBoxZoom()) — restores
+        // this box's own saved zoom into the live editor+preview, exactly as it was left, every
+        // time it's reopened: "Ein erneutes Öffnen der Box stellt die Zoomwerte in Vorschau und
+        // in der Quelltextansicht wieder exakt wie gespeichert her." Skipped under Simple Modus,
+        // which already forces its own fixed zoom preset (see enterSimpleMode()) that a per-box
+        // override would otherwise fight.
+        applyCanvasBoxZoom(box);
+      }
+
+      updatePreview();
+      // updatePreview() just rendered the box and positioned the overlay for the *first* time —
+      // but only now, after it also added canvas-editing-box (unblocking the editor-pane's real
+      // grid width), does canvasPreview's own on-screen rect reflect its final, settled editing
+      // layout. Re-deriving the box's screen position against *that* rect is what
+      // ensureCanvasBoxVisible() needs to correctly tell whether the box is actually clipped
+      // behind the divider; positionCanvasBoxOverlay() is then called again to pick up whatever
+      // pan adjustment that just made.
+      const openedBoxEl = canvasPage.querySelector('[data-box-id="' + boxId + '"]');
+      if (openedBoxEl) {
+        ensureCanvasBoxVisible(openedBoxEl);
+        positionCanvasBoxOverlay();
+      }
+      applyPaneVisibility(); // toggleEditBtn/togglePreviewBtn's active state now reflects a real open box
+      updateUndoRedoButtons();
+      // Deferred: this runs from a pointerdown handler on a plain, non-focusable <div> (the
+      // box's own canvas element) — the browser's own default mousedown handling blurs/moves
+      // focus (there's nothing focusable at the click target) as part of finishing that same
+      // event, which happens *after* handlers run and so was undoing a synchronous focus() call
+      // right back off the editor before the user ever got to type. Confirmed directly: opening
+      // a box left document.activeElement empty and every keystroke went nowhere. A macrotask
+      // runs after the browser's own default action has already completed, so this one wins.
+      setTimeout(() => editor.focus(), 0);
+    }
+
+    function closeCanvasBoxEditor() {
+      if (!canvasEditingBoxId) return;
+      const tab = getActiveTabReal();
+      canvasEditingBoxId = null;
+      preview.style.left = preview.style.top = preview.style.width = preview.style.height = '';
+      // Clears the transform/transform-origin/clip-path positionCanvasBoxOverlay() applies for
+      // canvas-zoom scaling and divider-crossing clipping (see its own comment) -- a plain
+      // (non-canvas) document's preview must render at its own natural, untransformed, unclipped
+      // size, not whatever this box's overlay was left at.
+      preview.style.transform = preview.style.transformOrigin = preview.style.clipPath = '';
+      // Removes the per-box --zoom-scale override (see applyCanvasBoxZoom()) so editor/preview
+      // fall back to inheriting the app-wide zoom from documentElement again -- otherwise the
+      // next plain (non-canvas) document opened would still render at whatever zoom this box
+      // happened to be left at.
+      editor.style.removeProperty('--zoom-scale');
+      preview.style.removeProperty('--zoom-scale');
+      if (tab) {
+        syncCanvasContentToTab(tab);
+      }
+      editor.value = '';
+      updatePreview();
+      applyPaneVisibility(); // back to neither toggle button showing "on" for the whole-canvas view
+      saveStateToLocalStorage();
     }
 
     // Adopts the first line as the tab's filename as long as the tab is still unnamed
@@ -8361,6 +10053,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function markActiveTabModified() {
       const activeTab = getCurrentTab();
       if (activeTab) {
+        // While editing a canvas box, editor.value is that one box's markdown, not the tab's own
+        // content (a JSON scene) — see openCanvasBoxEditor()/syncCanvasContentToTab(). Nothing
+        // here needs to run in that case anyway: closeCanvasBoxEditor() flushes the box's
+        // markdown and marks the tab modified itself once editing ends.
+        if (activeTab.fileType === 'canvas') return;
         activeTab.content = editor.value;
         if (!activeTab.isModified) {
           activeTab.isModified = true;
@@ -8559,6 +10256,22 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             replacement = '![Video]()';
             newCursorPos = start + replacement.length - 1;
             break;
+          case 'embed': {
+            // A raw HTML block (marked/CommonMark pass a line starting with a block-level tag
+            // like <iframe> through unescaped, same as the video-embed iframes hljsRenderer.image()
+            // already generates) rather than the ![alt](href) shorthand every other asset uses --
+            // there's no URL-detection step to route through here, and "alle Parameter... die
+            // eventuell angepasst werden können" (width/height/fullscreen/...) is exactly what
+            // this being real, editable HTML attributes in the source (rather than hidden behind
+            // a one-time insert dialog) gives for free. title is this element's alt-text
+            // equivalent -- markdownTtsEngine() (see its own IFRAME branch) reads it aloud the
+            // same way image/drawing segments read their alt attribute.
+            const prefix = '\n\n<iframe src="';
+            const suffix = '" title="Das ist eine Einbettung." width="600" height="400" style="border:0;" allow="fullscreen" allowfullscreen loading="lazy"></iframe>\n\n';
+            replacement = prefix + suffix;
+            newCursorPos = start + prefix.length;
+            break;
+          }
           case 'hr':
             replacement = '\n\n---\n\n';
             newCursorPos = start + replacement.length;
@@ -8740,7 +10453,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function findTableBlock() {
       const tab = getCurrentTab();
-      if (tab && (tab.fileType === 'json' || tab.fileType === 'txt')) return null;
+      if (tab && (tab.fileType === 'json' || tab.fileType === 'txt' || tab.fileType === 'canvas')) return null;
 
       const lines = editor.value.split('\n');
 
@@ -8864,6 +10577,279 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           }
         }
       }
+    }
+
+    // --- Word-click-to-source (click a word in prose, select it in the raw markdown) ---
+    // Mirrors the table-cell click-to-source feature above (attachMarkdownTableCellPositions),
+    // but words aren't separate DOM elements the way <td>/<th> are, so wrapping every rendered
+    // word in its own <span> (the way the TTS engine wraps words for highlighting, see the
+    // Vorlesen section) would both mutate the DOM on every render and collide with that same TTS
+    // wrapping. Instead, positions are precomputed as plain data via marked's own tokenizer (same
+    // idiom classifySlidePresentationLayout already uses instead of regexing raw text) and kept
+    // in this array, one entry per rendered <p>/<h1-h6>/<li> (see findWordBlockElements below for
+    // the exact matching element set) in document order; the click handler further down resolves
+    // which word was clicked against the live DOM only at click time, no permanent DOM change.
+    let textWordRanges = []; // Array<Array<{ word, start, end }>>, populated by updatePreview()
+
+    // Recognizes a "word" the same way across both the source-side token walk and the DOM-side
+    // click resolution below — Unicode letters/digits/underscore, so German umlauts and ß count.
+    const WORD_MATCH_RE = /[\p{L}\p{N}_]+/gu;
+
+    // Before re-lexing a blockquote's or list item's nested/continuation lines, marked strips a
+    // per-line prefix first (a blockquote's leading '>' plus at most one space; a list item's own
+    // hanging-indent width) — confirmed directly against the bundled marked build, not assumed.
+    // That means a nested token's .raw is no longer a literal substring of the *original* source
+    // once it spans more than one line, which breaks the plain indexOf-cursor approach used
+    // everywhere else in this file (findAllMarkdownTableBlocks, attachMarkdownTableCellPositions).
+    // A "view" fixes this: { text, toAbs(i) } wraps either the real source (toAbs = identity) or
+    // a reconstructed, prefix-stripped rendering of one nested container's lines, with toAbs
+    // translating a position in that reconstruction back to the real offset editor.setSelectionRange
+    // ultimately needs. Views compose naturally through nesting (a view built from a view's own
+    // reconstructed text still has a working toAbs, since it closes over the parent's).
+    function rootWordView(source) {
+      return { text: source, toAbs: (i) => i };
+    }
+
+    // Builds a child view over view.text's [start, start+len) span, stripping stripLen(line, lineIndex)
+    // leading characters from each line. Only ever built over one block's worth of nested markdown
+    // (never a whole document), so the O(n) per-character map is cheap.
+    function stripPerLineWordView(view, start, len, stripLen) {
+      const raw = view.text.slice(start, start + len);
+      const lines = raw.split('\n');
+      let text = '';
+      const map = [];
+      let lineOffset = 0;
+      lines.forEach((line, li) => {
+        const strip = Math.min(stripLen(line, li), line.length);
+        for (let k = strip; k < line.length; k++) map.push(start + lineOffset + k);
+        text += line.slice(strip);
+        if (li < lines.length - 1) { text += '\n'; map.push(start + lineOffset + line.length); }
+        lineOffset += line.length + 1;
+      });
+      return {
+        text,
+        toAbs: (i) => view.toAbs(map[Math.max(0, Math.min(i, map.length - 1))] || 0)
+      };
+    }
+
+    // Walks one inline-token list (a paragraph/heading/list-item's own .tokens) collecting each
+    // text-bearing leaf's words with their offset resolved back through `view` (see above).
+    // cursorRef.pos is a monotonically-advancing search cursor local to view.text — marked only
+    // ever emits tokens in document order, so view.text.indexOf(raw, cursorRef.pos) can't misfire
+    // on an earlier, unrelated occurrence of the same text.
+    function collectInlineWordRanges(tokens, view, cursorRef, out) {
+      for (const tok of tokens) {
+        if (tok.type === 'text' || tok.type === 'escape' || tok.type === 'codespan') {
+          const raw = tok.raw;
+          const rawStart = view.text.indexOf(raw, cursorRef.pos);
+          if (rawStart === -1) continue;
+          cursorRef.pos = rawStart + raw.length;
+          // For a plain 'text' token raw === text, so this anchor is 0; for 'codespan'/'escape'
+          // it skips past the surrounding backticks/backslash to where the visible text starts.
+          const text = tok.text != null ? tok.text : raw;
+          const anchor = rawStart + Math.max(0, raw.indexOf(text));
+          WORD_MATCH_RE.lastIndex = 0;
+          let m;
+          while ((m = WORD_MATCH_RE.exec(text))) {
+            const localStart = anchor + m.index;
+            const localEnd = localStart + m[0].length;
+            out.push({ word: m[0], start: view.toAbs(localStart), end: view.toAbs(localEnd - 1) + 1 });
+          }
+        } else if (tok.tokens) {
+          // Container inline tokens (strong/em/del/link, ...) — the whole wrapped span is still
+          // one contiguous run in the source, so anchor once and recurse into its inner tokens.
+          // A link's own href/title never reaches here, only its .tokens (the link *text*) does.
+          const rawStart = view.text.indexOf(tok.raw, cursorRef.pos);
+          if (rawStart === -1) { collectInlineWordRanges(tok.tokens, view, cursorRef, out); continue; }
+          const innerCursor = { pos: rawStart };
+          collectInlineWordRanges(tok.tokens, view, innerCursor, out);
+          cursorRef.pos = Math.max(rawStart + tok.raw.length, innerCursor.pos);
+        }
+        // image/br/html leaves intentionally contribute no words — nothing clickable there.
+      }
+    }
+
+    function pushLeafWordEntry(tok, view, cursorRef, blocks) {
+      const rawStart = view.text.indexOf(tok.raw, cursorRef.pos);
+      const out = [];
+      if (rawStart !== -1) {
+        collectInlineWordRanges(tok.tokens || [], view, { pos: rawStart }, out);
+        cursorRef.pos = rawStart + tok.raw.length;
+      }
+      blocks.push(out);
+    }
+
+    // One list item's own directly-owned words, plus separately any nested block children.
+    // Verified directly against the bundled marked build's actual token shapes (not assumed):
+    // a *loose* item's own paragraph(s) do NOT come wrapped in a 'paragraph' token the way a
+    // top-level paragraph does — they surface as one or more flat 'text' tokens straight in
+    // item.tokens (with 'space' tokens between multiple ones for a multi-paragraph item), and
+    // it's marked's *renderer* that wraps each such leaf in its own <p> based on item.loose, not
+    // a difference in the token tree shape. A *tight* item instead has exactly one such 'text'
+    // leaf, rendered directly inside <li> with no <p> wrapper. So: loose -> the <li> itself owns
+    // no words (push an empty entry for it) and each text leaf gets its own entry (one per <p>
+    // the renderer will produce); tight -> a single entry for the <li>'s own (only) text leaf.
+    // Nested block content (sub-list/blockquote/heading typed directly into the item) always
+    // gets its own entry(ies) too, via collectBlockWordRanges, regardless of looseness.
+    //
+    // item.raw (found via plain indexOf against `view`, since a list item's *own* first line is
+    // never itself prefix-transformed) spans the item's entire content including any nested
+    // sub-list/continuation lines, always with their *original* indentation intact — but every
+    // token *inside* item.tokens beyond that first line had that indentation already stripped by
+    // marked before being re-lexed. A child view undoes it: the strip width is read empirically
+    // off item.raw's own second line (rather than computed from the marker syntax), so it stays
+    // correct regardless of marker width ('-', '*', '12.', extra spaces after the marker, ...).
+    function collectListItemWordRanges(item, view, fromPos, blocks) {
+      const rawStart = view.text.indexOf(item.raw, fromPos);
+      if (rawStart === -1) { blocks.push([]); return fromPos; }
+      // The first *non-blank* line after the item's own first line carries the real indent — a
+      // loose item can have a genuinely empty separator line directly after its first line (e.g.
+      // before a nested sub-list), which has zero leading whitespace of its own and must not be
+      // mistaken for "no indentation used".
+      const continuationLines = item.raw.split('\n').slice(1);
+      const firstRealLine = continuationLines.find(l => l.length > 0);
+      const indentWidth = firstRealLine ? leadingWhitespaceWidth(firstRealLine) : 0;
+      const inner = indentWidth === 0
+        ? view
+        : stripPerLineWordView(view, rawStart, item.raw.length, (line, li) => li === 0 ? 0 : indentWidth);
+      const innerCursor = indentWidth === 0 ? { pos: rawStart } : { pos: 0 };
+
+      const itemTokens = item.tokens || [];
+      const textLeaves = itemTokens.filter(t => t.type === 'text');
+      if (item.loose) {
+        blocks.push([]); // the <li> itself owns no direct words in a loose list
+        for (const leaf of textLeaves) {
+          const out = [];
+          if (leaf.tokens) collectInlineWordRanges(leaf.tokens, inner, innerCursor, out);
+          blocks.push(out);
+        }
+      } else {
+        const out = [];
+        const leaf = textLeaves[0];
+        if (leaf && leaf.tokens) collectInlineWordRanges(leaf.tokens, inner, innerCursor, out);
+        blocks.push(out);
+      }
+
+      const blockChildren = itemTokens.filter(t =>
+        t.type === 'list' || t.type === 'blockquote' || t.type === 'heading' || t.type === 'paragraph');
+      if (blockChildren.length) collectBlockWordRanges(blockChildren, inner, innerCursor, blocks);
+      return rawStart + item.raw.length;
+    }
+
+    function leadingWhitespaceWidth(s) {
+      let n = 0;
+      while (n < s.length && (s[n] === ' ' || s[n] === '\t')) n++;
+      return n;
+    }
+
+    // Block-level walk producing exactly one entry per element findWordBlockElements() will find
+    // in the rendered DOM, in the same order — paragraphs and headings anywhere (including nested
+    // inside a blockquote), list items (tight or loose, see collectListItemWordRanges), recursing
+    // into blockquotes/lists to reach further nested content. Table/code/html/hr/space tokens are
+    // deliberately skipped: tables already have their own click-to-source feature above, and raw
+    // code/HTML has no "words" in the sense this feature means.
+    function collectBlockWordRanges(tokens, view, cursorRef, blocks) {
+      for (const tok of tokens) {
+        if (tok.type === 'paragraph' || tok.type === 'heading') {
+          pushLeafWordEntry(tok, view, cursorRef, blocks);
+        } else if (tok.type === 'blockquote') {
+          const rawStart = view.text.indexOf(tok.raw, cursorRef.pos);
+          if (rawStart === -1) continue;
+          cursorRef.pos = rawStart + tok.raw.length;
+          // CommonMark blockquote parsing strips a leading '>' plus at most one following space
+          // from each line (a line with neither, a "lazy continuation", is left untouched — the
+          // strip function below already handles that by finding nothing to strip).
+          const inner = stripPerLineWordView(view, rawStart, tok.raw.length, (line) => {
+            let n = 0;
+            if (line[0] === '>') { n = 1; if (line[1] === ' ') n = 2; }
+            return n;
+          });
+          collectBlockWordRanges(tok.tokens || [], inner, { pos: 0 }, blocks);
+        } else if (tok.type === 'list') {
+          const rawStart = view.text.indexOf(tok.raw, cursorRef.pos);
+          if (rawStart === -1) continue;
+          let pos = rawStart;
+          for (const item of tok.items) {
+            pos = collectListItemWordRanges(item, view, pos, blocks);
+          }
+          cursorRef.pos = Math.max(rawStart + tok.raw.length, pos);
+        }
+      }
+    }
+
+    function buildTextWordRanges(source) {
+      const blocks = [];
+      collectBlockWordRanges(marked.lexer(source), rootWordView(source), { pos: 0 }, blocks);
+      return blocks;
+    }
+
+    // The DOM-side counterpart to buildTextWordRanges' block list — every element that can own
+    // "its own" clickable words. closest() at click time naturally prefers the innermost match
+    // (e.g. a loose list item's nested <p>, never its wrapping <li>), so no ancestor-deduplication
+    // is needed here despite <li> and <p> both appearing in this one selector.
+    const WORD_BLOCK_SELECTOR = 'p, h1, h2, h3, h4, h5, h6, li';
+    function findWordBlockElements() {
+      return Array.from(preview.querySelectorAll(WORD_BLOCK_SELECTOR));
+    }
+
+    // Tags whose subtree must NOT be walked when collecting "this block's own text" — a list
+    // item's nested sub-list/blockquote/loose-paragraph is a separate entry in textWordRanges
+    // (see collectListItemWordRanges), so its text must not also be counted as part of the outer
+    // item's own words, or word indices would drift out of sync with the source-side list.
+    const NESTED_WORD_BLOCK_TAGS = new Set(['UL', 'OL', 'BLOCKQUOTE', 'P', 'TABLE', 'PRE']);
+
+    // Finds which word (by index within blockEl, in document order) a click landed on/nearest to.
+    // range comes from caretRangeFromPoint/caretPositionFromPoint (see wordRangeAtPoint below) and
+    // pinpoints an exact text-node + offset; this walks blockEl's own text (excluding nested block
+    // children per NESTED_WORD_BLOCK_TAGS) to translate that DOM position into a plain-text offset,
+    // then finds the nearest word match to it — "nearest" rather than "exact" so a click slightly
+    // off a word (e.g. just past its last letter) still resolves instead of silently doing nothing.
+    function findClickedWordIndex(blockEl, range) {
+      const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT, {
+        acceptNode(node) {
+          let p = node.parentElement;
+          while (p && p !== blockEl) {
+            if (NESTED_WORD_BLOCK_TAGS.has(p.tagName)) return NodeFilter.FILTER_REJECT;
+            p = p.parentElement;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      });
+      let text = '';
+      let clickOffset = -1;
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node === range.startContainer) clickOffset = text.length + range.startOffset;
+        text += node.nodeValue;
+      }
+      if (clickOffset === -1) return -1;
+
+      WORD_MATCH_RE.lastIndex = 0;
+      let m, idx = 0, best = -1, bestDist = Infinity;
+      while ((m = WORD_MATCH_RE.exec(text))) {
+        const dist = clickOffset < m.index ? m.index - clickOffset
+          : clickOffset > m.index + m[0].length ? clickOffset - (m.index + m[0].length) : 0;
+        if (dist === 0) return idx;
+        if (dist < bestDist) { bestDist = dist; best = idx; }
+        idx++;
+      }
+      return best;
+    }
+
+    // Cross-browser text-hit-testing: Chrome/Safari have caretRangeFromPoint, Firefox has the
+    // standardized caretPositionFromPoint instead. Where neither exists, the feature simply
+    // no-ops (see the click handler below) rather than throwing — same graceful-degradation
+    // spirit as this file's other optional-API features (Fullscreen, camera).
+    function wordRangeAtPoint(clientX, clientY) {
+      if (document.caretRangeFromPoint) return document.caretRangeFromPoint(clientX, clientY);
+      if (document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(clientX, clientY);
+        if (!pos || !pos.offsetNode) return null;
+        const range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        return range;
+      }
+      return null;
     }
 
     // --- Markdown pipe-table cell parsing/building ---
@@ -9338,6 +11324,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
     }
 
+    // Same two-signal check as isPdfFile() above (MIME type OR filename extension) -- needed
+    // because MIME-type detection for some audio formats, m4a especially, is inconsistent across
+    // browsers/OS (sometimes empty, sometimes audio/mp4, sometimes audio/x-m4a), so the extension
+    // is the more reliable of the two signals for that one format specifically.
+    function isAudioFile(file) {
+      return (file.type && file.type.startsWith('audio/')) || /\.(wav|ogg|mp3|m4a)$/i.test(file.name);
+    }
+
     function handleFileSelect(event) {
       const files = event.target.files;
       if (!files) return;
@@ -9350,6 +11344,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       window.__mdNativeLastOpenPaths = null;
       Array.from(files).forEach((file, i) => {
         if (isPdfFile(file)) { handlePdfFile(file); return; }
+        // Same exception as the drag-and-drop handler below: an audio file opened this way is
+        // inserted into the current document as a playable asset, not opened as its own new tab
+        // (which would just show it as unreadable binary "text").
+        if (isAudioFile(file)) { insertAudioFileAsset(file); return; }
         const nativePath = (nativePaths && nativePaths[i]) || null;
         const reader = new FileReader();
         reader.onload = (e) => createNewTab(file.name, e.target.result, null, nativePath);
@@ -9600,6 +11598,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (tab.fileType === 'json') return { description: 'JSON-Datei', mime: 'application/json', extensions: ['.json'] };
       if (tab.fileType === 'html') return { description: 'HTML-Datei', mime: 'text/html', extensions: ['.html', '.htm'] };
       if (tab.fileType === 'txt') return { description: 'Textdatei', mime: 'text/plain', extensions: ['.txt'] };
+      if (tab.fileType === 'canvas') return { description: 'Canvas-Datei', mime: 'application/json', extensions: ['.canvas'] };
       return { description: 'Markdown File', mime: 'text/markdown', extensions: ['.md', '.markdown'] };
     }
 
@@ -9842,6 +11841,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         return;
       }
 
+      if (currentTab.fileType === 'canvas') {
+        performCanvasHtmlExport();
+        return;
+      }
+
       if (currentTab.fileType === 'markdown' && splitIntoSlides(editor.value).length > 1) {
         document.getElementById('exportChoiceModal').classList.add('active');
         return;
@@ -9862,6 +11866,80 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function chooseEbookWidgetExport() {
       closeExportChoiceModal();
       exportAsEbookWidget();
+    }
+
+    // Standalone HTML export for a canvas tab: every box absolutely positioned in real mm units
+    // within a fixed-size page div, matching the in-app canvas exactly (see the .canvas-page/
+    // .canvas-box CSS) — reuses getMarkdownTypographyCss() for box content so this can't drift
+    // from the other two exports' text styling. Unlike the live app, there's no getCurrentTab()
+    // to resolve each box's own asset:ID references against while looping over every box in
+    // turn (only one box, if any, is ever "the current tab" at a time) — canvasIdleRenderBox
+    // (see its own comment, near hljsRenderer.image()) is set to each box in turn instead, so
+    // hljsRenderer.image() resolves against that specific box's asset maps. This used to be a
+    // plain regex substitution of asset:ID -> data URI directly in the markdown source before
+    // parsing, which broke audio playback the same way it did in renderCanvasBoxes() — an
+    // exported Sprachaufnahme rendered as a broken <img> instead of an <audio> player, since
+    // hljsRenderer.image() never got to see the literal "asset:ID" href it needs to detect
+    // audioAssetIds.
+    function performCanvasHtmlExport() {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const data = tab.canvasData;
+      const title = (tab.name || 'Canvas').replace(/\.canvas$/i, '');
+      const isLandscape = parseFloat(data.pageWidth) > parseFloat(data.pageHeight);
+
+      // Boxes are inserted into the exported page in Vorlesen reading order (see
+      // computeCanvasReadingOrder()), not data.boxes' own array order -- each box still keeps its
+      // own explicit left/top/z-index below, so this has zero effect on how the page actually
+      // looks (position:absolute + explicit z-index don't care about DOM order at all), only on
+      // the order markdownTtsEngine() below walks them in. Unlike the live app, the exported page
+      // never re-renders after load, so there's no need for a separate TTS-owned stage element
+      // here (see #canvasTtsStage's own comment for why the live app does need one) -- the engine
+      // can safely read the real, already-rendered boxes directly, one continuous walk across all
+      // of them, word-highlighting each in place as it goes.
+      suppressDrawingControls = true;
+      const boxesHtml = computeCanvasReadingOrder(data.boxes).map(box => {
+        canvasIdleRenderBox = box;
+        const html = '<div class="canvas-export-box" style="left:' + box.x + 'mm; top:' + box.y + 'mm; width:' + box.w + 'mm; height:' + box.h + 'mm; z-index:' + (box.zIndex || 0) + ';">' +
+          '<div class="markdown-body">' + marked.parse(box.content || '') + '</div></div>';
+        canvasIdleRenderBox = null;
+        return html;
+      }).join('\n');
+      suppressDrawingControls = false;
+
+      const cs = getComputedStyle(preview);
+      const previewVars = ['--preview-bg', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
+        .map(name => `        ${name}: ${cs.getPropertyValue(name).trim()};`)
+        .join('\n');
+      const hljsCss = DARK_THEMES.has(currentTheme)
+        ? document.getElementById('hljs-theme-dark').textContent
+        : document.getElementById('hljs-theme-light').textContent;
+
+      const html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + escapeHtmlText(title) + '</title>\n' +
+        '<style>\n' +
+        '  :root {\n' + previewVars + '\n  }\n' +
+        '  html, body { margin: 0; background: #6b7280; display: flex; justify-content: center; padding: 24px; box-sizing: border-box; }\n' +
+        '  .canvas-export-page { position: relative; width: ' + data.pageWidth + '; height: ' + data.pageHeight + '; background: ' + (data.pageBackgroundColor || '#ffffff') + '; box-shadow: 0 4px 24px rgba(0,0,0,.3); flex-shrink: 0; }\n' +
+        '  .canvas-export-box { position: absolute; overflow: hidden; border: 1px solid #ccc; background: #fffef2; box-sizing: border-box; }\n' +
+        '  .canvas-export-box .markdown-body { width: 100%; height: 100%; overflow: hidden; padding: 8px; box-sizing: border-box; font-size: 13px; line-height: 1.4; color: #1a1a1a; }\n' +
+        '  .canvas-export-box .markdown-body :first-child { margin-top: 0; }\n' +
+        getMarkdownTypographyCss() +
+        hljsCss + '\n' +
+        getTtsButtonExportCss(16, 16) +
+        '  @media print {\n' +
+        '    html, body { background: none; padding: 0; }\n' +
+        '    .canvas-export-page { box-shadow: none; }\n' +
+        '    .tts-toggle-btn { display: none !important; }\n' +
+        '    @page { size: ' + (isLandscape ? 'landscape' : 'portrait') + '; margin: 0; }\n' +
+        '  }\n' +
+        '</style>\n</head>\n<body>\n<div class="canvas-export-page">\n' + boxesHtml + '\n</div>\n' +
+        // onSlideCompleteExpr is 'null' -- a single continuous container (the whole page), not a
+        // slide-by-slide advance like the eBook export needs, since every box is already a real,
+        // permanent sibling in the DOM in reading order (see boxesHtml above).
+        getTtsButtonExportHtml('document.querySelector(".canvas-export-page")', 'null') +
+        '</body>\n</html>';
+
+      downloadHtmlBlob(html, title + '.html');
     }
 
     function performHtmlExport() {
@@ -10632,7 +12710,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // tab.drawingAssetIds marks a drawing) so hljsRenderer.image renders it as <audio> instead
     // of <img>. Unlike an image (chosen from a file, inserted synchronously), a recording can run
     // for a while — the user could switch tabs mid-recording — so the target tab/cursor position
-    // is captured at record-start time, not read fresh when the recording finally stops.
+    // is captured at record-start time, not read fresh when the recording finally stops. An
+    // existing audio file (dropped, pasted, or opened — see isAudioFile()/insertAudioFileAsset()
+    // near isPdfFile() further up) has no such concern, since reading a File is effectively
+    // instantaneous, and shares insertAudioAsset() below with this recorder rather than needing
+    // its own copy of the asset-write/splice logic.
 
     let audioMediaRecorder = null;
     let audioRecorderChunks = [];
@@ -10663,7 +12745,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
 
       audioRecorderStream = stream;
-      audioInsertTarget = { tabId: activeTabId, start: editor.selectionStart, end: editor.selectionEnd };
+      // boxId captures which canvas box (if any) was open when the recording started -- a
+      // recording can outlive that box being open (the user can close it, open a different one,
+      // or switch tabs entirely while it's still running), so insertAudioAsset() needs this to
+      // re-resolve the correct target later rather than trusting whatever canvasEditingBoxId
+      // happens to be by the time the recording actually stops. null for an ordinary (non-canvas)
+      // tab, same as every other field here describing "where this insert belongs".
+      audioInsertTarget = { tabId: activeTabId, boxId: canvasEditingBoxId, start: editor.selectionStart, end: editor.selectionEnd };
       audioRecorderChunks = [];
 
       const mimeType = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
@@ -10699,28 +12787,57 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       btn.title = recording ? 'Aufnahme stoppen' : 'Sprachaufnahme einfügen';
     }
 
-    function insertAudioAsset(dataUrl, target) {
+    // label defaults to "Sprachaufnahme" (the only case that existed before dropped/pasted/opened
+    // audio files did) — insertAudioFileAsset() below passes "Audiodatei" instead, so the
+    // markdown reference/alt-text/toast correctly describe an imported file rather than a live
+    // recording, without needing two near-identical functions.
+    function insertAudioAsset(dataUrl, target, label) {
+      label = label || 'Sprachaufnahme';
       const tab = tabs.find(t => t.id === target.tabId);
       if (!tab) return;
 
-      if (!tab.assets) tab.assets = {};
-      tab.assetCounter = (tab.assetCounter || 0) + 1;
-      const assetId = 'audio_' + tab.assetCounter;
-      tab.assets[assetId] = dataUrl;
-      persistAssetToIndexedDb(tab, assetId);
-      if (!tab.audioAssetIds) tab.audioAssetIds = {};
-      tab.audioAssetIds[assetId] = true;
+      // A recording started while a canvas box was open belongs to THAT box's own asset map (see
+      // makeCanvasBox()/getCurrentTab()'s box-editing indirection) — every other insert path
+      // (insertImageAsset, insertNewDrawingAsset) gets this for free since they run synchronously
+      // while getCurrentTab() still returns the box, but a recording can run long enough to
+      // outlive the box being open (closed, a different box opened, or the tab switched away
+      // from entirely) — so the target box has to be captured up front (see
+      // startAudioRecording()'s target.boxId) and re-resolved here, not assumed from whatever
+      // canvasEditingBoxId happens to be by the time this actually runs. Missing this was a real,
+      // reported bug: the markdown reference landed correctly in the box's own content (spliced
+      // into the shared editor.value while the box was still open, same as any other box edit),
+      // but the asset DATA was written onto the canvas tab's own unused top-level .assets instead
+      // of the box's — rendering as a broken image everywhere the box's own asset map is what
+      // actually gets consulted ("Eine Sprachaufnahme wird... mit fehlendem Symbol dargestellt").
+      const box = target.boxId && tab.canvasData
+        ? tab.canvasData.boxes.find(b => b.id === target.boxId)
+        : null;
+      if (target.boxId && tab.fileType === 'canvas' && !box) return; // box was deleted meanwhile — nothing left to attach this recording to
+      const doc = box || tab;
+
+      if (!doc.assets) doc.assets = {};
+      doc.assetCounter = (doc.assetCounter || 0) + 1;
+      const assetId = 'audio_' + doc.assetCounter;
+      doc.assets[assetId] = dataUrl;
+      // A box's assets ride along inside tab.content (JSON.stringify(canvasData) already embeds
+      // them) rather than through the separate per-tab IndexedDB store — persistAssetToIndexedDb
+      // keys off tab.syncId, which a box doesn't have (see makeCanvasBox()).
+      if (!box) persistAssetToIndexedDb(tab, assetId);
+      if (!doc.audioAssetIds) doc.audioAssetIds = {};
+      doc.audioAssetIds[assetId] = true;
 
       // Trailing \n\n — see the matching comment in insertImageAsset() — skipped the same way when
       // target.start sits inside a table row/CSV document. content-before-splice is editor.value
-      // for the active tab, but tab.content for the "recorded on a tab no longer active" branch
-      // below — isTablePosition() (unlike findTableBlock()) takes both explicitly rather than
-      // always reading the live editor, which is exactly why that branch needs it.
-      const contentBeforeSplice = tab.id === activeTabId ? editor.value : tab.content;
-      const skipTrailingBreak = isTablePosition(contentBeforeSplice, target.start, tab.fileType);
-      const markdownRef = '![Sprachaufnahme](asset:' + assetId + ')' + (skipTrailingBreak ? '' : '\n\n');
+      // when still editing this exact document (box or tab), but doc.content for the "no longer
+      // being edited" branch below — isTablePosition() (unlike findTableBlock()) takes both
+      // explicitly rather than always reading the live editor, which is exactly why that branch
+      // needs it.
+      const stillEditingThisDoc = box ? canvasEditingBoxId === target.boxId : tab.id === activeTabId;
+      const contentBeforeSplice = stillEditingThisDoc ? editor.value : doc.content;
+      const skipTrailingBreak = isTablePosition(contentBeforeSplice, target.start, doc.fileType);
+      const markdownRef = '![' + label + '](asset:' + assetId + ')' + (skipTrailingBreak ? '' : '\n\n');
 
-      if (tab.id === activeTabId) {
+      if (stillEditingThisDoc) {
         editor.value = editor.value.substring(0, target.start) + markdownRef + editor.value.substring(target.end);
         const newPos = target.start + markdownRef.length;
         editor.setSelectionRange(newPos, newPos);
@@ -10730,19 +12847,40 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         updatePreview();
         switchToPreviewIfSimpleMode();
       } else {
-        // The user switched away from the recording's tab while it was running — splice into
-        // its stored content directly rather than touching the (unrelated) active tab/editor.
-        tab.content = tab.content.substring(0, target.start) + markdownRef + tab.content.substring(target.end);
-        tab.isModified = true;
-        tab.history = tab.history.slice(0, tab.historyIndex + 1);
-        tab.history.push(tab.content);
-        tab.historyIndex = tab.history.length - 1;
-        if (tab.history.length > 80) { tab.history.shift(); tab.historyIndex--; }
+        // The user switched away from the recording's tab (or, for a box, closed it / opened a
+        // different one / switched tabs) while it was running — splice into its stored content
+        // directly rather than touching whatever unrelated document the editor happens to show
+        // now.
+        doc.content = doc.content.substring(0, target.start) + markdownRef + doc.content.substring(target.end);
+        doc.isModified = true;
+        doc.history = doc.history.slice(0, doc.historyIndex + 1);
+        doc.history.push(doc.content);
+        doc.historyIndex = doc.history.length - 1;
+        if (doc.history.length > 80) { doc.history.shift(); doc.historyIndex--; }
+        if (box) {
+          syncCanvasContentToTab(tab); // re-serialize the box's new content/assets back into tab.content
+          if (tab.id === activeTabId) renderCanvasBoxes(); // refresh the idle view if this canvas happens to be on screen right now
+        }
         renderTabs();
       }
 
       saveStateToLocalStorage();
-      showToast('Sprachaufnahme eingefügt');
+      showToast(label + ' eingefügt');
+    }
+
+    // Shared entry point for an audio FILE arriving via drag-and-drop, paste, or the "Öffnen"
+    // dialog (see isAudioFile()'s call sites) -- as opposed to a live microphone recording
+    // (startAudioRecording() above). Reuses insertAudioAsset() unmodified rather than duplicating
+    // its box-vs-tab resolution and persistence logic: unlike a recording, reading a dropped/
+    // pasted/opened file is effectively instantaneous, so there's no risk of the target (tab/box/
+    // cursor position) going stale before the FileReader resolves, and target can just be built
+    // from whatever's current right now instead of captured ahead of time.
+    function insertAudioFileAsset(file) {
+      if (editor.disabled) return;
+      const target = { tabId: activeTabId, boxId: canvasEditingBoxId, start: editor.selectionStart, end: editor.selectionEnd };
+      const reader = new FileReader();
+      reader.onload = () => insertAudioAsset(reader.result, target, 'Audiodatei');
+      reader.readAsDataURL(file);
     }
 
     // --- DRAWING (Excalidraw embedded via iframe) ---
@@ -11368,9 +13506,32 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         selectAltTextForImageIndex(Array.from(preview.querySelectorAll('.image-wrapper')).indexOf(wrapper));
         return;
       }
-      const wrapper = e.target.closest('.image-wrapper.drawing');
-      if (!wrapper) return;
-      openDrawingModal(wrapper.dataset.assetId);
+      const drawingWrapper = e.target.closest('.image-wrapper.drawing');
+      if (drawingWrapper) {
+        openDrawingModal(drawingWrapper.dataset.assetId);
+        return;
+      }
+
+      // Word-click-to-source (see buildTextWordRanges/findClickedWordIndex above). Guarded so it
+      // never fires on the tail end of a drag-selection (the whole point of clicking-and-dragging
+      // in the preview is to select/copy text, not jump into the source) or on a link (which
+      // should keep navigating normally).
+      if (!window.getSelection().isCollapsed) return;
+      if (e.target.closest('a, button, svg, input, table, pre')) return;
+      const tab = getCurrentTab();
+      if (!tab || tab.fileType !== 'markdown' || editor.disabled) return;
+      const blockEl = e.target.closest(WORD_BLOCK_SELECTOR);
+      if (!blockEl || !preview.contains(blockEl)) return;
+      const range = wordRangeAtPoint(e.clientX, e.clientY);
+      if (!range) return;
+      const blockIndex = findWordBlockElements().indexOf(blockEl);
+      if (blockIndex === -1 || !textWordRanges[blockIndex]) return;
+      const wordIndex = findClickedWordIndex(blockEl, range);
+      if (wordIndex === -1) return;
+      const wordRange = textWordRanges[blockIndex][wordIndex];
+      if (!wordRange) return;
+      editor.focus();
+      editor.setSelectionRange(wordRange.start, wordRange.end);
     });
 
     // --- Rectangular cell-range selection for CSV/markdown-table previews ---
@@ -11947,10 +14108,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const items = e.clipboardData && e.clipboardData.items;
       if (!items) return;
       for (const item of items) {
-        if (item.kind === 'file' && item.type.startsWith('image/')) {
+        if (item.kind !== 'file') continue;
+        if (item.type.startsWith('image/')) {
           e.preventDefault();
           const choice = await requestImageInsertChoice(item.getAsFile());
           if (choice) insertImageAsset(choice.dataUrl, 'Das ist ein Bild.');
+          return;
+        }
+        const file = item.getAsFile();
+        if (file && isAudioFile(file)) {
+          e.preventDefault();
+          insertAudioFileAsset(file);
           return;
         }
       }
@@ -11977,6 +14145,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
               continue;
             }
             if (isPdfFile(file)) { handlePdfFile(file); continue; }
+            if (isAudioFile(file)) {
+              if (activeTabId) insertAudioFileAsset(file);
+              continue;
+            }
             const reader = new FileReader();
             reader.onload = (event) => createNewTab(file.name, event.target.result, null);
             reader.readAsText(file);

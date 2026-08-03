@@ -33,9 +33,16 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **🪪 Clipart/Piktogramme** — Suchdialog für die freie [ARASAAC](https://arasaac.org)-Piktogramm-Bibliothek (deutschsprachige Suche), ausgewählte Bilder landen wie eine Zeichnung im Dokument und bleiben bearbeitbar; eine per Checkbox zuschaltbare Lizenzangabe (Autor, Lizenz, Quelle) wird dann als Bildunterschrift ergänzt
 - **Bildunterschriften** — jedes Bild kann über die Markdown-Bildsyntax (`![Alt](Adresse "Bildunterschrift")`) eine sichtbare Beschriftung darunter bekommen, in Vorschau, Präsentationsmodus und beiden HTML-Exporten
 - **📄 PDF als Arbeitsblatt öffnen** — eine PDF-Datei öffnen oder hineinziehen, eine oder mehrere Seiten auswählen (einzeln, alle, oder ein Seitenbereich wie „1-3,5"); jede gewählte Seite wird direkt in den Zeichen-Editor geladen und kann dort beschriftet werden. Landet automatisch in einer neuen, eigenen Notiz — bei mehreren Seiten alle untereinander, mit automatischem Weiterschalten zur nächsten Seite nach dem Speichern
-- **🎙️ Sprachaufnahmen** — Audio direkt in das Dokument einbetten, in der Vorschau über einen Player abspielbar
+- **🎙️ Sprachaufnahmen und Audiodateien** — direkt über das Mikrofon aufnehmen oder eine vorhandene Audiodatei (`.wav`/`.ogg`/`.mp3`/`.m4a`) per Copy-Paste, Drag & Drop oder Datei-Dialog einfügen, in der Vorschau über einen Player abspielbar
 - **🎬 Video einbetten** — YouTube- oder Vimeo-Link (oder eine direkte Videodatei-URL) einfügen, wird in der Vorschau automatisch als eingebetteter Player angezeigt
+- **🌐 Web-Einbettungen (iframe)** — beliebige Webseiten oder Web-Widgets einbetten; erzeugt direkt editierbaren HTML-Code (Breite, Höhe, Vollbild-Erlaubnis, …) statt eines versteckten Einstellungsdialogs, inklusive vorlesbarem Titel-Text als Alt-Text-Gegenstück
 - **Tabellenfeste Einfügung** — Bild, Foto, Zeichnung, Piktogramm oder Sprachaufnahme mit dem Cursor in einer Tabellenzelle eingefügt, verzichtet auf die sonst übliche Leerzeile danach, damit die Tabellenstruktur erhalten bleibt
+
+### Canvas-Modus (freie Notizfläche)
+- **Freie DIN-A4-Fläche** (`.canvas`-Dokumente, über ✨ Neu) statt eines linearen Dokuments — beliebig viele frei platzierbare, unabhängig voneinander bearbeitbare Notizzettel („Boxen") auf einer Seite, z. B. für ein Moodboard oder ein visuelles Arbeitsblatt
+- Jede Box ist eine vollständige Mini-Notiz mit demselben Funktionsumfang wie ein normales Dokument (Formatierung, Bilder, Zeichnungen, Tabellen, Audio, Web-Einbettungen), mit **eigenem Design** und **eigener, unabhängig gespeicherter Zoomstufe**
+- Eigene **Hintergrundfarbe** für die Fläche selbst, frei verschiebbar/zoombar per Maus oder Kopfzeile
+- Eigener **Vorlesemodus**, der alle Boxen der Reihe nach (in Leserichtung) vorliest, sowie ein eigenständiger HTML-Export mit identischem Layout und funktionierendem Vorlesen-Button
 
 ### Vorschau & Darstellung
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau
