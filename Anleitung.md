@@ -65,7 +65,11 @@ Ein unbenanntes Dokument übernimmt automatisch die erste `#`-Überschrift als D
 
 ### Tabs umbenennen und Format wechseln
 
-Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit einem Format-Dropdown (`.md` / `.txt` / `.csv` / `.json` / `.html`). So lässt sich ein Dokument gezielt in ein anderes Dateiformat konvertieren, z. B. um eine Tabelle als CSV weiterzuverarbeiten. `Enter` bestätigt, `Escape` bricht ab.
+Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit einem Format-Dropdown (`.md` / `.txt` / `.csv` / `.json` / `.html`). So lässt sich ein Dokument gezielt in ein anderes Dateiformat konvertieren, z. B. um eine Tabelle als CSV weiterzuverarbeiten. `Enter` bestätigt, `Escape` bricht ab. Bei einem Canvas-Dokument (siehe [Abschnitt 19](#19-canvas-modus-freie-notizfläche)) zeigt das Umbenennen-Feld kein Format-Dropdown — eine Canvas-Fläche ist kein Text-Format und lässt sich nicht in eines der anderen umwandeln, nur der Name lässt sich ändern.
+
+### Tabs neu anordnen
+
+Ein Tab lässt sich per Ziehen (Maus gedrückt halten und bewegen) an eine andere Stelle in der Tableiste verschieben — die neue Reihenfolge bleibt wie gewohnt geräteweit gespeichert.
 
 ## 3. Text formatieren
 
@@ -89,6 +93,8 @@ Die Formatierungsleiste unter der Tableiste bietet:
 **Einklappbare Abschnitte:** der Button „Einklappbarer Abschnitt" fügt einen `<details>`/`<summary>`-Block ein (GitHubs „Collapsed Sections", z. B. für Lösungen, Spoiler oder optionale Zusatzinfos, die man erst bei Bedarf aufklappt). Der Cursor landet direkt in der Titelzeile, um sie sofort zu betiteln; war vorher Text markiert, wird dieser automatisch zum einklappbaren Inhalt darunter. In der Vorschau erscheint ein anklickbares Dreieck davor — ein Klick klappt den Inhalt auf oder wieder zu.
 
 **Formatierung aufräumen** (Besen-Symbol) normalisiert überflüssige Leerzeilen im gesamten Dokument und setzt Abschnitte wie Überschriften, Tabellen und eingebettete Medien sauber ab — Inhalt innerhalb von Codeblöcken bleibt dabei unangetastet.
+
+**Formatierte Inhalte einfügen:** wird Text aus einer anderen Anwendung eingefügt (z. B. aus Word, Google Docs oder einer Webseite) und enthält dieser echte Formatierung, wandelt Markdown Studio sie automatisch in passendes Markdown um — Überschriften, Absätze, Zeilenumbrüche, Listen (inkl. Verschachtelung/Einrückung), Aufgabenlisten-Checkboxen, fett/kursiv/durchgestrichen, Links und Tabellen bleiben dabei erhalten. Enthält der eingefügte Text keine echte Formatierung (z. B. Code aus einem Editor oder bereits vorhandener Markdown-Quelltext aus einer anderen Notiz), wird ganz normal unverändert als reiner Text eingefügt — nichts wird ungefragt „markdown-isiert".
 
 ## 4. Tabellen und CSV
 
@@ -278,21 +284,86 @@ Der ☁️-Button färbt sich **hellgrün**, sobald mindestens eine Synchronisie
 
 ## 15. Tastenkürzel
 
+Für so gut wie jede Funktion aus Kopfzeile, Formatierungsleiste und Tabellen-Werkzeugen gibt es ein Tastenkürzel — viele davon von Haus aus vorbelegt, alle über das ⌨️-Symbol in der Kopfzeile einzeln auf eine eigene Kombination umlegbar.
+
+### Vorbelegte Tastenkombinationen
+
+**Datei**
+
 | Tastenkombination | Aktion |
 |---|---|
+| `Strg`/`Cmd` + `Alt` + `N` | Neu (Vorlagenauswahl) |
+| `Strg`/`Cmd` + `Alt` + `T` | Neuer leerer Tab |
+| `Strg`/`Cmd` + `O` | Öffnen |
 | `Strg`/`Cmd` + `S` | Speichern |
-| `Strg`/`Cmd` + `B` | Fett |
-| `Strg`/`Cmd` + `I` | Kursiv |
-| `Strg`/`Cmd` + `F` | Suchen & Ersetzen ein-/ausblenden |
+| `Strg`/`Cmd` + `Umschalt` + `S` | Speichern unter |
+| `Strg`/`Cmd` + `Alt` + `W` | Tab schließen |
+| `Strg`/`Cmd` + `Alt` + `E` | Als HTML exportieren |
+| `Strg`/`Cmd` + `P` | Drucken / Als PDF speichern |
+| `Strg`/`Cmd` + `Alt` + `C` | Formatiert kopieren |
+| `Strg`/`Cmd` + `Alt` + `Y` | WebDAV-Synchronisierung |
+
+**Bearbeiten**
+
+| Tastenkombination | Aktion |
+|---|---|
 | `Strg`/`Cmd` + `Z` | Rückgängig |
 | `Strg`/`Cmd` + `Y` bzw. `Strg`/`Cmd` + `Umschalt` + `Z` | Wiederherstellen |
+| `Strg`/`Cmd` + `F` | Suchen & Ersetzen |
+| `Strg`/`Cmd` + `Alt` + `L` | Formatierung aufräumen |
+| `Strg`/`Cmd` + `Alt` + `R` | Rechtschreibprüfung umschalten |
+
+**Format**
+
+| Tastenkombination | Aktion |
+|---|---|
+| `Strg`/`Cmd` + `B` | Fett |
+| `Strg`/`Cmd` + `I` | Kursiv |
+| `Strg`/`Cmd` + `Umschalt` + `X` | Durchgestrichen |
+| `Strg`/`Cmd` + `E` | Code (Inline) |
+| `Strg`/`Cmd` + `Alt` + `1`–`6` | Überschrift 1–6 |
+| `Strg`/`Cmd` + `Umschalt` + `8` | Aufzählung |
+| `Strg`/`Cmd` + `Umschalt` + `7` | Nummerierte Liste |
+| `Strg`/`Cmd` + `Umschalt` + `9` | Aufgabenliste |
+| `Strg`/`Cmd` + `Umschalt` + `.` | Zitat |
+| `Strg`/`Cmd` + `Alt` + `K` | Code-Block |
+| `Strg`/`Cmd` + `Alt` + `H` | Trennlinie |
+| `Strg`/`Cmd` + `Alt` + `D` | Einklappbarer Abschnitt |
+| `Strg`/`Cmd` + `K` | Link |
+| `Strg`/`Cmd` + `Alt` + `B` | Web-Einbettung (iframe) |
+| `Strg`/`Cmd` + `Umschalt` + `T` | Tabelle einfügen |
+| `Strg`/`Cmd` + `Alt` + `I` | Bild einfügen |
+| `Tab` / `Umschalt` + `Tab` | Einzug / Ausrücken |
+
+**Ansicht**
+
+| Tastenkombination | Aktion |
+|---|---|
+| `Strg`/`Cmd` + `Alt` + `Q` | Quelltext ein-/ausblenden |
+| `Strg`/`Cmd` + `Alt` + `V` | Vorschau ein-/ausblenden |
 | `Strg`/`Cmd` + `+` / `-` | Vergrößern / Verkleinern |
-| `Tab` / `Umschalt` + `Tab` | Einzug / Ausrücken (bei Textauswahl oder am Zeilenanfang) |
+| `Strg`/`Cmd` + `Alt` + `F` | Vollbildmodus umschalten |
+| `Strg`/`Cmd` + `Alt` + `P` | Präsentationsmodus starten |
+| `Strg`/`Cmd` + `Alt` + `O` | Inhaltsverzeichnis umschalten |
+| `Strg`/`Cmd` + `Alt` + `U` | Vorlesen starten/pausieren |
+| `Strg`/`Cmd` + `Alt` + `M` | Simple Modus umschalten |
+| `Strg`/`Cmd` + `Alt` + `/` | Tastenkürzel anzeigen |
+
+**Immer fest** (nicht anpassbar, da an eine feste, allgemeine Konvention statt an eine einzelne Aktion gebunden)
+
+| Tastenkombination | Aktion |
+|---|---|
 | `Enter` in einer Liste | Nächsten Listenpunkt fortsetzen |
 | `Enter` auf leerem Listenpunkt | Liste beenden |
-| `Esc` | Aktuelles Fenster/Modal schließen, Präsentation/Vollbild beenden |
+| `Esc` | Aktuelles Fenster/Modal schließen (bricht auch eine gerade laufende Tastenkürzel-Aufnahme ab, siehe unten) |
 
-Diese Übersicht ist auch jederzeit über das ⌨️-Symbol in der Kopfzeile abrufbar.
+Foto/Zeichnung/Clipart/Sprachaufnahme/Video einfügen sowie alle Tabellen-Zeilen-/Spalten-Werkzeuge (Einfügen, Verschieben, Löschen, Sortieren nach Spalte) haben von Haus aus **keine** Vorbelegung — sie lassen sich aber genau wie jede andere Aktion im nächsten Abschnitt eine eigene Kombination zuweisen.
+
+### Eigene Tastenkombinationen zuweisen
+
+Im Tastenkürzel-Fenster (⌨️-Symbol) steht neben jeder Aktion die aktuell zugewiesene Kombination als anklickbarer Button. Ein Klick darauf startet die Aufnahme („Taste drücken …") — einfach die gewünschte Kombination drücken (dabei muss mindestens `Strg` oder `Alt` gehalten werden, damit normales Tippen im Editor nie blockiert werden kann) und die neue Zuordnung ist sofort aktiv. War die Kombination bereits einer anderen Aktion zugewiesen, wird sie dort automatisch entfernt und eine kurze Meldung zeigt an, wovon sie „geklaut" wurde. `Esc` während der Aufnahme bricht sie ohne Änderung ab.
+
+Ein kleines ↺-Symbol neben einer geänderten Kombination setzt nur diese eine Aktion auf ihren Standard zurück; „Alle auf Standard zurücksetzen" oben im Fenster setzt die komplette Liste zurück. Alle Änderungen werden geräteweit gespeichert (unabhängig von einzelnen Dokumenten) und bleiben nach einem Neuladen der Seite erhalten.
 
 ## 16. Speicherplatz und Datenschutz
 
