@@ -6630,6 +6630,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // fresh tab.canvasData reparse instead, and only actually needs to repaint anything if
         // this canvas happens to be what's on screen right now.
         const realTabForRefresh = getActiveTabReal();
+        // Declared here, outside the if/else below, because the theme-refresh check further
+        // down also needs it -- it used to live inside the "else" block only, which made it
+        // silently out of scope there (a ReferenceError, thrown and swallowed by this
+        // function's own catch -- see performWebdavSync()) on literally every completed sync,
+        // canvas or not, reported as the sync failing with "current is not defined".
+        const current = getCurrentTab();
         if (realTabForRefresh && realTabForRefresh.fileType === 'canvas') {
           try {
             realTabForRefresh.canvasData = JSON.parse(realTabForRefresh.content);
@@ -6639,12 +6645,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             // malformed pull -- same defensive fallback switchTab() itself uses.
           }
           if (!canvasEditingBoxId) updatePreview();
-        } else {
-          const current = getCurrentTab();
-          if (current && editor.value !== current.content) {
-            editor.value = current.content;
-            updatePreview();
-          }
+        } else if (current && editor.value !== current.content) {
+          editor.value = current.content;
+          updatePreview();
         }
         // A silently-pulled remote change (applyRemoteTabToLocal above) can include a theme
         // picked on another device -- reapply it live if it's the tab currently on screen,
