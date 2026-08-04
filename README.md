@@ -12,7 +12,8 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 ### Dokumente & Dateiformate
 - **Mehrere Tabs** — beliebig viele Dokumente gleichzeitig offen, mit Autospeicherung im Browser (Text/Metadaten in LocalStorage, größere Anhänge wie Bilder/PDFs in IndexedDB für deutlich mehr Speicherplatz); ein Prozentbalken in der Fußleiste zeigt den belegten Speicherplatz sowie die Größe aller aktuell geöffneten Notizen zusammen an
 - **Markdown, CSV, JSON, HTML und TXT** in derselben App: CSV und JSON werden als Tabelle bzw. hübsch formatiert mit Syntax-Hervorhebung angezeigt; HTML-Dateien bekommen eine echte Syntax-Hervorhebung im Editor **und** eine echte gerenderte Web-Vorschau (in einer abgeschotteten Sandbox, damit fremder HTML/JS-Code nichts im Editor selbst anrichten kann); TXT-Dateien werden unverändert als reiner Text angezeigt
-- **Tabs umbenennen & Format wechseln** — Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit Format-Dropdown (Markdown/TXT/CSV/JSON/HTML), um ein Dokument gezielt in ein anderes Format zu konvertieren
+- **Tabs umbenennen & Format wechseln** — Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit Format-Dropdown (Markdown/TXT/CSV/JSON/HTML), um ein Dokument gezielt in ein anderes Format zu konvertieren (bei Canvas-Dokumenten nur der Name, ohne Format-Wechsel, da eine Canvas-Fläche kein Text-basiertes Format ist)
+- **Tab-Reihenfolge per Drag & Drop** ändern — einen Tab in der Tableiste an die gewünschte Stelle ziehen
 - **14 Dokumentvorlagen** über den ✨-Button — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan und eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt)
 - **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
 - **Speichern** in eine lokale Datei (inkl. Speichern unter, mit direktem Dateizugriff sofern der Browser das unterstützt)
@@ -20,6 +21,8 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 ### Editor & Formatierung
 - **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Einklappbarer Abschnitt, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
 - **Einklappbare Abschnitte** — fügt einen `<details>`/`<summary>`-Block ein (GitHubs „Collapsed Sections"); eine vorhandene Auswahl wird automatisch zum einklappbaren Inhalt, der Cursor landet direkt in der Titelzeile zum Eintippen
+- **Formatierte Inhalte einfügen** (Copy-Paste) — Rich Text aus Word, Google Docs oder einer Webseite wird beim Einfügen automatisch zu Markdown umgewandelt: Überschriften, Absätze/Zeilenumbrüche, Listen (inkl. Einrückung), Aufgabenlisten-Checkboxen, fett/kursiv/durchgestrichen, Links und Tabellen bleiben erhalten; reiner Text (z. B. Code oder bereits vorhandener Markdown-Quelltext) wird unverändert eingefügt
+- **Anpassbare Tastenkürzel** — praktisch jede Aktion aus Kopf- und Formatierungsleiste sowie den Tabellen-Werkzeugen hat ein Tastenkürzel (viele vorbelegt, alle im Tastenkürzel-Fenster per Klick auf eine neue Kombination umlegbar, inkl. automatischer Konfliktauflösung)
 - **Tabellen-Werkzeuge** — Zeilen/Spalten einfügen, löschen, verschieben und nach einer Spalte sortieren, sobald der Cursor in einer Tabelle steht (funktioniert identisch für Markdown- und CSV-Tabellen)
 - **Klick & Mehrfachauswahl in der Tabellen-Vorschau** — Klick auf eine Zelle (Markdown-Tabelle oder CSV) springt zur passenden Stelle im Quelltext; durch mehrere Zellen ziehen markiert eine Zeile, Spalte oder einen beliebigen Zellblock zum Kopieren als Tabelle in die Zwischenablage
 - **Frei verschiebbarer Trenner** zwischen Editor und Vorschau — das Verhältnis lässt sich beliebig in beide Richtungen ziehen
@@ -62,7 +65,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 ### Sonstiges
 - **Responsiv** — Bedienleisten werden auf schmalen Bildschirmen (z. B. iPhone) horizontal scrollbar, Editor/Vorschau stapeln sich übereinander
 - **Installierbar** — App-Icon und Web-Manifest, auf iOS über „Zum Home-Bildschirm“ startbar wie eine echte App
-- **Tastenkürzel-Hilfe** über das ⌨️-Symbol in der Kopfzeile
+- **Tastenkürzel-Hilfe** über das ⌨️-Symbol in der Kopfzeile — zeigt alle Kombinationen und erlaubt, sie direkt dort anzupassen
 - **URL-Parameter für Direktlinks** — `?view=source`/`?view=preview`/`?view=split` legt die Startansicht unabhängig von zuvor gespeicherten Einstellungen fest; `?url=<Adresse-einer-.md-Datei>` öffnet automatisch ein Dokument von einer beliebigen (CORS-freigegebenen) Web-Adresse, ohne beim erneuten Öffnen desselben Links doppelt zu importieren; `?localstorage=false` startet die App bewusst ohne die gespeicherten Notizen zu laden (z. B. für Vorführungen) — zusammen mit `?url=` wird dann ausschließlich die dort angegebene Notiz geöffnet; `?view=kiosk` geht noch weiter und speichert während der ganzen Sitzung nichts im Browser (echter Kiosk-/Vorführ-Link, ohne Spuren). Alle Parameter lassen sich mit `?simple=true`/`?simple=false` kombinieren, um den Simple Modus gezielt an- oder auszuschalten. Details in der [Anleitung](./Anleitung.md#18-direktlinks-mit-url-parametern)
 
 ## 🚀 Verwenden
