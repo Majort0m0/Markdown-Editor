@@ -77,7 +77,7 @@ Die Formatierungsleiste unter der Tableiste bietet:
 | Text | Fett (`Strg`+`B`), Kursiv (`Strg`+`I`), Durchgestrichen |
 | Listen | Aufzählung, Nummerierte Liste, Aufgabenliste (Checkbox) |
 | Einzug | Ausrücken (`Umschalt`+`Tab`), Einzug (`Tab`) |
-| Blockelemente | Zitat, Code (Inline), Code-Block, Trennlinie |
+| Blockelemente | Einklappbarer Abschnitt, Zitat, Code (Inline), Code-Block, Trennlinie |
 | Verweise & Medien | Link, Web-Einbettung, Bild, Foto, Zeichnung, Sprachaufnahme, Video, Tabelle |
 
 **Toggle-Verhalten:** jeder Formatierungs-Button erkennt, ob die Formatierung am Cursor bereits aktiv ist, und hebt sie dann wieder auf, statt sie doppelt anzuwenden — z. B. macht ein zweiter Klick auf „Fett" innerhalb von fettem Text den Text wieder normal. Der aktuell aktive Zustand wird in der Werkzeugleiste farblich hervorgehoben.
@@ -85,6 +85,8 @@ Die Formatierungsleiste unter der Tableiste bietet:
 **Listen fortsetzen:** `Enter` innerhalb einer Aufzählungs-, Nummerierungs- oder Aufgabenliste erzeugt automatisch den nächsten Listenpunkt (bei nummerierten Listen mit hochgezählter Nummer); `Enter` auf einem leeren Listenpunkt beendet die Liste.
 
 **Aufgaben abhaken:** Checkboxen (`- [ ]`) lassen sich direkt in der Vorschau anklicken, ohne den Quelltext zu bearbeiten — der Haken wird automatisch im Markdown nachgezogen.
+
+**Einklappbare Abschnitte:** der Button „Einklappbarer Abschnitt" fügt einen `<details>`/`<summary>`-Block ein (GitHubs „Collapsed Sections", z. B. für Lösungen, Spoiler oder optionale Zusatzinfos, die man erst bei Bedarf aufklappt). Der Cursor landet direkt in der Titelzeile, um sie sofort zu betiteln; war vorher Text markiert, wird dieser automatisch zum einklappbaren Inhalt darunter. In der Vorschau erscheint ein anklickbares Dreieck davor — ein Klick klappt den Inhalt auf oder wieder zu.
 
 **Formatierung aufräumen** (Besen-Symbol) normalisiert überflüssige Leerzeilen im gesamten Dokument und setzt Abschnitte wie Überschriften, Tabellen und eingebettete Medien sauber ab — Inhalt innerhalb von Codeblöcken bleibt dabei unangetastet.
 
@@ -421,9 +423,17 @@ Ist keine Box geöffnet, erscheint an der Stelle der Design-Auswahl in der Kopfz
 
 Ein eigener 🔊-Button oben links über der Canvas-Fläche liest alle Boxen der Reihe nach vor — von oben links beginnend, zeilenweise in Leserichtung. Die gerade vorgelesene Box wird dabei automatisch in den sichtbaren Bereich verschoben und wie im normalen [Vorlesemodus](#9-vorlesemodus) Wort für Wort hervorgehoben; eingebettete Bilder, Zeichnungen, Audiodateien und Web-Einbettungen werden dabei genauso behandelt. Da Boxen frei auf der Fläche platziert sind, gibt es keine hundertprozentig eindeutige Leserichtung — bei unregelmäßig angeordneten oder überlappenden Boxen kann die tatsächliche Reihenfolge daher gelegentlich von der Erwartung abweichen.
 
+### Präsentationsmodus im Canvas
+
+Der [Präsentationsmodus](#10-präsentationen-erstellen) lässt sich auch auf ein Canvas-Dokument anwenden: jede Box wird dabei zu einer eigenen Folie, in derselben Leserichtung wie der Vorlesemodus (siehe oben) und jeweils mit dem eigenen Design der Box. Enthält eine Box selbst Folientrennlinien (`---`), wird sie zusätzlich in mehrere aufeinanderfolgende Folien aufgeteilt statt nur eine einzige zu ergeben.
+
 ### Export
 
 **Als eigenständige HTML-Datei exportieren** (siehe [Abschnitt 14](#14-export-und-teilen)) erzeugt bei einem Canvas-Dokument eine eigenständige Seite mit exakt demselben Layout (Boxen an derselben Position und Größe) und einem eigenen, funktionierenden Vorlesen-Button — auch außerhalb dieser App nutzbar.
+
+**🖨️ Drucken / Als PDF speichern** druckt die Canvas-Seite passend auf ein DIN-A4-Blatt (Hoch- oder Querformat, je nach Seitenausrichtung) — unabhängig davon, wie weit die Fläche gerade im Browserfenster gezoomt oder verschoben ist.
+
+**📋 Formatierte Notiz in die Zwischenablage kopieren** reiht bei einem Canvas-Dokument alle Boxen in Leserichtung aneinander (durch eine Trennlinie getrennt, jede im eigenen Design), statt — wie sonst — nur den Inhalt eines einzelnen Dokuments zu kopieren.
 
 ---
 

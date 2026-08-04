@@ -4249,7 +4249,21 @@ return He}()
       /* Canvas Mode: print/PDF-export the page at true DIN-A4 size, editing chrome stripped out
          and pan/zoom reset to 1:1 (@page can't read the --split-ratio-style CSS var this file
          uses elsewhere, so the two possible page sizes are named CSS Paged Media pages instead —
-         canvasPage.classList('landscape'), toggled in updateCanvasPreview(), picks between them). */
+         canvasPage.classList('landscape'), toggled in updateCanvasPreview(), picks between them).
+         The two @page rules below deliberately spell out the exact DIN-A4 millimeter dimensions
+         (`size: 210mm 297mm`) rather than the vaguer `size: portrait`/`size: landscape` keywords
+         used here originally — those keywords only ever constrain *orientation*, they don't
+         request a specific paper size; the actual physical dimensions still come from whatever
+         paper size happens to be selected in the browser's print dialog / OS print system at that
+         moment (last used printer, a stale default, ...). Whenever that ambient size didn't
+         happen to match true A4, the browser had to tile the page's real 210×297mm content across
+         however many sheets of the *actually selected* (mismatched) paper size it took to fit —
+         reported directly as a single portrait canvas printing as 4 pages, and a landscape canvas
+         never fitting on one sheet even after manually selecting A4 in the print dialog (Chrome's
+         own paper-size dropdown and this keyword-only @page rule were fighting over two different
+         ideas of "the" page size). Spelling out the millimeters here removes the ambiguity
+         entirely — the printed/exported page is always exactly DIN-A4, in the right orientation,
+         regardless of whatever the browser's own dialog defaults to. */
       main.canvas-tab-active .canvas-add-toggle-btn,
       main.canvas-tab-active .canvas-nav-overlay,
       main.canvas-tab-active .canvas-tts-toggle-btn,
@@ -4268,26 +4282,56 @@ return He}()
 
       main.canvas-tab-active .canvas-viewport {
         overflow: visible !important;
+        /* .canvas-viewport's own 24px top padding (see its base rule) exists to keep the page
+           clear of the nav-overlay/toolbar in the *live, on-screen* view -- during print, with
+           html/body/main/.preview-pane all switched to height:auto above, that padding no longer
+           gets absorbed into a fixed-height box; it becomes real, additional vertical space
+           (~6.35mm) stacked in front of the page content, on top of whatever the page itself
+           measures. That's enough on its own to tip an already borderline-fitting 297mm-tall page
+           into needing a second sheet — a real, identifiable contributor to the reported overflow,
+           not just rendering-rounding noise, so it's removed outright here rather than folded into
+           the safety-scale buffer below. */
+        padding-top: 0 !important;
       }
 
+      /* Even with the @page dimensions above now spelling out exact DIN-A4 millimeters, the
+         printed page still came out "a tick too big" and spilled onto a second sheet -- the
+         browser's own print engine has its own small, unavoidable rendering/rounding overhead
+         (subpixel layout, font metrics, ...) at the exact boundary between "fits" and "needs a
+         second page", so relying on an *exact* equality between content size and page size has
+         no safety margin at all. CANVAS_PRINT_SAFETY_SCALE (98%) below shrinks the actual
+         rendered page by a small, visually negligible amount so there's real headroom -- applied
+         as BOTH an explicit width/height override (this is what the page-breaking/pagination
+         decision is actually based on; a plain `transform: scale()` alone would NOT help here,
+         since transforms are paint-only and never change an element's layout size) AND a matching
+         `transform: scale()` with transform-origin pinned to the same top-left corner the
+         width/height shrink is anchored at (so the .canvas-box children -- position:absolute,
+         with their own x/y/w/h still expressed in the box's *original*, un-shrunk mm coordinate
+         system -- visually scale down in lockstep with their now-smaller parent instead of
+         poking out past its new, slightly smaller edges). */
       main.canvas-tab-active .canvas-page {
         position: static !important;
-        transform: none !important;
+        transform: scale(0.98) !important;
+        transform-origin: top left !important;
         box-shadow: none !important;
+        width: 205.8mm !important;
+        height: 291.06mm !important;
         page: canvas-portrait;
       }
 
       main.canvas-tab-active .canvas-page.landscape {
+        width: 291.06mm !important;
+        height: 205.8mm !important;
         page: canvas-landscape;
       }
 
       @page canvas-portrait {
-        size: portrait;
+        size: 210mm 297mm;
         margin: 0;
       }
 
       @page canvas-landscape {
-        size: landscape;
+        size: 297mm 210mm;
         margin: 0;
       }
     }
@@ -4648,6 +4692,7 @@ return He}()
     <button class="toolbar-btn fmt-btn simple-hide" onclick="indentLines('outdent')" title="Ausrücken (Umschalt+Tab)"><svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22,3a1,1,0,0,1-1,1H3A1,1,0,0,1,3,2H21A1,1,0,0,1,22,3ZM3,10H8A1,1,0,0,0,8,8H3a1,1,0,0,0,0,2Zm0,6H8a1,1,0,0,0,0-2H3a1,1,0,0,0,0,2Zm0,6H21a1,1,0,0,0,0-2H3a1,1,0,0,0,0,2ZM21,11H13.414l1.293-1.293a1,1,0,0,0-1.414-1.414l-3,3a1,1,0,0,0,0,1.414l3,3a1,1,0,0,0,1.414-1.414L13.414,13H21a1,1,0,0,0,0-2Z"/></svg></button>
     <button class="toolbar-btn fmt-btn simple-hide" onclick="indentLines('indent')" title="Einzug (Tab)"><svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22,3a1,1,0,0,1-1,1H3A1,1,0,0,1,3,2H21A1,1,0,0,1,22,3ZM21,8H16a1,1,0,0,0,0,2h5a1,1,0,0,0,0-2Zm0,6H16a1,1,0,0,0,0,2h5a1,1,0,0,0,0-2ZM3,22H21a1,1,0,0,0,0-2H3a1,1,0,0,0,0,2Zm0-9h7.586L9.293,14.293a1,1,0,1,0,1.414,1.414l3-3a1,1,0,0,0,0-1.414l-3-3A1,1,0,0,0,9.293,9.707L10.586,11H3a1,1,0,0,0,0,2Z"/></svg></button>
     <div class="toolbar-divider"></div>
+    <button class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('details')" title="Einklappbarer Abschnitt"><svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M24 9H42" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 19H42" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 29H42" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 39H42" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 9.76619C6 8.9889 6.84797 8.50878 7.5145 8.9087L14.5708 13.1425C15.2182 13.5309 15.2182 14.4691 14.5708 14.8575L7.5145 19.0913C6.84797 19.4912 6 19.0111 6 18.2338V9.76619Z" fill="currentColor" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button id="fmtQuoteBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('quote')" title="Zitat"><svg viewBox="0 0 64 64" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M36.806,51.968l0,-8.026c2.537,-0.14 4.458,-0.604 5.761,-1.391c1.304,-0.786 2.22,-2.063 2.749,-3.829c0.528,-1.766 0.793,-4.293 0.793,-7.581l-9.303,0l0,-19.147l19.081,0l0,18.203c0,7.519 -1.612,13.028 -4.836,16.525c-3.225,3.497 -7.973,5.246 -14.245,5.246Zm-28.806,0l0,-8.026c2.537,-0.14 4.457,-0.586 5.761,-1.338c1.304,-0.752 2.247,-2.029 2.828,-3.83c0.581,-1.801 0.872,-4.345 0.872,-7.633l-9.461,0l0,-19.147l19.186,0l0,18.203c0,7.519 -1.603,13.028 -4.809,16.525c-3.207,3.497 -7.999,5.246 -14.377,5.246Z"/></svg></button>
     <button id="fmtCodeBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('code')" title="Code"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 8L5 11.6923L9 16M15 8L19 11.6923L15 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('codeblock')" title="Code-Block"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 9L15.6716 9.17157C17.0049 10.5049 17.6716 11.1716 17.6716 12C17.6716 12.8284 17.0049 13.4951 15.6716 14.8284L15.5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13.2942 7.17041L12.0001 12L10.706 16.8297" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8.49994 9L8.32837 9.17157C6.99504 10.5049 6.32837 11.1716 6.32837 12C6.32837 12.8284 6.99504 13.4951 8.32837 14.8284L8.49994 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
@@ -8558,6 +8603,19 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // one at a time, like a slideshow.
 
     let presentationSlides = [];
+    // Parallel to presentationSlides -- null for an ordinary document (all slides share the
+    // app's one currentTheme, as before), or a theme-class string for a slide that came from a
+    // canvas box (see startPresentation()'s canvas branch), so each box's own theme carries over
+    // into its slide(s) exactly like it does in the idle canvas view, the clipboard export, and
+    // the HTML export.
+    let presentationSlideThemes = [];
+    // Also parallel to presentationSlides -- null for an ordinary document, or the source box
+    // object for a canvas-derived slide. renderPresentationSlide() points canvasIdleRenderBox at
+    // this before calling marked.parse() so the slide's own asset:ID references (images,
+    // drawings, audio) resolve against *that box's* asset map instead of getCurrentTab()'s (which
+    // is the canvas tab itself here, with no assets of its own -- see canvasIdleRenderBox's own
+    // comment near hljsRenderer.image() for why this indirection exists at all).
+    let presentationSlideBoxes = [];
     let presentationIndex = 0;
     let presentationActive = false;
     let presentationOwnsFullscreen = false;
@@ -8643,15 +8701,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function renderPresentationSlide() {
       const slideMarkdown = presentationSlides[presentationIndex];
       const layout = classifySlidePresentationLayout(slideMarkdown);
-      presentationSlideEl.className = 'presentation-slide markdown-body ' + currentTheme + (layout === 'normal' ? '' : ' ' + layout);
+      const slideTheme = presentationSlideThemes[presentationIndex] || currentTheme;
+      presentationSlideEl.className = 'presentation-slide markdown-body ' + slideTheme + (layout === 'normal' ? '' : ' ' + layout);
       // The theme's --preview-bg is scoped to .markdown-body.theme-xxx (presentationSlideEl),
       // which doesn't cascade back up to its own parent — so the overlay needs its background
       // set explicitly, or it stays transparent and the editor/preview bleed through in the
       // letterboxing outside the slide's max-width on wide screens.
       presentationOverlay.style.backgroundColor = getComputedStyle(presentationSlideEl).backgroundColor;
+      canvasIdleRenderBox = presentationSlideBoxes[presentationIndex] || null;
       suppressDrawingControls = true;
       presentationSlideEl.innerHTML = marked.parse(slideMarkdown);
       suppressDrawingControls = false;
+      canvasIdleRenderBox = null;
       presentationCounter.textContent = (presentationIndex + 1) + ' / ' + presentationSlides.length;
     }
 
@@ -8744,12 +8805,45 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // Presentation mode doesn't go through updatePreview(), so its own auto-stop hook there
       // never fires here — and both this and the live-preview engine ultimately share one global
       // speechSynthesis queue, so a read left running in the preview would otherwise fight the
-      // presentation instance for it the moment presentation mode starts its own reading. Same
-      // reasoning for the canvas-wide read (not reachable from a canvas tab today, but cheap and
-      // harmless insurance if that ever changes).
+      // presentation instance for it the moment presentation mode starts its own reading. Also
+      // stops a canvas-wide read, reachable from here now that a canvas tab can start a
+      // presentation of its own (see the branch below).
       previewTts.stop();
       stopCanvasTts();
-      presentationSlides = splitIntoSlides(editor.value);
+      if (isCanvasWithoutOpenBox()) {
+        // A canvas has no single linear document to split into slides the normal way (boxes sit
+        // freely in 2D space, not in one markdown text) -- same underlying problem
+        // copyFormattedToClipboard() already solves for the clipboard, and the same fix applies
+        // here: walk every box in Vorlesen reading order (computeCanvasReadingOrder()) and turn
+        // each into its own slide. Reusing splitIntoSlides() per box (rather than assuming "one
+        // box = one slide") is what makes a box's *own* internal --- breaks also become separate
+        // slides for free, exactly like typing --- into an ordinary document already does --
+        // splitIntoSlides() already returns a single one-element array for a box with no breaks
+        // of its own, so this needs no separate "does this box have breaks" branch. Each slide
+        // remembers which box it came from via presentationSlideThemes/presentationSlideBoxes,
+        // so it keeps that box's own theme (instead of forcing one uniform look across every
+        // slide) and resolves that box's own asset:ID references (images/drawings/audio) instead
+        // of coming up empty against the canvas tab's own, unrelated top-level assets.
+        const realTab = getActiveTabReal();
+        presentationSlides = [];
+        presentationSlideThemes = [];
+        presentationSlideBoxes = [];
+        computeCanvasReadingOrder(realTab.canvasData.boxes)
+          .filter(box => (box.content || '').trim())
+          .forEach(box => {
+            const theme = box.theme || 'theme-clean';
+            splitIntoSlides(box.content || '').forEach(slide => {
+              presentationSlides.push(slide);
+              presentationSlideThemes.push(theme);
+              presentationSlideBoxes.push(box);
+            });
+          });
+        if (!presentationSlides.length) { showToast('Keine Boxen zum Präsentieren vorhanden'); return; }
+      } else {
+        presentationSlides = splitIntoSlides(editor.value);
+        presentationSlideThemes = presentationSlides.map(() => null);
+        presentationSlideBoxes = presentationSlides.map(() => null);
+      }
       presentationIndex = 0;
       presentationActive = true;
       updatePresentationWidth();
@@ -10276,6 +10370,22 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             replacement = '\n\n---\n\n';
             newCursorPos = start + replacement.length;
             break;
+          case 'details': {
+            // GFM collapsed section (<details>/<summary>): the blank line between </summary> and
+            // the body is required, not stylistic -- without it GitHub (and marked, which mirrors
+            // this) treats the whole block as opaque raw HTML instead of parsing markdown inside
+            // it. Selected text becomes the body so "wrap this paragraph as collapsible" works in
+            // one click; cursor always lands right after <summary> since that's what needs typing
+            // first either way (an empty summary has nothing else to fill in yet, and text already
+            // selected already covers the body).
+            const prefix = '\n\n<details>\n<summary>';
+            const suffix = selection
+              ? '</summary>\n\n' + selection + '\n\n</details>\n\n'
+              : '</summary>\n\n</details>\n\n';
+            replacement = prefix + suffix;
+            newCursorPos = start + prefix.length;
+            break;
+          }
           case 'table':
             replacement = '\n| | |\n| --- | --- |\n| | |\n';
             newCursorPos = start + 3;
@@ -12373,10 +12483,37 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         return;
       }
 
-      const content = currentTab.fileType === 'markdown' ? expandBlankLinesForClipboard(editor.value) : editor.value;
-      suppressDrawingControls = true;
-      const bodyHtml = renderContentForTab(currentTab, content);
-      suppressDrawingControls = false;
+      let bodyHtml;
+      if (isCanvasWithoutOpenBox()) {
+        // getCurrentTab() falls back to the real canvas tab here (fileType 'canvas', not
+        // 'markdown') -- neither expandBlankLinesForClipboard() nor renderContentForTab() know
+        // what to do with that, and editor.value is empty besides (no box is open), so this used
+        // to silently copy nothing usable at all. A canvas has no single linear document to copy
+        // in the first place -- boxes sit freely in 2D space -- so this flattens every box's own
+        // rendered content into one document instead, in the same reading order a human would
+        // naturally read the canvas in (computeCanvasReadingOrder(), already built for the
+        // canvas-wide Vorlesen feature). Each box keeps its own theme (wrapped in its own
+        // .markdown-body.theme-xxx div, exactly like performCanvasHtmlExport()'s boxesHtml) and
+        // has its own asset:ID references resolved via canvasIdleRenderBox, same as the idle
+        // canvas rendering and the HTML export both already do. Boxes with no content at all are
+        // skipped so an empty box doesn't leave a stray blank section with just a separator line.
+        const realTab = getActiveTabReal();
+        suppressDrawingControls = true;
+        bodyHtml = computeCanvasReadingOrder(realTab.canvasData.boxes)
+          .filter(box => (box.content || '').trim())
+          .map(box => {
+            canvasIdleRenderBox = box;
+            const html = '<div class="markdown-body ' + (box.theme || 'theme-clean') + '">' + marked.parse(box.content || '') + '</div>';
+            canvasIdleRenderBox = null;
+            return html;
+          }).join('<hr>');
+        suppressDrawingControls = false;
+      } else {
+        const content = currentTab.fileType === 'markdown' ? expandBlankLinesForClipboard(editor.value) : editor.value;
+        suppressDrawingControls = true;
+        bodyHtml = renderContentForTab(currentTab, content);
+        suppressDrawingControls = false;
+      }
 
       const container = document.createElement('div');
       container.className = preview.className;

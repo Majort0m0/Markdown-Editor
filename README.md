@@ -18,7 +18,8 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **Speichern** in eine lokale Datei (inkl. Speichern unter, mit direktem Dateizugriff sofern der Browser das unterstützt)
 
 ### Editor & Formatierung
-- **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
+- **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Einklappbarer Abschnitt, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist
+- **Einklappbare Abschnitte** — fügt einen `<details>`/`<summary>`-Block ein (GitHubs „Collapsed Sections"); eine vorhandene Auswahl wird automatisch zum einklappbaren Inhalt, der Cursor landet direkt in der Titelzeile zum Eintippen
 - **Tabellen-Werkzeuge** — Zeilen/Spalten einfügen, löschen, verschieben und nach einer Spalte sortieren, sobald der Cursor in einer Tabelle steht (funktioniert identisch für Markdown- und CSV-Tabellen)
 - **Klick & Mehrfachauswahl in der Tabellen-Vorschau** — Klick auf eine Zelle (Markdown-Tabelle oder CSV) springt zur passenden Stelle im Quelltext; durch mehrere Zellen ziehen markiert eine Zeile, Spalte oder einen beliebigen Zellblock zum Kopieren als Tabelle in die Zwischenablage
 - **Frei verschiebbarer Trenner** zwischen Editor und Vorschau — das Verhältnis lässt sich beliebig in beide Richtungen ziehen
@@ -43,6 +44,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - Jede Box ist eine vollständige Mini-Notiz mit demselben Funktionsumfang wie ein normales Dokument (Formatierung, Bilder, Zeichnungen, Tabellen, Audio, Web-Einbettungen), mit **eigenem Design** und **eigener, unabhängig gespeicherter Zoomstufe**
 - Eigene **Hintergrundfarbe** für die Fläche selbst, frei verschiebbar/zoombar per Maus oder Kopfzeile
 - Eigener **Vorlesemodus**, der alle Boxen der Reihe nach (in Leserichtung) vorliest, sowie ein eigenständiger HTML-Export mit identischem Layout und funktionierendem Vorlesen-Button
+- **Präsentationsmodus, Drucken/PDF und Zwischenablage-Kopie** funktionieren auch im Canvas: jede Box wird zu einer eigenen Folie (inkl. eigener Folientrennlinien innerhalb einer Box), der Druck passt sich automatisch auf ein DIN-A4-Blatt an, und die Kopierfunktion reiht alle Boxen in Leserichtung aneinander
 
 ### Vorschau & Darstellung
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau
