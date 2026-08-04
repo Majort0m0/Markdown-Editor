@@ -96,6 +96,8 @@ Die Formatierungsleiste unter der Tableiste bietet:
 
 **Formatierte Inhalte einfügen:** wird Text aus einer anderen Anwendung eingefügt (z. B. aus Word, Google Docs oder einer Webseite) und enthält dieser echte Formatierung, wandelt Markdown Studio sie automatisch in passendes Markdown um — Überschriften, Absätze, Zeilenumbrüche, Listen (inkl. Verschachtelung/Einrückung), Aufgabenlisten-Checkboxen, fett/kursiv/durchgestrichen, Links und Tabellen bleiben dabei erhalten. Enthält der eingefügte Text keine echte Formatierung (z. B. Code aus einem Editor oder bereits vorhandener Markdown-Quelltext aus einer anderen Notiz), wird ganz normal unverändert als reiner Text eingefügt — nichts wird ungefragt „markdown-isiert".
 
+Enthält der eingefügte Inhalt Bilder, die auf der Quell-Webseite nur verlinkt sind (nicht als Datei kopiert), versucht die App zusätzlich, jedes Bild direkt herunterzuladen und wie ein normal eingefügtes Bild einzubetten (verkleinert, als Base64 im Dokument gespeichert) — praktisch, damit die Notiz auch offline und unabhängig von der Quellseite vollständig bleibt. Das klappt nur bei Quellen, die das technisch erlauben (viele, aber nicht alle Webseiten); wo es nicht klappt, bleibt automatisch der externe Link erhalten statt eines Fehlers.
+
 ## 4. Tabellen und CSV
 
 Eine Tabelle über den **Tabelle**-Button in der Formatierungsleiste einfügen (leeres Grundgerüst) oder direkt Markdown-Syntax tippen. Sobald der Cursor innerhalb einer Tabelle steht, erscheint eine eigene Werkzeugleiste darüber:
@@ -121,7 +123,22 @@ Drei Wege, ein Bild einzufügen:
 2. **Drag & Drop** — eine Bilddatei ins Editorfenster ziehen.
 3. **🖼️ Bild einfügen** (Formatierungsleiste) — öffnet den Dateidialog.
 
-In allen drei Fällen erscheint ein Dialog mit der Wahl zwischen „📉 Verkleinert einfügen" (empfohlen, kleinere Dateigröße) und „🖼️ Original einfügen". Das Bild wird nicht als riesiger Base64-Textblock in den sichtbaren Quelltext eingefügt, sondern als kurze Referenz (`![...](asset:...)`) — die eigentlichen Bilddaten werden separat verwaltet, damit der Quelltext übersichtlich bleibt.
+In allen drei Fällen erscheint ein Dialog mit der Wahl zwischen „📉 Verkleinert einfügen" (empfohlen, kleinere Dateigröße), „🖼️ Original einfügen" und „🎨 Bearbeiten & einfügen" (siehe nächster Abschnitt). Das Bild wird nicht als riesiger Base64-Textblock in den sichtbaren Quelltext eingefügt, sondern als kurze Referenz (`![...](asset:...)`) — die eigentlichen Bilddaten werden separat verwaltet, damit der Quelltext übersichtlich bleibt.
+
+### Bilder bearbeiten (Helligkeit, Kontrast, Effekte)
+
+Ein eingebauter Bildeditor erlaubt einfache Anpassungen, ganz ohne externe Software:
+
+- **Schieberegler** für Helligkeit, Kontrast und Sättigung, mit sofortiger Live-Vorschau.
+- **Effekte** — ein Klick genügt: Schwarz-Weiß, Sepia, Vintage, Lomo, Crossprozess, Sonnenaufgang, Schärfen, Vignette. Effekte und Schieberegler lassen sich kombinieren (z. B. erst „Vintage" anklicken, danach die Helligkeit noch etwas erhöhen).
+- **↺ Zurücksetzen** verwirft alle Änderungen und stellt das Originalbild wieder her; „✓ Übernehmen" speichert das Ergebnis.
+
+Zwei Wege dorthin:
+
+1. **Beim Einfügen eines neuen Bildes** — „🎨 Bearbeiten & einfügen" im Einfüge-Dialog (siehe oben) öffnet den Editor, bevor das Bild überhaupt im Dokument landet.
+2. **Nachträglich, für ein bereits eingefügtes Bild** — beim Überfahren eines Bildes in der Vorschau mit der Maus erscheint oben rechts ein „🎨 Bearbeiten"-Button (bei Zeichnungen erscheint stattdessen der Zeichnungs-Editor, siehe unten). Die Änderung wird direkt im vorhandenen Bild gespeichert — der Verweis im Quelltext bleibt unverändert, nur das Bild dahinter ändert sich.
+
+Nicht verfügbar für Bilder, die nur als externer Link eingefügt wurden (kein Bild im Dokument, das bearbeitet und gespeichert werden könnte).
 
 ### Foto aufnehmen
 
