@@ -1778,6 +1778,14 @@ return He}()
       padding-left: 10px;
     }
 
+    /* Applied only once a drag-reorder gesture actually engages (past TAB_DRAG_THRESHOLD's worth
+       of pointer movement, see handleTabDragPointerMove) -- never during a plain click/tab
+       switch, so this never flickers for ordinary use. */
+    .tab.dragging {
+      opacity: 0.6;
+      cursor: grabbing;
+    }
+
     .tab .tab-name {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -7390,6 +7398,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         return;
       }
 
+      // Canvas documents are a JSON scene graph (freely placed boxes), not linear text — unlike
+      // md/txt/csv/json/html, which are all just the same text reinterpreted, there's no sane way
+      // to "convert" one into any of those, and buildTabRenameForm() never shows the format
+      // <select> for a canvas tab for exactly that reason. Without this guard, TAB_FORMAT_OPTIONS
+      // doesn't contain a 'canvas' entry at all, so the lookup below silently fell back to its
+      // very first option (.md) and reclassified the tab as fileType 'markdown' while its raw
+      // canvasData JSON stayed as tab.content — reported as renaming a canvas tab destroying it.
+      if (tab.fileType === 'canvas') {
+        tab.name = baseName + '.canvas';
+        tab.isDefaultName = false;
+        renderTabs();
+        saveStateToLocalStorage();
+        return;
+      }
+
       const option = TAB_FORMAT_OPTIONS.find(o => o.ext === ext) || TAB_FORMAT_OPTIONS[0];
       const fileTypeChanged = option.fileType !== tab.fileType;
 
@@ -7416,6 +7439,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function buildTabRenameForm(tab) {
       const { base, ext } = splitTabNameExt(tab.name);
       const currentExt = TAB_FORMAT_OPTIONS.some(o => o.ext === ext) ? ext : 'md';
+      // A canvas tab can't change format (see confirmTabRename's own comment on why) — no format
+      // <select> is offered for one, just the plain name field.
+      const isCanvas = tab.fileType === 'canvas';
 
       const form = document.createElement('div');
       form.className = 'tab-rename-form';
@@ -7426,17 +7452,19 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       input.value = base;
       input.spellcheck = false;
 
-      const select = document.createElement('select');
-      select.className = 'tab-rename-select';
-      TAB_FORMAT_OPTIONS.forEach(o => {
-        const opt = document.createElement('option');
-        opt.value = o.ext;
-        opt.textContent = o.label;
-        if (o.ext === currentExt) opt.selected = true;
-        select.appendChild(opt);
-      });
+      const select = isCanvas ? null : document.createElement('select');
+      if (select) {
+        select.className = 'tab-rename-select';
+        TAB_FORMAT_OPTIONS.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.ext;
+          opt.textContent = o.label;
+          if (o.ext === currentExt) opt.selected = true;
+          select.appendChild(opt);
+        });
+      }
 
-      const commit = () => confirmTabRename(tab.id, input.value, select.value);
+      const commit = () => confirmTabRename(tab.id, input.value, select ? select.value : null);
       const handleKeydown = (e) => {
         // Keep Enter/Escape from also reaching the document-level shortcut/modal handler while
         // typing a tab name (e.g. its own Escape-closes-modals logic has nothing to do here).
@@ -7445,7 +7473,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         else if (e.key === 'Escape') { e.preventDefault(); cancelTabRename(); }
       };
       input.onkeydown = handleKeydown;
-      select.onkeydown = handleKeydown;
+      if (select) select.onkeydown = handleKeydown;
       form.onclick = (e) => e.stopPropagation();
 
       // A single focusout listener on the whole form (rather than blur on each control) so
@@ -7459,7 +7487,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       });
 
       form.appendChild(input);
-      form.appendChild(select);
+      if (select) form.appendChild(select);
       return form;
     }
 
@@ -7475,6 +7503,78 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     const TAB_LOCAL_SAVE_WARNING_SVG = '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 3L2 20H22L12 3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><line x1="12" y1="10" x2="12" y2="14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>';
 
+    // --- TAB REORDERING (drag & drop) ---
+
+    // Pointer Events rather than native HTML5 drag-and-drop -- same reasoning as the pane
+    // resizer and the camera crop box (see their own comments): works uniformly for mouse,
+    // touch, and pen, whereas native DnD's touch support is notoriously inconsistent. A small
+    // movement threshold is what keeps a plain click-to-switch from being mistaken for the start
+    // of a drag -- only pointer movement past this distance actually engages drag mode; until
+    // then this looks exactly like an ordinary click.
+    const TAB_DRAG_THRESHOLD = 6;
+    let tabDragState = null; // { tabId, tabEl, pointerId, startX, dragging } for the tab currently under the pointer, or null
+    let tabDragJustEnded = false; // suppresses the native 'click' that still fires right after a completed drag's pointerup
+
+    function handleTabDragPointerDown(e, tab, tabEl) {
+      if (e.button !== 0) return; // primary mouse button / primary touch contact only
+      if (e.target.closest('.close-btn')) return; // let the close button behave exactly as before
+      if (tabs.length < 2) return; // nothing to reorder against with only one tab open
+      tabDragState = { tabId: tab.id, tabEl, pointerId: e.pointerId, startX: e.clientX, dragging: false };
+    }
+
+    function handleTabDragPointerMove(e) {
+      if (!tabDragState || e.pointerId !== tabDragState.pointerId) return;
+
+      if (!tabDragState.dragging) {
+        if (Math.abs(e.clientX - tabDragState.startX) < TAB_DRAG_THRESHOLD) return;
+        tabDragState.dragging = true;
+        tabDragState.tabEl.setPointerCapture(e.pointerId);
+        tabDragState.tabEl.classList.add('dragging');
+      }
+
+      // Moves the actual DOM node being dragged (rather than calling the usual renderTabs() on
+      // every move) so the element that just called setPointerCapture() above is never torn out
+      // mid-gesture -- renderTabs() rebuilds every tab element from scratch via tabList.innerHTML
+      // = '', which would silently end the drag the moment it ran.
+      const otherEls = Array.from(tabList.children).filter(el => el !== tabDragState.tabEl);
+      let insertBeforeEl = null;
+      for (const el of otherEls) {
+        const rect = el.getBoundingClientRect();
+        if (e.clientX < rect.left + rect.width / 2) { insertBeforeEl = el; break; }
+      }
+      if (insertBeforeEl !== tabDragState.tabEl.nextSibling) {
+        tabList.insertBefore(tabDragState.tabEl, insertBeforeEl); // insertBefore(x, null) appends at the end
+      }
+
+      // Keeps the backing `tabs` array in sync with the DOM at every step, not just once on drop
+      // -- renderTabs() isn't called again until the next unrelated change, so the array would
+      // otherwise silently lag the visible order for the rest of the session.
+      const tabsById = new Map(tabs.map(t => [t.id, t]));
+      const newOrder = Array.from(tabList.children).map(el => tabsById.get(el.dataset.tabId)).filter(Boolean);
+      if (newOrder.length === tabs.length) {
+        tabs.length = 0;
+        tabs.push(...newOrder);
+      }
+    }
+
+    function handleTabDragPointerUp(e) {
+      if (!tabDragState || e.pointerId !== tabDragState.pointerId) return;
+      if (tabDragState.dragging) {
+        tabDragState.tabEl.classList.remove('dragging');
+        tabDragJustEnded = true;
+        // Chromium/Firefox both already suppress the native 'click' after enough pointer movement
+        // between down and up, so most of the time nothing ever arrives here to consume the flag
+        // via the onclick handler below -- left sticky, it would then swallow the NEXT, completely
+        // unrelated click on some other tab days-of-testing-later. Self-clearing on a fresh
+        // macrotask (rather than a microtask) is what still leaves the flag "true" for a real,
+        // same-turn click if one *does* fire (browsers that don't suppress it), while guaranteeing
+        // it never outlives this one gesture either way.
+        setTimeout(() => { tabDragJustEnded = false; }, 0);
+        saveStateToLocalStorage();
+      }
+      tabDragState = null;
+    }
+
     function renderTabs() {
       tabList.innerHTML = '';
       tabs.forEach(tab => {
@@ -7484,6 +7584,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (tab.id === renamingTabId) classes.push('renaming');
         if (isTabSynced(tab)) classes.push('synced');
         tabEl.className = classes.join(' ');
+        tabEl.dataset.tabId = tab.id;
 
         if (tab.id === renamingTabId) {
           tabEl.appendChild(buildTabRenameForm(tab));
@@ -7491,8 +7592,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           return;
         }
 
-        tabEl.onclick = () => switchTab(tab.id);
+        tabEl.onclick = () => {
+          // A completed drag-reorder still fires a native 'click' right on its own pointerup --
+          // without this, dropping a tab in its new position would also immediately switch to
+          // whatever tab the pointer happened to end up over.
+          if (tabDragJustEnded) { tabDragJustEnded = false; return; }
+          switchTab(tab.id);
+        };
         tabEl.ondblclick = () => startTabRename(tab.id);
+        tabEl.addEventListener('pointerdown', (e) => handleTabDragPointerDown(e, tab, tabEl));
+        tabEl.addEventListener('pointermove', handleTabDragPointerMove);
+        tabEl.addEventListener('pointerup', handleTabDragPointerUp);
+        tabEl.addEventListener('pointercancel', handleTabDragPointerUp);
 
         const nameSpan = document.createElement('span');
         nameSpan.className = 'tab-name';
