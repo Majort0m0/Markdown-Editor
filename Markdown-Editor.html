@@ -6095,38 +6095,41 @@ return rgba;});});}).call(this);
     // top-level content and promotes it; a background span the user typed by hand covering only
     // part of a cell's text intentionally does NOT match this and stays a plain inline highlight.
     const TABLE_CELL_BG_SPAN_RE = /^<span style="background-color:\s*([^"]+)">([\s\S]*)<\/span>$/;
-    // Same whole-cell-span-promotion idea as the background-color case above, for live formula
-    // cells (see the "TABLE FORMULAS" section further down): resolveFormulasForRender() already
-    // substitutes the *computed* display value into the span's inner text before marked ever sees
-    // it (a raw <span data-formula="..."> carries no live-recalculation ability of its own — see
-    // that function's own comment on why the computation has to happen as text preprocessing,
-    // before marked.parse(), rather than in here), so this only ever needs to promote the class/
-    // data-formula attribute onto the <td>/<th> itself for the orange-border CSS and the click-to-
-    // edit/freeze overlay (both keyed off data-formula) to find it.
-    const TABLE_CELL_FORMULA_SPAN_RE = /^<span class="cell-formula" data-formula="([^"]*)">([\s\S]*)<\/span>$/;
+    // Same "does a formula span appear in this cell" question resolveTableFormulaCells() asks of
+    // the *raw source* (see FORMULA_CELL_SPAN_RE and its own comment on why this isn't anchored to
+    // the whole string), asked here of the cell's already-rendered inline HTML instead. Not
+    // anchored — a formula cell can be wrapped in bold/italic/strike/a color span (bold/italic/
+    // strike have already become <strong>/<em>/<del> by the time this runs, since
+    // this.parser.parseInline() above fully parses inline markdown first) — so this searches for
+    // the span *anywhere* in the cell rather than requiring it to be the cell's entire content.
+    // Only the class/data-formula attribute promote up to the <td>/<th> (for the orange-border CSS
+    // and the click-to-edit/freeze overlay, both keyed off data-formula); the span itself, and
+    // whatever wraps it, stays exactly where it is in the cell's own HTML.
+    const TABLE_CELL_FORMULA_SPAN_RE = /<span class="cell-formula" data-formula="([^"]*)">[\s\S]*?<\/span>/;
     hljsRenderer.tablecell = function(e) {
       const content = this.parser.parseInline(e.tokens);
       const tag = e.header ? 'th' : 'td';
       const alignAttr = e.align ? ' align="' + e.align + '"' : '';
 
-      const formulaMatch = content.match(TABLE_CELL_FORMULA_SPAN_RE);
-      if (formulaMatch) {
-        const formulaAttr = ' class="cell-formula-cell" data-formula="' + formulaMatch[1] + '"';
-        // The fill handle (bottom-right corner square, drag to copy this formula into adjacent
-        // cells with shifted references — see startFormulaFillDrag() further down) is a real
-        // element, not CSS, since precisely hit-testing "the user grabbed this exact corner" needs
-        // a real event target — a ::after pseudo-element can't be one. Suppressed under
-        // suppressDrawingControls (exports/presentation/clipboard copy, same flag hljsRenderer.image
-        // already checks) since none of those have this app's own JS behind them to make it do
-        // anything; a live, empty little square there would just be visual noise.
-        const fillHandle = suppressDrawingControls ? '' : '<span class="formula-fill-handle" title="Ziehen zum Ausfüllen"></span>';
-        return '<' + tag + alignAttr + formulaAttr + '>' + formulaMatch[2] + fillHandle + '</' + tag + '>\n';
-      }
-
+      // Whole-cell background-color span, if any, is peeled off first (same "entire cell is
+      // exactly one span" anchored check as always) — its own content may itself contain a
+      // formula span or other formatting, which the search below still finds regardless.
       const bgMatch = content.match(TABLE_CELL_BG_SPAN_RE);
       const inner = bgMatch ? bgMatch[2] : content;
       const styleAttr = bgMatch ? ' style="background-color:' + bgMatch[1] + '"' : '';
-      return '<' + tag + alignAttr + styleAttr + '>' + inner + '</' + tag + '>\n';
+
+      const formulaMatch = inner.match(TABLE_CELL_FORMULA_SPAN_RE);
+      const formulaAttr = formulaMatch ? ' class="cell-formula-cell" data-formula="' + formulaMatch[1] + '"' : '';
+      // The fill handle (bottom-right corner square, drag to copy this formula into adjacent
+      // cells with shifted references — see startFormulaFillDrag() further down) is a real
+      // element, not CSS, since precisely hit-testing "the user grabbed this exact corner" needs
+      // a real event target — a ::after pseudo-element can't be one. Suppressed under
+      // suppressDrawingControls (exports/presentation/clipboard copy, same flag hljsRenderer.image
+      // already checks) since none of those have this app's own JS behind them to make it do
+      // anything; a live, empty little square there would just be visual noise.
+      const fillHandle = (formulaMatch && !suppressDrawingControls) ? '<span class="formula-fill-handle" title="Ziehen zum Ausfüllen"></span>' : '';
+
+      return '<' + tag + alignAttr + formulaAttr + styleAttr + '>' + inner + fillHandle + '</' + tag + '>\n';
     };
 
     marked.setOptions({
@@ -8788,7 +8791,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey, code: e.code };
     }
 
-    function comboMatchesEvent(combo, e) {
+    function comboMatchesEvent(combo, e, actionId) {
       if (!combo) return false;
       if (!!combo.ctrl !== !!(e.ctrlKey || e.metaKey)) return false;
       if (!!combo.alt !== !!e.altKey) return false;
@@ -8798,6 +8801,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // combos in the registry for what's really one action each.
       const shiftAgnostic = combo.code === 'Equal' || combo.code === 'Minus';
       if (!shiftAgnostic && !!combo.shift !== !!e.shiftKey) return false;
+      // Undo/Redo specifically match via e.key (layout-aware: the character a keypress actually
+      // produces) rather than e.code (always the US-QWERTY reference physical position,
+      // regardless of the user's real layout or what's printed on their keys). Y and Z are the
+      // one letter pair that swaps physical position between QWERTY (US) and QWERTZ (German)
+      // keyboards, so a purely code-based "Ctrl+Z" only ever fires for the physical key labeled
+      // "Y" on a German keyboard -- Ctrl+["Z"-labeled key] there instead silently matched Redo
+      // (a no-op in the common, nothing-to-redo-yet case, which is exactly why it read as
+      // "Cmd+Z does nothing" rather than "does the wrong thing"). Reported directly, with the fix
+      // requested explicitly by a German-layout user: Cmd+Z should mean Undo on every layout,
+      // matching both the universal convention and this app's own shortcuts-help modal, which
+      // already (correctly) always *displays* "Z" regardless of layout. Scoped to just these two
+      // actions by id, not every combo that happens to use these codes, so a user-rebound
+      // shortcut that happens to land on Z/Y (captured, like everything else, via the physical
+      // .code the rebinding UI records) keeps matching the same way every other rebound shortcut
+      // does, rather than silently changing meaning under it.
+      if ((actionId === 'undo' || actionId === 'redo') && (combo.code === 'KeyZ' || combo.code === 'KeyY')) {
+        return e.key.toLowerCase() === combo.code.slice(-1).toLowerCase();
+      }
       return e.code === combo.code;
     }
 
@@ -8996,7 +9017,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // with no Ctrl/Alt held), and 60 comparisons is nowhere near enough to matter.
       for (const action of SHORTCUT_ACTIONS) {
         const combo = effectiveCombo(action.id);
-        if (!combo || !comboMatchesEvent(combo, e)) continue;
+        if (!combo || !comboMatchesEvent(combo, e, action.id)) continue;
         if (!shouldDispatchShortcut(combo)) return;
         e.preventDefault();
         action.run();
@@ -9009,8 +9030,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // unconditionally rather than being folded into "redo"'s own single rebindable slot and
       // losing Ctrl+Y as the one shown/customizable in the modal. Only reached when the loop above
       // found no match, so an explicit user rebinding of some other action onto this exact combo
-      // still correctly takes priority over this fallback.
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.code === 'KeyZ' && shouldDispatchShortcut({ alt: false })) {
+      // still correctly takes priority over this fallback. e.key (not e.code) for the same
+      // layout-crossing reason as comboMatchesEvent()'s own undo/redo special-case above --
+      // Ctrl+Shift+["Z"-labeled key] on a German keyboard has code:"KeyY", not "KeyZ".
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && !e.altKey && e.key.toLowerCase() === 'z' && shouldDispatchShortcut({ alt: false })) {
         e.preventDefault();
         redo();
       }
@@ -11698,7 +11721,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function applyInlineFormatToCellSelection(type) {
       if (isCsvTab()) return;
-      const ranges = excludeFormulaCellRanges(getSelectedCellRanges());
+      const ranges = getSelectedCellRanges();
       if (!ranges || ranges.length === 0) return;
       applyEditsToCellRanges(ranges, (current) => toggleInlineWrapForCellText(current, type));
     }
@@ -12004,7 +12027,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // <span> written into one would just show up as literal text rather than ever being styled.
     function applyColorFormatToCellSelection(kind, color) {
       if (isCsvTab()) return;
-      const ranges = excludeFormulaCellRanges(getSelectedCellRanges());
+      const ranges = getSelectedCellRanges();
       if (!ranges || ranges.length === 0) return;
       const prop = kind === 'text' ? 'color' : 'background-color';
       const spanRe = new RegExp('^<span style="' + prop + ':\\s*([^"]+)">([\\s\\S]*)</span>$');
@@ -12596,7 +12619,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return rows.map(row => row.map(r => text.substring(r.start, r.end).trim()));
     }
 
-    const FORMULA_CELL_SPAN_RE = /^<span class="cell-formula" data-formula="([^"]*)">[\s\S]*<\/span>$/;
+    // Deliberately not anchored (^...$) — a formula cell can be wrapped in bold/italic/strike/a
+    // color span (applying one of the multi-cell formatting operations to a selection that
+    // includes a formula cell wraps its span rather than replacing it), so this searches for the
+    // span *anywhere* within a cell's raw text instead of requiring the whole cell to be exactly
+    // one span. resolveTableFormulaCells() below uses the match's own position (not the cell's
+    // trimmed bounds) to know exactly which substring to overwrite with the computed value,
+    // leaving whatever wraps it untouched.
+    const FORMULA_CELL_SPAN_RE = /<span class="cell-formula" data-formula="([^"]*)">[\s\S]*?<\/span>/;
 
     // Every (row, col) a formula's refs/ranges touch, as "r,c" keys — used only to figure out
     // *evaluation order* below (which formula cells depend on which other formula cells), never to
@@ -12650,8 +12680,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           const m = cellRaw.match(FORMULA_CELL_SPAN_RE);
           if (!m) continue;
           const trimmedStart = fullCellText.length - fullCellText.trimStart().length;
-          const spanStart = range.start + trimmedStart;
-          formulaCells.push({ r, c, formula: m[1], spanStart, spanEnd: spanStart + cellRaw.length });
+          // m.index is the span's own offset *within* cellRaw (which may have other formatting
+          // wrapped around it) — not necessarily 0, now that the regex above searches rather than
+          // anchors to the whole cell.
+          const spanStart = range.start + trimmedStart + m.index;
+          formulaCells.push({ r, c, formula: m[1], spanStart, spanEnd: spanStart + m[0].length });
         }
       }
 
@@ -15965,26 +15998,6 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return ranges;
     }
 
-    // Used by the multi-cell bold/italic/strike/color operations to leave live formula cells
-    // alone. A formula cell's raw text is just <span class="cell-formula" data-formula="...">
-    // (empty content — see the TABLE FORMULAS section) — naively wrapping *that* in "**...**" or a
-    // color span breaks resolveFormulasForRender()'s/hljsRenderer.tablecell()'s own
-    // FORMULA_CELL_SPAN_RE match (which requires the span to be the cell's *entire* trimmed
-    // content), so the formula stops being recognized as one at all. The result renders as
-    // "<strong><span data-formula=...></span></strong>" — an empty, unresolved span wrapped in an
-    // equally empty <strong> — which is where "cell content becomes invisible" came from: reported
-    // directly after selecting a formula cell together with plain cells and applying bold/
-    // background color, where the formula cell's value vanished while the others formatted fine.
-    // Skipping formula cells entirely (rather than trying to make formatting nest inside the
-    // formula span some other way) keeps their live-recalculation contract intact; Delete/
-    // Backspace deliberately does *not* use this filter — clearing a formula cell's content
-    // outright is a normal, well-defined action (Excel's Delete key clears a cell's formula too).
-    function excludeFormulaCellRanges(ranges) {
-      if (!ranges || ranges.length === 0) return ranges;
-      const text = editor.value;
-      return ranges.filter(r => !FORMULA_CELL_SPAN_RE.test(text.substring(r.start, r.end).trim()));
-    }
-
     // Applies transformFn(currentCellText, range) to every range and writes all the results back
     // in one go — same "collect edits, sort back-to-front, splice all at once" pattern
     // resolveFormulasForRender()/commitFormulaFill() already use, needed here for the same reason:
@@ -16437,32 +16450,37 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // "Der orangene Rahmen und der Quellenbezug verschwinden... im Quelltext steht nur noch der
     // Zielwert" — re-evaluates the formula one last time against the *current* source (not
     // whatever's currently displayed, in case it's stale by even one render) and writes that
-    // plain value in, replacing the whole <span> — the one deliberate point a formula's result
-    // actually gets persisted into the raw document, permanently losing its live-ness. Goes through
-    // resolveTableFormulaCells() (dependency-ordered, same as the live render path) rather than a
-    // single direct evaluateTableFormula() call, so freezing a "totals row" cell that itself sums
-    // other formula cells correctly picks up their computed values instead of reading their still-
-    // raw <span> source text as zero.
+    // plain value in, replacing just the <span> itself — not the whole cell — so any bold/italic/
+    // strike/color wrapper the cell was formatted with (see the "formula cells can be formatted"
+    // support above) survives freezing intact; only the live formula becomes a plain value inside
+    // it. Goes through resolveTableFormulaCells() (dependency-ordered, same as the live render
+    // path) rather than a single direct evaluateTableFormula() call, so freezing a "totals row"
+    // cell that itself sums other formula cells correctly picks up their computed values instead
+    // of reading their still-raw <span> source text as zero.
     function freezeFormulaCellFromOverlay() {
       const cellEl = activeFormulaCellOverlayTd;
       if (!cellEl) return;
       hideFormulaCellOverlay();
-      const spanStart = Number(cellEl.dataset.start);
-      const spanEnd = Number(cellEl.dataset.end);
-      if (!Number.isFinite(spanStart) || !Number.isFinite(spanEnd)) return;
+      const cellStart = Number(cellEl.dataset.start);
+      const cellEnd = Number(cellEl.dataset.end);
+      if (!Number.isFinite(cellStart) || !Number.isFinite(cellEnd)) return;
 
       const text = editor.value;
       const blocks = findAllMarkdownTableBlocks(text);
-      let displayValue = null;
+      let hit = null;
       for (const rows of blocks) {
         const resolved = resolveTableFormulaCells(text, rows);
-        const hit = Array.from(resolved.values()).find(v => v.spanStart === spanStart && v.spanEnd === spanEnd);
-        if (hit) { displayValue = hit.display; break; }
+        // cellEl.dataset.start/end are the *whole cell's* raw-source range (see
+        // attachMarkdownTableCellPositions() below) — not the formula span's own range, which can
+        // sit anywhere inside it now that a formatting wrapper may surround the span. Locate the
+        // span by containment rather than exact equality so a wrapped cell still resolves.
+        hit = Array.from(resolved.values()).find(v => v.spanStart >= cellStart && v.spanEnd <= cellEnd);
+        if (hit) break;
       }
-      if (displayValue === null) return; // the cell couldn't be relocated in the current source — nothing safe to replace
+      if (!hit) return; // the cell couldn't be relocated in the current source — nothing safe to replace
 
-      editor.value = text.substring(0, spanStart) + displayValue + text.substring(spanEnd);
-      const newPos = spanStart + displayValue.length;
+      editor.value = text.substring(0, hit.spanStart) + hit.display + text.substring(hit.spanEnd);
+      const newPos = hit.spanStart + hit.display.length;
       editor.focus();
       editor.setSelectionRange(newPos, newPos);
       recordHistory();
