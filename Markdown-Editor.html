@@ -2920,6 +2920,90 @@ return rgba;});});}).call(this);
       background-color: #eceff2;
     }
 
+    /* Text-/Hintergrundfarbe popover (toggleColorPopover()) — position:fixed since it's anchored
+       to a formatting-toolbar button (a sibling of #mainContainer, not a descendant), unlike
+       .toc-panel above which can use position:absolute inside #mainContainer. */
+    .color-picker-popover {
+      position: fixed;
+      z-index: 30;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      padding: 10px;
+      display: none;
+    }
+
+    .color-picker-popover.active {
+      display: block;
+    }
+
+    .color-picker-swatches {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .color-picker-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .color-picker-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .color-picker-custom {
+      position: relative;
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      border-radius: 5px;
+      border: 1px dashed var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      line-height: 1;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .color-picker-custom input[type="color"] {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .color-picker-remove-btn {
+      flex: 1;
+      font-size: 0.78rem;
+      padding: 5px 8px;
+      border-radius: 5px;
+      border: 1px solid var(--border-color);
+      background: transparent;
+      color: var(--text-main);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .color-picker-remove-btn:hover {
+      background-color: #eceff2;
+    }
+
     .editor-pane {
       grid-column: 1;
       height: 100%;
@@ -3591,6 +3675,74 @@ return rgba;});});}).call(this);
       color: #fff;
     }
 
+    /* Live formula cells (table SUM/+-*÷ feature) — the orange border is the one visual constant
+       across every state (idle, hovered, mid-edit); the two overlay buttons that appear on click
+       are built/positioned by JS (updateFormulaCellOverlay()), not CSS, since they need to track
+       a specific cell's live bounding rect. */
+    .markdown-body table td.cell-formula-cell,
+    .markdown-body table th.cell-formula-cell {
+      border: 2px solid var(--accent-view);
+      cursor: pointer;
+    }
+
+    /* While formula-input mode is active (cursor sits in a cell whose raw text starts with '=' —
+       see formulaEditState/updateFormulaEditState()), every *other* cell in that same table
+       becomes a clickable formula-reference target — a dashed accent outline on hover is the
+       "you can click this to insert a reference" affordance, deliberately different from the
+       plain solid hover state above (:hover on td[data-start]) so the two "clickable but for
+       different reasons" states read as visually distinct. */
+    .markdown-body table.formula-ref-selectable td[data-start]:hover,
+    .markdown-body table.formula-ref-selectable th[data-start]:hover {
+      outline: 2px dashed var(--accent-view);
+      outline-offset: -2px;
+      background-color: var(--preview-code-bg);
+    }
+
+    .markdown-body table.formula-ref-selectable td.formula-ref-drag-selected,
+    .markdown-body table.formula-ref-selectable th.formula-ref-drag-selected {
+      background-color: var(--accent-view);
+      color: #fff;
+    }
+
+    /* Round "=" confirm overlay (target-cell) and the edit/freeze pair (existing formula cell) —
+       position:fixed, positioned in JS from the relevant <td>'s getBoundingClientRect() (same
+       reasoning as .color-picker-popover above: these are anchored to a preview cell, not a
+       fixed chrome element .toc-panel-style position:absolute could target). */
+    .formula-overlay-btn {
+      position: fixed;
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 1px solid var(--accent-view);
+      background-color: var(--bg-surface);
+      color: var(--accent-view);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 700;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .formula-overlay-btn:hover {
+      background-color: var(--accent-view);
+      color: #fff;
+    }
+
+    .formula-overlay-btn.formula-freeze-btn {
+      border-color: var(--text-muted);
+      color: var(--text-muted);
+    }
+
+    .formula-overlay-btn.formula-freeze-btn:hover {
+      background-color: var(--text-muted);
+      color: #fff;
+    }
+
     .markdown-body input[type="checkbox"] {
       margin-right: 6px;
       cursor: pointer;
@@ -4120,12 +4272,19 @@ return rgba;});});}).call(this);
       line-height: 0;
     }
 
-    #cropImage {
+    #cropImage,
+    #imgEditCropImage {
       display: block;
       max-width: 100%;
       max-height: 60vh;
       -webkit-user-drag: none;
       user-select: none;
+    }
+
+    .image-edit-crop-toggle-row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 14px;
     }
 
     .crop-box {
@@ -4847,6 +5006,30 @@ return rgba;});});}).call(this);
         grid-template-rows: 1fr 0 0;
       }
 
+      /* Idle canvas view (no box open) needs the same "collapse the hidden editor pane's own
+         track to 0" treatment the desktop rule above already gives it -- but that desktop rule
+         (main.canvas-tab-active:not(.canvas-editing-box) { grid-template-columns: 0 0 1fr
+         !important }) only ever overrides grid-template-COLUMNS, since columns are the axis main
+         normally splits editor/preview along. This breakpoint just switched that same split onto
+         grid-template-ROWS instead (see the plain `main` rule above) -- without a matching rows
+         override here, the editor pane's row still reserved var(--split-ratio, 50%) of the height
+         for an element that's actually display:none (a hidden grid item still gets its track
+         sized), squeezing the canvas itself into whatever fraction was left over instead of the
+         full pane. Reported directly as the canvas barely/not rendering on an iPhone.
+         The desktop rule's own !important has no media guard of its own, so it's *still* in
+         effect here too, right alongside this one -- meaning grid-template-columns needs its own
+         !important override back to the single "1fr" column this breakpoint actually uses (not
+         just left alone), or the desktop rule's three explicit column tracks (0 0 1fr) would win
+         the cascade tie and place .preview-pane's mobile-assigned grid-column: 1 into what's
+         actually a zero-width track -- full height, zero width, so still invisible. A CSS tie
+         between two equally-specific !important declarations resolves to whichever comes later in
+         the stylesheet, which is this one (this @media block is physically after the desktop
+         rule), so this override is what actually wins once both are present. */
+      main.canvas-tab-active:not(.canvas-editing-box) {
+        grid-template-columns: 1fr !important;
+        grid-template-rows: 0 0 1fr;
+      }
+
       .pane-resizer {
         grid-column: 1;
         grid-row: 2;
@@ -4982,19 +5165,19 @@ return rgba;});});}).call(this);
       <input type="file" id="fileInput" accept=".md,.markdown,.txt,.csv,.json,.html,.htm,.pdf,.canvas,.wav,.ogg,.mp3,.m4a" multiple onchange="handleFileSelect(event)">
       <input type="file" id="imageFileInput" accept="image/*" onchange="handleImageFileSelect(event)">
 
-      <button id="saveBtn" class="icon-btn" onclick="saveCurrentFile()" title="Speichern (Strg+S)"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg></button>
+      <button id="saveBtn" class="icon-btn" onclick="saveCurrentFile()" title="Speichern (Strg/Cmd + S)"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg></button>
       <button id="copyFormattedBtn" class="icon-btn" onclick="copyFormattedToClipboard()" title="Formatierte Notiz in die Zwischenablage kopieren (zum Einfügen in Word, E-Mail, ...)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Copy"><path id="Vector" d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
 
       <div class="action-divider"></div>
 
       <!-- Undo / Redo Buttons -->
-      <button id="undoBtn" class="icon-btn" onclick="undo()" disabled title="Rückgängig (Strg+Z)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.53033 3.46967C7.82322 3.76256 7.82322 4.23744 7.53033 4.53033L5.81066 6.25H15C18.1756 6.25 20.75 8.82436 20.75 12C20.75 15.1756 18.1756 17.75 15 17.75H8.00001C7.58579 17.75 7.25001 17.4142 7.25001 17C7.25001 16.5858 7.58579 16.25 8.00001 16.25H15C17.3472 16.25 19.25 14.3472 19.25 12C19.25 9.65279 17.3472 7.75 15 7.75H5.81066L7.53033 9.46967C7.82322 9.76256 7.82322 10.2374 7.53033 10.5303C7.23744 10.8232 6.76256 10.8232 6.46967 10.5303L3.46967 7.53033C3.17678 7.23744 3.17678 6.76256 3.46967 6.46967L6.46967 3.46967C6.76256 3.17678 7.23744 3.17678 7.53033 3.46967Z" fill="currentColor"/></svg></button>
-      <button id="redoBtn" class="icon-btn" onclick="redo()" disabled title="Wiederherstellen (Strg+Y)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7H9.00001C6.23858 7 4 9.23857 4 12C4 14.7614 6.23858 17 9 17H16M20 7L17 4M20 7L17 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button id="undoBtn" class="icon-btn" onclick="undo()" disabled title="Rückgängig (Strg/Cmd + Z)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.53033 3.46967C7.82322 3.76256 7.82322 4.23744 7.53033 4.53033L5.81066 6.25H15C18.1756 6.25 20.75 8.82436 20.75 12C20.75 15.1756 18.1756 17.75 15 17.75H8.00001C7.58579 17.75 7.25001 17.4142 7.25001 17C7.25001 16.5858 7.58579 16.25 8.00001 16.25H15C17.3472 16.25 19.25 14.3472 19.25 12C19.25 9.65279 17.3472 7.75 15 7.75H5.81066L7.53033 9.46967C7.82322 9.76256 7.82322 10.2374 7.53033 10.5303C7.23744 10.8232 6.76256 10.8232 6.46967 10.5303L3.46967 7.53033C3.17678 7.23744 3.17678 6.76256 3.46967 6.46967L6.46967 3.46967C6.76256 3.17678 7.23744 3.17678 7.53033 3.46967Z" fill="currentColor"/></svg></button>
+      <button id="redoBtn" class="icon-btn" onclick="redo()" disabled title="Wiederherstellen (Strg/Cmd + Y)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 7H9.00001C6.23858 7 4 9.23857 4 12C4 14.7614 6.23858 17 9 17H16M20 7L17 4M20 7L17 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
       <div class="action-divider"></div>
 
       <!-- Search & Replace Toggle Button -->
-      <button id="toggleSearchBtn" class="icon-btn simple-hide" onclick="toggleSearchBar()" title="Suchen und Ersetzen (Strg+F)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.29289 1.29289C9.48043 1.10536 9.73478 1 10 1H18C19.6569 1 21 2.34315 21 4V8C21 8.55228 20.5523 9 20 9C19.4477 9 19 8.55228 19 8V4C19 3.44772 18.5523 3 18 3H11V8C11 8.55228 10.5523 9 10 9H5V20C5 20.5523 5.44772 21 6 21H10C10.5523 21 11 21.4477 11 22C11 22.5523 10.5523 23 10 23H6C4.34315 23 3 21.6569 3 20V8C3 7.73478 3.10536 7.48043 3.29289 7.29289L9.29289 1.29289ZM6.41421 7H9V4.41421L6.41421 7ZM20.1716 18.7574C20.6951 17.967 21 17.0191 21 16C21 13.2386 18.7614 11 16 11C13.2386 11 11 13.2386 11 16C11 18.7614 13.2386 21 16 21C17.0191 21 17.967 20.6951 18.7574 20.1716L21.2929 22.7071C21.6834 23.0976 22.3166 23.0976 22.7071 22.7071C23.0976 22.3166 23.0976 21.6834 22.7071 21.2929L20.1716 18.7574ZM13 16C13 14.3431 14.3431 13 16 13C17.6569 13 19 14.3431 19 16C19 17.6569 17.6569 19 16 19C14.3431 19 13 17.6569 13 16Z" fill="currentColor"/></svg></button>
+      <button id="toggleSearchBtn" class="icon-btn simple-hide" onclick="toggleSearchBar()" title="Suchen und Ersetzen (Strg/Cmd + F)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.29289 1.29289C9.48043 1.10536 9.73478 1 10 1H18C19.6569 1 21 2.34315 21 4V8C21 8.55228 20.5523 9 20 9C19.4477 9 19 8.55228 19 8V4C19 3.44772 18.5523 3 18 3H11V8C11 8.55228 10.5523 9 10 9H5V20C5 20.5523 5.44772 21 6 21H10C10.5523 21 11 21.4477 11 22C11 22.5523 10.5523 23 10 23H6C4.34315 23 3 21.6569 3 20V8C3 7.73478 3.10536 7.48043 3.29289 7.29289L9.29289 1.29289ZM6.41421 7H9V4.41421L6.41421 7ZM20.1716 18.7574C20.6951 17.967 21 17.0191 21 16C21 13.2386 18.7614 11 16 11C13.2386 11 11 13.2386 11 16C11 18.7614 13.2386 21 16 21C17.0191 21 17.967 20.6951 18.7574 20.1716L21.2929 22.7071C21.6834 23.0976 22.3166 23.0976 22.7071 22.7071C23.0976 22.3166 23.0976 21.6834 22.7071 21.2929L20.1716 18.7574ZM13 16C13 14.3431 14.3431 13 16 13C17.6569 13 19 14.3431 19 16C19 17.6569 17.6569 19 16 19C14.3431 19 13 17.6569 13 16Z" fill="currentColor"/></svg></button>
 
       <!-- Lint Button (Abstände/Leerzeilen bereinigen) -->
       <button id="lintBtn" class="icon-btn simple-hide" onclick="lintMarkdownSpacing()" title="Abstände optimieren (Leerzeilen bereinigen, Abschnitte wie Überschriften, Tabellen und Einbettungen absetzen)"><svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"><style type="text/css">.st0{fill:currentColor;}</style><g><path class="st0" d="M332.571,140.81l-16.665,16.648c-41.547-24.17-95.688-18.468-131.288,17.116l153.521,153.52
@@ -5150,9 +5333,11 @@ return rgba;});});}).call(this);
       </select>
     </div>
     <div class="toolbar-divider"></div>
-    <button id="fmtBoldBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('bold')" title="Fett (Strg+B)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Bold"><path id="Vector" d="M8 12H12.5M8 12V5H12.5C14.433 5 16 6.567 16 8.5C16 10.433 14.433 12 12.5 12M8 12V19H13.5C15.433 19 17 17.433 17 15.5C17 13.567 15.433 12 13.5 12H12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
-    <button id="fmtItalicBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('italic')" title="Kursiv (Strg+I)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Italic"><path id="Vector" d="M8 19H10M10 19H12M10 19L14 5M12 5H14M14 5H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
+    <button id="fmtBoldBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('bold')" title="Fett (Strg/Cmd + B)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Bold"><path id="Vector" d="M8 12H12.5M8 12V5H12.5C14.433 5 16 6.567 16 8.5C16 10.433 14.433 12 12.5 12M8 12V19H13.5C15.433 19 17 17.433 17 15.5C17 13.567 15.433 12 13.5 12H12.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
+    <button id="fmtItalicBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('italic')" title="Kursiv (Strg/Cmd + I)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Italic"><path id="Vector" d="M8 19H10M10 19H12M10 19L14 5M12 5H14M14 5H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
     <button id="fmtStrikeBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('strike')" title="Durchgestrichen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Strikethrough"><path id="Vector" d="M12.0005 12.0001C12.8959 12.0001 13.7749 12.1925 14.5457 12.5571C14.8939 12.7218 15.2146 12.9192 15.5009 13.1437C15.8484 13.4162 16.1457 13.729 16.3822 14.0732C16.8136 14.7009 17.0263 15.4096 16.9982 16.1256C16.97 16.8416 16.702 17.5385 16.2222 18.1433C15.7424 18.7481 15.0684 19.2386 14.2705 19.5638C13.4727 19.889 12.5802 20.0373 11.6865 19.9923C10.7928 19.9473 9.93104 19.7108 9.19043 19.3082C8.44982 18.9055 7.85782 18.3514 7.47656 17.7032M12.0005 12.0001H4M12.0005 12.0001H20M16.5243 6.29718C16.143 5.649 15.5512 5.09462 14.8105 4.69197C14.0699 4.28932 13.2076 4.05287 12.314 4.00789C11.4203 3.96291 10.5278 4.11091 9.72998 4.43613C8.93213 4.76135 8.25812 5.25205 7.77832 5.85689C7.29852 6.46173 7.03057 7.15885 7.00244 7.87485C6.9942 8.08463 7.00669 8.29345 7.03924 8.50014" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
+    <button id="fmtTextColorBtn" class="toolbar-btn fmt-btn simple-hide" onclick="toggleColorPopover('text', this)" title="Textfarbe"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 15L9.8 5.5C10.02 4.95 10.55 4.6 11.14 4.6H12.86C13.45 4.6 13.98 4.95 14.2 5.5L18 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.6 11H16.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect id="fmtTextColorSwatch" x="4" y="18.5" width="16" height="3" rx="1" fill="#e03131"/></svg></button>
+    <button id="fmtBgColorBtn" class="toolbar-btn fmt-btn simple-hide" onclick="toggleColorPopover('bg', this)" title="Hintergrundfarbe / Markierfarbe"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.5 3.5L20.5 6.5L11 16L7 17L8 13L17.5 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M7 17L4 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><rect id="fmtBgColorSwatch" x="4" y="21.2" width="16" height="2.2" rx="1" fill="#ffd43b"/></svg></button>
     <div class="toolbar-divider"></div>
     <button id="fmtUlBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('ul')" title="Aufzählung"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / List_Unordered"><path id="Vector" d="M9 17H19M9 12H19M9 7H19M5.00195 17V17.002L5 17.002V17H5.00195ZM5.00195 12V12.002L5 12.002V12H5.00195ZM5.00195 7V7.002L5 7.00195V7H5.00195Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
     <button id="fmtOlBtn" class="toolbar-btn fmt-btn simple-hide" onclick="insertFormatting('ol')" title="Nummerierte Liste"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / List_Ordered"><path id="Vector" d="M10 17H20M4 15.6853V15.5C4 14.6716 4.67157 14 5.5 14H5.54054C6.34658 14 7.00021 14.6534 7.00021 15.4595C7.00021 15.8103 6.8862 16.1519 6.67568 16.4326L4 20.0002L7 20M10 12H20M10 7H20M4 5L6 4V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg></button>
@@ -5198,7 +5383,30 @@ return rgba;});});}).call(this);
     <button class="toolbar-btn" onclick="tableDeleteColumn()" title="Spalte löschen"><svg fill="currentColor" viewBox="0 0 1920 1920" xmlns="http://www.w3.org/2000/svg"><path d="M1800 1740c0 33-27 60-60 60h-420v-300h-120v300H720v-300H600v300H180c-33.12 0-60-27-60-60V180c0-33 26.88-60 60-60h420v300h120V120h480v300h120V120h420c33 0 60 27 60 60v1560ZM1740 0H180C80.76 0 0 80.76 0 180v1560c0 99.24 80.76 180 180 180h1560c99.24 0 180-80.76 180-180V180c0-99.24-80.76-180-180-180Zm-305.16 654.84-169.68-169.68L960 790.32 654.84 485.16 485.16 654.84 790.32 960l-305.16 305.16 169.68 169.68L960 1129.68l305.16 305.16 169.68-169.68L1129.68 960l305.16-305.16Z" fill-rule="evenodd"/></svg></button>
     <div class="toolbar-divider"></div>
     <button class="toolbar-btn" onclick="tableSortByColumn()" title="Nach dieser Spalte sortieren (erneut klicken kehrt die Reihenfolge um)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 13.125C12.3013 13.125 12.5733 13.3052 12.6907 13.5827C12.8081 13.8601 12.7482 14.1808 12.5384 14.3971L8.53844 18.5221C8.39719 18.6678 8.20293 18.75 8.00002 18.75C7.79711 18.75 7.60285 18.6678 7.46159 18.5221L3.46159 14.3971C3.25188 14.1808 3.19192 13.8601 3.30934 13.5827C3.42676 13.3052 3.69877 13.125 4.00002 13.125H7.25002V6C7.25002 5.58579 7.5858 5.25 8.00002 5.25C8.41423 5.25 8.75002 5.58579 8.75002 6V13.125H12Z" fill="currentColor"/><path d="M20 10.875C20.3013 10.875 20.5733 10.6948 20.6907 10.4173C20.8081 10.1399 20.7482 9.81916 20.5384 9.60289L16.5384 5.47789C16.3972 5.33222 16.2029 5.25 16 5.25C15.7971 5.25 15.6029 5.33222 15.4616 5.47789L11.4616 9.60289C11.2519 9.81916 11.1919 10.1399 11.3093 10.4173C11.4268 10.6948 11.6988 10.875 12 10.875H15.25V18C15.25 18.4142 15.5858 18.75 16 18.75C16.4142 18.75 16.75 18.4142 16.75 18L16.75 10.875H20Z" fill="currentColor"/></svg></button>
+    <div class="toolbar-divider"></div>
+    <button class="toolbar-btn" onclick="triggerFormulaEditAtCursor()" title="Formel einfügen (Zellen/Bereiche im Vorschau-Fenster anklicken)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 5H7L12 12L7 19H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
   </div>
+
+  <!-- Text-/Hintergrundfarbe popover — one shared element, repositioned/retargeted (see
+       colorPickerKind) by whichever of fmtTextColorBtn/fmtBgColorBtn triggered it. -->
+  <div class="color-picker-popover" id="colorPickerPopover">
+    <div class="color-picker-swatches" id="colorPickerSwatches"></div>
+    <div class="color-picker-actions">
+      <label class="color-picker-custom" title="Eigene Farbe wählen">
+        <span aria-hidden="true">+</span>
+        <input type="color" id="colorPickerCustomInput" value="#000000" onchange="applyColorFromPopover(this.value)">
+      </label>
+      <button type="button" class="color-picker-remove-btn" onclick="applyColorFromPopover(null)">✕ Entfernen</button>
+    </div>
+  </div>
+
+  <!-- Table formula overlays — see renderFormulaModeUI()/toggleFormulaCellOverlay() for how these
+       three get shown/positioned; only ever one of the two groups (confirm vs edit+freeze) is
+       visible at a time, since they represent mutually exclusive states (typing a new formula vs.
+       having clicked an already-committed one). -->
+  <button type="button" class="formula-overlay-btn" id="formulaConfirmBtn" onclick="commitFormulaEdit()" title="Formel übernehmen" style="display:none;">=</button>
+  <button type="button" class="formula-overlay-btn" id="formulaEditOverlayBtn" onclick="editFormulaCellFromOverlay()" title="Formel bearbeiten" style="display:none;">✏️</button>
+  <button type="button" class="formula-overlay-btn formula-freeze-btn" id="formulaFreezeOverlayBtn" onclick="freezeFormulaCellFromOverlay()" title="Wert übernehmen (Formel entfernen)" style="display:none;">✕</button>
 
   <main id="mainContainer">
     <div class="editor-pane" id="editorPane">
@@ -5263,7 +5471,7 @@ return rgba;});});}).call(this);
         <button class="shortcuts-reset-all-btn" type="button" onclick="resetAllShortcuts()">Alle auf Standard zurücksetzen</button>
       </div>
       <div id="shortcutsListContainer"></div>
-      <p class="shortcuts-hint">Klick auf eine Tastenkombination, um sie neu zu belegen (dann die gewünschte Kombination drücken, mindestens mit <kbd>Strg</kbd> oder <kbd>Alt</kbd>) &mdash; <kbd>Esc</kbd> bricht ab.</p>
+      <p class="shortcuts-hint" id="shortcutsHintText"></p>
       <div class="shortcuts-help-links">
         <a href="https://github.com/Majort0m0/Markdown-Editor#readme" target="_blank" rel="noopener noreferrer">❓ Hilfe &amp; Dokumentation (README auf GitHub)</a>
         <a href="https://github.com/Majort0m0/Markdown-Editor/blob/main/Anleitung.md" target="_blank" rel="noopener noreferrer">📖 Ausführliche Anleitung mit Schritt-für-Schritt-Beispielen</a>
@@ -5307,33 +5515,53 @@ return rgba;});});}).call(this);
         <h2>🎨 Bild bearbeiten</h2>
         <button class="icon-btn" onclick="cancelImageEdit()" title="Abbrechen">✕</button>
       </div>
-      <div class="image-edit-preview-wrap">
-        <img id="imageEditPreview" alt="Bildvorschau">
+      <div id="imageEditNormalView">
+        <div class="image-edit-preview-wrap">
+          <img id="imageEditPreview" alt="Bildvorschau">
+        </div>
+        <div class="image-edit-crop-toggle-row">
+          <button class="image-dialog-choice-btn" style="width:auto;" onclick="startImageEditCrop()" type="button">✂️ Zuschneiden</button>
+        </div>
+        <div class="image-edit-sliders">
+          <label class="image-edit-slider-row">
+            <span>Helligkeit</span>
+            <input type="range" id="imgEditBrightness" min="-100" max="100" value="0" oninput="updateImageEditLivePreview()">
+            <span class="image-edit-slider-value" id="imgEditBrightnessVal">0</span>
+          </label>
+          <label class="image-edit-slider-row">
+            <span>Kontrast</span>
+            <input type="range" id="imgEditContrast" min="-100" max="100" value="0" oninput="updateImageEditLivePreview()">
+            <span class="image-edit-slider-value" id="imgEditContrastVal">0</span>
+          </label>
+          <label class="image-edit-slider-row">
+            <span>Sättigung</span>
+            <input type="range" id="imgEditSaturation" min="-100" max="100" value="0" oninput="updateImageEditLivePreview()">
+            <span class="image-edit-slider-value" id="imgEditSaturationVal">0</span>
+          </label>
+        </div>
+        <div class="image-edit-effects">
+          <div class="image-edit-effects-label">Effekte</div>
+          <div class="image-edit-effects-grid" id="imageEditEffectsGrid"></div>
+        </div>
+        <div class="camera-controls">
+          <button class="image-dialog-choice-btn" style="width:auto;" onclick="resetImageEdit()" type="button">↺ Zurücksetzen</button>
+          <button class="btn-primary" onclick="confirmImageEdit()" type="button">✓ Übernehmen</button>
+        </div>
       </div>
-      <div class="image-edit-sliders">
-        <label class="image-edit-slider-row">
-          <span>Helligkeit</span>
-          <input type="range" id="imgEditBrightness" min="-100" max="100" value="0" oninput="updateImageEditLivePreview()">
-          <span class="image-edit-slider-value" id="imgEditBrightnessVal">0</span>
-        </label>
-        <label class="image-edit-slider-row">
-          <span>Kontrast</span>
-          <input type="range" id="imgEditContrast" min="-100" max="100" value="0" oninput="updateImageEditLivePreview()">
-          <span class="image-edit-slider-value" id="imgEditContrastVal">0</span>
-        </label>
-        <label class="image-edit-slider-row">
-          <span>Sättigung</span>
-          <input type="range" id="imgEditSaturation" min="-100" max="100" value="0" oninput="updateImageEditLivePreview()">
-          <span class="image-edit-slider-value" id="imgEditSaturationVal">0</span>
-        </label>
-      </div>
-      <div class="image-edit-effects">
-        <div class="image-edit-effects-label">Effekte</div>
-        <div class="image-edit-effects-grid" id="imageEditEffectsGrid"></div>
-      </div>
-      <div class="camera-controls">
-        <button class="image-dialog-choice-btn" style="width:auto;" onclick="resetImageEdit()" type="button">↺ Zurücksetzen</button>
-        <button class="btn-primary" onclick="confirmImageEdit()" type="button">✓ Übernehmen</button>
+      <div id="imageEditCropView" style="display:none;">
+        <div id="imgEditCropWrapper" class="crop-wrapper">
+          <img id="imgEditCropImage" alt="Zuschneiden">
+          <div id="imgEditCropBox" class="crop-box">
+            <div class="crop-handle" data-handle="nw"></div>
+            <div class="crop-handle" data-handle="ne"></div>
+            <div class="crop-handle" data-handle="sw"></div>
+            <div class="crop-handle" data-handle="se"></div>
+          </div>
+        </div>
+        <div class="camera-controls">
+          <button class="image-dialog-choice-btn" style="width:auto;" onclick="cancelImageEditCrop()" type="button">✕ Abbrechen</button>
+          <button class="btn-primary" onclick="applyImageEditCrop()" type="button">✓ Zuschneiden anwenden</button>
+        </div>
       </div>
     </div>
   </div>
@@ -5811,6 +6039,44 @@ return rgba;});});}).call(this);
       itemBody += this.parser.parse(item.tokens, !!item.loose);
       const taskClass = item.task ? ' class="task-list-item"' : '';
       return '<li' + taskClass + '>' + itemBody + '</li>\n';
+    };
+
+    // Replicates marked's default tablecell() exactly (see its own comment on why every
+    // hljsRenderer override does this) but additionally promotes a background-color span that
+    // covers a cell's *entire* rendered content onto the <td>/<th> itself, so the toolbar's
+    // Hintergrundfarbe button can fill a whole table cell the way Excel's cell-fill does, not
+    // just color the text run inside it (a plain inline <span style="background-color:...">
+    // only ever colors its own text box, not the cell's padding/box around it).
+    // applyColorFormat()'s table-cell branch always wraps a cell's *whole* raw text when coloring
+    // its background (never just the current selection) specifically so this regex — matched
+    // against the cell's already-rendered inline HTML — reliably sees the span as the cell's only
+    // top-level content and promotes it; a background span the user typed by hand covering only
+    // part of a cell's text intentionally does NOT match this and stays a plain inline highlight.
+    const TABLE_CELL_BG_SPAN_RE = /^<span style="background-color:\s*([^"]+)">([\s\S]*)<\/span>$/;
+    // Same whole-cell-span-promotion idea as the background-color case above, for live formula
+    // cells (see the "TABLE FORMULAS" section further down): resolveFormulasForRender() already
+    // substitutes the *computed* display value into the span's inner text before marked ever sees
+    // it (a raw <span data-formula="..."> carries no live-recalculation ability of its own — see
+    // that function's own comment on why the computation has to happen as text preprocessing,
+    // before marked.parse(), rather than in here), so this only ever needs to promote the class/
+    // data-formula attribute onto the <td>/<th> itself for the orange-border CSS and the click-to-
+    // edit/freeze overlay (both keyed off data-formula) to find it.
+    const TABLE_CELL_FORMULA_SPAN_RE = /^<span class="cell-formula" data-formula="([^"]*)">([\s\S]*)<\/span>$/;
+    hljsRenderer.tablecell = function(e) {
+      const content = this.parser.parseInline(e.tokens);
+      const tag = e.header ? 'th' : 'td';
+      const alignAttr = e.align ? ' align="' + e.align + '"' : '';
+
+      const formulaMatch = content.match(TABLE_CELL_FORMULA_SPAN_RE);
+      if (formulaMatch) {
+        const formulaAttr = ' class="cell-formula-cell" data-formula="' + formulaMatch[1] + '"';
+        return '<' + tag + alignAttr + formulaAttr + '>' + formulaMatch[2] + '</' + tag + '>\n';
+      }
+
+      const bgMatch = content.match(TABLE_CELL_BG_SPAN_RE);
+      const inner = bgMatch ? bgMatch[2] : content;
+      const styleAttr = bgMatch ? ' style="background-color:' + bgMatch[1] + '"' : '';
+      return '<' + tag + alignAttr + styleAttr + '>' + inner + '</' + tag + '>\n';
     };
 
     marked.setOptions({
@@ -8214,6 +8480,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // shortcut calls), and def (its default combo, or null for "no default -- customizable but
     // unbound out of the box," used for the ~15 more niche actions like individual media-insert
     // types or table row/column moves that don't need a default binding to be useful).
+    //
+    // A handful of Ctrl+Alt+<letter> defaults were deliberately kept off letters that collide with
+    // macOS/Mac-Chrome shortcuts that fire at the OS/browser-chrome level, before this app's own
+    // keydown handler ever sees the event -- no amount of preventDefault() here can win against
+    // those, so the *combo* has to move instead: Cmd+Option+C (Inspect Element), Cmd+Option+H
+    // (Hide Others), Cmd+Option+I (Toggle DevTools), and Cmd+Option+M (Minimize All) are each
+    // avoided below for exactly this reason (see the individual entries' own comments). Cmd+Shift+T
+    // (Reopen Closed Tab) is avoided the same way despite using Shift rather than Alt.
     const SHORTCUT_ACTIONS = [
       // Datei
       { id: 'newDoc', category: 'Datei', label: 'Neu (Vorlagenauswahl)', run: () => openTemplateModal(), def: { ctrl: true, alt: true, code: 'KeyN' } },
@@ -8224,7 +8498,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       { id: 'closeTab', category: 'Datei', label: 'Tab schließen', run: () => closeTab(activeTabId), def: { ctrl: true, alt: true, code: 'KeyW' } },
       { id: 'htmlExport', category: 'Datei', label: 'Als HTML exportieren', run: () => exportAsHtml(), def: { ctrl: true, alt: true, code: 'KeyE' } },
       { id: 'print', category: 'Datei', label: 'Drucken / Als PDF speichern', run: () => window.print(), def: { ctrl: true, code: 'KeyP' } },
-      { id: 'copyFormatted', category: 'Datei', label: 'Formatiert kopieren', run: () => copyFormattedToClipboard(), def: { ctrl: true, alt: true, code: 'KeyC' } },
+      { id: 'copyFormatted', category: 'Datei', label: 'Formatiert kopieren', run: () => copyFormattedToClipboard(), def: { ctrl: true, alt: true, code: 'KeyX' } }, // not KeyC -- Cmd+Option+C is macOS Chrome/Safari's own "Inspect Element" shortcut
       { id: 'webdavSync', category: 'Datei', label: 'WebDAV-Synchronisierung', run: () => openWebdavModal(), def: { ctrl: true, alt: true, code: 'KeyY' } },
 
       // Bearbeiten
@@ -8250,12 +8524,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       { id: 'task', category: 'Format', label: 'Aufgabenliste', run: () => insertFormatting('task'), def: { ctrl: true, shift: true, code: 'Digit9' } },
       { id: 'quote', category: 'Format', label: 'Zitat', run: () => insertFormatting('quote'), def: { ctrl: true, shift: true, code: 'Period' } },
       { id: 'codeBlock', category: 'Format', label: 'Code-Block', run: () => insertFormatting('codeblock'), def: { ctrl: true, alt: true, code: 'KeyK' } },
-      { id: 'hr', category: 'Format', label: 'Trennlinie', run: () => insertFormatting('hr'), def: { ctrl: true, alt: true, code: 'KeyH' } },
+      { id: 'hr', category: 'Format', label: 'Trennlinie', run: () => insertFormatting('hr'), def: { ctrl: true, alt: true, code: 'KeyG' } }, // not KeyH -- Cmd+Option+H is macOS's own "Hide Others" (OS-level, not even reaching the browser)
       { id: 'details', category: 'Format', label: 'Einklappbarer Abschnitt', run: () => insertFormatting('details'), def: { ctrl: true, alt: true, code: 'KeyD' } },
       { id: 'link', category: 'Format', label: 'Link', run: () => insertFormatting('link'), def: { ctrl: true, code: 'KeyK' } },
       { id: 'embed', category: 'Format', label: 'Web-Einbettung (iframe)', run: () => insertFormatting('embed'), def: { ctrl: true, alt: true, code: 'KeyB' } },
-      { id: 'table', category: 'Format', label: 'Tabelle einfügen', run: () => insertFormatting('table'), def: { ctrl: true, shift: true, code: 'KeyT' } },
-      { id: 'image', category: 'Format', label: 'Bild einfügen', run: () => triggerImageFileInsert(), def: { ctrl: true, alt: true, code: 'KeyI' } },
+      { id: 'table', category: 'Format', label: 'Tabelle einfügen', run: () => insertFormatting('table'), def: { ctrl: true, alt: true, code: 'KeyJ' } }, // not Shift+KeyT -- Cmd+Shift+T is "Reopen Closed Tab" on Mac Chrome
+      { id: 'image', category: 'Format', label: 'Bild einfügen', run: () => triggerImageFileInsert(), def: { ctrl: true, alt: true, code: 'KeyA' } }, // not KeyI -- Cmd+Option+I is macOS Chrome/Safari's own "Toggle DevTools" shortcut
       { id: 'camera', category: 'Format', label: 'Foto aufnehmen', run: () => openCameraModal(), def: null },
       { id: 'drawing', category: 'Format', label: 'Zeichnung einfügen', run: () => openDrawingModal(), def: null },
       { id: 'clipart', category: 'Format', label: 'Clipart einfügen', run: () => openClipartModal(), def: null },
@@ -8285,7 +8559,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       { id: 'presentation', category: 'Ansicht', label: 'Präsentationsmodus starten', run: () => startPresentation(), def: { ctrl: true, alt: true, code: 'KeyP' } },
       { id: 'toc', category: 'Ansicht', label: 'Inhaltsverzeichnis umschalten', run: () => toggleToc(), def: { ctrl: true, alt: true, code: 'KeyO' } },
       { id: 'tts', category: 'Ansicht', label: 'Vorlesen starten/pausieren', run: () => previewTts.toggle(), def: { ctrl: true, alt: true, code: 'KeyU' } },
-      { id: 'simpleMode', category: 'Ansicht', label: 'Simple Modus umschalten', run: () => toggleSimpleMode(), def: { ctrl: true, alt: true, code: 'KeyM' } },
+      { id: 'simpleMode', category: 'Ansicht', label: 'Simple Modus umschalten', run: () => toggleSimpleMode(), def: { ctrl: true, alt: true, code: 'KeyS' } }, // not KeyM -- Cmd+Option+M is macOS's own "Minimize All" (OS-level, not even reaching the browser)
       { id: 'shortcutsHelp', category: 'Ansicht', label: 'Tastenkürzel anzeigen', run: () => openShortcutsModal(), def: { ctrl: true, alt: true, code: 'Slash' } },
     ];
 
@@ -8367,6 +8641,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // --- Matching & display ---
 
+    // Functionally, combo.ctrl already means "Ctrl or Cmd" everywhere (comboMatchesEvent checks
+    // e.ctrlKey || e.metaKey) -- this only decides which glyph the shortcuts modal *shows* for it.
+    // navigator.platform is deprecated but still the simplest reliable signal here, and iPadOS
+    // Safari (which reports "MacIntel", desktop-spoofed, since iPadOS 13) is exactly a platform
+    // that should also see "⌘", so there's no need to tell it apart from a real Mac for this.
+    const IS_APPLE_PLATFORM = /Mac|iPod|iPhone|iPad/.test(navigator.platform || '');
+
     const SHORTCUT_CODE_LABELS = {
       Equal: '+', Minus: '-', Period: '.', Comma: ',', Slash: '/', Backslash: '\\',
       BracketLeft: '[', BracketRight: ']', Quote: "'", Semicolon: ';',
@@ -8382,15 +8663,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return code;
     }
 
-    // Returns an array of display labels (e.g. ['Strg', 'Alt', '1']), rendered as separate <kbd>
-    // chips by renderShortcutsList()/comboButtonHtml() -- kept as an array rather than a
-    // pre-joined string so both call sites can wrap each piece in its own <kbd> consistently.
+    // Returns an array of display labels (e.g. ['Strg', 'Alt', '1'], or ['⌘', '⌥', '1'] on
+    // Apple platforms), rendered as separate <kbd> chips by renderShortcutsList()/
+    // comboButtonHtml() -- kept as an array rather than a pre-joined string so both call sites
+    // can wrap each piece in its own <kbd> consistently.
     function formatComboParts(combo) {
       if (!combo) return null;
       const parts = [];
-      if (combo.ctrl) parts.push('Strg');
-      if (combo.alt) parts.push('Alt');
-      if (combo.shift) parts.push('Umschalt');
+      if (combo.ctrl) parts.push(IS_APPLE_PLATFORM ? '⌘' : 'Strg');
+      if (combo.alt) parts.push(IS_APPLE_PLATFORM ? '⌥' : 'Alt');
+      if (combo.shift) parts.push(IS_APPLE_PLATFORM ? '⇧' : 'Umschalt');
       parts.push(formatKeyCodeLabel(combo.code));
       return parts;
     }
@@ -8496,6 +8778,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     });
 
     function renderShortcutsList() {
+      const ctrlLabel = IS_APPLE_PLATFORM ? '⌘' : 'Strg';
+      const altLabel = IS_APPLE_PLATFORM ? '⌥' : 'Alt';
+      document.getElementById('shortcutsHintText').innerHTML =
+        'Klick auf eine Tastenkombination, um sie neu zu belegen (dann die gewünschte Kombination drücken, mindestens mit <kbd>' + ctrlLabel + '</kbd> oder <kbd>' + altLabel + '</kbd>) &mdash; <kbd>Esc</kbd> bricht ab.';
+
       const container = document.getElementById('shortcutsListContainer');
       container.innerHTML = '';
       let lastCategory = null;
@@ -8587,10 +8874,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         closeExportChoiceModal();
         closeTemplateModal();
         closeToc();
+        closeColorPopover();
         closeWebdavModal();
         if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();
         if (document.getElementById('pdfImportModal').classList.contains('active')) closePdfImportModal();
         if (cellSelection) { cellSelection = null; clearCellSelectionHighlight(); }
+        hideFormulaCellOverlay();
         return;
       }
 
@@ -8676,6 +8965,78 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const btn = document.getElementById('tocToggleBtn');
       if (panel.classList.contains('active') && !panel.contains(e.target) && !btn.contains(e.target)) {
         closeToc();
+      }
+    });
+
+    // --- TEXT-/HINTERGRUNDFARBE POPOVER (fmtTextColorBtn / fmtBgColorBtn) ---
+
+    const TEXT_COLOR_PRESETS = ['#e03131', '#f08c00', '#ffd43b', '#2f9e44', '#1971c2', '#7048e8', '#e64980', '#495057', '#000000', '#ffffff'];
+    // Lighter pastel tones by default for backgrounds — a background/cell-fill is meant to sit
+    // *behind* readable text (the same text color presets above, or a theme's default text color),
+    // which the saturated TEXT_COLOR_PRESETS hues would fight against as a fill; a highlighter-
+    // style pastel keeps the underlying text legible while still clearly marking the cell/span.
+    const BG_COLOR_PRESETS = ['#ffc9c9', '#ffd8a8', '#fff3bf', '#b2f2bb', '#99e9f2', '#a5d8ff', '#d0bfff', '#fcc2d7', '#e9ecef', '#ffffff'];
+
+    let colorPickerKind = null; // 'text' | 'bg' | null (closed) — which button's popover is open
+
+    function toggleColorPopover(kind, btnEl) {
+      const popover = document.getElementById('colorPickerPopover');
+      if (popover.classList.contains('active') && colorPickerKind === kind) {
+        closeColorPopover();
+        return;
+      }
+      colorPickerKind = kind;
+      renderColorPickerSwatches();
+      // position:fixed, so getBoundingClientRect()'s viewport coordinates can be used directly —
+      // no container-relative math needed (unlike .toc-panel, which lives inside #mainContainer).
+      const rect = btnEl.getBoundingClientRect();
+      popover.style.top = (rect.bottom + 6) + 'px';
+      popover.style.left = rect.left + 'px';
+      popover.classList.add('active');
+    }
+
+    function closeColorPopover() {
+      document.getElementById('colorPickerPopover').classList.remove('active');
+      colorPickerKind = null;
+    }
+
+    function renderColorPickerSwatches() {
+      const container = document.getElementById('colorPickerSwatches');
+      container.innerHTML = '';
+      const presets = colorPickerKind === 'bg' ? BG_COLOR_PRESETS : TEXT_COLOR_PRESETS;
+      presets.forEach(color => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'color-picker-swatch';
+        btn.style.backgroundColor = color;
+        btn.title = color;
+        btn.onclick = () => applyColorFromPopover(color);
+        container.appendChild(btn);
+      });
+    }
+
+    // color: a CSS color string from a preset swatch or the native <input type="color">, or null
+    // from the "Entfernen" button. Also updates the triggering toolbar button's own swatch bar to
+    // reflect the just-picked color, purely cosmetic (a quick "this is the color you'll get again"
+    // hint) — applyColorFormat() itself re-derives everything it needs from the source text, not
+    // from this.
+    function applyColorFromPopover(color) {
+      if (!colorPickerKind) return;
+      if (color) {
+        const swatchId = colorPickerKind === 'text' ? 'fmtTextColorSwatch' : 'fmtBgColorSwatch';
+        document.getElementById(swatchId).setAttribute('fill', color);
+      }
+      applyColorFormat(colorPickerKind, color);
+      closeColorPopover();
+    }
+
+    document.addEventListener('click', (e) => {
+      const popover = document.getElementById('colorPickerPopover');
+      const textBtn = document.getElementById('fmtTextColorBtn');
+      const bgBtn = document.getElementById('fmtBgColorBtn');
+      if (popover.classList.contains('active') && !popover.contains(e.target) &&
+          !textBtn.contains(e.target) && !bgBtn.contains(e.target)) {
+        closeColorPopover();
       }
     });
 
@@ -10005,6 +10366,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 
+    // Same as escapeHtmlText, plus quotes — for text embedded inside a double-quoted HTML
+    // attribute (e.g. resolveFormulasForRender()'s data-formula="...") rather than element content.
+    function escapeHtmlAttrText(str) {
+      return escapeHtmlText(str).replace(/"/g, '&quot;');
+    }
+
     // Cell markup carries data-start/data-end (the cell's exact [start, end) range in the raw
     // source, from parseCsvWithPositions) so a click can select the matching span in the editor —
     // see the delegated click listener on `preview` further down. A cell missing from a ragged
@@ -10062,7 +10429,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (tab && tab.fileType === 'csv') return renderCsvPreview(content, tab.csvDelimiter);
       if (tab && tab.fileType === 'json') return renderJsonPreview(content);
       if (tab && tab.fileType === 'txt') return renderTxtPreview(content);
-      return marked.parse(content);
+      // resolveFormulasForRender() substitutes each live formula cell's freshly-computed display
+      // value into a throwaway copy of the text, purely for this render — never written back into
+      // `content` itself (tab.content/editor.value keeps just the formula) — see the TABLE
+      // FORMULAS section for why. Applying it here, in the one shared dispatch point, means
+      // exportAsHtml()/copyFormattedToClipboard() get correctly-resolved formulas for free too,
+      // same as every other renderContentForTab() consumer.
+      return marked.parse(resolveFormulasForRender(content));
     }
 
     // HTML tabs bypass renderContentForTab entirely: the preview pane shows a real,
@@ -10111,6 +10484,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // Any live cell-selection refers to DOM nodes that preview.innerHTML below is about to
       // destroy — no need to also strip .cell-selected off them first, they're going away anyway.
       cellSelection = null;
+      // Same reasoning for the formula-cell edit/freeze overlay (see the TABLE FORMULAS section):
+      // its target <td> is about to be destroyed too. formulaEditState itself is deliberately
+      // NOT reset here — it's re-derived fresh from the (about to be rebuilt) DOM+source further
+      // down (updateFormulaEditState()), so a formula still being typed stays in formula-input
+      // mode across this same re-render instead of dropping out of it on every keystroke.
+      hideFormulaCellOverlay();
       // isHtml/isCanvas describe the real, open TAB (chrome/layout concerns) — deliberately not
       // derived from getCurrentTab(), which returns a canvas *box* while one is being edited (see
       // getCurrentTab()'s own comment). `tab` below is the actual document to render, which
@@ -10172,6 +10551,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       updateFormatButtonStates();
       if (!isEditingCanvasBox) updateTabNameFromFirstHeading(); // a box's heading isn't the tab's
       updateTableControlsVisibility();
+      // Must run after attachMarkdownTableCellPositions() above — it locates the formula's target
+      // cell in the fresh DOM via the same data-start attribute that call just (re)assigned.
+      updateFormulaEditState();
     }
 
     // --- CANVAS MODE (a fixed DIN-A4 page of freely placed, individually editable boxes) ---
@@ -11396,6 +11778,115 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       updatePreview();
     }
 
+    // --- TEXT / BACKGROUND COLOR (toolbar) ---
+    //
+    // Colors are embedded directly as raw inline HTML (<span style="color:...">/
+    // <span style="background-color:...">) rather than a bespoke markdown syntax — GFM/marked
+    // already pass inline HTML through unescaped (same mechanism <details>/<iframe> embeds rely
+    // on, see insertFormatting()'s 'embed'/'details' cases above), so this needs no new parser
+    // support and stays a portable, standalone-readable .md file with no dependency on this app.
+
+    // Which raw-source cell (if any) the cursor currently sits in, for the background-color
+    // button's table-cell-fill behavior below. CSV is deliberately excluded: renderCsvPreview()
+    // escapes cell text as plain data (see escapeHtmlText() there), so a raw <span> written into
+    // a CSV cell would show up as literal, broken-looking text instead of ever being rendered.
+    function getCurrentTableCellInfo() {
+      if (isCsvTab()) return null;
+      const table = findTableBlock();
+      if (!table) return null;
+      const { lines, cursorLine, separatorLine } = table;
+      if (cursorLine === separatorLine) return null; // the --- row has no real cell content to color
+      const lineText = lines[cursorLine];
+      const posInLine = editor.selectionStart - lineStartOffset(lines, cursorLine);
+      const colIndex = getColumnIndexAtCursor(lineText, posInLine);
+      const cells = getRowCells(lineText);
+      if (colIndex < 0 || colIndex >= cells.length) return null;
+      return { lines, cursorLine, colIndex, cells };
+    }
+
+    // Background color on a table cell always targets the cell's *entire* raw text, regardless
+    // of the current selection's extent — matching Excel-style cell-fill (the user's own framing
+    // for the whole feature request) rather than highlighting just a text run within the cell.
+    // The hljsRenderer.tablecell() override above is what actually turns this whole-cell span
+    // into a filled <td> at render time; this function only ever needs to produce that span.
+    function applyColorToTableCell(cellInfo, color) {
+      const { lines, cursorLine, colIndex, cells } = cellInfo;
+      const current = cells[colIndex];
+      const m = current.match(/^<span style="background-color:\s*([^"]+)">([\s\S]*)<\/span>$/);
+      const innerText = m ? m[2] : current;
+      const existingColor = m ? m[1] : null;
+
+      let newCellText;
+      if (color === null || (existingColor && existingColor.toLowerCase() === color.toLowerCase())) {
+        newCellText = innerText; // no color picked (remove), or re-picking the cell's current color toggles it off
+      } else {
+        newCellText = '<span style="background-color:' + color + '">' + innerText + '</span>';
+      }
+
+      cells[colIndex] = newCellText;
+      lines[cursorLine] = buildRowFromCells(cells);
+      const newCursorOffset = lineStartOffset(lines, cursorLine) + offsetOfCellInRow(cells, colIndex) + newCellText.length;
+      commitTableEdit(lines, newCursorOffset);
+    }
+
+    // kind: 'text' | 'bg'. color: a CSS color string to apply, or null to strip whatever color
+    // formatting is already present. Mirrors applyInlineFormat()'s own "detect current type →
+    // strip → reapply" toggle pattern (see the Formatting toolbar section of the project docs):
+    // re-picking the exact color already applied removes it instead of nesting a second span.
+    function applyColorFormat(kind, color) {
+      if (editor.disabled) return;
+
+      if (kind === 'bg') {
+        const cellInfo = getCurrentTableCellInfo();
+        if (cellInfo) {
+          applyColorToTableCell(cellInfo, color);
+          return;
+        }
+      }
+
+      const prop = kind === 'text' ? 'color' : 'background-color';
+      const spanRe = new RegExp('^<span style="' + prop + ':\\s*([^"]+)">([\\s\\S]*)</span>$');
+
+      let start = editor.selectionStart;
+      let end = editor.selectionEnd;
+      const text = editor.value;
+      const selection = text.substring(start, end);
+
+      let innerText = selection;
+      let existingColor = null;
+      const m = selection.match(spanRe);
+      if (m) {
+        existingColor = m[1];
+        innerText = m[2];
+      }
+
+      let replacement;
+      if (color === null || (existingColor && existingColor.toLowerCase() === color.toLowerCase())) {
+        replacement = innerText;
+      } else {
+        replacement = '<span style="' + prop + ':' + color + '">' + innerText + '</span>';
+      }
+
+      const newText = text.substring(0, start) + replacement + text.substring(end);
+      editor.value = newText;
+      editor.focus();
+
+      if (innerText || existingColor) {
+        editor.setSelectionRange(start, start + replacement.length);
+      } else if (color !== null) {
+        // Empty-by-default (same convention as every other insertFormatting/applyInlineFormat
+        // case): no filler text, cursor lands right inside the empty span, ready to type.
+        const openTagLength = replacement.length - '</span>'.length;
+        editor.setSelectionRange(start + openTagLength, start + openTagLength);
+      } else {
+        editor.setSelectionRange(start, start);
+      }
+
+      recordHistory();
+      markActiveTabModified();
+      updatePreview();
+    }
+
     // --- INDENT / OUTDENT (Tab / Umschalt+Tab, toolbar buttons) ---
 
     function indentLines(direction) {
@@ -11514,6 +12005,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (document.activeElement === editor) {
         updateFormatButtonStates();
         updateTableControlsVisibility();
+        // Re-derives formula-input mode on a plain cursor move too (not just on text change,
+        // which updatePreview() already covers) — moving the cursor out of a "=..." cell should
+        // drop out of formula mode just as promptly as moving into one should enter it. Doesn't
+        // rebuild the preview DOM itself, only repositions/toggles overlays against it, so this is
+        // safe and cheap to call on every selection change while the editor is focused.
+        updateFormulaEditState();
       }
     });
 
@@ -11649,6 +12146,333 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         i = end + 1;
       }
       return blocks;
+    }
+
+    // --- TABLE FORMULAS (Excel-style SUM/+-*÷ over table cells) ---
+    //
+    // A formula cell's raw source is <span class="cell-formula" data-formula="A1+B2"></span> —
+    // the formula expression only, no cached value — see startFormulaEditMode()/commitFormulaEdit()
+    // further down for how that markup gets created from what the user types/clicks. There is
+    // deliberately no per-cell "last computed value" persisted anywhere: resolveFormulasForRender()
+    // below re-evaluates every formula cell from the *current* raw text of whatever cells it
+    // references, every single render (updatePreview() runs on every keystroke), which is what
+    // "ändert automatisch die Berechnung, wenn sich in den Quellzellen etwas ändert" (auto-
+    // recalculates when a source cell changes) means in practice — there's no dependency graph or
+    // dirty-tracking to maintain, a formula cell simply has no fixed value to go stale in the first
+    // place. This only stops being true once the user explicitly freezes a cell (the round "✕"
+    // overlay button, see freezeFormulaCell()), which is the one deliberate point where a computed
+    // value gets written into the raw source as a plain string, permanently.
+    //
+    // Row/column addressing mirrors Excel (A, B, C... columns; 1-based rows) but maps directly
+    // onto findAllMarkdownTableBlocks()'s own row array — row 1 is the table's header row (index
+    // 0), row 2 the first body row, and so on; column A is cell index 0 in that same row array.
+    // This was chosen over "row 1 = first body row" specifically because it matches what the user
+    // actually sees when clicking a cell in the live preview (the header row is visually the
+    // table's first row), and needs no special-casing to look up a header cell's own value.
+
+    const FORMULA_CURRENCY_SYMBOLS = ['€', '$', '£'];
+
+    // A comma is only ever treated as a decimal separator (German "5,5" -> 5.5) -- a '.' is left
+    // exactly as JS's own Number() would parse it (a decimal point), since '.' as a thousands
+    // separator is indistinguishable from '.' as a US decimal point without knowing which
+    // convention the user intended, and guessing wrong would silently corrupt a real calculation.
+    function parseNumericTableCell(rawText) {
+      let s = String(rawText == null ? '' : rawText).trim();
+      if (!s) return { value: null, currency: null };
+      let currency = null;
+      for (const sym of FORMULA_CURRENCY_SYMBOLS) {
+        if (s.startsWith(sym)) { currency = { symbol: sym, position: 'prefix' }; s = s.slice(sym.length).trim(); break; }
+        if (s.endsWith(sym)) { currency = { symbol: sym, position: 'suffix' }; s = s.slice(0, -sym.length).trim(); break; }
+      }
+      if (!s) return { value: null, currency };
+      if (/^-?\d+,\d+$/.test(s)) s = s.replace(',', '.');
+      const num = Number(s);
+      // Cells containing other characters/letters are ignored (contribute nothing to the
+      // calculation) rather than treated as an error — Number('') is 0, which would silently
+      // count a blank cell as a real zero, so blank/non-numeric text is explicitly excluded here.
+      if (!/^-?\d+(\.\d+)?$/.test(s) || !isFinite(num) || Number.isNaN(num)) return { value: null, currency };
+      return { value: num, currency };
+    }
+
+    function formulaColLetterToIndex(letters) {
+      let idx = 0;
+      for (const ch of letters.toUpperCase()) idx = idx * 26 + (ch.charCodeAt(0) - 64);
+      return idx - 1; // 0-based
+    }
+
+    function formulaColIndexToLetter(index) {
+      let n = index + 1, s = '';
+      while (n > 0) {
+        const rem = (n - 1) % 26;
+        s = String.fromCharCode(65 + rem) + s;
+        n = Math.floor((n - 1) / 26);
+      }
+      return s;
+    }
+
+    // "A1" -> { row: 0, col: 0 } (0-based, see the row/col addressing note above).
+    function parseFormulaCellRef(ref) {
+      const m = ref.match(/^([A-Za-z]+)(\d+)$/);
+      if (!m) return null;
+      return { row: parseInt(m[2], 10) - 1, col: formulaColLetterToIndex(m[1]) };
+    }
+
+    function formulaCellRefString(row, col) {
+      return formulaColIndexToLetter(col) + (row + 1);
+    }
+
+    // grid: Array<Array<string>> of raw cell text (see buildFormulaGrid below). A lone ref (`A1`)
+    // resolves to that cell's own numeric value; a range (`A1:A5`) sums every numeric cell inside
+    // the rectangle it spans (Excel's own SUM(range) behavior, without needing a separate SUM()
+    // function syntax the toolbar's click-to-select UX would then have to also generate).
+    function evaluateFormulaOperand(token, grid, selfRow, selfCol) {
+      if (token.includes(':')) {
+        const [a, b] = token.split(':');
+        const ra = parseFormulaCellRef(a), rb = parseFormulaCellRef(b);
+        if (!ra || !rb) return { value: null, currency: null, selfRef: false };
+        const minRow = Math.min(ra.row, rb.row), maxRow = Math.max(ra.row, rb.row);
+        const minCol = Math.min(ra.col, rb.col), maxCol = Math.max(ra.col, rb.col);
+        let sum = 0, any = false, currency = null, selfRef = false;
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            if (r === selfRow && c === selfCol) { selfRef = true; continue; }
+            const raw = (grid[r] && grid[r][c] !== undefined) ? grid[r][c] : '';
+            const parsed = parseNumericTableCell(raw);
+            if (parsed.value !== null) {
+              sum += parsed.value;
+              any = true;
+              if (!currency && parsed.currency) currency = parsed.currency;
+            }
+          }
+        }
+        return { value: any ? sum : 0, currency, selfRef };
+      }
+      const rc = parseFormulaCellRef(token);
+      if (!rc) return { value: null, currency: null, selfRef: false };
+      if (rc.row === selfRow && rc.col === selfCol) return { value: null, currency: null, selfRef: true };
+      const raw = (grid[rc.row] && grid[rc.row][rc.col] !== undefined) ? grid[rc.row][rc.col] : '';
+      const parsed = parseNumericTableCell(raw);
+      return { value: parsed.value, currency: parsed.currency, selfRef: false };
+    }
+
+    // Three alternatives, tried in this order at each position: a cell/range ref, a bare numeric
+    // literal (no leading sign — see evaluateTableFormula's own comment on why signed literals
+    // aren't supported), or an operator. A ref always wins over a literal where both could
+    // theoretically start matching (they never actually overlap: a ref always starts with a
+    // letter, a literal always starts with a digit), so the ordering here is for clarity, not
+    // correctness.
+    const FORMULA_TOKEN_RE = /([A-Za-z]+\d+(?::[A-Za-z]+\d+)?)|(\d+(?:[.,]\d+)?)|([+\-*/])/g;
+
+    // Deliberately a flat two-pass evaluator (collapse * and / into signed terms, then sum the
+    // terms) rather than a general expression parser with parentheses/functions — the toolbar's
+    // own formula-building UX (click a cell, type an operator, click another cell, ...) never
+    // produces anything but a flat operand-operator-operand-... chain, so there's nothing a fuller
+    // grammar would actually be needed for here. selfRow/selfCol let a direct self-reference
+    // (a formula in its own cell) be rejected as an error instead of silently reading stale/
+    // in-progress text — the equivalent of Excel's circular-reference guard. This function itself
+    // only ever reads whatever is currently in `grid` for each operand cell — it has no notion of
+    // "that other cell is itself a formula, evaluate it first"; chained formulas (a "totals row"
+    // summing other formula cells, for example) only work because resolveTableFormulaCells() below
+    // pre-resolves the *grid* in dependency order before this ever runs against a chained operand.
+    // A genuine circular chain (A references B references A) still can't resolve — the caller
+    // evaluates those against whatever's left in the grid once no more progress is possible, so a
+    // cycle degrades to a visible, wrong-but-present value rather than looping forever.
+    //
+    // Bare numeric literals (e.g. "B3*2" or "A1*1.19" for a tax rate) are supported as operands
+    // alongside cell/range refs — beyond what the feature request literally described (which only
+    // ever mentions clicking cells), but a natural, low-risk extension of "just like Excel", and
+    // cheap given the tokenizer already needs to recognize refs vs. operators. Literals are
+    // deliberately unsigned only: allowing a leading '-' would make the tokenizer ambiguous
+    // between "the '-' operator followed by a positive literal" (e.g. "A1-5") and "a negative
+    // literal operand" at the same position, and resolving that ambiguity isn't worth it for a
+    // formula grammar this simple — a leading negative literal (e.g. "=-5+A1") is the one
+    // resulting edge case left unsupported (see the token loop below).
+    function evaluateTableFormula(formula, grid, selfRow, selfCol) {
+      const tokens = [];
+      let m;
+      FORMULA_TOKEN_RE.lastIndex = 0;
+      while ((m = FORMULA_TOKEN_RE.exec(formula)) !== null) {
+        if (m[1]) tokens.push({ type: 'operand', kind: 'ref', text: m[1] });
+        else if (m[2]) tokens.push({ type: 'operand', kind: 'literal', text: m[2] });
+        else tokens.push({ type: 'op', text: m[3] });
+      }
+      if (tokens.length === 0 || tokens[0].type !== 'operand') return { error: true };
+
+      const operands = [];
+      const operators = [];
+      let currency = null;
+      let expectOperand = true;
+      for (const t of tokens) {
+        if (expectOperand !== (t.type === 'operand')) return { error: true }; // malformed, e.g. "A1++B2" or "A1 B2"
+        if (t.type === 'operand') {
+          let ev;
+          if (t.kind === 'literal') {
+            const num = Number(t.text.replace(',', '.'));
+            ev = { value: isFinite(num) && !Number.isNaN(num) ? num : null, currency: null, selfRef: false };
+          } else {
+            ev = evaluateFormulaOperand(t.text, grid, selfRow, selfCol);
+          }
+          if (ev.selfRef) return { error: true };
+          operands.push(ev.value);
+          if (!currency && ev.currency) currency = ev.currency;
+        } else {
+          operators.push(t.text);
+        }
+        expectOperand = !expectOperand;
+      }
+      if (expectOperand || operands.length !== operators.length + 1) return { error: true }; // trailing operator (still expecting an operand at the end)
+
+      const terms = [{ sign: 1, value: operands[0] === null ? 0 : operands[0] }];
+      for (let i = 0; i < operators.length; i++) {
+        const rhs = operands[i + 1] === null ? 0 : operands[i + 1];
+        const current = terms[terms.length - 1];
+        if (operators[i] === '*') current.value *= rhs;
+        else if (operators[i] === '/') current.value = rhs === 0 ? NaN : current.value / rhs;
+        else terms.push({ sign: operators[i] === '+' ? 1 : -1, value: rhs });
+      }
+
+      let result = 0;
+      for (const term of terms) result += term.sign * term.value;
+      if (!isFinite(result) || Number.isNaN(result)) return { error: true };
+      return { error: false, value: result, currency };
+    }
+
+    function formatTableFormulaResult(result) {
+      if (!result || result.error) return '#FEHLER';
+      // Rounded to 2 decimals to avoid raw floating-point noise (0.1 + 0.2 = 0.30000000000000004)
+      // showing up in the cell; German-style comma decimal, no thousands grouping (kept simple/
+      // predictable rather than guessing the user's preferred grouping style).
+      const rounded = Math.round(result.value * 100) / 100;
+      const s = String(rounded).replace('.', ',');
+      if (!result.currency) return s;
+      return result.currency.position === 'prefix' ? (result.currency.symbol + s) : (s + result.currency.symbol);
+    }
+
+    // Row/col-indexed raw cell text for one table block (see findAllMarkdownTableBlocks's own
+    // row/{start,end} shape) — the grid evaluateTableFormula operates against.
+    function buildFormulaGrid(text, rows) {
+      return rows.map(row => row.map(r => text.substring(r.start, r.end).trim()));
+    }
+
+    const FORMULA_CELL_SPAN_RE = /^<span class="cell-formula" data-formula="([^"]*)">[\s\S]*<\/span>$/;
+
+    // Every (row, col) a formula's refs/ranges touch, as "r,c" keys — used only to figure out
+    // *evaluation order* below (which formula cells depend on which other formula cells), never to
+    // compute a value itself. Literal-number operands contribute no ref, same as evaluateTableFormula
+    // itself ignores them for this purpose.
+    function extractFormulaRefCells(formula) {
+      const cells = [];
+      FORMULA_TOKEN_RE.lastIndex = 0;
+      let m;
+      while ((m = FORMULA_TOKEN_RE.exec(formula)) !== null) {
+        if (!m[1]) continue; // m[2] = literal, m[3] = operator -- only m[1] (ref/range) matters here
+        const token = m[1];
+        if (token.includes(':')) {
+          const [a, b] = token.split(':');
+          const ra = parseFormulaCellRef(a), rb = parseFormulaCellRef(b);
+          if (!ra || !rb) continue;
+          const minRow = Math.min(ra.row, rb.row), maxRow = Math.max(ra.row, rb.row);
+          const minCol = Math.min(ra.col, rb.col), maxCol = Math.max(ra.col, rb.col);
+          for (let r = minRow; r <= maxRow; r++) for (let c = minCol; c <= maxCol; c++) cells.push(r + ',' + c);
+        } else {
+          const rc = parseFormulaCellRef(token);
+          if (rc) cells.push(rc.row + ',' + rc.col);
+        }
+      }
+      return cells;
+    }
+
+    // Resolves every formula cell in one table block to its computed display value, in dependency
+    // order — a formula summing a *row total* column (e.g. "Summe" = C2:C3, where C2/C3 are
+    // themselves "=A2*B2"-style formula cells) needs those rows' own formulas evaluated *first*, or
+    // it would just read their still-raw "<span ...>" source text as non-numeric and silently treat
+    // them as zero. Each pass evaluates every formula cell whose referenced cells are either plain
+    // data or already-resolved formula cells from an earlier pass, substituting the freshly computed
+    // display string into a working copy of the grid so the *next* pass's parseNumericTableCell call
+    // sees a normal number there, same as any other cell. A pass that resolves nothing means whatever
+    // is left only depends on itself/each other (a genuine circular reference, e.g. C2 referencing
+    // C3 referencing C2) — those are evaluated one final time against the grid as-is (their
+    // dependency reads as non-numeric/0, the same result this had before chaining was supported)
+    // rather than left blank, so a cycle degrades to a visible, wrong-but-present value instead of
+    // silently vanishing.
+    //
+    // Returns a Map from "r,c" to { formula, spanStart, spanEnd, display }.
+    function resolveTableFormulaCells(text, rows) {
+      const grid = buildFormulaGrid(text, rows);
+      const formulaCells = [];
+      for (let r = 0; r < rows.length; r++) {
+        for (let c = 0; c < rows[r].length; c++) {
+          const range = rows[r][c];
+          const fullCellText = text.substring(range.start, range.end);
+          const cellRaw = fullCellText.trim();
+          const m = cellRaw.match(FORMULA_CELL_SPAN_RE);
+          if (!m) continue;
+          const trimmedStart = fullCellText.length - fullCellText.trimStart().length;
+          const spanStart = range.start + trimmedStart;
+          formulaCells.push({ r, c, formula: m[1], spanStart, spanEnd: spanStart + cellRaw.length });
+        }
+      }
+
+      const results = new Map();
+      const formulaCellKeys = new Set(formulaCells.map(fc => fc.r + ',' + fc.c));
+      let unresolved = formulaCells;
+      const maxPasses = Math.max(10, formulaCells.length);
+      for (let pass = 0; pass < maxPasses && unresolved.length > 0; pass++) {
+        const stillUnresolved = [];
+        let progressed = false;
+        for (const fc of unresolved) {
+          const key = fc.r + ',' + fc.c;
+          const blockedByUnresolvedDep = extractFormulaRefCells(fc.formula)
+            .some(refKey => refKey !== key && formulaCellKeys.has(refKey) && !results.has(refKey));
+          if (blockedByUnresolvedDep) { stillUnresolved.push(fc); continue; }
+          const display = formatTableFormulaResult(evaluateTableFormula(fc.formula, grid, fc.r, fc.c));
+          results.set(key, display);
+          grid[fc.r][fc.c] = display;
+          progressed = true;
+        }
+        unresolved = stillUnresolved;
+        if (!progressed) break;
+      }
+      for (const fc of unresolved) { // leftover circular cells, evaluated as-is (see comment above)
+        results.set(fc.r + ',' + fc.c, formatTableFormulaResult(evaluateTableFormula(fc.formula, grid, fc.r, fc.c)));
+      }
+
+      const byKey = new Map();
+      for (const fc of formulaCells) {
+        byKey.set(fc.r + ',' + fc.c, { formula: fc.formula, spanStart: fc.spanStart, spanEnd: fc.spanEnd, display: results.get(fc.r + ',' + fc.c) });
+      }
+      return byKey;
+    }
+
+    // The one place formula *values* actually get computed for display — called from
+    // renderContentForTab() right before marked.parse(), never from anywhere that persists its
+    // result back into editor.value/tab.content (see the section comment above for why that
+    // matters: a formula cell has no stored value to go stale, by design). Text-level
+    // find-and-replace rather than hooking into hljsRenderer.tablecell() directly because that
+    // renderer method only ever sees *one* cell's own already-parsed inline tokens, with no
+    // visibility into sibling cells' raw text — exactly the visibility this needs, and exactly
+    // what findAllMarkdownTableBlocks() already provides for the whole document in one pass.
+    function resolveFormulasForRender(text) {
+      const blocks = findAllMarkdownTableBlocks(text);
+      if (blocks.length === 0) return text;
+
+      const edits = [];
+      for (const rows of blocks) {
+        const resolved = resolveTableFormulaCells(text, rows);
+        for (const { formula, spanStart, spanEnd, display } of resolved.values()) {
+          const newSpan = '<span class="cell-formula" data-formula="' + escapeHtmlAttrText(formula) + '">' +
+            escapeHtmlText(display) + '</span>';
+          edits.push({ start: spanStart, end: spanEnd, replacement: newSpan });
+        }
+      }
+      if (edits.length === 0) return text;
+
+      edits.sort((a, b) => b.start - a.start); // apply back-to-front so earlier offsets stay valid
+      let result = text;
+      for (const edit of edits) {
+        result = result.substring(0, edit.start) + edit.replacement + result.substring(edit.end);
+      }
+      return result;
     }
 
     // Tags every <td>/<th> in every rendered markdown table with the same data-start/data-end
@@ -12256,6 +13080,34 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       commitTableEdit(lines, lineStartOffset(lines, bodyStart));
     }
 
+    // The Σ toolbar button — a discoverable entry point into formula-input mode (see the TABLE
+    // FORMULAS section near preview's pointerdown handler) for anyone who wouldn't otherwise think
+    // to just type "=" themselves. Always targets the *whole* cell the cursor currently sits in,
+    // same "background color always targets the whole cell" reasoning as applyColorToTableCell —
+    // this is a "make this cell a formula" action, not a partial-text insert. An already-committed
+    // formula cell reverts to its plain "=formula" text (cursor at the end, ready to keep clicking/
+    // typing) rather than being blown away, the same outcome editFormulaCellFromOverlay() gives its
+    // own pencil button.
+    function triggerFormulaEditAtCursor() {
+      if (editor.disabled) return;
+      const table = findTableBlock();
+      if (!table || isCsvTab()) return;
+      const { lines, cursorLine, separatorLine } = table;
+      if (cursorLine === separatorLine) return;
+      const lineText = lines[cursorLine];
+      const lineStart = lineStartOffset(lines, cursorLine);
+      const posInLine = editor.selectionStart - lineStart;
+      const colIndex = getColumnIndexAtCursor(lineText, posInLine);
+      const cells = getRowCells(lineText);
+      if (colIndex < 0 || colIndex >= cells.length) return;
+
+      const existingFormula = cells[colIndex].match(FORMULA_CELL_SPAN_RE);
+      cells[colIndex] = '=' + (existingFormula ? existingFormula[1] : '');
+      lines[cursorLine] = buildRowFromCells(cells);
+      const newCursorOffset = lineStartOffset(lines, cursorLine) + offsetOfCellInRow(cells, colIndex) + cells[colIndex].length;
+      commitTableEdit(lines, newCursorOffset);
+    }
+
     function updateTableControlsVisibility() {
       const bar = document.getElementById('tableControls');
       if (!bar) return;
@@ -12282,6 +13134,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         } else {
           indentLines('indent');
         }
+        return;
+      }
+
+      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey && formulaEditState) {
+        // Confirms a formula being typed (cursor inside a table cell whose raw text starts with
+        // '=') instead of the smart list-continuation/newline handling below — a literal newline
+        // has no meaning inside a single-line table cell anyway, so this always takes priority
+        // over that logic while formula-input mode is active, never falls through to it.
+        e.preventDefault();
+        commitFormulaEdit();
         return;
       }
 
@@ -13481,6 +14343,19 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       container.className = preview.className;
       container.style.cssText = 'position:fixed; left:-99999px; top:0; pointer-events:none;';
       container.innerHTML = bodyHtml;
+
+      // Word/Outlook (and other native word-processor clipboard consumers) render this app's own
+      // heading weight -- 600, a deliberate "semibold" choice shared by the live preview and the
+      // HTML export (see the .markdown-body h1..h6 rule / getMarkdownTypographyCss()), which looks
+      // properly bold in any browser -- as visually indistinguishable from regular text. Unlike a
+      // browser, they don't reliably synthesize an in-between weight when the actual font has no
+      // real 600-weight face installed; they just fall back to whichever face they do have, often
+      // plain regular. An explicit inline font-weight here, scoped to just this detached copy
+      // container (never touching the live preview or the HTML export, both of which already
+      // render correctly as-is), removes that ambiguity for whatever application ends up parsing
+      // the pasted HTML.
+      container.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach((h) => { h.style.fontWeight = '700'; });
+
       document.body.appendChild(container);
 
       const range = document.createRange();
@@ -14703,6 +15578,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const row = cell.parentElement.rowIndex;
       const col = cell.cellIndex;
 
+      // Formula-input mode (typing "=..." in a table cell) takes over clicking/dragging cells in
+      // that *same* table entirely — inserting a cell/range reference into the formula instead of
+      // the plain copy-selection behavior below. A click in a *different* table (or a click while
+      // not in formula mode at all) falls through to the normal cellSelection handling unchanged.
+      if (formulaEditState && table.classList.contains('formula-ref-selectable')) {
+        startFormulaRefDrag(e, table, row, col);
+        return;
+      }
+
       if (e.shiftKey && cellSelection && cellSelection.table === table) {
         // Extend the existing selection to here instead of starting a new one — no drag needed,
         // mirrors how shift-click extends a selection in a real spreadsheet. Blur for the same
@@ -14839,6 +15723,287 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!grid) return;
       e.preventDefault();
       copyGridToClipboard(grid);
+    });
+
+    // --- TABLE FORMULAS: interactive click-to-select UX ---
+    // Typing "=" as the first character of a table cell enters formula-input mode
+    // (formulaEditState, derived fresh on every relevant input/selectionchange — see
+    // updateFormulaEditState()): every other cell in that *same* table becomes clickable/
+    // draggable in the preview (table.formula-ref-selectable, CSS above), inserting an A1-style
+    // reference (or, for a drag, an A1:B2-style range) into the formula at the current cursor
+    // position. Confirm via Enter (see the keydown handler above) or the round "=" overlay button
+    // this section positions over the target cell; either calls commitFormulaEdit(), which turns
+    // the raw "=A1+B2" text into the <span class="cell-formula" data-formula="A1+B2"></span>
+    // markup resolveFormulasForRender()/hljsRenderer.tablecell() (see the TABLE FORMULAS section
+    // near findAllMarkdownTableBlocks) then render live. Clicking an already-committed formula
+    // cell (the orange-bordered one) instead toggles a second overlay pair — edit (revert back to
+    // plain "=A1+B2" text, selected, ready to retype/re-click) and freeze (bake the current
+    // computed value in as plain text, permanently — the one point a formula's value actually
+    // gets written into the raw source).
+
+    let formulaEditState = null; // null, or { cellStart, cellEnd } (absolute offsets in editor.value) of the "=..." cell currently being edited
+    let formulaCellDrag = null;  // null, or { table, anchorRow, anchorCol, focusRow, focusCol } while actively dragging out a ref range
+
+    function detectFormulaEditState() {
+      if (isCsvTab()) return null; // see getCurrentTableCellInfo()'s own comment: CSV cells render escaped, a raw <span> would just show as literal text
+      const table = findTableBlock();
+      if (!table) return null;
+      const { lines, cursorLine, separatorLine } = table;
+      if (cursorLine === separatorLine) return null;
+      const lineText = lines[cursorLine];
+      const lineStart = lineStartOffset(lines, cursorLine);
+      const posInLine = editor.selectionStart - lineStart;
+      const ranges = getMarkdownCellRanges(lineText);
+      const colIndex = getColumnIndexAtCursor(lineText, posInLine);
+      if (colIndex < 0 || colIndex >= ranges.length) return null;
+      const cellRange = ranges[colIndex];
+      const cellStart = lineStart + cellRange.start;
+      const cellEnd = lineStart + cellRange.end;
+      // The cursor must still sit inside *this* cell's own range, not just somewhere on its row —
+      // a formula in one cell shouldn't put a neighboring, unrelated cell into edit mode too.
+      if (editor.selectionStart < cellStart || editor.selectionStart > cellEnd) return null;
+      if (!lineText.substring(cellRange.start, cellRange.end).trim().startsWith('=')) return null;
+      return { cellStart, cellEnd };
+    }
+
+    // The one place formulaEditState is written — called from updatePreview() (after a text
+    // change) and the selectionchange listener (after a plain cursor move); both are safe/cheap
+    // to call unconditionally since detectFormulaEditState() itself no-ops outside a markdown
+    // table cell.
+    function updateFormulaEditState() {
+      formulaEditState = detectFormulaEditState();
+      renderFormulaModeUI();
+    }
+
+    function renderFormulaModeUI() {
+      document.querySelectorAll('.markdown-body table.formula-ref-selectable')
+        .forEach(t => t.classList.remove('formula-ref-selectable'));
+      const confirmBtn = document.getElementById('formulaConfirmBtn');
+      if (!formulaEditState) {
+        confirmBtn.style.display = 'none';
+        return;
+      }
+      // Reuses attachMarkdownTableCellPositions()'s own data-start tagging to locate the exact
+      // <td>/<th> this formula belongs to — both it and formulaEditState.cellStart are absolute
+      // offsets derived from the same getMarkdownCellRanges()/lineStartOffset() primitives, so
+      // they line up without any extra coordinate translation.
+      const targetCell = preview.querySelector('[data-start="' + formulaEditState.cellStart + '"]');
+      if (!targetCell) { confirmBtn.style.display = 'none'; return; }
+      const table = targetCell.closest('table');
+      if (table) table.classList.add('formula-ref-selectable');
+
+      const rect = targetCell.getBoundingClientRect();
+      confirmBtn.style.display = 'flex';
+      confirmBtn.style.top = (rect.top - 13) + 'px';
+      confirmBtn.style.left = (rect.right - 13) + 'px';
+    }
+
+    // Turns the raw "=A1+B2" text currently in the formula's cell into the committed
+    // <span class="cell-formula" data-formula="A1+B2"></span> form. A bare "=" with nothing typed
+    // after it yet commits to nothing (formula-input mode simply ends, same as clicking away) —
+    // there's no meaningful formula to freeze into a span.
+    function commitFormulaEdit() {
+      const state = formulaEditState;
+      if (!state) return;
+      const text = editor.value;
+      const rawCellText = text.substring(state.cellStart, state.cellEnd).trim();
+      const formula = rawCellText.startsWith('=') ? rawCellText.slice(1).trim() : '';
+      if (!formula) {
+        formulaEditState = null;
+        renderFormulaModeUI();
+        return;
+      }
+      const newSpan = '<span class="cell-formula" data-formula="' + escapeHtmlAttrText(formula) + '"></span>';
+      editor.value = text.substring(0, state.cellStart) + newSpan + text.substring(state.cellEnd);
+      const newPos = state.cellStart + newSpan.length;
+      editor.focus();
+      editor.setSelectionRange(newPos, newPos);
+      formulaEditState = null;
+      recordHistory();
+      markActiveTabModified();
+      updatePreview();
+    }
+
+    // Inserts an A1-style reference at the *current* editor cursor position (wherever it was left
+    // when the user clicked away into the preview — clicking a plain <td> never moves DOM focus
+    // off the textarea on its own, and this code deliberately never calls editor.blur() the way
+    // the plain cellSelection pointerdown handler does, specifically so selectionStart/End here
+    // still reflect exactly where the user was mid-formula, not some other, blurred-away state).
+    function insertFormulaRefAtCursor(ref) {
+      if (!formulaEditState) return;
+      const start = editor.selectionStart;
+      const end = editor.selectionEnd;
+      const text = editor.value;
+      const newText = text.substring(0, start) + ref + text.substring(end);
+      editor.value = newText;
+      const newPos = start + ref.length;
+      editor.focus();
+      editor.setSelectionRange(newPos, newPos);
+      recordHistory();
+      markActiveTabModified();
+      updatePreview(); // re-derives formulaEditState fresh from the now-updated cell text, keeping formula mode active for the next click
+    }
+
+    function formulaCellRefFromDrag(sel) {
+      const minRow = Math.min(sel.anchorRow, sel.focusRow), maxRow = Math.max(sel.anchorRow, sel.focusRow);
+      const minCol = Math.min(sel.anchorCol, sel.focusCol), maxCol = Math.max(sel.anchorCol, sel.focusCol);
+      const startRef = formulaCellRefString(minRow, minCol), endRef = formulaCellRefString(maxRow, maxCol);
+      return startRef === endRef ? startRef : (startRef + ':' + endRef);
+    }
+
+    function applyFormulaCellDragHighlight() {
+      document.querySelectorAll('.formula-ref-drag-selected').forEach(el => el.classList.remove('formula-ref-drag-selected'));
+      if (!formulaCellDrag) return;
+      const { table, anchorRow, anchorCol, focusRow, focusCol } = formulaCellDrag;
+      const minRow = Math.min(anchorRow, focusRow), maxRow = Math.max(anchorRow, focusRow);
+      const minCol = Math.min(anchorCol, focusCol), maxCol = Math.max(anchorCol, focusCol);
+      for (let r = minRow; r <= maxRow; r++) {
+        const row = table.rows[r];
+        if (!row) continue;
+        for (let c = minCol; c <= maxCol; c++) {
+          const cell = row.cells[c];
+          if (cell) cell.classList.add('formula-ref-drag-selected');
+        }
+      }
+    }
+
+    function startFormulaRefDrag(e, table, row, col) {
+      formulaCellDrag = { table, anchorRow: row, anchorCol: col, focusRow: row, focusCol: col };
+      applyFormulaCellDragHighlight();
+      preview.setPointerCapture(e.pointerId);
+      document.addEventListener('pointermove', onFormulaRefDragMove);
+      document.addEventListener('pointerup', onFormulaRefDragEnd);
+      document.addEventListener('pointercancel', onFormulaRefDragEnd);
+    }
+
+    function onFormulaRefDragMove(e) {
+      if (!formulaCellDrag) return;
+      const cell = cellFromPoint(e.clientX, e.clientY);
+      if (!cell || cell.closest('table') !== formulaCellDrag.table) return;
+      const row = cell.parentElement.rowIndex, col = cell.cellIndex;
+      if (row === formulaCellDrag.focusRow && col === formulaCellDrag.focusCol) return;
+      formulaCellDrag.focusRow = row;
+      formulaCellDrag.focusCol = col;
+      applyFormulaCellDragHighlight();
+    }
+
+    function onFormulaRefDragEnd() {
+      document.removeEventListener('pointermove', onFormulaRefDragMove);
+      document.removeEventListener('pointerup', onFormulaRefDragEnd);
+      document.removeEventListener('pointercancel', onFormulaRefDragEnd);
+      if (!formulaCellDrag) return;
+      const ref = formulaCellRefFromDrag(formulaCellDrag);
+      formulaCellDrag = null;
+      document.querySelectorAll('.formula-ref-drag-selected').forEach(el => el.classList.remove('formula-ref-drag-selected'));
+      insertFormulaRefAtCursor(ref);
+    }
+
+    // --- Click on an *existing* (already-committed) live formula cell: edit / freeze overlay ---
+
+    let activeFormulaCellOverlayTd = null; // the <td>/<th> currently showing the edit/freeze pair, or null
+
+    function hideFormulaCellOverlay() {
+      activeFormulaCellOverlayTd = null;
+      document.getElementById('formulaEditOverlayBtn').style.display = 'none';
+      document.getElementById('formulaFreezeOverlayBtn').style.display = 'none';
+    }
+
+    function positionFormulaCellOverlay() {
+      const cellEl = activeFormulaCellOverlayTd;
+      if (!cellEl || !cellEl.isConnected) { hideFormulaCellOverlay(); return; }
+      const rect = cellEl.getBoundingClientRect();
+      const editBtn = document.getElementById('formulaEditOverlayBtn');
+      const freezeBtn = document.getElementById('formulaFreezeOverlayBtn');
+      editBtn.style.display = 'flex';
+      freezeBtn.style.display = 'flex';
+      editBtn.style.top = (rect.top - 13) + 'px';
+      editBtn.style.left = (rect.right - 44) + 'px';
+      freezeBtn.style.top = (rect.top - 13) + 'px';
+      freezeBtn.style.left = (rect.right - 13) + 'px';
+    }
+
+    function toggleFormulaCellOverlay(cellEl) {
+      if (activeFormulaCellOverlayTd === cellEl) {
+        hideFormulaCellOverlay();
+        return;
+      }
+      activeFormulaCellOverlayTd = cellEl;
+      positionFormulaCellOverlay();
+    }
+
+    // "Vielleicht einfach in der Quelltextansicht A1+A2..." — clicking edit reverts the cell's
+    // committed span back into plain, directly-editable "=A1+B2" text (selected, cursor ready),
+    // re-entering the exact same formula-input mode a fresh "=" would — rather than any bespoke
+    // formula-editing UI. The next Enter/overlay-confirm re-commits it, same as a brand new formula.
+    function editFormulaCellFromOverlay() {
+      const cellEl = activeFormulaCellOverlayTd;
+      if (!cellEl) return;
+      hideFormulaCellOverlay();
+      const formula = cellEl.dataset.formula || '';
+      const start = Number(cellEl.dataset.start);
+      const end = Number(cellEl.dataset.end);
+      if (!Number.isFinite(start) || !Number.isFinite(end)) return;
+      const plainFormula = '=' + formula;
+      const text = editor.value;
+      editor.value = text.substring(0, start) + plainFormula + text.substring(end);
+      editor.focus();
+      editor.setSelectionRange(start, start + plainFormula.length);
+      recordHistory();
+      markActiveTabModified();
+      updatePreview();
+    }
+
+    // "Der orangene Rahmen und der Quellenbezug verschwinden... im Quelltext steht nur noch der
+    // Zielwert" — re-evaluates the formula one last time against the *current* source (not
+    // whatever's currently displayed, in case it's stale by even one render) and writes that
+    // plain value in, replacing the whole <span> — the one deliberate point a formula's result
+    // actually gets persisted into the raw document, permanently losing its live-ness. Goes through
+    // resolveTableFormulaCells() (dependency-ordered, same as the live render path) rather than a
+    // single direct evaluateTableFormula() call, so freezing a "totals row" cell that itself sums
+    // other formula cells correctly picks up their computed values instead of reading their still-
+    // raw <span> source text as zero.
+    function freezeFormulaCellFromOverlay() {
+      const cellEl = activeFormulaCellOverlayTd;
+      if (!cellEl) return;
+      hideFormulaCellOverlay();
+      const spanStart = Number(cellEl.dataset.start);
+      const spanEnd = Number(cellEl.dataset.end);
+      if (!Number.isFinite(spanStart) || !Number.isFinite(spanEnd)) return;
+
+      const text = editor.value;
+      const blocks = findAllMarkdownTableBlocks(text);
+      let displayValue = null;
+      for (const rows of blocks) {
+        const resolved = resolveTableFormulaCells(text, rows);
+        const hit = Array.from(resolved.values()).find(v => v.spanStart === spanStart && v.spanEnd === spanEnd);
+        if (hit) { displayValue = hit.display; break; }
+      }
+      if (displayValue === null) return; // the cell couldn't be relocated in the current source — nothing safe to replace
+
+      editor.value = text.substring(0, spanStart) + displayValue + text.substring(spanEnd);
+      const newPos = spanStart + displayValue.length;
+      editor.focus();
+      editor.setSelectionRange(newPos, newPos);
+      recordHistory();
+      markActiveTabModified();
+      updatePreview();
+    }
+
+    preview.addEventListener('click', (e) => {
+      const formulaCell = e.target.closest('td.cell-formula-cell, th.cell-formula-cell');
+      if (formulaCell) {
+        e.preventDefault();
+        toggleFormulaCellOverlay(formulaCell);
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!activeFormulaCellOverlayTd) return;
+      const editBtn = document.getElementById('formulaEditOverlayBtn');
+      const freezeBtn = document.getElementById('formulaFreezeOverlayBtn');
+      if (e.target.closest('td.cell-formula-cell, th.cell-formula-cell') ||
+          editBtn.contains(e.target) || freezeBtn.contains(e.target)) return;
+      hideFormulaCellOverlay();
     });
 
     // Drives Excalidraw's own "Bild exportieren" dialog to get a PNG (with the full editable
@@ -15386,6 +16551,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         imgEl.src = dataUrl;
         imgEl.style.filter = 'none';
         renderImageEditEffectsGrid();
+        // In case a previous session was left mid-crop (cancelled via Escape/✕/backdrop rather
+        // than its own "Abbrechen" button, which are the only paths that don't already reset
+        // this) -- every fresh open should start on the normal (sliders/effects) view.
+        document.getElementById('imageEditCropView').style.display = 'none';
+        document.getElementById('imageEditNormalView').style.display = '';
         document.getElementById('imageEditModal').classList.add('active');
       });
     }
@@ -15416,6 +16586,154 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       imageEditState = null;
       resolve(result);
     }
+
+    // --- Cropping within the image editor ---
+    //
+    // A separate, adapted copy of the camera-capture crop UI/math (setupCropInteractions() and
+    // friends above -- same CROP_MIN_SIZE and clamp() helper, reused as-is) rather than
+    // generalizing the existing camera flow to serve both: the two contexts differ in where the
+    // source image and the result each live (a captured canvas / finishCameraCapture() there vs.
+    // imageEditState.workingDataUrl here), and parameterizing the already-working camera code felt
+    // like a bigger regression risk for this one extra step than a small, isolated duplicate.
+    let imageEditCropDrag = null;
+
+    function startImageEditCrop() {
+      if (!imageEditState) return;
+      bakeImageEditSliders(); // fold in any pending brightness/contrast/saturation first, same as clicking an effect does
+      const cropImg = document.getElementById('imgEditCropImage');
+      cropImg.onload = () => { initImageEditCropBoxToFull(); cropImg.onload = null; };
+      cropImg.src = imageEditState.workingDataUrl;
+      document.getElementById('imageEditNormalView').style.display = 'none';
+      document.getElementById('imageEditCropView').style.display = '';
+    }
+
+    function cancelImageEditCrop() {
+      document.getElementById('imageEditCropView').style.display = 'none';
+      document.getElementById('imageEditNormalView').style.display = '';
+    }
+
+    // Crop box defaults to the full image, same reasoning as the camera flow's own
+    // initCropBoxToFullImage(): if the user never touches it, applying "crops" to the whole
+    // frame, i.e. behaves exactly like skipping the step entirely.
+    function initImageEditCropBoxToFull() {
+      const box = document.getElementById('imgEditCropBox');
+      box.style.left = '0px';
+      box.style.top = '0px';
+      box.style.width = '100%';
+      box.style.height = '100%';
+    }
+
+    function setupImageEditCropInteractions() {
+      const box = document.getElementById('imgEditCropBox');
+      box.addEventListener('pointerdown', (e) => {
+        if (e.target.classList.contains('crop-handle')) return;
+        startImageEditCropDrag(e, 'move');
+      });
+      box.querySelectorAll('.crop-handle').forEach(handle => {
+        handle.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          startImageEditCropDrag(e, handle.dataset.handle);
+        });
+      });
+    }
+
+    function startImageEditCropDrag(e, mode) {
+      e.preventDefault();
+      const wrapper = document.getElementById('imgEditCropWrapper');
+      const box = document.getElementById('imgEditCropBox');
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      imageEditCropDrag = {
+        mode,
+        startX: e.clientX,
+        startY: e.clientY,
+        wrapperW: wrapperRect.width,
+        wrapperH: wrapperRect.height,
+        boxLeft: boxRect.left - wrapperRect.left,
+        boxTop: boxRect.top - wrapperRect.top,
+        boxW: boxRect.width,
+        boxH: boxRect.height
+      };
+      box.setPointerCapture(e.pointerId);
+      document.addEventListener('pointermove', onImageEditCropDragMove);
+      document.addEventListener('pointerup', onImageEditCropDragEnd);
+      document.addEventListener('pointercancel', onImageEditCropDragEnd);
+    }
+
+    function onImageEditCropDragMove(e) {
+      if (!imageEditCropDrag) return;
+      const dx = e.clientX - imageEditCropDrag.startX;
+      const dy = e.clientY - imageEditCropDrag.startY;
+      const { wrapperW, wrapperH, mode } = imageEditCropDrag;
+      let { boxLeft: left, boxTop: top, boxW: w, boxH: h } = imageEditCropDrag;
+
+      if (mode === 'move') {
+        left = clamp(left + dx, 0, wrapperW - w);
+        top = clamp(top + dy, 0, wrapperH - h);
+      } else {
+        if (mode.includes('w')) {
+          const newLeft = clamp(left + dx, 0, left + w - CROP_MIN_SIZE);
+          w = w + (left - newLeft);
+          left = newLeft;
+        }
+        if (mode.includes('e')) {
+          w = clamp(w + dx, CROP_MIN_SIZE, wrapperW - left);
+        }
+        if (mode.includes('n')) {
+          const newTop = clamp(top + dy, 0, top + h - CROP_MIN_SIZE);
+          h = h + (top - newTop);
+          top = newTop;
+        }
+        if (mode.includes('s')) {
+          h = clamp(h + dy, CROP_MIN_SIZE, wrapperH - top);
+        }
+      }
+
+      const box = document.getElementById('imgEditCropBox');
+      box.style.left = left + 'px';
+      box.style.top = top + 'px';
+      box.style.width = w + 'px';
+      box.style.height = h + 'px';
+    }
+
+    function onImageEditCropDragEnd() {
+      imageEditCropDrag = null;
+      document.removeEventListener('pointermove', onImageEditCropDragMove);
+      document.removeEventListener('pointerup', onImageEditCropDragEnd);
+      document.removeEventListener('pointercancel', onImageEditCropDragEnd);
+    }
+
+    // Maps the on-screen crop box (CSS pixels, relative to the *displayed* <img>) back onto the
+    // image's own real pixel grid via naturalWidth/naturalHeight -- same "stays sharp regardless
+    // of how small the modal displays it" reasoning as the camera flow's own applyCrop(), just
+    // reading dimensions straight from the <img> element instead of a separately-tracked source
+    // canvas (the two are numerically identical here: nothing between encoding and display
+    // changes pixel dimensions, only JPEG re-encodes the pixel values).
+    function applyImageEditCrop() {
+      if (!imageEditState) return;
+      const img = document.getElementById('imgEditCropImage');
+      const box = document.getElementById('imgEditCropBox');
+      const imgRect = img.getBoundingClientRect();
+      const boxRect = box.getBoundingClientRect();
+      const scaleX = img.naturalWidth / imgRect.width;
+      const scaleY = img.naturalHeight / imgRect.height;
+
+      const sx = Math.round((boxRect.left - imgRect.left) * scaleX);
+      const sy = Math.round((boxRect.top - imgRect.top) * scaleY);
+      const sw = Math.round(boxRect.width * scaleX);
+      const sh = Math.round(boxRect.height * scaleY);
+
+      const cropCanvas = document.createElement('canvas');
+      cropCanvas.width = sw;
+      cropCanvas.height = sh;
+      cropCanvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+      imageEditState.workingDataUrl = cropCanvas.toDataURL('image/jpeg', 0.92);
+      document.getElementById('imageEditPreview').src = imageEditState.workingDataUrl;
+      cancelImageEditCrop();
+    }
+
+    setupImageEditCropInteractions();
 
     // Entry point for the preview's own 🎨-button on an already-inserted photo (see
     // hljsRenderer.image()/the delegated preview click listener) -- edits tab.assets[assetId] in
