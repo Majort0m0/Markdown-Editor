@@ -3675,6 +3675,18 @@ return rgba;});});}).call(this);
       color: #fff;
     }
 
+    /* Without this, hovering a selected cell mixed the *plain* hover rule's background (higher
+       specificity than .cell-selected's own, since an attribute selector + :hover both count as
+       class-level) with .cell-selected's still-applying white text color — a light-gray-background/
+       white-text combination that's effectively unreadable. Same specificity as the plain hover
+       rule (tied 1:1 on class-level selectors), so source order — this comes after — is what
+       actually wins it; keep this block below both of the rules above. */
+    .markdown-body table td.cell-selected:hover,
+    .markdown-body table th.cell-selected:hover {
+      background-color: var(--accent);
+      color: #fff;
+    }
+
     /* Live formula cells (table SUM/+-*÷ feature) — the orange border is the one visual constant
        across every state (idle, hovered, mid-edit); the two overlay buttons that appear on click
        are built/positioned by JS (updateFormulaCellOverlay()), not CSS, since they need to track
@@ -11536,45 +11548,58 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return total;
     }
 
+    // localStorage (holds md_studio_state -- tab text/metadata, see saveStateToLocalStorage())
+    // has its own small, fixed per-origin cap (commonly 5-10MB depending on browser) that's
+    // entirely separate from -- and typically orders of magnitude smaller than -- the *combined*
+    // IndexedDB+localStorage quota navigator.storage.estimate() reports (a Chromium origin's
+    // Storage API quota is commonly a large fraction of free disk space, easily gigabytes).
+    const LOCAL_STORAGE_ASSUMED_QUOTA = 5 * 1024 * 1024; // conservative; see comment below
+
     // Shows used/total storage as a percent bar in the footer, after the word/char stats.
-    // Prefers navigator.storage.estimate(), which reports usage+quota across *all* of this
-    // origin's storage (localStorage AND IndexedDB together) against the browser's real quota --
-    // the meaningful number now that assets live in IndexedDB (see the "ASSET STORAGE" comment
-    // above), not just the small localStorage remainder. Falls back to a conservative, clearly-
-    // marked (~) estimate against localStorage's own content alone when the API isn't available
-    // (not verifiable under every context this app runs in, e.g. some file:// setups) -- no exact
-    // quota to compare against there, so this is deliberately labeled as approximate rather than
-    // presented with the same confidence as a real API-reported number.
+    // Originally measured only navigator.storage.estimate()'s combined figure, on the reasoning
+    // that image/PDF/audio assets living in IndexedDB (see the "ASSET STORAGE" comment above) made
+    // it "the meaningful number now." That reasoning missed that localStorage's own cap is what
+    // actually produces the "Speicherplatz voll" tab warning in practice (see
+    // saveStateToLocalStorage()'s own catch block, LOCAL_STORAGE_ISSUE_TEXT) -- and since that cap
+    // is tiny next to IndexedDB's much larger allowance, localStorage could be *completely full*
+    // and still round to 0% of the combined quota, which is exactly what got reported: the warning
+    // triangle firing while this bar stayed at 0%. Fixed by computing both localStorage's own
+    // percentage (against LOCAL_STORAGE_ASSUMED_QUOTA, since there's no API to ask its *exact*
+    // cap) and the combined Storage API percentage, and showing whichever is actually closer to
+    // its own limit -- either kind of storage pressure now visibly shows up, not just whichever
+    // one this happened to measure.
     async function updateStorageIndicator() {
       const el = document.getElementById('storageIndicator');
       if (!el) return;
       const fillEl = el.querySelector('.footer-storage-bar-fill');
       const textEl = el.querySelector('.footer-storage-text');
 
-      let usage = null;
-      let quota = null;
-      let approximate = false;
+      const raw = localStorage.getItem('md_studio_state') || '';
+      const localStorageUsage = new Blob([raw]).size;
+      const localStoragePct = Math.min(100, Math.round((localStorageUsage / LOCAL_STORAGE_ASSUMED_QUOTA) * 100));
 
+      let combinedUsage = null, combinedQuota = null, combinedPct = 0;
       if (navigator.storage && navigator.storage.estimate) {
         try {
           const est = await navigator.storage.estimate();
           if (typeof est.usage === 'number' && typeof est.quota === 'number' && est.quota > 0) {
-            usage = est.usage;
-            quota = est.quota;
+            combinedUsage = est.usage;
+            combinedQuota = est.quota;
+            combinedPct = Math.min(100, Math.round((combinedUsage / combinedQuota) * 100));
           }
         } catch (err) {
           console.warn('navigator.storage.estimate() fehlgeschlagen:', err);
         }
       }
 
-      if (usage === null) {
-        approximate = true;
-        const raw = localStorage.getItem('md_studio_state') || '';
-        usage = new Blob([raw]).size;
-        quota = 5 * 1024 * 1024; // conservative assumed localStorage-only quota, see comment above
-      }
+      // Prefer whichever mechanism is closer to its own limit -- a tie (e.g. both still at 0%)
+      // falls to the combined, non-approximate figure when it's actually known.
+      const useLocalStorageMetric = localStoragePct > combinedPct || combinedUsage === null;
+      const pct = useLocalStorageMetric ? localStoragePct : combinedPct;
+      const usage = useLocalStorageMetric ? localStorageUsage : combinedUsage;
+      const quota = useLocalStorageMetric ? LOCAL_STORAGE_ASSUMED_QUOTA : combinedQuota;
+      const approximate = useLocalStorageMetric; // localStorage's *exact* cap isn't queryable, so this branch is always a conservative guess
 
-      const pct = quota > 0 ? Math.min(100, Math.round((usage / quota) * 100)) : 0;
       fillEl.style.width = pct + '%';
       fillEl.classList.toggle('warn', pct >= 70 && pct < 90);
       fillEl.classList.toggle('critical', pct >= 90);
@@ -11582,7 +11607,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const openTabsSize = await computeOpenTabsDataSize();
       textEl.textContent = (approximate ? '~' : '') + pct + '% · ' + formatBytes(openTabsSize);
       el.title = (approximate
-        ? 'Geschätzter Speicherplatz (' + formatBytes(usage) + ' von ~' + formatBytes(quota) + ') -- genaue Browser-Speicherquote hier nicht ermittelbar.\n'
+        ? 'Geschätzter Text-/Metadaten-Speicher (' + formatBytes(usage) + ' von ~' + formatBytes(quota) + ') -- genaue Browser-Speicherquote hier nicht ermittelbar.\n'
         : 'Belegter Speicherplatz (localStorage + IndexedDB): ' + formatBytes(usage) + ' von ' + formatBytes(quota) + '\n')
         + formatBytes(openTabsSize) + ' in ' + tabs.length + ' offenen Tab' + (tabs.length === 1 ? '' : 's') + '.';
     }
@@ -11651,8 +11676,41 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return { start, end, lineStart, lineEnd, text };
     }
 
+    // Same "whole selected cells, not just editor-cursor text" reasoning as
+    // applyColorFormatToCellSelection() above — bold/italic/strike toggle each selected cell's
+    // entire raw text. Deliberately doesn't cover 'code', which stays cursor-selection-only (not
+    // part of what was asked for, and there's no natural "whole cell as inline code" precedent the
+    // way there is for the other three plus the two colors). Markdown-only for the same
+    // CSV-renders-escaped reason as the color case.
+    function toggleInlineWrapForCellText(text, type) {
+      const trimmed = text.trim();
+      let inner = trimmed, current = null;
+      if (/^\*\*([\s\S]*)\*\*$/.test(trimmed)) { current = 'bold'; inner = trimmed.slice(2, -2); }
+      else if (/^\*([\s\S]*)\*$/.test(trimmed) && !trimmed.startsWith('**')) { current = 'italic'; inner = trimmed.slice(1, -1); }
+      else if (/^~~([\s\S]*)~~$/.test(trimmed)) { current = 'strike'; inner = trimmed.slice(2, -2); }
+
+      if (current === type) return inner;
+      if (type === 'bold') return '**' + inner + '**';
+      if (type === 'italic') return '*' + inner + '*';
+      if (type === 'strike') return '~~' + inner + '~~';
+      return trimmed;
+    }
+
+    function applyInlineFormatToCellSelection(type) {
+      if (isCsvTab()) return;
+      const ranges = excludeFormulaCellRanges(getSelectedCellRanges());
+      if (!ranges || ranges.length === 0) return;
+      applyEditsToCellRanges(ranges, (current) => toggleInlineWrapForCellText(current, type));
+    }
+
     function applyInlineFormat(type) {
       if (editor.disabled) return;
+
+      if (cellSelection && (type === 'bold' || type === 'italic' || type === 'strike')) {
+        applyInlineFormatToCellSelection(type);
+        return;
+      }
+
       let start = editor.selectionStart;
       let end = editor.selectionEnd;
       let text = editor.value;
@@ -11707,11 +11765,25 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (currentFormat === type) {
         replacement = innerText;
       } else {
-        let targetText = innerText;
-        if (type === 'bold') replacement = '**' + targetText + '**';
-        else if (type === 'italic') replacement = '*' + targetText + '*';
-        else if (type === 'strike') replacement = '~~' + targetText + '~~';
-        else if (type === 'code') replacement = '`' + targetText + '`';
+        // CommonMark only opens/closes emphasis on a delimiter run that isn't immediately
+        // followed/preceded by whitespace — "** Lego **" (space right inside the **) is
+        // therefore literal text, not bold, no matter what renders it (this app's marked
+        // included). Selecting a word together with some incidental leading/trailing
+        // whitespace (an easy, common accident when double-clicking/dragging) used to silently
+        // produce exactly that non-rendering shape. Trimming the whitespace out of what gets
+        // wrapped — and keeping it outside the delimiters instead of just dropping it — fixes
+        // this without deviating from the spec: " Lego " becomes " **Lego** ", not "**Lego**"
+        // (which would eat the spacing) or "** Lego **" (which wouldn't render at all).
+        const leadingWs = innerText.match(/^\s*/)[0];
+        const coreAndTrailing = innerText.slice(leadingWs.length);
+        const trailingWs = coreAndTrailing.match(/\s*$/)[0];
+        const targetText = trailingWs ? coreAndTrailing.slice(0, -trailingWs.length) : coreAndTrailing;
+        let wrapped = '';
+        if (type === 'bold') wrapped = '**' + targetText + '**';
+        else if (type === 'italic') wrapped = '*' + targetText + '*';
+        else if (type === 'strike') wrapped = '~~' + targetText + '~~';
+        else if (type === 'code') wrapped = '`' + targetText + '`';
+        replacement = leadingWs + wrapped + trailingWs;
       }
 
       const newText = text.substring(0, start) + replacement + text.substring(end);
@@ -11922,12 +11994,43 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       commitTableEdit(lines, newCursorOffset);
     }
 
+    // Text/background color on an active preview cell-range selection (cellSelection — click/drag
+    // multiple cells) applies to every selected cell's *entire* raw text at once, not just
+    // whatever's under the editor cursor — there's no "partial text within a cell" concept once
+    // whole cells are selected by dragging in the preview, so both colors behave like the
+    // single-cell background-color case always has (whole-cell), unlike text color's normal
+    // wrap-just-the-selection behavior for a plain in-editor selection. Markdown-only, same
+    // reasoning as getCurrentTableCellInfo() below: a CSV cell renders its raw text escaped, so a
+    // <span> written into one would just show up as literal text rather than ever being styled.
+    function applyColorFormatToCellSelection(kind, color) {
+      if (isCsvTab()) return;
+      const ranges = excludeFormulaCellRanges(getSelectedCellRanges());
+      if (!ranges || ranges.length === 0) return;
+      const prop = kind === 'text' ? 'color' : 'background-color';
+      const spanRe = new RegExp('^<span style="' + prop + ':\\s*([^"]+)">([\\s\\S]*)</span>$');
+      applyEditsToCellRanges(ranges, (current) => {
+        const trimmed = current.trim();
+        const m = trimmed.match(spanRe);
+        const innerText = m ? m[2] : trimmed;
+        const existingColor = m ? m[1] : null;
+        if (color === null || (existingColor && existingColor.toLowerCase() === color.toLowerCase())) {
+          return innerText;
+        }
+        return '<span style="' + prop + ':' + color + '">' + innerText + '</span>';
+      });
+    }
+
     // kind: 'text' | 'bg'. color: a CSS color string to apply, or null to strip whatever color
     // formatting is already present. Mirrors applyInlineFormat()'s own "detect current type →
     // strip → reapply" toggle pattern (see the Formatting toolbar section of the project docs):
     // re-picking the exact color already applied removes it instead of nesting a second span.
     function applyColorFormat(kind, color) {
       if (editor.disabled) return;
+
+      if (cellSelection) {
+        applyColorFormatToCellSelection(kind, color);
+        return;
+      }
 
       if (kind === 'bg') {
         const cellInfo = getCurrentTableCellInfo();
@@ -12265,12 +12368,37 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     const FORMULA_CURRENCY_SYMBOLS = ['€', '$', '£'];
 
+    // Peels off one layer of a recognized inline wrapper (bold/italic/strike/code/a color span) —
+    // repeatedly, so a cell with more than one applied (e.g. a bolded *and* colored price) still
+    // resolves. Without this, formatting a plain data cell for visual emphasis (bold a price,
+    // color-highlight a total, ...) would silently break any *other* formula elsewhere that sums
+    // it — reported directly: a bolded "1" cell stopped counting as a number for a neighboring
+    // formula the moment applyInlineFormatToCellSelection() wrapped it in "**1**", since that's no
+    // longer a bare digit string. This is purely about *reading* a cell's numeric value for
+    // calculation — the raw source itself is untouched, formatting stays exactly as applied.
+    function stripInlineMarkdownWrapper(s) {
+      let changed = true;
+      while (changed) {
+        changed = false;
+        let m;
+        if ((m = s.match(/^\*\*([\s\S]*)\*\*$/))) { s = m[1]; changed = true; }
+        else if ((m = s.match(/^\*([\s\S]*)\*$/)) && !s.startsWith('**')) { s = m[1]; changed = true; }
+        else if ((m = s.match(/^~~([\s\S]*)~~$/))) { s = m[1]; changed = true; }
+        else if ((m = s.match(/^`([\s\S]*)`$/))) { s = m[1]; changed = true; }
+        else if ((m = s.match(/^<span[^>]*>([\s\S]*)<\/span>$/))) { s = m[1]; changed = true; }
+        if (changed) s = s.trim();
+      }
+      return s;
+    }
+
     // A comma is only ever treated as a decimal separator (German "5,5" -> 5.5) -- a '.' is left
     // exactly as JS's own Number() would parse it (a decimal point), since '.' as a thousands
     // separator is indistinguishable from '.' as a US decimal point without knowing which
     // convention the user intended, and guessing wrong would silently corrupt a real calculation.
     function parseNumericTableCell(rawText) {
       let s = String(rawText == null ? '' : rawText).trim();
+      if (!s) return { value: null, currency: null };
+      s = stripInlineMarkdownWrapper(s);
       if (!s) return { value: null, currency: null };
       let currency = null;
       for (const sym of FORMULA_CURRENCY_SYMBOLS) {
@@ -15794,6 +15922,105 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return grid;
     }
 
+    // Raw-source [start, end) ranges for every cell inside the current cellSelection rectangle —
+    // buildGridFromCellSelection()'s own role, but positions instead of rendered textContent, so
+    // callers can actually *edit* the selected cells rather than just read them. Dispatches on
+    // isCsvTab() the same way the single-cell table-edit primitives elsewhere do: CSV has one flat
+    // parseCsvWithPositions() pass over the whole document (no separator row, no per-table lookup
+    // needed since a CSV tab only ever has the one table); markdown locates its table's own block
+    // via the same "Nth DOM <table> = Nth findAllMarkdownTableBlocks() block" correspondence
+    // commitFormulaFill() already relies on.
+    function getSelectedCellRanges() {
+      if (!cellSelection) return null;
+      const { table, anchorRow, anchorCol, focusRow, focusCol } = cellSelection;
+      const minRow = Math.min(anchorRow, focusRow), maxRow = Math.max(anchorRow, focusRow);
+      const minCol = Math.min(anchorCol, focusCol), maxCol = Math.max(anchorCol, focusCol);
+      const text = editor.value;
+      const ranges = [];
+
+      if (isCsvTab()) {
+        const delimiter = getCurrentTab().csvDelimiter || ',';
+        const rows = parseCsvWithPositions(text, delimiter);
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            const cell = rows[r] && rows[r][c];
+            if (cell) ranges.push({ start: cell.start, end: cell.end, row: r, col: c });
+          }
+        }
+        return ranges;
+      }
+
+      const domTables = Array.from(preview.querySelectorAll('table'));
+      const tableIndex = domTables.indexOf(table);
+      if (tableIndex === -1) return ranges;
+      const blocks = findAllMarkdownTableBlocks(text);
+      const rows = blocks[tableIndex];
+      if (!rows) return ranges;
+      for (let r = minRow; r <= maxRow; r++) {
+        for (let c = minCol; c <= maxCol; c++) {
+          const range = rows[r] && rows[r][c];
+          if (range) ranges.push({ start: range.start, end: range.end, row: r, col: c });
+        }
+      }
+      return ranges;
+    }
+
+    // Used by the multi-cell bold/italic/strike/color operations to leave live formula cells
+    // alone. A formula cell's raw text is just <span class="cell-formula" data-formula="...">
+    // (empty content — see the TABLE FORMULAS section) — naively wrapping *that* in "**...**" or a
+    // color span breaks resolveFormulasForRender()'s/hljsRenderer.tablecell()'s own
+    // FORMULA_CELL_SPAN_RE match (which requires the span to be the cell's *entire* trimmed
+    // content), so the formula stops being recognized as one at all. The result renders as
+    // "<strong><span data-formula=...></span></strong>" — an empty, unresolved span wrapped in an
+    // equally empty <strong> — which is where "cell content becomes invisible" came from: reported
+    // directly after selecting a formula cell together with plain cells and applying bold/
+    // background color, where the formula cell's value vanished while the others formatted fine.
+    // Skipping formula cells entirely (rather than trying to make formatting nest inside the
+    // formula span some other way) keeps their live-recalculation contract intact; Delete/
+    // Backspace deliberately does *not* use this filter — clearing a formula cell's content
+    // outright is a normal, well-defined action (Excel's Delete key clears a cell's formula too).
+    function excludeFormulaCellRanges(ranges) {
+      if (!ranges || ranges.length === 0) return ranges;
+      const text = editor.value;
+      return ranges.filter(r => !FORMULA_CELL_SPAN_RE.test(text.substring(r.start, r.end).trim()));
+    }
+
+    // Applies transformFn(currentCellText, range) to every range and writes all the results back
+    // in one go — same "collect edits, sort back-to-front, splice all at once" pattern
+    // resolveFormulasForRender()/commitFormulaFill() already use, needed here for the same reason:
+    // editing ranges left-to-right one at a time would invalidate every later range's own [start,
+    // end) offsets the moment an earlier edit changes the text's length.
+    function applyEditsToCellRanges(ranges, transformFn) {
+      if (!ranges || ranges.length === 0) return false;
+      const text = editor.value;
+      const edits = ranges.map(r => ({
+        start: r.start,
+        end: r.end,
+        replacement: transformFn(text.substring(r.start, r.end), r)
+      }));
+      edits.sort((a, b) => b.start - a.start);
+      let newText = text;
+      for (const edit of edits) {
+        newText = newText.substring(0, edit.start) + edit.replacement + newText.substring(edit.end);
+      }
+      editor.value = newText;
+      // Every other formatting entry point (insertFormatting()/applyInlineFormat()'s cursor-based
+      // path, applyColorToTableCell(), commitTableEdit()'s row/column operations, ...) ends by
+      // refocusing the editor — this one didn't, so document.activeElement was left on whatever a
+      // multi-cell operation's caller happened to be (the toolbar button just clicked, or
+      // document.body after the preview drag-selection's own editor.blur()). Reported as global
+      // keyboard shortcuts — Cmd/Strg+Z specifically — going dead right after using one of these
+      // multi-cell operations: with nothing genuinely text-editable focused, some browsers route a
+      // plain Ctrl/Cmd+Z to their own native "Undo" menu handling *before* it ever reaches this
+      // page's own keydown listener, instead of the no-op-if-nothing's-focused behavior Chrome
+      // happens to have. Refocusing here brings this in line with every other edit path in the app.
+      editor.focus();
+      recordHistory();
+      markActiveTabModified();
+      updatePreview();
+      return true;
+    }
+
     // Tabs/newlines inside a copied value would otherwise be misread as extra columns/rows by
     // whatever the TSV gets pasted into — flattened to a single space, same trade-off
     // expandBlankLinesForClipboard elsewhere in this file makes peace with for a different format.
@@ -15851,6 +16078,19 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!grid) return;
       e.preventDefault();
       copyGridToClipboard(grid);
+    });
+
+    // Delete/Backspace on an active preview cell selection clears every selected cell's raw text
+    // (works for both markdown and CSV tables, unlike the formatting shortcuts below — clearing
+    // content needs no HTML span, so CSV's "cells render escaped" limitation doesn't apply here).
+    // Same activeElement guard as the Ctrl/Cmd+C handler above and the same reasoning: a plain
+    // click on a <td> never moves focus off the editor by itself, so this can't misfire while
+    // actually typing/deleting text in the editor itself.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if (!cellSelection || document.activeElement === editor) return;
+      e.preventDefault();
+      applyEditsToCellRanges(getSelectedCellRanges(), () => '');
     });
 
     // --- TABLE FORMULAS: interactive click-to-select UX ---
@@ -16126,6 +16366,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         newText = newText.substring(0, edit.start) + edit.replacement + newText.substring(edit.end);
       }
       editor.value = newText;
+      // Same reasoning as applyEditsToCellRanges()'s own comment: a fill-handle drag never
+      // touches editor focus at all (it's a pure pointer drag over the preview), so without this
+      // document.activeElement is left wherever it was before the drag — refocusing here keeps
+      // keyboard shortcuts (Undo especially) working right after filling a formula down/across.
+      editor.focus();
       recordHistory();
       markActiveTabModified();
       updatePreview();
@@ -17125,6 +17370,22 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return !!(doc.body && doc.body.querySelector(RICH_TEXT_PASTE_SELECTOR));
     }
 
+    // The CSV-tab counterpart of htmlToMarkdown() above, for the opposite paste direction: a
+    // table copied from this app's own preview (copyGridToClipboard()), a spreadsheet app, or a
+    // webpage all put a real <table> on the clipboard's text/html flavor — reads its rows/cells
+    // back out as plain text (cell.textContent, so any rich formatting inside a cell is discarded
+    // rather than carried into CSV, which has no concept of it) rather than routing through
+    // htmlToMarkdown(), which would otherwise deposit literal markdown pipe-table syntax into raw
+    // CSV text. Returns null (not an empty array) when the HTML has no table at all, so the paste
+    // handler can tell "nothing to convert, fall through to a normal text paste" apart from "found
+    // a table with zero rows" (a real, if unusual, possibility for a genuinely empty table).
+    function htmlTableToRows(html) {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const table = doc.body && doc.body.querySelector('table');
+      if (!table) return null;
+      return Array.from(table.rows).map(row => Array.from(row.cells).map(cell => cell.textContent.trim()));
+    }
+
     // --- Embedding externally-linked images from a rich-text paste ---
     //
     // Turndown's own image rule (see the bundled source above) just carries an <img src="..."> straight
@@ -17271,7 +17532,23 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
 
       const html = clipboardData && clipboardData.getData('text/html');
-      if (html && htmlHasRichFormatting(html)) {
+      const pasteTab = getCurrentTab();
+
+      if (pasteTab && pasteTab.fileType === 'csv' && html) {
+        const rows = htmlTableToRows(html);
+        if (rows) {
+          e.preventDefault();
+          const delimiter = pasteTab.csvDelimiter || ',';
+          insertPlainTextAtCursor(rows.map(row => buildCsvRow(row, delimiter)).join('\n'));
+          return;
+        }
+      }
+
+      // The markdown-conversion path below is deliberately skipped for CSV (would otherwise
+      // deposit literal pipe-table/heading/list syntax straight into raw CSV text) — the branch
+      // above already handles the one CSV paste shape that has an unambiguous conversion (a real
+      // table); anything else pasted into a CSV tab falls through to a plain, unconverted paste.
+      if (html && pasteTab && pasteTab.fileType !== 'csv' && htmlHasRichFormatting(html)) {
         let markdown = null;
         try {
           markdown = htmlToMarkdown(html);
@@ -17280,8 +17557,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         }
         if (markdown) {
           e.preventDefault();
-          const tab = getCurrentTab();
-          if (tab) markdown = await embedExternalPasteImages(markdown, tab);
+          markdown = await embedExternalPasteImages(markdown, pasteTab);
           insertPlainTextAtCursor(markdown);
         }
       }
