@@ -6823,6 +6823,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         fileType: t.fileType || 'markdown',
         csvDelimiter: t.csvDelimiter || null,
         theme: t.theme || 'theme-github-light',
+        // Per-tab Quelltext/Vorschau visibility and split-divider position -- see
+        // persistTabViewState()/switchTab() above. Booleans, so `!== undefined` rather than
+        // `||` (a stored `false` must not fall back to the `true` default the way an empty
+        // string safely would for the theme field just above).
+        showEditor: t.showEditor !== undefined ? t.showEditor : true,
+        showPreview: t.showPreview !== undefined ? t.showPreview : true,
+        splitRatio: t.splitRatio !== undefined ? t.splitRatio : 50,
         // Mac app only (see isMacApp()) — deliberately device-local like fileHandle itself (never
         // included in the WebDAV sync payload functions below), since a native filesystem path is
         // meaningless on another device. Persisting it here (unlike fileHandle, which genuinely
@@ -6967,6 +6974,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           fileType: t.fileType || 'markdown',
           csvDelimiter: t.csvDelimiter || null,
           theme: t.theme || 'theme-github-light',
+          // Per-tab pane visibility/split-ratio -- see the matching fields in
+          // saveStateToLocalStorage() above. Defaults cover tabs saved before this existed.
+          showEditor: t.showEditor !== undefined ? t.showEditor : true,
+          showPreview: t.showPreview !== undefined ? t.showPreview : true,
+          splitRatio: t.splitRatio !== undefined ? t.splitRatio : 50,
           // Tabs saved before WebDAV sync existed have no syncId yet; ensureSyncId() below
           // mints one on first use rather than every tab needing a migration pass here.
           syncId: t.syncId || null,
@@ -7121,11 +7133,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // 3-way merge (see attemptWebdavSync()), never to reconstruct content from. tabToSyncPayload()
     // below is the one that carries the real bytes to the server, deliberately unfingerprinted.
     function tabSyncSnapshot(tab) {
-      return JSON.stringify({ name: tab.name, content: tab.content, assets: sortedFingerprint(getAssetFingerprint(tab)), drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, pdfDrawingAssetIds: tab.pdfDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light' });
+      return JSON.stringify({ name: tab.name, content: tab.content, assets: sortedFingerprint(getAssetFingerprint(tab)), drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, pdfDrawingAssetIds: tab.pdfDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light', showEditor: tab.showEditor !== undefined ? tab.showEditor : true, showPreview: tab.showPreview !== undefined ? tab.showPreview : true, splitRatio: tab.splitRatio !== undefined ? tab.splitRatio : 50 });
     }
 
     function remoteTabSnapshot(rt) {
-      return JSON.stringify({ name: rt.name, content: rt.content, assets: fingerprintAssets(rt.assets), drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, pdfDrawingAssetIds: rt.pdfDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light' });
+      return JSON.stringify({ name: rt.name, content: rt.content, assets: fingerprintAssets(rt.assets), drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, pdfDrawingAssetIds: rt.pdfDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light', showEditor: rt.showEditor !== undefined ? rt.showEditor : true, showPreview: rt.showPreview !== undefined ? rt.showPreview : true, splitRatio: rt.splitRatio !== undefined ? rt.splitRatio : 50 });
     }
 
     function tabToSyncPayload(t) {
@@ -7141,7 +7153,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         audioAssetIds: t.audioAssetIds || {},
         fileType: t.fileType || 'markdown',
         csvDelimiter: t.csvDelimiter || null,
-        theme: t.theme || 'theme-github-light'
+        theme: t.theme || 'theme-github-light',
+        // Quelltext/Vorschau visibility and the split-divider position travel with the
+        // document across devices, same reasoning as theme just above -- see
+        // persistTabViewState() and switchTab()'s per-tab restore.
+        showEditor: t.showEditor !== undefined ? t.showEditor : true,
+        showPreview: t.showPreview !== undefined ? t.showPreview : true,
+        splitRatio: t.splitRatio !== undefined ? t.splitRatio : 50
       };
     }
 
@@ -7181,6 +7199,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       t.fileType = rt.fileType || 'markdown';
       t.csvDelimiter = rt.csvDelimiter || null;
       t.theme = rt.theme || 'theme-github-light';
+      t.showEditor = rt.showEditor !== undefined ? rt.showEditor : true;
+      t.showPreview = rt.showPreview !== undefined ? rt.showPreview : true;
+      t.splitRatio = rt.splitRatio !== undefined ? rt.splitRatio : 50;
       t.isModified = false;
       t.history = [t.content];
       t.historyIndex = 0;
@@ -7229,6 +7250,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         fileType: remoteTabData.fileType || 'markdown',
         csvDelimiter: remoteTabData.csvDelimiter || null,
         theme: remoteTabData.theme || 'theme-github-light',
+        showEditor: remoteTabData.showEditor !== undefined ? remoteTabData.showEditor : true,
+        showPreview: remoteTabData.showPreview !== undefined ? remoteTabData.showPreview : true,
+        splitRatio: remoteTabData.splitRatio !== undefined ? remoteTabData.splitRatio : 50,
         syncId: nameSuffix ? null : remoteTabData.syncId,
         lastSyncedSnapshot: nameSuffix ? null : remoteTabSnapshot(remoteTabData),
         _assetsHydrated: true, // already fully in memory from remoteTabData.assets above
@@ -7547,6 +7571,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           const tabTheme = current.theme || 'theme-github-light';
           themeSelector.value = tabTheme;
           applyTheme(tabTheme);
+        }
+        // Same reasoning as the theme reapply just above, for the just-synced tab's own
+        // pane-visibility/split-ratio -- see persistTabViewState() and switchTab()'s matching
+        // per-tab restore. Canvas tabs are excluded the same way switchTab() excludes them.
+        if (current && !simpleMode && current.fileType !== 'canvas') {
+          const tabShowEditor = current.showEditor !== undefined ? current.showEditor : true;
+          const tabShowPreview = current.showPreview !== undefined ? current.showPreview : true;
+          const tabSplitRatio = current.splitRatio !== undefined ? current.splitRatio : 50;
+          if (showEditor !== tabShowEditor || showPreview !== tabShowPreview || splitRatio !== tabSplitRatio) {
+            showEditor = tabShowEditor;
+            showPreview = tabShowPreview;
+            splitRatio = tabSplitRatio;
+            applyPaneVisibility();
+            applySplitRatio();
+          }
         }
         renderTabs();
 
@@ -8060,11 +8099,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         lastSyncedSnapshot: null,
         fileType: fileType,
         csvDelimiter: fileType === 'csv' ? detectCsvDelimiter(tabContent) : null,
-        // Inherits whatever tab was active when this one was created (getCurrentTab() here is
-        // still the *old* active tab -- switchTab(tabId) below hasn't run yet), not the
-        // possibly Simple-Modus-forced currentTheme, so a new tab never picks up 'theme-clean'
-        // just because it happened to be created while Simple Modus was on.
-        theme: (getCurrentTab() && getCurrentTab().theme) || currentTheme,
+        // A brand-new note always starts at the fixed 50/50 split with both panes visible, in
+        // the GitHub Light theme -- a fixed baseline per how this was specified ("eine neue
+        // Notiz soll immer in 50/50 mit dem Design Github Light öffnen"), deliberately not
+        // inherited from whatever tab happened to be active when it was created (unlike, say,
+        // a duplicated/synced-in tab, which does keep its own saved values -- see
+        // addRemoteTabAsNewLocalTab()/applyRemoteTabToLocal()).
+        theme: 'theme-github-light',
+        showEditor: true,
+        showPreview: true,
+        splitRatio: 50,
         // A brand-new tab's assets (empty, or already extracted from a pasted/opened document
         // with inline images -- see extractInlineImagesToAssets() above) are already fully in
         // memory, so there's nothing for switchTab()'s lazy hydration to fetch.
@@ -8174,6 +8218,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           const tabTheme = targetTab.theme || 'theme-github-light';
           themeSelector.value = tabTheme;
           applyTheme(tabTheme);
+        }
+        // Quelltext/Vorschau visibility and the split-divider position are per-tab, same
+        // theme-restore pattern just above -- and the same exclusions: Simple Modus overrides
+        // both with its own fixed preset regardless of tab (see enterSimpleMode()), and a
+        // canvas tab's showEditor/showPreview deliberately stay whatever some other tab last
+        // left them at (see isCanvasWithoutOpenBox()'s own comment) rather than being restored
+        // from the canvas tab's own fields, which only exist here as inheritance leftovers.
+        if (!simpleMode && targetTab.fileType !== 'canvas') {
+          showEditor = targetTab.showEditor !== undefined ? targetTab.showEditor : true;
+          showPreview = targetTab.showPreview !== undefined ? targetTab.showPreview : true;
+          splitRatio = targetTab.splitRatio !== undefined ? targetTab.splitRatio : 50;
+          applySplitRatio();
         }
         updatePreview();
         applyPaneVisibility(); // toggleEditBtn/togglePreviewBtn must not read "active" for a
@@ -9780,6 +9836,25 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // --- TOGGLE EDIT / PREVIEW VIEW & THEMES ---
 
+    // Mirrors changeTheme()'s per-tab persistence: Quelltext/Vorschau visibility and the
+    // split-divider position are saved individually per document (and travel via WebDAV sync,
+    // see tabToSyncPayload()/applyRemoteTabToLocal() etc.) the same way tab.theme already does.
+    // Called from every non-Simple-Modus mutation site (toggleEditor(), togglePreview(),
+    // endPaneResize(), the force-show-editor branch in selectAltTextForImageIndex()) rather than
+    // baked into applyPaneVisibility()/applySplitRatio() themselves, since those two also run
+    // during Simple Modus's own preset and while restoring a just-switched-to tab's saved
+    // values -- neither of those should immediately write back into a tab's stored state.
+    // Uses getActiveTabReal() rather than getCurrentTab(): while a canvas box is open for
+    // editing, getCurrentTab() returns the *box* object, not the real tab, and writing these
+    // fields onto a box would leak into that box's own serialized canvasData JSON.
+    function persistTabViewState() {
+      const tab = getActiveTabReal();
+      if (!tab || simpleMode || tab.fileType === 'canvas') return;
+      tab.showEditor = showEditor;
+      tab.showPreview = showPreview;
+      tab.splitRatio = splitRatio;
+    }
+
     // On a canvas tab, showEditor/showPreview describe whatever the user last had on some other
     // tab (see the CSS this bypasses, main.canvas-tab-active:not(.canvas-editing-box)) — the
     // source/preview split has no meaning until a box is actually open, and only opening one
@@ -9807,6 +9882,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (!showEditor && !showPreview) showPreview = true; // never hide both panes
       }
       applyPaneVisibility();
+      persistTabViewState();
       saveStateToLocalStorage();
     }
 
@@ -9820,6 +9896,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (!showPreview && !showEditor) showEditor = true; // never hide both panes
       }
       applyPaneVisibility();
+      persistTabViewState();
       saveStateToLocalStorage();
     }
 
@@ -10039,6 +10116,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function endPaneResize(e) {
       if (!paneResizer.classList.contains('dragging')) return;
       paneResizer.classList.remove('dragging');
+      persistTabViewState();
       saveStateToLocalStorage();
     }
     paneResizer.addEventListener('pointerup', endPaneResize);
@@ -15734,7 +15812,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (count === index) {
           const altStart = match.index + 2; // past "!["
           const altEnd = altStart + match[1].length;
-          if (!showEditor) { showEditor = true; applyPaneVisibility(); saveStateToLocalStorage(); }
+          if (!showEditor) { showEditor = true; applyPaneVisibility(); persistTabViewState(); saveStateToLocalStorage(); }
           editor.focus();
           editor.setSelectionRange(altStart, altEnd);
           return;

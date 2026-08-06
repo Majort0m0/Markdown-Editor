@@ -296,12 +296,13 @@ Aus jedem Dokument lässt sich mit einem Klick eine Bildschirmpräsentation mach
 
 ### Designs
 
-15 Vorschau-Designs stehen über das Dropdown in der Kopfzeile zur Auswahl: GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (mit farbiger Code-Hervorhebung). Das Design wird **pro Tab** gemerkt, nicht global für die ganze App — jedes Dokument kann also sein eigenes Design haben, und diese Wahl wird bei aktivem WebDAV-Sync mit übertragen.
+15 Vorschau-Designs stehen über das Dropdown in der Kopfzeile zur Auswahl: GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (mit farbiger Code-Hervorhebung). Das Design wird **pro Tab** gemerkt, nicht global für die ganze App — jedes Dokument kann also sein eigenes Design haben, und diese Wahl wird bei aktivem WebDAV-Sync mit übertragen. Eine neue Notiz startet dabei immer im Design „GitHub Light“, unabhängig davon, welches Design in der zuvor aktiven Notiz eingestellt war.
 
 ### Editor/Vorschau und geteilte Ansicht
 
 - Editor bzw. Vorschau lassen sich einzeln ausblenden (zwei Buttons in der Kopfzeile), um mehr Platz für die jeweils andere Seite zu haben.
 - Der Trenner zwischen Editor und Vorschau lässt sich per Maus/Touch frei in beide Richtungen ziehen.
+- Sowohl welche Bereiche gerade sichtbar sind als auch die Position des Trenners werden **pro Notiz** gemerkt (genau wie das Design oben) und bei aktivem WebDAV-Sync mit übertragen — jedes Dokument öffnet also wieder genau in der Ansicht, in der es zuletzt verlassen wurde. Eine neu erstellte Notiz startet dabei immer bei einer 50/50-Aufteilung mit beiden Bereichen sichtbar, unabhängig von der zuvor aktiven Notiz.
 - **Synchrones Scrollen** (Doppelpfeil-Symbol) hält Editor und Vorschau beim Scrollen prozentual aufeinander abgestimmt; lässt sich bei Bedarf abschalten.
 - **Zoom** vergrößert/verkleinert Editor und Vorschau gemeinsam (`Strg`/`Cmd`+`+`/`-`).
 
@@ -330,7 +331,7 @@ Dokumente lassen sich zwischen mehreren Geräten (z. B. Laptop und Tablet) über
 
 Der ☁️-Button färbt sich **hellgrün**, sobald mindestens eine Synchronisierung tatsächlich erfolgreich war und seitdem kein Fehler aufgetreten ist — bei aktivem Intervall zeigt zusätzlich ein dunkelgrüner Ring um den Button an, wie viel Zeit bis zur nächsten automatischen Synchronisierung verbleibt (voller Kreis = Synchronisierung steht unmittelbar bevor). In der Tableiste bekommt jeder erfolgreich synchronisierte, unveränderte Tab einen schmalen grünen Rand.
 
-**Was wird synchronisiert:** Name, Inhalt, eingefügte Bilder/Zeichnungen/Audio und das gewählte Design jedes Dokuments. Rein geräteweite Einstellungen (Splitscreen-Verhältnis, welche Bereiche gerade sichtbar sind, Zoomstufe) werden **nicht** mit übertragen.
+**Was wird synchronisiert:** Name, Inhalt, eingefügte Bilder/Zeichnungen/Audio, das gewählte Design sowie die Editor-/Vorschau-Ansicht (welche Bereiche sichtbar sind und die Position des Trenners) jedes Dokuments. Rein geräteweite Einstellungen (Zoomstufe, Simple Modus) werden **nicht** mit übertragen.
 
 **Bei Konflikten** (dasselbe Dokument wurde auf zwei Geräten unterschiedlich geändert) fragt die App pro betroffenem Dokument nach: „Lokal behalten", „Server-Version" übernehmen oder „Beide behalten" (die Server-Version landet dann als zusätzliche, neue Notiz).
 
