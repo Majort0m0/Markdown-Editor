@@ -3683,6 +3683,36 @@ return rgba;});});}).call(this);
     .markdown-body table th.cell-formula-cell {
       border: 2px solid var(--accent-view);
       cursor: pointer;
+      /* Anchors .formula-fill-handle (an absolutely-positioned child) to this cell's own corner
+         rather than the table's — position:relative on a <td> doesn't affect table layout at all,
+         it only establishes this containing block for the handle. */
+      position: relative;
+    }
+
+    /* Fill handle — bottom-right corner square, drag to copy this formula into adjacent cells with
+       shifted references (see startFormulaFillDrag()). Sits half outside the cell's own border
+       (negative right/bottom) so it reads as sitting *on* the border corner, matching the familiar
+       spreadsheet fill-handle look, rather than floating inside the cell's padding. */
+    .formula-fill-handle {
+      position: absolute;
+      right: -4px;
+      bottom: -4px;
+      width: 8px;
+      height: 8px;
+      background-color: var(--accent-view);
+      border: 1px solid var(--bg-surface);
+      border-radius: 1px;
+      cursor: crosshair;
+      z-index: 5;
+    }
+
+    /* Live preview of which cells a fill-handle drag currently targets — cleared/reapplied on
+       every pointermove via applyFormulaFillDragHighlight(), same pattern as .cell-selected. */
+    .markdown-body table td.formula-fill-target,
+    .markdown-body table th.formula-fill-target {
+      background-color: rgba(249, 115, 22, 0.18);
+      outline: 1px dashed var(--accent-view);
+      outline-offset: -1px;
     }
 
     /* While formula-input mode is active (cursor sits in a cell whose raw text starts with '=' —
@@ -5400,7 +5430,7 @@ return rgba;});});}).call(this);
     </div>
   </div>
 
-  <!-- Table formula overlays — see renderFormulaModeUI()/toggleFormulaCellOverlay() for how these
+  <!-- Table formula overlays — see renderFormulaModeUI()/showFormulaCellOverlay() for how these
        three get shown/positioned; only ever one of the two groups (confirm vs edit+freeze) is
        visible at a time, since they represent mutually exclusive states (typing a new formula vs.
        having clicked an already-committed one). -->
@@ -6070,7 +6100,15 @@ return rgba;});});}).call(this);
       const formulaMatch = content.match(TABLE_CELL_FORMULA_SPAN_RE);
       if (formulaMatch) {
         const formulaAttr = ' class="cell-formula-cell" data-formula="' + formulaMatch[1] + '"';
-        return '<' + tag + alignAttr + formulaAttr + '>' + formulaMatch[2] + '</' + tag + '>\n';
+        // The fill handle (bottom-right corner square, drag to copy this formula into adjacent
+        // cells with shifted references — see startFormulaFillDrag() further down) is a real
+        // element, not CSS, since precisely hit-testing "the user grabbed this exact corner" needs
+        // a real event target — a ::after pseudo-element can't be one. Suppressed under
+        // suppressDrawingControls (exports/presentation/clipboard copy, same flag hljsRenderer.image
+        // already checks) since none of those have this app's own JS behind them to make it do
+        // anything; a live, empty little square there would just be visual noise.
+        const fillHandle = suppressDrawingControls ? '' : '<span class="formula-fill-handle" title="Ziehen zum Ausfüllen"></span>';
+        return '<' + tag + alignAttr + formulaAttr + '>' + formulaMatch[2] + fillHandle + '</' + tag + '>\n';
       }
 
       const bgMatch = content.match(TABLE_CELL_BG_SPAN_RE);
@@ -12276,6 +12314,27 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return formulaColIndexToLetter(col) + (row + 1);
     }
 
+    // Shifts every cell/range reference in a formula by (rowDelta, colDelta) — Excel's own
+    // relative-reference behavior when dragging a fill handle: "A1+A2" dragged one column right
+    // becomes "B1+B2" (rowDelta 0, colDelta +1); dragged one row down becomes "A2+A3" (rowDelta +1,
+    // colDelta 0). Operates as a plain text substitution over the formula string rather than
+    // re-tokenizing through FORMULA_TOKEN_RE/evaluateTableFormula's machinery, since this only ever
+    // needs to touch the ref/range tokens themselves (never literals or operators) and a simple
+    // regex over "letters immediately followed by digits" already can't collide with either of
+    // those (operators are single symbol characters, literals are digits with no leading letters).
+    // A shift that would land a reference at column/row 0 or below (off the top/left of any real
+    // sheet) leaves that one reference untouched rather than producing something like "A1" wrapping
+    // to a negative row — a formula referencing the wrong-but-still-valid original cell is a much
+    // less surprising failure mode than a silently wrong one.
+    function shiftFormulaReferences(formula, rowDelta, colDelta) {
+      return formula.replace(/([A-Za-z]+)(\d+)/g, (match, colLetters, rowDigits) => {
+        const newCol = formulaColLetterToIndex(colLetters) + colDelta;
+        const newRow = parseInt(rowDigits, 10) - 1 + rowDelta;
+        if (newCol < 0 || newRow < 0) return match;
+        return formulaCellRefString(newRow, newCol);
+      });
+    }
+
     // grid: Array<Array<string>> of raw cell text (see buildFormulaGrid below). A lone ref (`A1`)
     // resolves to that cell's own numeric value; a range (`A1:A5`) sums every numeric cell inside
     // the rectangle it spans (Excel's own SUM(range) behavior, without needing a separate SUM()
@@ -15614,6 +15673,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // tagged by renderCsvPreview/attachMarkdownTableCellPositions ever carry data-start, so this
     // is implicitly a no-op everywhere else without needing its own fileType guard.
     preview.addEventListener('pointerdown', (e) => {
+      // Checked before the generic td[data-start] lookup below — the fill handle is a small child
+      // element of its own formula cell, and grabbing it precisely (rather than falling through to
+      // that cell's normal click/cellSelection handling) is the whole point of it existing as a
+      // real element instead of CSS (see hljsRenderer.tablecell()'s own comment on this).
+      if (!editor.disabled) {
+        const fillHandle = e.target.closest('.formula-fill-handle');
+        if (fillHandle) {
+          const anchorTd = fillHandle.closest('td.cell-formula-cell, th.cell-formula-cell');
+          if (anchorTd) { startFormulaFillDrag(e, anchorTd); return; }
+        }
+      }
+
       const cell = e.target.closest('td[data-start], th[data-start]');
       if (!cell || editor.disabled) return;
       e.preventDefault();
@@ -15685,7 +15756,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // any single cell always did before — a follow-up shift+click's own editor.blur() (see
         // above) is what re-establishes "a preview selection is active" for Ctrl/Cmd+C if used.
         const cell = table.rows[anchorRow] && table.rows[anchorRow].cells[anchorCol];
-        if (cell) {
+        if (cell && cell.classList.contains('cell-formula-cell')) {
+          // A formula cell's own click handling (show its edit/freeze overlay) deliberately lives
+          // here rather than in a separate preview 'click' listener keyed off e.target: this
+          // pointerId just had preview.setPointerCapture() called on it a moment ago (below), and
+          // on a fast double-click the *second* click's pointerup/click pair gets retargeted to
+          // the capturing element (`preview` itself) instead of the actual <td> — confirmed
+          // directly by logging every pointerdown/pointerup/click's e.target through one such
+          // gesture. e.target-based detection silently sees the wrong element there; the
+          // anchorRow/anchorCol captured at pointerdown time (above) never has that problem, since
+          // capture can't retarget something that was already read before capture applied. There's
+          // also no meaningful raw text to jump to for a formula cell anyway (its source is just
+          // the empty <span data-formula="...">, not the displayed value), so this replaces the
+          // jump-to-source behavior below rather than running alongside it.
+          showFormulaCellOverlay(cell);
+        } else if (cell) {
           editor.focus();
           editor.setSelectionRange(Number(cell.dataset.start), Number(cell.dataset.end));
         }
@@ -15941,6 +16026,111 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       insertFormulaRefAtCursor(ref);
     }
 
+    // --- Fill handle: drag a formula cell's corner to copy it into adjacent cells, with relative
+    // references shifted to match (Excel's own fill-handle behavior) ---
+
+    let formulaFillDrag = null; // null, or { table, anchorRow, anchorCol, anchorFormula, targetCells: [{row,col}] }
+
+    function startFormulaFillDrag(e, anchorTd) {
+      e.preventDefault();
+      const table = anchorTd.closest('table');
+      formulaFillDrag = {
+        table,
+        anchorRow: anchorTd.parentElement.rowIndex,
+        anchorCol: anchorTd.cellIndex,
+        anchorFormula: anchorTd.dataset.formula,
+        targetCells: []
+      };
+      preview.setPointerCapture(e.pointerId);
+      document.addEventListener('pointermove', onFormulaFillDragMove);
+      document.addEventListener('pointerup', onFormulaFillDragEnd);
+      document.addEventListener('pointercancel', onFormulaFillDragEnd);
+    }
+
+    // Straight-line fill only, like Excel's own handle — whichever axis (row or column) has moved
+    // further from the anchor wins, the other stays pinned at the anchor's own row/column. Diagonal
+    // fills aren't a thing here or in Excel, so there's no ambiguity to resolve beyond that pick.
+    function onFormulaFillDragMove(e) {
+      if (!formulaFillDrag) return;
+      const cell = cellFromPoint(e.clientX, e.clientY);
+      if (!cell || cell.closest('table') !== formulaFillDrag.table) return;
+      const row = cell.parentElement.rowIndex, col = cell.cellIndex;
+      const { anchorRow, anchorCol } = formulaFillDrag;
+      const rowDelta = row - anchorRow, colDelta = col - anchorCol;
+
+      const targetCells = [];
+      if (Math.abs(rowDelta) >= Math.abs(colDelta) && rowDelta !== 0) {
+        const step = rowDelta > 0 ? 1 : -1;
+        for (let r = anchorRow + step; step > 0 ? r <= row : r >= row; r += step) targetCells.push({ row: r, col: anchorCol });
+      } else if (colDelta !== 0) {
+        const step = colDelta > 0 ? 1 : -1;
+        for (let c = anchorCol + step; step > 0 ? c <= col : c >= col; c += step) targetCells.push({ row: anchorRow, col: c });
+      }
+      formulaFillDrag.targetCells = targetCells;
+      applyFormulaFillDragHighlight();
+    }
+
+    function applyFormulaFillDragHighlight() {
+      document.querySelectorAll('.formula-fill-target').forEach(el => el.classList.remove('formula-fill-target'));
+      if (!formulaFillDrag) return;
+      const { table, targetCells } = formulaFillDrag;
+      for (const { row, col } of targetCells) {
+        const r = table.rows[row];
+        const cell = r && r.cells[col];
+        if (cell) cell.classList.add('formula-fill-target');
+      }
+    }
+
+    function onFormulaFillDragEnd() {
+      document.removeEventListener('pointermove', onFormulaFillDragMove);
+      document.removeEventListener('pointerup', onFormulaFillDragEnd);
+      document.removeEventListener('pointercancel', onFormulaFillDragEnd);
+      if (!formulaFillDrag) return;
+      const { table, anchorRow, anchorCol, anchorFormula, targetCells } = formulaFillDrag;
+      document.querySelectorAll('.formula-fill-target').forEach(el => el.classList.remove('formula-fill-target'));
+      formulaFillDrag = null;
+      if (targetCells.length === 0) return; // no real drag happened -- a plain click on the handle does nothing
+      commitFormulaFill(table, anchorRow, anchorCol, anchorFormula, targetCells);
+    }
+
+    // Writes a rowDelta/colDelta-shifted copy of anchorFormula (see shiftFormulaReferences()) into
+    // every target cell's raw source, replacing whatever was there before — same whole-cell-replace
+    // approach as applyColorToTableCell()/commitFormulaEdit(). Locates the table's raw row/cell
+    // ranges by matching `table`'s position among preview's own <table> elements against the same-
+    // index block from findAllMarkdownTableBlocks(), the same "Nth DOM table = Nth raw block"
+    // correspondence attachMarkdownTableCellPositions() already relies on — rather than trying to
+    // re-derive cursor/selection state, since this drag never touched the editor's own selection at
+    // any point (it's driven entirely by pointer position over the *rendered* table).
+    function commitFormulaFill(table, anchorRow, anchorCol, anchorFormula, targetCells) {
+      const text = editor.value;
+      const domTables = Array.from(preview.querySelectorAll('table'));
+      const tableIndex = domTables.indexOf(table);
+      if (tableIndex === -1) return;
+      const blocks = findAllMarkdownTableBlocks(text);
+      const rows = blocks[tableIndex];
+      if (!rows) return;
+
+      const edits = [];
+      for (const { row, col } of targetCells) {
+        const range = rows[row] && rows[row][col];
+        if (!range) continue;
+        const shiftedFormula = shiftFormulaReferences(anchorFormula, row - anchorRow, col - anchorCol);
+        const newSpan = '<span class="cell-formula" data-formula="' + escapeHtmlAttrText(shiftedFormula) + '"></span>';
+        edits.push({ start: range.start, end: range.end, replacement: newSpan });
+      }
+      if (edits.length === 0) return;
+
+      edits.sort((a, b) => b.start - a.start);
+      let newText = text;
+      for (const edit of edits) {
+        newText = newText.substring(0, edit.start) + edit.replacement + newText.substring(edit.end);
+      }
+      editor.value = newText;
+      recordHistory();
+      markActiveTabModified();
+      updatePreview();
+    }
+
     // --- Click on an *existing* (already-committed) live formula cell: edit / freeze overlay ---
 
     let activeFormulaCellOverlayTd = null; // the <td>/<th> currently showing the edit/freeze pair, or null
@@ -15965,11 +16155,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       freezeBtn.style.left = (rect.right - 13) + 'px';
     }
 
-    function toggleFormulaCellOverlay(cellEl) {
-      if (activeFormulaCellOverlayTd === cellEl) {
-        hideFormulaCellOverlay();
-        return;
-      }
+    // Deliberately idempotent, not a toggle — a click on a formula cell always shows/repositions
+    // its overlay, full stop; it never hides on a second click of the *same* cell. An actual toggle
+    // used to fire twice for a single double-click (two 'click' events land on the same target,
+    // same as any other double-click), showing the overlay and immediately hiding it again in the
+    // same gesture — reported as "the buttons never appear", which is exactly what that looks like
+    // from the outside. Closing stays available (outside click, Escape — see below) without needing
+    // a "click again to close" affordance that only worked for single, deliberate clicks.
+    function showFormulaCellOverlay(cellEl) {
       activeFormulaCellOverlayTd = cellEl;
       positionFormulaCellOverlay();
     }
@@ -16032,20 +16225,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       updatePreview();
     }
 
-    preview.addEventListener('click', (e) => {
-      const formulaCell = e.target.closest('td.cell-formula-cell, th.cell-formula-cell');
-      if (formulaCell) {
-        e.preventDefault();
-        toggleFormulaCellOverlay(formulaCell);
-      }
-    });
+    // (Showing a formula cell's edit/freeze overlay on click is handled inside
+    // onCellSelectionEnd() above, not a separate preview 'click' listener here — see its own
+    // comment on why e.target can't be trusted for this specific case.)
 
     document.addEventListener('click', (e) => {
       if (!activeFormulaCellOverlayTd) return;
       const editBtn = document.getElementById('formulaEditOverlayBtn');
       const freezeBtn = document.getElementById('formulaFreezeOverlayBtn');
-      if (e.target.closest('td.cell-formula-cell, th.cell-formula-cell') ||
-          editBtn.contains(e.target) || freezeBtn.contains(e.target)) return;
+      // document.elementFromPoint() rather than e.target — same reasoning as
+      // onCellSelectionEnd()'s own comment: this click's pointerId may have just had
+      // preview.setPointerCapture() called on it again (a second, rapid click on a table cell),
+      // which retargets e.target to the capturing element (`preview` itself) rather than whatever
+      // the pointer is actually over. elementFromPoint() is a real geometric hit-test, unaffected
+      // by capture, so it still correctly reports "yes, this landed back on the formula cell/its
+      // buttons" in exactly the case e.target alone would get wrong.
+      const realTarget = document.elementFromPoint(e.clientX, e.clientY);
+      if (realTarget && (realTarget.closest('td.cell-formula-cell, th.cell-formula-cell') ||
+          editBtn.contains(realTarget) || freezeBtn.contains(realTarget))) return;
       hideFormulaCellOverlay();
     });
 

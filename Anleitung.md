@@ -149,6 +149,8 @@ Die Zielzelle bekommt einen **orangenen Rahmen** und zeigt das berechnete Ergebn
 
 Ein Klick außerhalb der Zelle oder `Esc` schließt die beiden Buttons wieder, ohne etwas zu ändern.
 
+**Formel auf Nachbarzellen ausfüllen (Ausfüllkästchen):** Jede Formelzelle hat unten rechts an ihrem orangenen Rahmen ein kleines Quadrat — genau wie das Ausfüllkästchen in Excel. Daran klicken und waagerecht oder senkrecht in Nachbarzellen ziehen kopiert die Formel dorthin, wobei sich Zeilen- bzw. Spaltenbezüge automatisch an die neue Position anpassen (`A1+A2` wird beim Ziehen um eine Spalte nach rechts zu `B1+B2`, beim Ziehen um eine Zeile nach unten zu `A2+A3`). Praktisch, um z. B. eine Formel für Zeilensummen einmal zu bauen und dann für alle weiteren Zeilen einer Tabelle zu übernehmen, ohne sie jedes Mal neu zusammenzuklicken.
+
 ## 5. Bilder, Fotos, Zeichnungen und Piktogramme einfügen
 
 ### Bilder einfügen
