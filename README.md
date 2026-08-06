@@ -16,7 +16,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **Tab-Reihenfolge per Drag & Drop** ändern — einen Tab in der Tableiste an die gewünschte Stelle ziehen
 - **14 Dokumentvorlagen** über den ✨-Button — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan und eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt)
 - **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
-- **Speichern** in eine lokale Datei (inkl. Speichern unter, mit direktem Dateizugriff sofern der Browser das unterstützt)
+- **Speichern** fragt immer nach einem Speicherort (funktioniert also immer wie „Speichern unter") — mit nativem Ordnerauswahl-Dialog, der standardmäßig im zuletzt für diese Notiz verwendeten Ordner öffnet, sofern der Browser das unterstützt; sonst ein Download mit Hinweis darauf
 
 ### Editor & Formatierung
 - **Formatierungsleiste** — Überschriften (H1–H6), Fett/Kursiv/Durchgestrichen, Listen (Aufzählung/Nummeriert/Aufgaben), Einzug/Ausrücken, Einklappbarer Abschnitt, Zitat, Code, Code-Block, Trennlinie, Link, Bild, Tabelle — Buttons zeigen live an, welche Formatierung am Cursor aktiv ist

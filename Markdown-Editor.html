@@ -6428,8 +6428,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // from switchTab()) instead of it always already being there from the localStorage blob, and
     // writing to IndexedDB instead of relying on the localStorage blob to carry it forward.
     const ASSET_DB_NAME = 'md_studio_assets_db';
-    const ASSET_DB_VERSION = 1;
+    // Bumped to 2 for FILE_HANDLE_STORE below (remembers each document's last save-folder via its
+    // File System Access API handle) — same database as assets, just a second object store, so
+    // there's only ever one IndexedDB connection/upgrade path to reason about.
+    const ASSET_DB_VERSION = 2;
     const ASSET_STORE = 'assets';
+    const FILE_HANDLE_STORE = 'fileHandles';
     let assetDbPromise = null;
 
     function openAssetDb() {
@@ -6445,11 +6449,62 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           if (!store.indexNames.contains('syncId')) {
             store.createIndex('syncId', 'syncId', { unique: false });
           }
+          if (!db.objectStoreNames.contains(FILE_HANDLE_STORE)) {
+            db.createObjectStore(FILE_HANDLE_STORE, { keyPath: 'syncId' });
+          }
         };
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
       return assetDbPromise;
+    }
+
+    // --- REMEMBERED SAVE FOLDER (File System Access API) ---
+    // A FileSystemFileHandle is structured-clone-safe, so IndexedDB can hold it directly (unlike
+    // localStorage, which is why the in-memory tab.fileHandle itself was never persisted at all —
+    // see saveCurrentFile()'s own comment). Keyed by the document's own stable syncId (ensureSyncId(),
+    // already used for WebDAV identity) rather than tab.id, which is only unique within one
+    // device's own tabIdCounter and can be reused across unrelated documents after a localStorage
+    // reset — a wrong-but-harmless startIn suggestion is an acceptable outcome of that, an actual
+    // write to the wrong file never is, so no *write* path here ever keys off tab.id.
+    //
+    // Only ever used to seed showSaveFilePicker()'s `startIn` option (which folder the picker opens
+    // in) — never to bypass the picker and write through the restored handle directly, since
+    // Speichern is now deliberately always "Speichern unter" (see saveCurrentFile()). That also
+    // means the restored handle's own read/write permission state never needs checking here: the
+    // picker only reads its parent directory to seed itself, it doesn't need active permission on
+    // the stale handle itself, and the *new* handle it returns already carries fresh permission
+    // from the user's own picker interaction.
+    async function persistFileHandleForTab(tab, handle) {
+      if (!tab) return;
+      const syncId = ensureSyncId(tab);
+      try {
+        const db = await openAssetDb();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(FILE_HANDLE_STORE, 'readwrite');
+          tx.objectStore(FILE_HANDLE_STORE).put({ syncId, handle });
+          tx.oncomplete = resolve;
+          tx.onerror = () => reject(tx.error);
+        });
+      } catch (err) {
+        console.warn('Datei-Handle konnte nicht gespeichert werden:', err);
+      }
+    }
+
+    async function loadFileHandleForTab(tab) {
+      if (!tab || !tab.syncId) return null; // never saved from this device before -- nothing to look up
+      try {
+        const db = await openAssetDb();
+        const record = await new Promise((resolve, reject) => {
+          const tx = db.transaction(FILE_HANDLE_STORE, 'readonly');
+          const req = tx.objectStore(FILE_HANDLE_STORE).get(tab.syncId);
+          req.onsuccess = () => resolve(req.result || null);
+          req.onerror = () => reject(req.error);
+        });
+        return record ? record.handle : null;
+      } catch (err) {
+        return null;
+      }
     }
 
     function assetDbKey(syncId, assetId) {
@@ -13488,43 +13543,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
     }
 
+    // "Speichern" is deliberately just an alias for "Speichern unter" now — it always shows a
+    // real file/folder picker (or the native macOS save panel), never a silent quick-save through
+    // a previously-chosen fileHandle/nativeFilePath. This used to have its own silent fast paths
+    // for exactly that, which on a browser with no File System Access API meant the *only*
+    // remaining path was the plain download-blob fallback, dropping the file straight into the
+    // browser's Downloads folder with no dialog and no way to tell it was even happening. Always
+    // going through saveCurrentFileAs() below closes that gap uniformly across every browser/
+    // platform this app runs on, at the cost of an extra confirmation click even where a handle
+    // *was* still valid — accepted trade-off, requested directly over the old, surprising behavior.
+    // loadFileHandleForTab()/persistFileHandleForTab() (see the REMEMBERED SAVE FOLDER section
+    // above) are what keep this from being a real burden: the picker reopens in whichever folder
+    // this exact document was last saved to, so re-saving is normally just one confirming click.
     async function saveCurrentFile() {
-      const currentTab = getCurrentTab();
-      if (!currentTab) return;
-      const contentToSave = inlineAssetsIntoContent(editor.value, currentTab.assets);
-
-      if (currentTab.fileHandle && 'createWritable' in currentTab.fileHandle) {
-        try {
-          const writable = await currentTab.fileHandle.createWritable();
-          await writable.write(contentToSave);
-          await writable.close();
-          currentTab.isModified = false;
-          renderTabs();
-          saveStateToLocalStorage();
-          return;
-        } catch (err) {
-          console.warn('Direktes Speichern fehlgeschlagen:', err);
-        }
-      }
-
-      // Mac app: a tab opened from (or previously saved to, via "Speichern unter") a real on-disk
-      // file carries its native path — write straight back to it with no dialog at all, which is
-      // what "Speichern" is supposed to do, rather than always behaving like "Speichern unter"
-      // the way the plain download-blob fallback below effectively does. See isMacApp() above and
-      // mac-app/main.swift's "mdNative" message handler.
-      if (isMacApp() && currentTab.nativeFilePath) {
-        try {
-          await callMdNative('save', { path: currentTab.nativeFilePath, content: contentToSave });
-          currentTab.isModified = false;
-          renderTabs();
-          saveStateToLocalStorage();
-          return;
-        } catch (err) {
-          console.warn('Direktes Speichern (macOS) fehlgeschlagen:', err);
-        }
-      }
-
-      saveCurrentFileAs();
+      return saveCurrentFileAs();
     }
 
     function getSaveFileTypeMeta(tab) {
@@ -13543,9 +13575,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const typeMeta = getSaveFileTypeMeta(currentTab);
 
       // Mac app: WebKit has no File System Access API on any OS, so this is the one place that
-      // gets a real native Save panel, with the resulting path remembered on the tab so future
-      // "Speichern" calls can silently reuse it instead of prompting again. See isMacApp() above
-      // and mac-app/main.swift's "mdNative" message handler.
+      // gets a real native Save panel — macOS's own NSSavePanel already remembers the last folder
+      // used *in this app* by itself, no directory hint needs passing from here. See isMacApp()
+      // above and mac-app/main.swift's "mdNative" message handler.
       if (isMacApp()) {
         try {
           const result = await callMdNative('saveAs', { content: contentToSave, suggestedName: currentTab.name });
@@ -13564,10 +13596,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       if ('showSaveFilePicker' in window) {
         try {
-          const handle = await window.showSaveFilePicker({
+          const pickerOptions = {
             suggestedName: currentTab.name,
             types: [{ description: typeMeta.description, accept: { [typeMeta.mime]: typeMeta.extensions } }]
-          });
+          };
+          // Opens the picker in whichever folder this exact document (by its own stable syncId,
+          // not tab.id) was last saved to, if any — see the REMEMBERED SAVE FOLDER section above.
+          const startInHandle = await loadFileHandleForTab(currentTab);
+          if (startInHandle) pickerOptions.startIn = startInHandle;
+          const handle = await window.showSaveFilePicker(pickerOptions);
           currentTab.fileHandle = handle;
           currentTab.name = handle.name;
           currentTab.isModified = false;
@@ -13577,10 +13614,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           await writable.close();
           renderTabs();
           saveStateToLocalStorage();
+          persistFileHandleForTab(currentTab, handle); // fire-and-forget — remembers this folder for next time
           return;
         } catch (err) { if (err.name === 'AbortError') return; }
       }
 
+      // No File System Access API (Firefox, Safari, most mobile browsers) — there's no web API to
+      // make the browser show a folder choice; where the download actually lands is entirely a
+      // browser-level download setting this page can't see or control. Telling the user why,
+      // instead of leaving it looking like an unexplained silent save, is the most this can do here.
+      showToast('Kein Ordner wählbar — dieser Browser unterstützt keine Ordnerauswahl beim Speichern. Datei wurde in den Download-Ordner gespeichert. Für eine Ordnerauswahl „Nachfragen, wo jede Datei gespeichert werden soll" in den Browser-Downloadeinstellungen aktivieren.');
       const blob = new Blob([contentToSave], { type: typeMeta.mime + ';charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);

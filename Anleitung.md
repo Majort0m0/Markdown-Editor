@@ -59,7 +59,7 @@ Ein unbenanntes Dokument übernimmt automatisch die erste `#`-Überschrift als D
 ### Öffnen und Speichern
 
 - **📂 Öffnen** lädt eine oder mehrere Dateien von der Festplatte (Markdown, TXT, CSV, JSON, HTML, PDF — siehe [Abschnitt 6](#6-pdf-dateien-als-arbeitsblatt-bearbeiten) für PDFs).
-- **💾 Speichern** (auch `Strg`/`Cmd`+`S`) schreibt in die zuletzt geöffnete/gespeicherte Datei zurück, sofern der Browser das unterstützt (Chrome/Edge); sonst wird ein Download ausgelöst.
+- **💾 Speichern** (auch `Strg`/`Cmd`+`S`) fragt immer nach einem Speicherort — genau wie „Speichern unter" —, statt ohne Rückfrage in eine zuvor gewählte Datei zu schreiben: In Chrome/Edge öffnet sich der native Ordnerauswahl-Dialog, standardmäßig im zuletzt für genau diese Notiz verwendeten Ordner auf diesem Gerät. In Browsern ohne diese Funktion (z. B. Firefox, Safari, die meisten mobilen Browser) landet die Datei automatisch im Download-Ordner — ein Hinweis erklärt das jedes Mal, samt Tipp, wie sich in den Browser-Einstellungen doch noch eine Ordnerauswahl aktivieren lässt.
 - Eine Datei lässt sich auch per **Drag & Drop** direkt ins Browserfenster ziehen, um sie zu öffnen.
 - Alle offenen Tabs werden zusätzlich automatisch im Browser (lokal) gespeichert — beim nächsten Öffnen der App sind alle Notizen unverändert wieder da, auch ohne sie manuell gespeichert zu haben.
 
