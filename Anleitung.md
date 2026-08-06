@@ -98,6 +98,19 @@ Die Formatierungsleiste unter der Tableiste bietet:
 
 Enthält der eingefügte Inhalt Bilder, die auf der Quell-Webseite nur verlinkt sind (nicht als Datei kopiert), versucht die App zusätzlich, jedes Bild direkt herunterzuladen und wie ein normal eingefügtes Bild einzubetten (verkleinert, als Base64 im Dokument gespeichert) — praktisch, damit die Notiz auch offline und unabhängig von der Quellseite vollständig bleibt. Das klappt nur bei Quellen, die das technisch erlauben (viele, aber nicht alle Webseiten); wo es nicht klappt, bleibt automatisch der externe Link erhalten statt eines Fehlers.
 
+### Textfarbe und Hintergrundfarbe
+
+Zwei weitere Buttons in der Formatierungsleiste (A mit farbigem Balken, Textmarker-Symbol) öffnen jeweils eine kleine Farbpalette:
+
+- **Farbe auswählen** — auf einen der zehn Farbkästchen klicken, wendet sie sofort auf die aktuelle Auswahl an (oder fügt bei leerer Auswahl eine leere Farbmarkierung an der Cursorposition ein, bereit zum Eintippen).
+- **Eigene Farbe** — das „+"-Kästchen öffnet den systemeigenen Farbwähler für beliebige Farbtöne.
+- **✕ Entfernen** — hebt eine vorhandene Farbmarkierung an der aktuellen Auswahl wieder auf.
+- Ein erneuter Klick auf dieselbe Farbe hebt sie wieder auf (Toggle-Verhalten wie bei Fett/Kursiv).
+
+Die beiden Paletten sind bewusst unterschiedlich: Bei der **Textfarbe** stehen kräftige, gut lesbare Farbtöne zur Auswahl; bei der **Hintergrundfarbe** sind es standardmäßig helle Pastelltöne, damit der Text darüber lesbar bleibt (ähnlich einem Textmarker).
+
+**Hintergrundfarbe in Tabellenzellen** füllt dabei die ganze Zelle aus (wie eine Zellfüllung in Excel), nicht nur den markierten Text — dazu einfach mit dem Cursor in der gewünschten Zelle stehen und eine Hintergrundfarbe wählen, unabhängig davon, was gerade markiert ist.
+
 ## 4. Tabellen und CSV
 
 Eine Tabelle über den **Tabelle**-Button in der Formatierungsleiste einfügen (leeres Grundgerüst) oder direkt Markdown-Syntax tippen. Sobald der Cursor innerhalb einer Tabelle steht, erscheint eine eigene Werkzeugleiste darüber:
@@ -112,6 +125,29 @@ Eine Tabelle über den **Tabelle**-Button in der Formatierungsleiste einfügen (
 **CSV-Dateien** werden automatisch als Tabelle dargestellt und lassen sich mit genau denselben Werkzeugen bearbeiten wie eine Markdown-Tabelle — das gesamte Dokument zählt dabei als eine Tabelle (kein Trennzeichen zwischen Kopf- und Datenzeilen nötig, im Gegensatz zu Markdown).
 
 **Medien in Tabellenzellen:** Wird ein Bild, Foto, eine Zeichnung, ein Piktogramm oder eine Sprachaufnahme eingefügt, während der Cursor in einer Tabellenzelle (oder in einer CSV-Datei) steht, lässt die App die sonst übliche Leerzeile danach weg — so bleibt die Tabellenstruktur erhalten, statt durch zusätzliche Zeilenumbrüche zu zerbrechen.
+
+### Formeln in Tabellen
+
+Markdown-Tabellenzellen können, ähnlich wie in Excel, Formeln enthalten, die andere Zellen derselben Tabelle automatisch verrechnen — nur bei echten Markdown-Tabellen, nicht bei CSV-Dateien.
+
+**Formel starten:**
+
+1. Mit dem Cursor in die Zielzelle klicken (die Zelle, in der später das Ergebnis stehen soll).
+2. `=` eintippen — oder das **Σ-Symbol** ganz rechts in der Tabellen-Werkzeugleiste anklicken. Die Tabelle wechselt jetzt in den Auswahlmodus: alle Zellen werden in der Vorschau anklickbar, und an der Zielzelle erscheint ein rundes „="-Symbol.
+3. Eine Zelle in der Vorschau **anklicken**, um ihre Adresse (z. B. `A1`) in die Formel einzufügen — oder über mehrere Zellen **ziehen**, um eine ganze Zeile, Spalte oder einen Zellblock als Bereich (z. B. `A1:A5`) einzufügen. Bereiche werden automatisch aufsummiert.
+4. Zwischen den Zellen einen Operator eintippen (`+`, `-`, `*`, `/`) und mit weiteren Klicks fortfahren, z. B. `A1+A2*B3`. Feste Zahlen (z. B. ein Steuersatz `*1.19`) lassen sich ebenfalls direkt eintippen.
+5. Mit `Enter` oder einem Klick auf das runde „="-Symbol übernehmen.
+
+Die Zielzelle bekommt einen **orangenen Rahmen** und zeigt das berechnete Ergebnis. Ändert sich später eine der verwendeten Quellzellen, rechnet sich das Ergebnis beim nächsten Tippen automatisch neu — auch über mehrere Ebenen hinweg: eine Summenzeile, die selbst wieder Formelzellen zusammenzählt (z. B. Zeilensummen aus „Anzahl × Preis", darunter eine Gesamtsumme über diese Zeilensummen), wird korrekt berechnet.
+
+**Währung und Text:** Währungszeichen (`€`, `$`, `£`) werden für die Berechnung ignoriert und im Ergebnis an derselben Stelle (davor oder danach) wieder angehängt. Zellen mit Buchstaben oder anderen nicht-numerischen Zeichen werden bei der Berechnung übersprungen (wie leere Zellen).
+
+**Formelzelle bearbeiten oder einfrieren:** Ein Klick auf eine bereits fertige, orange umrandete Formelzelle blendet zwei kleine Buttons ein:
+
+- **✏️** — bringt die Formel als einfachen, direkt editierbaren Text zurück in den Quelltext (z. B. `=A1+A2`), markiert und bereit zum Überschreiben oder Weiter-Anklicken. `Enter` übernimmt die geänderte Formel wieder.
+- **✕** — trägt den aktuell berechneten Wert fest als Zahl in die Zelle ein und entfernt die Formel dauerhaft; der orangene Rahmen verschwindet, im Quelltext steht danach nur noch der Zahlenwert.
+
+Ein Klick außerhalb der Zelle oder `Esc` schließt die beiden Buttons wieder, ohne etwas zu ändern.
 
 ## 5. Bilder, Fotos, Zeichnungen und Piktogramme einfügen
 
@@ -129,8 +165,9 @@ In allen drei Fällen erscheint ein Dialog mit der Wahl zwischen „📉 Verklei
 
 Ein eingebauter Bildeditor erlaubt einfache Anpassungen, ganz ohne externe Software:
 
+- **✂️ Zuschneiden** — öffnet einen eigenen Zuschneide-Schritt mit einem frei verschieb- und größenveränderbaren Auswahlrahmen (per Maus oder Finger); „✓ Zuschneiden anwenden" übernimmt den Ausschnitt, „✕ Abbrechen" kehrt unverändert zurück.
 - **Schieberegler** für Helligkeit, Kontrast und Sättigung, mit sofortiger Live-Vorschau.
-- **Effekte** — ein Klick genügt: Schwarz-Weiß, Sepia, Vintage, Lomo, Crossprozess, Sonnenaufgang, Schärfen, Vignette. Effekte und Schieberegler lassen sich kombinieren (z. B. erst „Vintage" anklicken, danach die Helligkeit noch etwas erhöhen).
+- **Effekte** — ein Klick genügt: Schwarz-Weiß, Sepia, Vintage, Lomo, Crossprozess, Sonnenaufgang, Schärfen, Vignette. Effekte, Schieberegler und Zuschnitt lassen sich beliebig kombinieren (z. B. erst zuschneiden, dann „Vintage" anklicken, danach die Helligkeit noch etwas erhöhen).
 - **↺ Zurücksetzen** verwirft alle Änderungen und stellt das Originalbild wieder her; „✓ Übernehmen" speichert das Ergebnis.
 
 Zwei Wege dorthin:
@@ -301,7 +338,7 @@ Der ☁️-Button färbt sich **hellgrün**, sobald mindestens eine Synchronisie
 
 ## 15. Tastenkürzel
 
-Für so gut wie jede Funktion aus Kopfzeile, Formatierungsleiste und Tabellen-Werkzeugen gibt es ein Tastenkürzel — viele davon von Haus aus vorbelegt, alle über das ⌨️-Symbol in der Kopfzeile einzeln auf eine eigene Kombination umlegbar.
+Für so gut wie jede Funktion aus Kopfzeile, Formatierungsleiste und Tabellen-Werkzeugen gibt es ein Tastenkürzel — viele davon von Haus aus vorbelegt, alle über das ⌨️-Symbol in der Kopfzeile einzeln auf eine eigene Kombination umlegbar. Auf Mac und iPad wird automatisch `Cmd` (⌘) statt `Strg` verwendet, erkennbar an den ⌘/⌥/⇧-Symbolen im Tastenkürzel-Fenster und in den Buttons-Tooltips.
 
 ### Vorbelegte Tastenkombinationen
 
@@ -317,7 +354,7 @@ Für so gut wie jede Funktion aus Kopfzeile, Formatierungsleiste und Tabellen-We
 | `Strg`/`Cmd` + `Alt` + `W` | Tab schließen |
 | `Strg`/`Cmd` + `Alt` + `E` | Als HTML exportieren |
 | `Strg`/`Cmd` + `P` | Drucken / Als PDF speichern |
-| `Strg`/`Cmd` + `Alt` + `C` | Formatiert kopieren |
+| `Strg`/`Cmd` + `Alt` + `X` | Formatiert kopieren |
 | `Strg`/`Cmd` + `Alt` + `Y` | WebDAV-Synchronisierung |
 
 **Bearbeiten**
@@ -344,12 +381,12 @@ Für so gut wie jede Funktion aus Kopfzeile, Formatierungsleiste und Tabellen-We
 | `Strg`/`Cmd` + `Umschalt` + `9` | Aufgabenliste |
 | `Strg`/`Cmd` + `Umschalt` + `.` | Zitat |
 | `Strg`/`Cmd` + `Alt` + `K` | Code-Block |
-| `Strg`/`Cmd` + `Alt` + `H` | Trennlinie |
+| `Strg`/`Cmd` + `Alt` + `G` | Trennlinie |
 | `Strg`/`Cmd` + `Alt` + `D` | Einklappbarer Abschnitt |
 | `Strg`/`Cmd` + `K` | Link |
 | `Strg`/`Cmd` + `Alt` + `B` | Web-Einbettung (iframe) |
-| `Strg`/`Cmd` + `Umschalt` + `T` | Tabelle einfügen |
-| `Strg`/`Cmd` + `Alt` + `I` | Bild einfügen |
+| `Strg`/`Cmd` + `Alt` + `J` | Tabelle einfügen |
+| `Strg`/`Cmd` + `Alt` + `A` | Bild einfügen |
 | `Tab` / `Umschalt` + `Tab` | Einzug / Ausrücken |
 
 **Ansicht**
@@ -363,7 +400,7 @@ Für so gut wie jede Funktion aus Kopfzeile, Formatierungsleiste und Tabellen-We
 | `Strg`/`Cmd` + `Alt` + `P` | Präsentationsmodus starten |
 | `Strg`/`Cmd` + `Alt` + `O` | Inhaltsverzeichnis umschalten |
 | `Strg`/`Cmd` + `Alt` + `U` | Vorlesen starten/pausieren |
-| `Strg`/`Cmd` + `Alt` + `M` | Simple Modus umschalten |
+| `Strg`/`Cmd` + `Alt` + `S` | Simple Modus umschalten |
 | `Strg`/`Cmd` + `Alt` + `/` | Tastenkürzel anzeigen |
 
 **Immer fest** (nicht anpassbar, da an eine feste, allgemeine Konvention statt an eine einzelne Aktion gebunden)
