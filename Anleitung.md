@@ -120,7 +120,11 @@ Eine Tabelle über den **Tabelle**-Button in der Formatierungsleiste einfügen (
 - Zeile/Spalte löschen
 - Nach der Spalte unter dem Cursor sortieren — erneuter Klick kehrt die Sortierrichtung um
 
-**In der Vorschau:** ein Klick auf eine Tabellenzelle springt direkt zur passenden Stelle im Quelltext. Durch mehrere Zellen ziehen markiert eine Zeile, Spalte oder einen beliebigen Zellblock, der sich mit `Strg`/`Cmd`+`C` als fertige Tabelle in die Zwischenablage kopieren lässt (z. B. zum Einfügen in Excel).
+**In der Vorschau:** ein Klick auf eine Tabellenzelle springt direkt zur passenden Stelle im Quelltext. Durch mehrere Zellen ziehen markiert eine Zeile, Spalte oder einen beliebigen Zellblock — das lässt sich direkt weiterverwenden:
+
+- **`Strg`/`Cmd`+`C`** kopiert die Auswahl als fertige Tabelle in die Zwischenablage (z. B. zum Einfügen in Excel). Wird eine so kopierte Auswahl in eine **CSV-Notiz** eingefügt, wandelt die App sie automatisch ins CSV-Format um (mit dem Trennzeichen dieser Notiz); umgekehrt wird eine in eine Markdown-Notiz eingefügte Tabelle (z. B. aus Excel oder Google Sheets kopiert) automatisch zur Markdown-Tabelle.
+- **`Entf`/`Rücktaste`** leert alle markierten Zellen auf einmal.
+- **Fett, Kursiv, Durchgestrichen** sowie **Text-/Hintergrundfarbe** aus der Formatierungsleiste wenden sich auf alle markierten Zellen gleichzeitig an, statt nur auf eine einzelne Auswahl im Quelltext — praktisch, um z. B. eine ganze Kopfzeile auf einmal fett zu setzen. Nur bei Markdown-Tabellen (CSV-Zellen können keine solche Formatierung darstellen); eine [Formelzelle](#formeln-in-tabellen) innerhalb der Auswahl bleibt dabei unangetastet, da sich Formatierung und eine live berechnete Formel nicht miteinander vertragen — sie lässt sich weiterhin einzeln über ihre eigenen Overlay-Buttons bearbeiten.
 
 **CSV-Dateien** werden automatisch als Tabelle dargestellt und lassen sich mit genau denselben Werkzeugen bearbeiten wie eine Markdown-Tabelle — das gesamte Dokument zählt dabei als eine Tabelle (kein Trennzeichen zwischen Kopf- und Datenzeilen nötig, im Gegensatz zu Markdown).
 
@@ -425,7 +429,7 @@ Ein kleines ↺-Symbol neben einer geänderten Kombination setzt nur diese eine 
 
 Alle Dokumente und eingefügten Medien werden ausschließlich lokal im Browser gespeichert — es findet keine Übertragung an einen Server statt, außer wenn WebDAV-Synchronisierung aktiv eingerichtet wurde (siehe [Abschnitt 13](#13-webdav-synchronisierung-zwischen-mehreren-geräten)), und dann nur an das selbst angegebene Ziel.
 
-Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere Anhänge (Bilder, Zeichnungen, PDF-Seiten, Audio) liegen in IndexedDB, das deutlich mehr Kapazität bietet. Die Fußleiste zeigt rechts neben der Wort-/Zeichen-Statistik der aktuellen Notiz einen Prozentbalken mit dem insgesamt belegten Speicherplatz sowie der reinen Datengröße aller aktuell geöffneten Notizen zusammen. Sollte der Speicherplatz des Browsers dennoch einmal knapp werden, erscheint zusätzlich ein kleines Warndreieck am betroffenen Tab.
+Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere Anhänge (Bilder, Zeichnungen, PDF-Seiten, Audio) liegen in IndexedDB, das deutlich mehr Kapazität bietet. Die Fußleiste zeigt rechts neben der Wort-/Zeichen-Statistik der aktuellen Notiz einen Prozentbalken sowie die reine Datengröße aller aktuell geöffneten Notizen zusammen. Der Prozentwert bezieht sich dabei auf das jeweils knappere der beiden Speicher — meist `localStorage`, das ein deutlich kleineres, festes Limit hat (wenige MB) als IndexedDB, wo die eigentlichen Anhänge liegen; ein `~` davor zeigt an, dass es sich um eine Schätzung handelt (die genaue `localStorage`-Grenze lässt sich nicht browserübergreifend zuverlässig abfragen). Sollte der Speicherplatz des Browsers dennoch einmal knapp werden, erscheint zusätzlich ein kleines Warndreieck am betroffenen Tab.
 
 **Empfehlung bei sehr großen Dokumenten** (viele/hochauflösende Bilder, umfangreiche PDF-Importe): regelmäßig über WebDAV sichern oder als Datei exportieren — das lokale lokale Speicherlimit des Browsers ist zwar großzügig, aber nicht unbegrenzt.
 
