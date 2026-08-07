@@ -3004,6 +3004,74 @@ return rgba;});});}).call(this);
       background-color: #eceff2;
     }
 
+    /* Größe/Rahmen popover (openImageStylePopoverForIndex()) — same position:fixed/anchoring
+       approach as .color-picker-popover above, just triggered from a preview-side .image-style-btn
+       (a descendant of #mainContainer, not the formatting toolbar) instead of a toolbar button. */
+    .image-style-popover {
+      position: fixed;
+      z-index: 30;
+      width: 220px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      padding: 12px;
+      display: none;
+    }
+
+    .image-style-popover.active {
+      display: block;
+    }
+
+    .image-style-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--text-main);
+      margin-bottom: 8px;
+    }
+
+    .image-style-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .image-style-row input[type="range"] {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .image-style-value {
+      flex-shrink: 0;
+      width: 32px;
+      text-align: right;
+      color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .image-style-border-fields {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .image-style-border-fields.active {
+      display: flex;
+    }
+
+    .image-style-border-fields input[type="color"] {
+      width: 26px;
+      height: 26px;
+      padding: 0;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
     .editor-pane {
       grid-column: 1;
       height: 100%;
@@ -3524,6 +3592,21 @@ return rgba;});});}).call(this);
       max-width: 100%;
     }
 
+    /* A custom width from the "#mdstyle:" fragment (see hljsRenderer.image()/
+       openImageStylePopoverForIndex() further down) is set as an inline style directly by JS
+       rather than through a CSS rule here — and, when a wrapper exists at all, on the *wrapper*
+       (display:block;width:N%), not the <img> itself. This inline-block wrapper's own width is
+       normally shrink-to-fit *around* the image, which makes a percentage width on a replaced
+       element (the <img>) inside it resolve as 'auto' per spec (an indeterminate containing-block
+       width can't anchor a percentage) — silently no-op'ing the resize. Percentage on the wrapper
+       instead gives it a well-defined width from the normal block flow, which the <img> (styled
+       100% in that case) can then fill exactly; this also keeps the wrapper's own box — what the
+       hover buttons below are absolutely positioned against — sized to match the now-smaller
+       image, rather than stranding them out at the old, wider edges. See hljsRenderer.image()'s
+       own comment on its two branches for why a bare <img> with no wrapper at all (exports/
+       presentation/clipboard) takes the percentage directly instead — there's no wrapper there to
+       carry it. */
+
     /* Visible caption from an image's optional markdown title (![alt](href "title")) -- see
        hljsRenderer.image(). A sibling of .image-wrapper (inline-block), not nested inside it, so
        block display here naturally starts it on its own line right under the image. Uses
@@ -3555,7 +3638,8 @@ return rgba;});});}).call(this);
 
     .drawing-edit-btn,
     .photo-edit-btn,
-    .alt-text-btn {
+    .alt-text-btn,
+    .image-style-btn {
       position: absolute;
       right: 8px;
       opacity: 0;
@@ -3585,9 +3669,20 @@ return rgba;});});}).call(this);
       bottom: 8px;
     }
 
+    /* .image-style-btn (size/border settings, see openImageStylePopoverForIndex()) gets the one
+       remaining corner, bottom-left, opposite .alt-text-btn — it's rendered on every image
+       (drawings included, unlike .photo-edit-btn), so it can never share a slot with any of the
+       other three the way .photo-edit-btn/.drawing-edit-btn already share theirs. */
+    .image-style-btn {
+      right: auto;
+      left: 8px;
+      bottom: 8px;
+    }
+
     .image-wrapper.drawing:hover .drawing-edit-btn,
     .image-wrapper:hover .photo-edit-btn,
-    .image-wrapper:hover .alt-text-btn {
+    .image-wrapper:hover .alt-text-btn,
+    .image-wrapper:hover .image-style-btn {
       opacity: 1;
     }
 
@@ -3702,13 +3797,21 @@ return rgba;});});}).call(this);
     }
 
     /* Fill handle — bottom-right corner square, drag to copy this formula into adjacent cells with
-       shifted references (see startFormulaFillDrag()). Sits half outside the cell's own border
-       (negative right/bottom) so it reads as sitting *on* the border corner, matching the familiar
-       spreadsheet fill-handle look, rather than floating inside the cell's padding. */
+       shifted references (see startFormulaFillDrag()). Previously sat half outside the cell's own
+       border (right/bottom: -4px) to read as sitting *on* the border corner. That negative offset
+       is out-of-flow-positioned relative to the <td> (position:relative, its containing block) but
+       still counts toward .markdown-body table's own scrollable overflow (overflow-x:auto sits on
+       the <table> itself — see the comment above .markdown-body table) whenever this cell is in the
+       table's last column: on a table whose content otherwise exactly fits its container, that 4px
+       overshoot alone was enough to push scrollWidth past clientWidth and trigger a spurious
+       horizontal scrollbar (verified directly — hiding just this element removed the scrollbar with
+       no other change). Right:0/bottom:0 keeps the handle fully inside the cell's padding box, so it
+       can never contribute overflow, at the minor cost of sitting flush in the corner instead of
+       straddling the border. */
     .formula-fill-handle {
       position: absolute;
-      right: -4px;
-      bottom: -4px;
+      right: 0;
+      bottom: 0;
       width: 8px;
       height: 8px;
       background-color: var(--accent-view);
@@ -5442,6 +5545,39 @@ return rgba;});});}).call(this);
     </div>
   </div>
 
+  <!-- Größe/Rahmen popover — one shared element, retargeted per click (see
+       imageStylePopoverIndex) by whichever image's .image-style-btn triggered it. Mirrors
+       #colorPickerPopover's own shared-element/reposition pattern above. -->
+  <div class="image-style-popover" id="imageStylePopover">
+    <div class="image-style-row">
+      <span>Größe</span>
+      <input type="range" id="imgStyleWidthSlider" min="25" max="100" step="5" oninput="applyImageStyleFromPopover()">
+      <span class="image-style-value" id="imgStyleWidthValue">100%</span>
+    </div>
+    <div class="image-style-row">
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" id="imgStyleBorderToggle" onchange="toggleImageStyleBorderFields(); applyImageStyleFromPopover();">
+        Rahmen anzeigen
+      </label>
+    </div>
+    <div class="image-style-border-fields" id="imgStyleBorderFields">
+      <div class="image-style-row">
+        <span>Farbe</span>
+        <input type="color" id="imgStyleBorderColor" value="#e03131" oninput="applyImageStyleFromPopover()">
+      </div>
+      <div class="image-style-row">
+        <span>Dicke</span>
+        <input type="range" id="imgStyleBorderWidthSlider" min="1" max="10" oninput="applyImageStyleFromPopover()">
+        <span class="image-style-value" id="imgStyleBorderWidthValue">2px</span>
+      </div>
+      <div class="image-style-row">
+        <span>Ecken</span>
+        <input type="range" id="imgStyleBorderRadiusSlider" min="0" max="40" oninput="applyImageStyleFromPopover()">
+        <span class="image-style-value" id="imgStyleBorderRadiusValue">0px</span>
+      </div>
+    </div>
+  </div>
+
   <!-- Table formula overlays — see renderFormulaModeUI()/showFormulaCellOverlay() for how these
        three get shown/positioned; only ever one of the two groups (confirm vs edit+freeze) is
        visible at a time, since they represent mutually exclusive states (typing a new formula vs.
@@ -5992,17 +6128,89 @@ return rgba;});});}).call(this);
     // so isAudio/isDrawing detection works identically for an idle box as for one being edited.
     let canvasIdleRenderBox = null;
 
+    // --- IMAGE SIZE/BORDER ("#mdstyle:") — see openImageStylePopoverForIndex() further down ---
+    //
+    // Width/border settings are appended to the image *reference*'s href as a URL fragment
+    // (asset:img_1#mdstyle:w=60;bc=%23e03131;bw=2;br=8, or the same suffix on a plain external
+    // https:// URL) rather than reusing the markdown title -- title is already a real, live
+    // feature here (the ARASAAC-clipart-attribution caption, see hljsRenderer.image()'s own
+    // .image-caption comment below), so hiding a second, unrelated payload inside it would
+    // silently corrupt any image that has both. A URL fragment is exactly the part of a URI meant
+    // for this: browsers ignore it when actually loading the resource (verified directly against a
+    // data: URI, which has no real "fragment" semantics of its own but still parses one off
+    // correctly rather than treating it as base64 payload), and it's simply absent -- not present
+    // as some default value -- on every image that has never been resized/bordered, so an
+    // untouched document's markdown is completely unaffected by this feature existing at all. Only
+    // ever recognized by the exact "#mdstyle:" prefix, so a manually-typed external image URL that
+    // happens to carry its own real fragment (a deep link, an SVG element ID, ...) is never
+    // misread as style data.
+    const MDSTYLE_FRAGMENT_PREFIX = '#mdstyle:';
+
+    // Splits a raw markdown image href into its real address and this app's own style fragment
+    // (if present). `style` is always a fully-populated object (defaults filled in) so callers
+    // never need their own null-check before reading a field.
+    function splitHrefAndMdStyle(href) {
+      const idx = href ? href.indexOf(MDSTYLE_FRAGMENT_PREFIX) : -1;
+      if (idx === -1) return { baseHref: href, style: { width: 100, borderColor: null, borderWidth: 2, borderRadius: 0 } };
+      return { baseHref: href.slice(0, idx), style: parseMdStyleFragment(href.slice(idx + MDSTYLE_FRAGMENT_PREFIX.length)) };
+    }
+
+    function parseMdStyleFragment(raw) {
+      const style = { width: 100, borderColor: null, borderWidth: 2, borderRadius: 0 };
+      raw.split(';').forEach(pair => {
+        const eq = pair.indexOf('=');
+        if (eq === -1) return;
+        const key = pair.slice(0, eq);
+        const value = decodeURIComponent(pair.slice(eq + 1));
+        if (key === 'w') style.width = parseInt(value, 10) || 100;
+        else if (key === 'bc') style.borderColor = value;
+        else if (key === 'bw') style.borderWidth = parseInt(value, 10) || 2;
+        else if (key === 'br') style.borderRadius = parseInt(value, 10) || 0;
+      });
+      return style;
+    }
+
+    // Inverse of parseMdStyleFragment() -- the exact "#mdstyle:..." suffix to splice back into the
+    // raw markdown source for this style (see applyImageStyleFromPopover()), or '' when the style
+    // is fully at its defaults (100% width, no border), so a never-customized or reset-back-to-
+    // default image's reference stays exactly the plain asset:ID/URL it always was, with no inert
+    // fragment left behind.
+    function buildMdStyleFragment(style) {
+      if (!style) return '';
+      const width = style.width || 100;
+      const hasBorder = !!style.borderColor;
+      if (width === 100 && !hasBorder) return '';
+      const parts = [];
+      if (width !== 100) parts.push('w=' + width);
+      if (hasBorder) {
+        parts.push('bc=' + encodeURIComponent(style.borderColor));
+        parts.push('bw=' + (style.borderWidth || 2));
+        parts.push('br=' + (style.borderRadius || 0));
+      }
+      return MDSTYLE_FRAGMENT_PREFIX + parts.join(';');
+    }
+
+    // Just the border/border-radius portion of a style's CSS -- deliberately excludes width,
+    // which hljsRenderer.image() below places differently depending on whether a wrapper element
+    // exists to carry it (see that function's own comments on the two branches).
+    function buildMdStyleBorderCss(style) {
+      if (!style || !style.borderColor) return '';
+      return 'border:' + (style.borderWidth || 2) + 'px solid ' + style.borderColor + ';border-radius:' + (style.borderRadius || 0) + 'px';
+    }
+
     hljsRenderer.image = function({ href, title, text }) {
       const videoEmbed = getVideoEmbedHtml(href, text);
       if (videoEmbed) return videoEmbed;
 
-      let resolvedHref = href;
+      const { baseHref, style: mdStyle } = splitHrefAndMdStyle(href);
+
+      let resolvedHref = baseHref;
       let isDrawing = false;
       let isAudio = false;
       let assetId = null;
-      if (href && href.indexOf('asset:') === 0) {
+      if (baseHref && baseHref.indexOf('asset:') === 0) {
         const tab = canvasIdleRenderBox || getCurrentTab();
-        assetId = href.slice('asset:'.length);
+        assetId = baseHref.slice('asset:'.length);
         resolvedHref = (tab && tab.assets && tab.assets[assetId]) || '';
         isDrawing = !!(tab && tab.drawingAssetIds && tab.drawingAssetIds[assetId]);
         isAudio = !!(tab && tab.audioAssetIds && tab.audioAssetIds[assetId]);
@@ -6017,12 +6225,14 @@ return rgba;});});}).call(this);
       }
 
       const titleAttr = title ? ' title="' + title.replace(/"/g, '&quot;') + '"' : '';
+      const hasCustomWidth = (mdStyle.width || 100) !== 100;
+      const borderCss = buildMdStyleBorderCss(mdStyle); // border/border-radius only, no width -- see its own comment
       // data-tts-kind is stamped unconditionally (unlike the .image-wrapper edit/alt-text button
       // markup below, which is skipped under suppressDrawingControls) so "is this a Zeichnung"
       // stays detectable in presentation mode and both HTML exports, not just the live
       // preview — the Vorlesen (TTS) engine's DOM walker relies on this to announce "Hier ist
       // eine Zeichnung" vs. "Hier ist ein Bild" everywhere, not only where the edit button renders.
-      const imgTag = '<img src="' + resolvedHref + '" alt="' + altAttr + '"' + titleAttr + (isDrawing ? ' data-tts-kind="drawing"' : '') + '>';
+      const ttsKindAttr = isDrawing ? ' data-tts-kind="drawing"' : '';
 
       // The optional markdown title (![alt](href "title")) doubles as a visible caption — e.g.
       // for license/attribution text that should sit right under an image, not just show up on
@@ -6035,7 +6245,30 @@ return rgba;});});}).call(this);
       // an unescaped "<"/">" in the caption would be parsed as markup.
       const captionHtml = title ? '<span class="image-caption">' + escapeHtmlText(title) + '</span>' : '';
 
-      if (suppressDrawingControls) return imgTag + captionHtml;
+      if (suppressDrawingControls) {
+        // No .image-wrapper exists in this branch (exports/presentation/clipboard all render a
+        // bare <img>, see suppressDrawingControls's own definition above) -- a custom width has
+        // nowhere else to live, so it goes directly on the <img> here, unlike the wrapped branch
+        // below where it's deliberately placed on the wrapper instead (see that branch's comment).
+        const widthCss = hasCustomWidth ? ('width:' + mdStyle.width + '%') : '';
+        const styleAttr = (widthCss || borderCss) ? ' style="' + [widthCss, borderCss].filter(Boolean).join(';') + '"' : '';
+        const imgTag = '<img src="' + resolvedHref + '" alt="' + altAttr + '"' + titleAttr + styleAttr + ttsKindAttr + '>';
+        return imgTag + captionHtml;
+      }
+
+      // Width goes on the *wrapper*, not the <img>, in this branch — see .image-wrapper's own CSS
+      // comment for why a percentage on the <img> itself would silently no-op inside an
+      // inline-block wrapper whose own width is normally shrink-to-fit. Putting it here instead
+      // (display:block so the percentage has something real to resolve against, alongside the
+      // percentage itself) also keeps the wrapper's own box — which is what the hover buttons
+      // below are absolutely positioned against — sized to match the now-smaller image, rather
+      // than staying the original full-width box with a shrunk image floating inside its
+      // top-left corner and the buttons stranded out at the old, wider edges. The <img> itself
+      // just fills whatever the wrapper now measures (100%).
+      const wrapperStyleAttr = hasCustomWidth ? ' style="display:block;width:' + mdStyle.width + '%"' : '';
+      const imgWidthCss = hasCustomWidth ? 'width:100%' : '';
+      const imgStyleAttr = (imgWidthCss || borderCss) ? ' style="' + [imgWidthCss, borderCss].filter(Boolean).join(';') + '"' : '';
+      const imgTag = '<img src="' + resolvedHref + '" alt="' + altAttr + '"' + titleAttr + imgStyleAttr + ttsKindAttr + '>';
 
       // Every image (not just drawings) gets wrapped in .image-wrapper so it has a positioning
       // context for the hover-revealed "Alt-Text" button (jumps the editor to where the alt text
@@ -6050,8 +6283,13 @@ return rgba;});});}).call(this);
       // slot to save an edit back into.
       const editBtn = isDrawing ? '<button type="button" class="drawing-edit-btn">✏️ Bearbeiten</button>' : '';
       const photoEditBtn = (!isDrawing && assetId) ? '<button type="button" class="photo-edit-btn" title="Helligkeit, Kontrast, Effekte">🎨 Bearbeiten</button>' : '';
+      // Every image gets this one (drawings included) -- unlike photoEditBtn, size/border isn't
+      // gated on assetId: it works identically for an asset-map photo/drawing and a plain
+      // external-URL image, since the style lives in the reference's own href either way.
+      const styleBtn = '<button type="button" class="image-style-btn" title="Größe & Rahmen">📐 Größe</button>';
       const assetAttr = assetId ? ' data-asset-id="' + assetId + '"' : '';
-      return '<span class="image-wrapper' + (isDrawing ? ' drawing' : '') + '"' + assetAttr + '>' + imgTag + editBtn + photoEditBtn +
+      const wrapperClass = 'image-wrapper' + (isDrawing ? ' drawing' : '');
+      return '<span class="' + wrapperClass + '"' + assetAttr + wrapperStyleAttr + '>' + imgTag + editBtn + photoEditBtn + styleBtn +
         '<button type="button" class="alt-text-btn">🏷️ Alt-Text</button></span>' + captionHtml;
     };
 
@@ -7488,16 +7726,29 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         resultTabsById.set(rt.syncId, rt);
       }
 
-      // Belt-and-suspenders: a tombstoned syncId should never end up back in resultTabsById
-      // via any of the paths above, but excluding it explicitly here is what actually removes
-      // it from the shared file if it somehow did.
-      for (const syncId of pendingDeletions) {
+      // Belt-and-suspenders: a tombstoned syncId should never end up back in resultTabsById via
+      // any of the paths above, but excluding it explicitly here is what actually removes it from
+      // the shared file if it somehow did. Re-read from the live webdavPendingDeletions array
+      // rather than reusing the `pendingDeletions` snapshot from the top of this function —
+      // closeTab()'s own triggerImmediateWebdavSync() call no-ops while a sync is already in
+      // progress (see performWebdavSync()'s webdavSyncInProgress guard), so a tab closed *during*
+      // the potentially long showWebdavConflictModal() await above never gets its own push; its
+      // only chance of being excluded from what this attempt writes is being picked up here.
+      // Reproduced directly: closing an unrelated tab while this same attempt's conflict modal was
+      // still open put that closed tab right back on the remote (the per-tab loop above had
+      // already added it to resultTabsById *before* it was closed), silently resurrecting it.
+      const finalPendingDeletions = new Set(webdavPendingDeletions);
+      for (const syncId of finalPendingDeletions) {
         resultTabsById.delete(syncId);
       }
 
       await putRemoteWebdavState({ version: 1, updatedAt: Date.now(), tabs: Array.from(resultTabsById.values()) }, remoteFetch.rawText);
-      // The server no longer has these — the tombstones have done their job.
-      webdavPendingDeletions = [];
+      // Only clear the tombstones this exact PUT actually excluded (finalPendingDeletions), not
+      // webdavPendingDeletions wholesale — a tab closed while putRemoteWebdavState()'s own network
+      // round-trip was in flight (after finalPendingDeletions was captured, above) would otherwise
+      // have its brand-new tombstone silently discarded here before it was ever pushed to the
+      // server, the same class of gap this whole block exists to close.
+      webdavPendingDeletions = webdavPendingDeletions.filter(id => !finalPendingDeletions.has(id));
 
       // Only stamp lastSyncedSnapshot for tabs that were actually pushed (pushedSnapshotById),
       // using the frozen snapshot captured before the PUT -- see the comment on that map above.
@@ -7962,8 +8213,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const pdfDrawingAssetIds = {};
       let counter = 0;
       const newContent = content.replace(
-        /!\[([^\]]*)\]\((data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[^)\s]+)\)/g,
-        (match, alt, dataUrl) => {
+        // The optional trailing group captures this app's own "#mdstyle:..." size/border fragment
+        // (see the IMAGE SIZE/BORDER section near hljsRenderer.image()) separately from the data
+        // URI itself -- base64's alphabet never contains '#', so excluding it from the data-URI
+        // group is always safe, and it's essential here: pngHasEmbeddedExcalidrawScene() below
+        // needs the *clean* base64 payload, and re-attaching an unstripped fragment to it would
+        // make atob() throw on the non-base64 "#mdstyle:..." tail, silently defeating the scene
+        // detection (and thus the drawing-editability marker) for every resized/bordered drawing.
+        /!\[([^\]]*)\]\((data:[a-zA-Z0-9.+-]+\/[a-zA-Z0-9.+-]+;base64,[^)\s#]+)(#mdstyle:[^)\s]*)?\)/g,
+        (match, alt, dataUrl, mdStyleFragment) => {
           counter++;
           const assetId = 'img_' + counter;
           assets[assetId] = dataUrl;
@@ -7993,7 +8251,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             rawDrawingAssetIds[assetId] = true;
             pdfDrawingAssetIds[assetId] = true;
           }
-          return '![' + alt + '](asset:' + assetId + ')';
+          return '![' + alt + '](asset:' + assetId + (mdStyleFragment || '') + ')';
         }
       );
       return { content: newContent, assets, drawingAssetIds, rawDrawingAssetIds, pdfDrawingAssetIds };
@@ -8001,9 +8259,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function inlineAssetsIntoContent(content, assets) {
       if (!assets) return content;
-      return content.replace(/!\[([^\]]*)\]\(asset:([a-zA-Z0-9_]+)\)/g, (match, alt, assetId) => {
+      // The optional trailing group is this app's own "#mdstyle:..." size/border fragment (see the
+      // IMAGE SIZE/BORDER section near hljsRenderer.image()) -- carried over onto the resolved data
+      // URI unchanged (data: URIs tolerate a trailing fragment identifier same as any other URI;
+      // verified directly that browsers correctly ignore it rather than treating it as base64
+      // payload) so a resized/bordered image's styling survives a save-to-.md-file round trip.
+      return content.replace(/!\[([^\]]*)\]\(asset:([a-zA-Z0-9_]+)(#mdstyle:[^)\s]*)?\)/g, (match, alt, assetId, mdStyleFragment) => {
         const dataUrl = assets[assetId];
-        return dataUrl ? '![' + alt + '](' + dataUrl + ')' : match;
+        return dataUrl ? '![' + alt + '](' + dataUrl + (mdStyleFragment || '') + ')' : match;
       });
     }
 
@@ -10494,8 +10757,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       });
     }
 
-    function syncScrollFrom(source) {
-      if (!syncScrollEnabled || isSyncingScroll || !showEditor || !showPreview) return;
+    // force: bypasses the isSyncingScroll re-entrancy guard (but not the flag itself -- see below).
+    // Needed by the editor 'input' handler's post-render resync (see updatePreview()'s call site):
+    // a native caret-follow scroll during typing fires its own 'scroll' event *before* 'input' (and
+    // therefore before that keystroke's updatePreview() has re-rendered the preview), so the sync it
+    // triggers can read previewPane's stale, pre-render scrollHeight and land the preview at a
+    // position that's already wrong the instant the fresh content lands moments later. Left
+    // uncorrected across many keystrokes (this app re-renders the whole preview on every one),
+    // that staleness compounds into the "scrolls away on its own while typing" reports -- calling
+    // this again right after updatePreview(), with force, re-derives the ratio against dimensions
+    // that are actually current. The plain (non-forced) entry guard stays in place for the ordinary
+    // 'scroll'-event-triggered calls below, so a user manually scrolling one pane still can't
+    // re-trigger itself via the resulting mirrored scroll on the other pane.
+    function syncScrollFrom(source, force) {
+      if (!syncScrollEnabled || (!force && isSyncingScroll) || !showEditor || !showPreview) return;
       isSyncingScroll = true;
       if (source === 'editor') {
         const range = editor.scrollHeight - editor.clientHeight;
@@ -11756,6 +12031,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     editor.addEventListener('input', () => {
       markActiveTabModified();
       updatePreview();
+      // Re-derive the preview's scroll position against the dimensions updatePreview() just
+      // produced -- see syncScrollFrom()'s own comment on why the native scroll event alone isn't
+      // reliably enough (it can fire before this re-render, using preview's stale scrollHeight).
+      syncScrollFrom('editor', true);
 
       clearTimeout(inputTimeout);
       inputTimeout = setTimeout(() => {
@@ -12052,6 +12331,32 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // on, see insertFormatting()'s 'embed'/'details' cases above), so this needs no new parser
     // support and stays a portable, standalone-readable .md file with no dependency on this app.
 
+    // Reported directly: a background-colored *text run* copied via "Formatierte Notiz kopieren"
+    // (see copyFormattedToClipboard()) lost its highlight once pasted into Word, while a
+    // background-colored *table cell* copied the same way came through fine. Reading back what
+    // Chrome itself puts on the clipboard for both cases showed both are present and structurally
+    // identical (a plain `background-color:` inline style either way) — so this isn't something
+    // wrong with what this app produces, it's a receiving-app HTML-paste quirk. Word's importer is
+    // documented to sometimes only honor the `background` shorthand on inline runs even though it
+    // already handles plain `background-color` on <td>/<th> table shading correctly. Emitting both
+    // properties is harmless everywhere (this app's own preview/export only ever reads
+    // `background-color`) and costs nothing, so it's applied uniformly rather than only for the
+    // text-run case that was actually reported.
+    function buildColorSpanStyle(prop, color) {
+      return prop === 'background-color' ? (prop + ':' + color + '; background:' + color) : (prop + ':' + color);
+    }
+
+    // Detects a color span previously built by buildColorSpanStyle() above, for the toggle-off/
+    // re-pick-to-remove behavior every call site below relies on. For background-color, the value
+    // group deliberately stops at the first ';' (or the closing quote) so it captures just the
+    // color itself, not the trailing "; background:..." shorthand also written above — that
+    // trailer is optional in the pattern so it still matches spans written before this shorthand
+    // existed. `color` spans have no shorthand and match exactly as they always have.
+    function colorSpanRegex(prop) {
+      const valuePattern = prop === 'background-color' ? '([^;"]+)(?:;\\s*background:[^"]*)?' : '([^"]+)';
+      return new RegExp('^<span style="' + prop + ':\\s*' + valuePattern + '">([\\s\\S]*)</span>$');
+    }
+
     // Which raw-source cell (if any) the cursor currently sits in, for the background-color
     // button's table-cell-fill behavior below. CSV is deliberately excluded: renderCsvPreview()
     // escapes cell text as plain data (see escapeHtmlText() there), so a raw <span> written into
@@ -12078,7 +12383,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function applyColorToTableCell(cellInfo, color) {
       const { lines, cursorLine, colIndex, cells } = cellInfo;
       const current = cells[colIndex];
-      const m = current.match(/^<span style="background-color:\s*([^"]+)">([\s\S]*)<\/span>$/);
+      const m = current.match(colorSpanRegex('background-color'));
       const innerText = m ? m[2] : current;
       const existingColor = m ? m[1] : null;
 
@@ -12086,7 +12391,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (color === null || (existingColor && existingColor.toLowerCase() === color.toLowerCase())) {
         newCellText = innerText; // no color picked (remove), or re-picking the cell's current color toggles it off
       } else {
-        newCellText = '<span style="background-color:' + color + '">' + innerText + '</span>';
+        newCellText = '<span style="' + buildColorSpanStyle('background-color', color) + '">' + innerText + '</span>';
       }
 
       cells[colIndex] = newCellText;
@@ -12108,7 +12413,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const ranges = getSelectedCellRanges();
       if (!ranges || ranges.length === 0) return;
       const prop = kind === 'text' ? 'color' : 'background-color';
-      const spanRe = new RegExp('^<span style="' + prop + ':\\s*([^"]+)">([\\s\\S]*)</span>$');
+      const spanRe = colorSpanRegex(prop);
       applyEditsToCellRanges(ranges, (current) => {
         const trimmed = current.trim();
         const m = trimmed.match(spanRe);
@@ -12117,7 +12422,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (color === null || (existingColor && existingColor.toLowerCase() === color.toLowerCase())) {
           return innerText;
         }
-        return '<span style="' + prop + ':' + color + '">' + innerText + '</span>';
+        return '<span style="' + buildColorSpanStyle(prop, color) + '">' + innerText + '</span>';
       });
     }
 
@@ -12142,7 +12447,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
 
       const prop = kind === 'text' ? 'color' : 'background-color';
-      const spanRe = new RegExp('^<span style="' + prop + ':\\s*([^"]+)">([\\s\\S]*)</span>$');
+      const spanRe = colorSpanRegex(prop);
 
       let start = editor.selectionStart;
       let end = editor.selectionEnd;
@@ -12161,7 +12466,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (color === null || (existingColor && existingColor.toLowerCase() === color.toLowerCase())) {
         replacement = innerText;
       } else {
-        replacement = '<span style="' + prop + ':' + color + '">' + innerText + '</span>';
+        replacement = '<span style="' + buildColorSpanStyle(prop, color) + '">' + innerText + '</span>';
       }
 
       const newText = text.substring(0, start) + replacement + text.substring(end);
@@ -15785,17 +16090,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     // Maps a rendered image's ordinal position (the Nth .image-wrapper in the live preview,
-    // matching however many .alt-text-btn buttons preceded the one that was clicked) back to the
-    // exact alt-text span in the raw markdown source, and selects it — same "render order matches
-    // source order" idiom toggleTaskInMarkdown() already relies on for checkboxes. Skips any
-    // !()[]-syntax match that's actually a video or audio embed (using the exact same
-    // classification hljsRenderer.image()/getVideoEmbedHtml() do, just re-run against raw text
-    // instead of parsed tokens) so the count only advances on genuine image/drawing occurrences —
-    // exactly the set that gets an .image-wrapper at render time. A trailing quoted title
-    // (`![alt](url "title")`) is stripped before the video-URL regexes see the href, since those
-    // are anchored/suffix-sensitive and a title left attached would throw off a match.
-    function selectAltTextForImageIndex(index) {
-      if (editor.disabled || index < 0) return;
+    // matching however many .image-wrapper elements preceded the one that was clicked) back to
+    // its exact !()[]-occurrence in the raw markdown source — same "render order matches source
+    // order" idiom toggleTaskInMarkdown() already relies on for checkboxes. Skips any match that's
+    // actually a video or audio embed (using the exact same classification hljsRenderer.image()/
+    // getVideoEmbedHtml() do, just re-run against raw text instead of parsed tokens) so the count
+    // only advances on genuine image/drawing occurrences — exactly the set that gets an
+    // .image-wrapper at render time. Shared by selectAltTextForImageIndex() (below) and
+    // openImageStylePopoverForIndex() (see the IMAGE SIZE/BORDER section further down), so both
+    // "click a button on the Nth preview image" flows agree on which source occurrence that is.
+    function findImageMarkdownOccurrence(index) {
       const tab = getCurrentTab();
       const audioAssetIds = (tab && tab.audioAssetIds) || {};
       const text = editor.value;
@@ -15803,6 +16107,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       let match;
       let count = 0;
       while ((match = re.exec(text))) {
+        // A trailing quoted title (`![alt](url "title")`) is stripped before the video-URL
+        // regexes see the href, since those are anchored/suffix-sensitive and a title left
+        // attached would throw off a match.
         const href = match[2].replace(/\s+["'][^"']*["']\s*$/, '');
         const isVideo = YOUTUBE_URL_RE.test(href) || VIMEO_URL_RE.test(href) || VIDEO_FILE_URL_RE.test(href);
         if (isVideo) continue;
@@ -15812,14 +16119,125 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (count === index) {
           const altStart = match.index + 2; // past "!["
           const altEnd = altStart + match[1].length;
-          if (!showEditor) { showEditor = true; applyPaneVisibility(); persistTabViewState(); saveStateToLocalStorage(); }
-          editor.focus();
-          editor.setSelectionRange(altStart, altEnd);
-          return;
+          const hrefStart = altEnd + 2; // past "]("
+          const hrefEnd = hrefStart + match[2].length;
+          return { altStart, altEnd, hrefStart, hrefEnd, rawHref: match[2] };
         }
         count++;
       }
+      return null;
     }
+
+    function selectAltTextForImageIndex(index) {
+      if (editor.disabled || index < 0) return;
+      const found = findImageMarkdownOccurrence(index);
+      if (!found) return;
+      if (!showEditor) { showEditor = true; applyPaneVisibility(); persistTabViewState(); saveStateToLocalStorage(); }
+      editor.focus();
+      editor.setSelectionRange(found.altStart, found.altEnd);
+    }
+
+    // --- IMAGE SIZE/BORDER POPOVER (.image-style-btn — see the "#mdstyle:" section above) ---
+
+    let imageStylePopoverIndex = -1; // which .image-wrapper's button opened the popover, or -1 (closed)
+
+    // Splits a raw href-with-optional-title string (the exact text `findImageMarkdownOccurrence()`
+    // captured between the parens) into its href and the verbatim trailing title suffix (including
+    // the leading space and quotes, or '' if there is none) — so a rewrite can replace just the
+    // href portion and paste the title suffix back on unchanged, same split selectAltTextForImageIndex's
+    // video-classification code already does (matched the same way, just capturing instead of stripping).
+    function splitRawHrefTitle(rawHref) {
+      const m = rawHref.match(/^([\s\S]*?)(\s+["'][^"']*["']\s*)$/);
+      return m ? { href: m[1], titleSuffix: m[2] } : { href: rawHref, titleSuffix: '' };
+    }
+
+    function openImageStylePopoverForIndex(index, btnEl) {
+      const found = findImageMarkdownOccurrence(index);
+      if (!found) return;
+      const { href } = splitRawHrefTitle(found.rawHref);
+      const { style } = splitHrefAndMdStyle(href);
+
+      imageStylePopoverIndex = index;
+      document.getElementById('imgStyleWidthSlider').value = style.width;
+      document.getElementById('imgStyleWidthValue').textContent = style.width + '%';
+      document.getElementById('imgStyleBorderToggle').checked = !!style.borderColor;
+      document.getElementById('imgStyleBorderColor').value = style.borderColor || '#e03131';
+      document.getElementById('imgStyleBorderWidthSlider').value = style.borderWidth || 2;
+      document.getElementById('imgStyleBorderWidthValue').textContent = (style.borderWidth || 2) + 'px';
+      document.getElementById('imgStyleBorderRadiusSlider').value = style.borderRadius || 0;
+      document.getElementById('imgStyleBorderRadiusValue').textContent = (style.borderRadius || 0) + 'px';
+      toggleImageStyleBorderFields();
+
+      const popover = document.getElementById('imageStylePopover');
+      const rect = btnEl.getBoundingClientRect();
+      popover.style.top = (rect.bottom + 6) + 'px';
+      // Right-align to the button instead of left-aligning like the color picker does — this
+      // popover is 220px wide and its trigger sits in the bottom-*left* corner of the image (see
+      // .image-style-btn's CSS), so left-aligning it would routinely run the popover off the left
+      // edge of the viewport for an image sitting near the edge of a narrow preview pane.
+      popover.style.left = 'auto';
+      popover.style.right = (window.innerWidth - rect.right) + 'px';
+      popover.classList.add('active');
+    }
+
+    function closeImageStylePopover() {
+      document.getElementById('imageStylePopover').classList.remove('active');
+      imageStylePopoverIndex = -1;
+      // See the Cell-range selection section's own "editor.focus() is load-bearing" note — this
+      // whole interaction (click a preview button, drag sliders) never focuses the editor on its
+      // own, and without this a plain Ctrl/Cmd+Z right after closing the popover can be swallowed
+      // by the browser's native Undo instead of reaching this app's own keydown handler.
+      editor.focus();
+    }
+
+    function toggleImageStyleBorderFields() {
+      document.getElementById('imgStyleBorderFields').classList.toggle('active', document.getElementById('imgStyleBorderToggle').checked);
+    }
+
+    // Rebuilds the full style from every control's current value and splices it into the raw
+    // source on every change (slider drag, color pick, checkbox toggle) for live feedback in the
+    // preview — mirrors how the color-picker popover applies each pick immediately rather than
+    // needing a separate "confirm" step. Deliberately does not call recordHistory() itself (that
+    // would spam one undo step per slider tick mid-drag); closeImageStylePopover() covers focus,
+    // and the next debounced history snapshot (or another explicit action) picks up the result,
+    // same as how a color/format toolbar pick immediately followed by more typing already behaves.
+    function applyImageStyleFromPopover() {
+      if (imageStylePopoverIndex < 0 || editor.disabled) return;
+      const found = findImageMarkdownOccurrence(imageStylePopoverIndex);
+      if (!found) return;
+
+      const width = parseInt(document.getElementById('imgStyleWidthSlider').value, 10);
+      const borderOn = document.getElementById('imgStyleBorderToggle').checked;
+      const borderWidth = parseInt(document.getElementById('imgStyleBorderWidthSlider').value, 10);
+      const borderRadius = parseInt(document.getElementById('imgStyleBorderRadiusSlider').value, 10);
+      document.getElementById('imgStyleWidthValue').textContent = width + '%';
+      document.getElementById('imgStyleBorderWidthValue').textContent = borderWidth + 'px';
+      document.getElementById('imgStyleBorderRadiusValue').textContent = borderRadius + 'px';
+
+      const style = {
+        width,
+        borderColor: borderOn ? document.getElementById('imgStyleBorderColor').value : null,
+        borderWidth,
+        borderRadius
+      };
+
+      const { href, titleSuffix } = splitRawHrefTitle(found.rawHref);
+      const { baseHref } = splitHrefAndMdStyle(href);
+      const newRawHref = baseHref + buildMdStyleFragment(style) + titleSuffix;
+
+      const text = editor.value;
+      editor.value = text.slice(0, found.hrefStart) + newRawHref + text.slice(found.hrefEnd);
+      markActiveTabModified();
+      updatePreview();
+    }
+
+    document.addEventListener('click', (e) => {
+      const popover = document.getElementById('imageStylePopover');
+      const btn = e.target.closest('.image-style-btn');
+      if (popover.classList.contains('active') && !popover.contains(e.target) && !btn) {
+        closeImageStylePopover();
+      }
+    });
 
     // Delegated once on the (stable) preview container rather than re-bound on every render.
     // Checked first/separately from the drawing-open branch below since the alt-text button can
@@ -15830,6 +16248,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (altBtn) {
         const wrapper = altBtn.closest('.image-wrapper');
         selectAltTextForImageIndex(Array.from(preview.querySelectorAll('.image-wrapper')).indexOf(wrapper));
+        return;
+      }
+      const styleBtn = e.target.closest('.image-style-btn');
+      if (styleBtn) {
+        const wrapper = styleBtn.closest('.image-wrapper');
+        openImageStylePopoverForIndex(Array.from(preview.querySelectorAll('.image-wrapper')).indexOf(wrapper), styleBtn);
         return;
       }
       const photoEditBtn = e.target.closest('.photo-edit-btn');
@@ -17605,6 +18029,89 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
     }
 
+    // --- CROSS-NOTE asset:ID COLLISION on plain-text copy/paste ---
+    //
+    // Asset IDs (img_1, img_2, ...) are only ever unique *within one tab* — tab.assetCounter
+    // starts fresh at 0 for every note. Copying raw markdown source that references an image
+    // (![Bild](asset:img_1)) out of one note's editor and pasting it into another note whose own,
+    // completely unrelated image also happens to be img_1 (extremely common, since "the first
+    // image in this note" is the typical case) used to silently render the *destination* note's
+    // own img_1 instead — the pasted reference is just the bare string "asset:img_1", which
+    // carries no information about which note's img_1 was actually meant, and a plain-text
+    // clipboard has no room to carry the real image bytes alongside it. Reported directly.
+    //
+    // The real fix needs the actual bytes, not just the copied text, and those only exist in this
+    // app's own memory (tab.assets) — an OS clipboard can't hold them for a plain-text copy. This
+    // in-page-memory snapshot bridges that gap for the common case (copying and pasting between
+    // notes within the same open app instance/tab): captured on 'copy'/'cut' from the editor
+    // whenever the selection contains an asset:ID reference, consulted on the next 'paste'.
+    // Copying to a completely different app/window, or pasting after the source note's assets
+    // have changed, has no such snapshot to consult and falls back to the old (collision-prone)
+    // plain-text paste — an accepted, narrower gap than fixing the general case would need.
+    let internalClipboardSnapshot = null; // { text, assets, drawingAssetIds, rawDrawingAssetIds, pdfDrawingAssetIds, audioAssetIds } | null
+
+    function captureInternalClipboardSnapshot() {
+      const tab = getCurrentTab();
+      const start = editor.selectionStart, end = editor.selectionEnd;
+      if (!tab || start === end) { internalClipboardSnapshot = null; return; }
+      const text = editor.value.slice(start, end);
+      const ids = new Set();
+      let m;
+      const idRe = /asset:([A-Za-z0-9_]+)/g;
+      while ((m = idRe.exec(text))) ids.add(m[1]);
+      if (ids.size === 0) { internalClipboardSnapshot = null; return; }
+
+      const snapshot = { text, assets: {}, drawingAssetIds: {}, rawDrawingAssetIds: {}, pdfDrawingAssetIds: {}, audioAssetIds: {} };
+      ids.forEach(id => {
+        if (tab.assets && tab.assets[id] !== undefined) snapshot.assets[id] = tab.assets[id];
+        if (tab.drawingAssetIds && tab.drawingAssetIds[id]) snapshot.drawingAssetIds[id] = true;
+        if (tab.rawDrawingAssetIds && tab.rawDrawingAssetIds[id]) snapshot.rawDrawingAssetIds[id] = true;
+        if (tab.pdfDrawingAssetIds && tab.pdfDrawingAssetIds[id]) snapshot.pdfDrawingAssetIds[id] = true;
+        if (tab.audioAssetIds && tab.audioAssetIds[id]) snapshot.audioAssetIds[id] = true;
+      });
+      internalClipboardSnapshot = snapshot;
+    }
+
+    editor.addEventListener('copy', captureInternalClipboardSnapshot);
+    editor.addEventListener('cut', captureInternalClipboardSnapshot);
+
+    // Rewrites any asset:ID reference in freshly pasted text against internalClipboardSnapshot
+    // (above), copying the real byte data into destTab under whichever ID it ends up using.
+    // Reusing the exact same ID unmodified is safe (and preferred, to avoid pointless duplicate
+    // asset entries) whenever destTab either doesn't have that ID yet or already holds the exact
+    // same bytes under it — the latter is the common "paste back into the very note it was copied
+    // from" case, e.g. duplicating a paragraph that contains an image. A real collision (the ID is
+    // already taken by *different* data — the reported bug) mints a fresh one instead, the same
+    // 'img_' + assetCounter scheme every other insert path uses (see registerImageAsset()).
+    // Returns the rewritten text, or null if there was nothing to remap (no snapshot for this
+    // exact paste, or it referenced no id this snapshot actually has data for) — the caller then
+    // leaves the paste to fall through to the native, unmodified path.
+    function remapPastedAssetReferences(text, destTab) {
+      const snapshot = internalClipboardSnapshot;
+      if (!snapshot || !snapshot.text.includes(text)) return null;
+      if (!destTab.assets) destTab.assets = {};
+
+      const idMap = {};
+      let touchedAny = false;
+      const result = text.replace(/asset:([A-Za-z0-9_]+)/g, (match, id) => {
+        if (!(id in snapshot.assets)) return match;
+        if (!(id in idMap)) {
+          const existing = destTab.assets[id];
+          const finalId = (existing === undefined || existing === snapshot.assets[id]) ? id : registerImageAsset(destTab, snapshot.assets[id]);
+          if (finalId === id) destTab.assets[id] = snapshot.assets[id]; // registerImageAsset() already wrote it for the fresh-id branch
+          if (snapshot.drawingAssetIds[id]) { destTab.drawingAssetIds = destTab.drawingAssetIds || {}; destTab.drawingAssetIds[finalId] = true; }
+          if (snapshot.rawDrawingAssetIds[id]) { destTab.rawDrawingAssetIds = destTab.rawDrawingAssetIds || {}; destTab.rawDrawingAssetIds[finalId] = true; }
+          if (snapshot.pdfDrawingAssetIds[id]) { destTab.pdfDrawingAssetIds = destTab.pdfDrawingAssetIds || {}; destTab.pdfDrawingAssetIds[finalId] = true; }
+          if (snapshot.audioAssetIds[id]) { destTab.audioAssetIds = destTab.audioAssetIds || {}; destTab.audioAssetIds[finalId] = true; }
+          if (finalId === id) persistAssetToIndexedDb(destTab, finalId); // registerImageAsset() already persists the fresh-id branch
+          idMap[id] = finalId;
+          touchedAny = true;
+        }
+        return 'asset:' + idMap[id];
+      });
+      return touchedAny ? result : null;
+    }
+
     editor.addEventListener('paste', async (e) => {
       if (editor.disabled) return;
       const clipboardData = e.clipboardData;
@@ -17655,6 +18162,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           e.preventDefault();
           markdown = await embedExternalPasteImages(markdown, pasteTab);
           insertPlainTextAtCursor(markdown);
+        }
+        return;
+      }
+
+      // Plain-text paste (no rich HTML flavor, or none this app treats as "rich") that might
+      // carry another note's asset:ID reference — see the section comment above.
+      const plainText = clipboardData && clipboardData.getData('text/plain');
+      if (plainText && pasteTab && pasteTab.fileType !== 'csv' && /asset:[A-Za-z0-9_]+/.test(plainText)) {
+        const remapped = remapPastedAssetReferences(plainText, pasteTab);
+        if (remapped !== null) {
+          e.preventDefault();
+          insertPlainTextAtCursor(remapped);
         }
       }
     });
