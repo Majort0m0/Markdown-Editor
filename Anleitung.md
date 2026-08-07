@@ -212,6 +212,18 @@ Jedes Bild kann einen sichtbaren Text darunter bekommen — über die optionale 
 
 Jedes eingefügte Bild/Foto/jede Zeichnung/jedes Piktogramm bekommt automatisch einen sprechfreundlichen Standard-Alt-Text („Das ist ein Bild." / „Das ist ein Foto." / „Das ist eine Zeichnung." / „Das ist ein Piktogramm."), der z. B. im [Vorlesemodus](#9-vorlesemodus) vorgelesen wird. Beim Überfahren eines Bildes in der Vorschau erscheint unten rechts ein „🏷️ Alt-Text"-Button — er markiert den Alt-Text direkt im Quelltext zum Überschreiben.
 
+### Bildgröße und Rahmen anpassen
+
+Jedes Bild — egal ob eingefügtes Foto, Zeichnung, Piktogramm oder verlinktes Bild — lässt sich verkleinern und mit einem farbigen Rahmen versehen, ohne die Bilddatei selbst zu verändern:
+
+1. Mit der Maus über das Bild in der Vorschau fahren — unten links erscheint ein „📐 Größe"-Button (neben dem „🏷️ Alt-Text"-Button in der gegenüberliegenden Ecke).
+2. Ein Klick öffnet ein kleines Fenster mit:
+   - **Größe** — Schieberegler von 25 % bis 100 % der verfügbaren Breite.
+   - **Rahmen anzeigen** — Checkbox; sobald aktiviert, erscheinen drei weitere Regler: **Farbe** (Farbwähler), **Dicke** (1–10 Pixel) und **Ecken** (Eckenradius, 0–40 Pixel, für abgerundete Ecken).
+3. Jede Änderung wirkt sich sofort auf die Vorschau aus — kein „Übernehmen"-Klick nötig.
+
+Die Einstellung wird direkt im Bildverweis im Quelltext gespeichert (unsichtbar als kleiner Zusatz an der Bildadresse) und bleibt beim Speichern, erneuten Öffnen und über WebDAV-Synchronisierung erhalten — genau wie bei jedem anderen Bild. Ein unverändertes Bild (100 % Breite, kein Rahmen) bekommt keinen solchen Zusatz und sieht im Quelltext exakt so aus wie bisher.
+
 ## 6. PDF-Dateien als Arbeitsblatt bearbeiten
 
 Eine sehr nützliche Funktion für Arbeitsblätter, Formulare oder gescannte Dokumente: eine PDF-Datei öffnen und einzelne Seiten direkt beschriften.
