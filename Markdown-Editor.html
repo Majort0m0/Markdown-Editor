@@ -7566,7 +7566,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       try {
         return { state: JSON.parse(text), rawText: text };
       } catch (err) {
-        throw new Error('Ungültiges Sync-Dateiformat auf dem Server – zeigt die URL auf eine Datei (nicht einen Ordner)?');
+        // The blanket "wrong URL shape?" message alone gave no way to tell an HTML login/error
+        // page apart from genuinely corrupted JSON without opening devtools -- plenty of WebDAV
+        // servers return a 200 with an HTML body instead of a proper 401/403 when an app password
+        // has expired or been revoked, or when a share link's permissions changed, which reads
+        // exactly like this same error even though the URL itself never moved. Content-Type is
+        // the single most telling signal when the server sets it usefully (text/html is a dead
+        // giveaway); a short preview of the actual body covers the servers that don't.
+        const contentType = res.headers.get('content-type') || 'unbekannt';
+        const preview = text.trim().slice(0, 160).replace(/\s+/g, ' ');
+        throw new Error('Ungültiges Sync-Dateiformat auf dem Server (Content-Type: ' + contentType + ') – zeigt die URL auf eine Datei (nicht einen Ordner)? Serverantwort begann mit: "' + preview + '"');
       }
     }
 
