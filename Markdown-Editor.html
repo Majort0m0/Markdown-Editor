@@ -27998,12 +27998,56 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       previewIsAuthoring = true;
       updatePreview();
       previewIsAuthoring = false;
+      refreshPreviewFormulaValues();
 
       markActiveTabModified();
       clearTimeout(inputTimeout);
       inputTimeout = setTimeout(() => {
         recordHistory();
       }, 400);
+    }
+
+    // Rechnet die angezeigten Werte aller Formelzellen neu und schreibt sie direkt in die
+    // vorhandenen Spans, ohne das DOM neu aufzubauen.
+    //
+    // Nötig, weil der Weg oben bewusst previewIsAuthoring benutzt: dabei bleibt preview.innerHTML
+    // unangetastet (sonst läge der Cursor nach jedem Zeichen woanders), und genau dieser
+    // innerHTML-Aufbau ist es, der sonst resolveFormulasForRender() durchläuft. Ergebnis war, dass
+    // eine Formel im Quelltext-Editor sofort mitrechnete, in der Vorschau aber auf dem alten Wert
+    // stehen blieb -- gemeldet und nachgestellt: Wert 10 auf 20 geändert, Quelltext korrekt, die
+    // Summe zeigte weiter 15 statt 25.
+    //
+    // Der berechnete Wert steht in einem eigenen <span class="cell-formula"> innerhalb der Zelle
+    // (siehe hljsRenderer.tablecell()), deshalb genügt es, dessen textContent zu setzen: eventuelle
+    // Formatierung (fett, Hintergrundfarbe) umschliesst diesen Span, wird also nicht angefasst, und
+    // der Ausfüll-Anfasser ist sein Geschwister, kein Kind.
+    function refreshPreviewFormulaValues() {
+      const spans = preview.querySelectorAll('.cell-formula-cell .cell-formula');
+      if (!spans.length) return;
+      const blocks = findAllMarkdownTableBlocks(editor.value);
+      if (!blocks.length) return;
+
+      // Position des Formel-Spans in der Quelle -> neuer Anzeigewert. Über die Position zugeordnet
+      // und nicht über die Formel selbst: dieselbe Formel darf mehrfach im Dokument vorkommen und
+      // dann je nach Tabelle ein anderes Ergebnis haben.
+      const werte = [];
+      for (const rows of blocks) {
+        for (const eintrag of resolveTableFormulaCells(editor.value, rows).values()) {
+          werte.push({ von: eintrag.spanStart, wert: eintrag.display });
+        }
+      }
+      if (!werte.length) return;
+
+      spans.forEach((span) => {
+        const zelle = span.closest('td[data-start], th[data-start]');
+        if (!zelle) return;
+        const von = Number(zelle.dataset.start), bis = Number(zelle.dataset.end);
+        if (!Number.isFinite(von) || !Number.isFinite(bis)) return;
+        const treffer = werte.find((w) => w.von >= von && w.von <= bis);
+        // Nur bei echter Änderung schreiben -- ein unnötiges textContent-Setzen würde den
+        // Textknoten ersetzen und damit eine Selektion in dieser Zelle zerstören.
+        if (treffer && span.textContent !== treffer.wert) span.textContent = treffer.wert;
+      });
     }
 
     // Studio Pro Phase 9: Tab/Shift+Tab cell-to-cell navigation -- steps to the next/previous cell
