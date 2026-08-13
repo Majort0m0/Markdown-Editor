@@ -3032,16 +3032,57 @@ return rgba;});});}).call(this);
     .canvas-box-handle.sw { bottom: -5px; left: -5px; cursor: nesw-resize; }
     .canvas-box-handle.se { bottom: -5px; right: -5px; cursor: nwse-resize; }
 
-    .canvas-box-move-edge {
+    /* Replaces the four 8px-wide .canvas-box-move-edge strips that used to straddle the box's own
+       borders. Reported directly as "ziemlich fizzelich" — those strips were the only way to move a
+       box, they sat half outside the border with nothing visible marking them, and they had to stay
+       thin so as not to swallow clicks meant for the box body or the corner resize handles. A real
+       button with its own visible affordance, parked clear of the box entirely, has none of those
+       constraints. Sized well above the ~44px comfortable touch target on its wider axis; the corner
+       resize handles keep their own smaller size since they are precision controls by nature.
+       transform: translateX(-50%) is what centers it on the box's own horizontal midpoint. */
+    .canvas-box-move-handle {
       position: absolute;
-      z-index: 4;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 46px;
+      height: 26px;
+      border-radius: 13px;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-secondary);
+      cursor: move;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      z-index: 6;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+      /* The pointerdown handler calls preventDefault(), but a touch drag is cancelled by the
+         browser's own scroll/pan gesture before that ever runs unless touch-action opts out. */
+      touch-action: none;
     }
-    .canvas-box-move-edge.top, .canvas-box-move-edge.bottom { left: 8px; right: 8px; height: 8px; cursor: move; }
-    .canvas-box-move-edge.left, .canvas-box-move-edge.right { top: 8px; bottom: 8px; width: 8px; cursor: move; }
-    .canvas-box-move-edge.top { top: -4px; }
-    .canvas-box-move-edge.bottom { bottom: -4px; }
-    .canvas-box-move-edge.left { left: -4px; }
-    .canvas-box-move-edge.right { right: -4px; }
+
+    /* A box sitting at (or very near) the page's own top edge has no room above it — measured with
+       a box at y=0: the handle landed 28px above the page and 4px above the viewport, clipped to 22
+       of its 26px. Flipping it just inside the box's top edge keeps it fully reachable there. It
+       overlaps the box's content in that position, which is why this is the exception rather than
+       the default: a handle sitting outside the box never covers anything. */
+    .canvas-box-move-handle.inside {
+      top: 4px;
+    }
+
+    .canvas-box-move-handle:hover {
+      background-color: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .canvas-box-move-handle svg {
+      width: 18px;
+      height: 18px;
+      pointer-events: none;
+    }
 
     .canvas-box-delete-btn {
       position: absolute;
@@ -5798,7 +5839,7 @@ return rgba;});});}).call(this);
       main.canvas-tab-active .canvas-tts-toggle-btn,
       #canvasTtsStage,
       .canvas-box-handle,
-      .canvas-box-move-edge,
+      .canvas-box-move-handle,
       .canvas-box-delete-btn {
         display: none !important;
       }
@@ -12883,11 +12924,22 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       '<path d="M4 7H20M9 7V5C9 4.44772 9.44772 4 10 4H14C14.5523 4 15 4.44772 15 5V7M18 7L17.3 18.3C17.2 19.5 16.2 20 15 20H9C7.8 20 6.8 19.5 6.7 18.3L6 7" ' +
       'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+    // Written inline here rather than pulled from Icons/, the same way CANVAS_TRASH_ICON above is:
+    // that folder has only a left/right pair (which the table controls rotate into up/down), no
+    // four-way "Steuerkreuz". Two crossed lines plus four arrowheads, all currentColor so the
+    // handle's own hover state recolors it for free.
+    const CANVAS_MOVE_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M12 3V21M3 12H21M12 3L9.5 5.5M12 3L14.5 5.5M12 21L9.5 18.5M12 21L14.5 18.5' +
+      'M3 12L5.5 9.5M3 12L5.5 14.5M21 12L18.5 9.5M21 12L18.5 14.5" ' +
+      'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
     // Rebuilds every box <div> from scratch on each call (mirroring how updatePreview() itself
     // fully replaces preview.innerHTML rather than diffing) — simple and fast enough at the
     // "handful of boxes on one page" scale this feature is meant for. Only the *selected* box
-    // gets resize handles/move edges/delete button, per the spec ("Wenn die Box nur einmal
-    // angeklickt wird, erhalten die Ränder der Box dynamische Anfasser").
+    // gets resize handles/move handle/delete button, per the spec ("Wenn die Box nur einmal
+    // angeklickt wird, erhalten die Ränder der Box dynamische Anfasser") — the corner resize
+    // handles still sit on the border as that spec describes; moving moved off the border
+    // entirely to its own button above the box (see .canvas-box-move-handle's CSS comment).
     function renderCanvasBoxes() {
       const tab = getActiveTabReal();
       if (!tab || !tab.canvasData) return;
@@ -12944,11 +12996,22 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             h.dataset.handle = pos;
             el.appendChild(h);
           });
-          ['top', 'bottom', 'left', 'right'].forEach(pos => {
-            const m = document.createElement('div');
-            m.className = 'canvas-box-move-edge ' + pos;
-            el.appendChild(m);
-          });
+          // One move handle above the box, replacing the four .canvas-box-move-edge strips that
+          // used to straddle its borders — see the CSS rule for why those were reported as fiddly.
+          const move = document.createElement('button');
+          move.type = 'button';
+          // The handle occupies the 30px directly above the box (top: -30px, 26px tall). A box
+          // closer to the page's top edge than that has nowhere to put it, so it flips inside —
+          // compared in millimeters against the box's own y, since that is the unit box positions
+          // are stored in. The comparison is zoom-independent on purpose: the handle lives inside
+          // .canvas-box, which canvasPage's own scale() transform already scales as a whole, so
+          // its 30px and the box's y shrink and grow together.
+          const moveHandleNeedsMm = 30 / CANVAS_PX_PER_MM;
+          move.className = 'canvas-box-move-handle' + (box.y < moveHandleNeedsMm ? ' inside' : '');
+          move.title = 'Box verschieben (ziehen)';
+          move.innerHTML = CANVAS_MOVE_ICON;
+          el.appendChild(move);
+
           const del = document.createElement('button');
           del.type = 'button';
           del.className = 'canvas-box-delete-btn';
@@ -13253,11 +13316,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
 
       const handle = e.target.closest('.canvas-box-handle');
-      const edge = e.target.closest('.canvas-box-move-edge');
+      const moveHandle = e.target.closest('.canvas-box-move-handle');
       const boxEl = e.target.closest('.canvas-box');
 
       if (handle) { startCanvasBoxResize(e, handle.dataset.handle, boxEl); return; }
-      if (edge) { startCanvasBoxMove(e, boxEl); return; }
+      // Checked before the plain boxEl branch below, exactly like the delete button above: the
+      // handle is a child of its own .canvas-box, so without this the two-step activation would
+      // claim the press and re-render the box (destroying the very button being dragged) before any
+      // drag could start. startCanvasBoxMove() itself is unchanged — only what triggers it moved.
+      if (moveHandle) { startCanvasBoxMove(e, boxEl); return; }
       if (boxEl) {
         // Simplified two-step activation (native dblclick is kept below as a fallback, but this
         // is the primary path): first click selects (shows handles/border), a second click while
@@ -13290,7 +13357,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // same exclusions the plain-click branch above already needs.
     canvasViewport.addEventListener('dblclick', (e) => {
       if (canvasAddMode) return;
-      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-handle, .canvas-box-move-edge')) return;
+      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-handle, .canvas-box-move-handle')) return;
       const boxEl = e.target.closest('.canvas-box');
       if (!boxEl) return;
       openCanvasBoxEditor(boxEl.dataset.boxId);
