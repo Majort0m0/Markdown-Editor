@@ -22367,9 +22367,70 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // finishPreviewStructuralEdit() erledigt Neuaufbau, Cursor-Wiederherstellung an der
       // gewünschten Quelltextposition und recordHistory() in der richtigen Reihenfolge -- dieselbe
       // Aufteilung wie bei finishAssetInsertion() für das Einfügen von Medien.
-      if (previewIsLiveEditingSurface()) {
+      // Nicht nur "ist die Vorschau editierbar", sondern "wird gerade IN ihr gearbeitet". Im
+      // Split-Modus ist beides sichtbar, und wer den Cursor im Quelltextfeld hat, soll ihn nach
+      // einer Tabellenaktion auch dort behalten -- ein Sprung in die Vorschau wäre dort ein
+      // Rückschritt gegenüber dem bisherigen Verhalten. Entschieden wird das an der Selektion, aus
+      // demselben Grund wie in applyToolbarFormat(): der Klick auf einen Leisten-Knopf verschiebt
+      // document.activeElement auf diesen Knopf, die Selektion bleibt aber, wo sie war.
+      const selektion = window.getSelection();
+      const inVorschauGearbeitet = !showEditor ||
+        !!(selektion && selektion.rangeCount > 0 && preview.contains(selektion.getRangeAt(0).startContainer));
+      if (previewIsLiveEditingSurface() && inVorschauGearbeitet) {
         editor.setSelectionRange(newCursorOffset, newCursorOffset);
         finishPreviewStructuralEdit(newCursorOffset);
+        // Nachkorrektur für den häufigsten Fall überhaupt: eine gerade eingefügte Zeile oder
+        // Spalte besteht aus LEEREN Zellen, und eine leere Zelle hat keinen Textknoten, in den
+        // sourceOffsetToDomPosition() einen Cursor setzen könnte. Gemessen: der Cursor landete
+        // stattdessen im nächsten auflösbaren Text (dem Absatz unter der Tabelle), der
+        // selectionchange-Hörer rechnete diese Position nach editor.selectionStart zurück,
+        // findTableBlock() sah keine Tabelle mehr -- und die Leiste verschwand direkt nach der
+        // Aktion, sodass man für jede weitere Zeile erst wieder in die Tabelle klicken musste.
+        // placeCaretInTableCell() verankert den Cursor auf dem Zellenelement selbst und kommt
+        // deshalb auch ohne Textknoten aus; es ist dieselbe Funktion, die ein Klick in eine Zelle
+        // ohnehin benutzt.
+        // Enthaltende Zelle zuerst; wenn keine passt, die nächstgelegene. Das zweite ist kein
+        // Sicherheitsnetz, sondern der reguläre Fall beim Zeilen-Löschen: dort zeigt der berechnete
+        // Offset auf den Zeilenanfang, also auf das trennende "|" -- ein Zeichen, das zu KEINER
+        // Zellenspanne gehört. Gemessen: mit sichtbarem Quelltext blieb der Cursor dort trotzdem in
+        // der Tabelle (Position 25), in der Vorschau rutschte er ohne diesen Zweig auf 36, hinter
+        // die Tabelle, und die Leiste verschwand.
+        const zellen = [...preview.querySelectorAll('td[data-start], th[data-start]')]
+          .map((c) => ({ el: c, von: Number(c.dataset.start), bis: Number(c.dataset.end) }))
+          .filter((c) => Number.isFinite(c.von) && Number.isFinite(c.bis));
+        let treffer = zellen.find((c) => newCursorOffset >= c.von && newCursorOffset <= c.bis);
+        if (!treffer && zellen.length) {
+          // Der Rückfall ist bewusst auf die Spanne EINER Tabelle begrenzt (erste bis letzte Zelle
+          // desselben <table>). Ohne diese Grenze würde ein Offset, der berechtigt ausserhalb jeder
+          // Tabelle liegt -- etwa nachdem die letzte Zeile entfernt wurde -- den Cursor trotzdem in
+          // die nächstbeste Zelle gezogen, womöglich sogar in eine ganz andere Tabelle weiter oben
+          // im Dokument.
+          const proTabelle = new Map();
+          zellen.forEach((c) => {
+            const tab = c.el.closest('table');
+            if (!tab) return;
+            const eintrag = proTabelle.get(tab) || { von: Infinity, bis: -Infinity, zellen: [] };
+            eintrag.von = Math.min(eintrag.von, c.von);
+            eintrag.bis = Math.max(eintrag.bis, c.bis);
+            eintrag.zellen.push(c);
+            proTabelle.set(tab, eintrag);
+          });
+          for (const eintrag of proTabelle.values()) {
+            if (newCursorOffset < eintrag.von || newCursorOffset > eintrag.bis) continue;
+            treffer = eintrag.zellen.reduce((beste, c) => {
+              const abstand = newCursorOffset < c.von ? c.von - newCursorOffset
+                : (newCursorOffset > c.bis ? newCursorOffset - c.bis : 0);
+              return (!beste || abstand < beste.abstand) ? Object.assign({}, c, { abstand }) : beste;
+            }, null);
+            break;
+          }
+        }
+        const zielZelle = treffer && treffer.el;
+        if (zielZelle) {
+          placeCaretInTableCell(zielZelle);
+          editor.setSelectionRange(newCursorOffset, newCursorOffset);
+        }
+        updateTableControlsVisibility();
         return;
       }
       editor.focus();
