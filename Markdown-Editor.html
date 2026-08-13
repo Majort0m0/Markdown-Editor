@@ -1844,8 +1844,18 @@ return rgba;});});}).call(this);
       display: none !important;
     }
 
+    /* Zentriert, weil Simple Modus nur eine Handvoll Symbole übrig lässt (alles andere trägt
+       .simple-hide) — linksbündig sammelten die sich in der Ecke einer sonst leeren Leiste.
+       "safe center" statt "center" ist hier nicht kosmetisch: die Leiste wird auf schmalen
+       Viewports zu flex-wrap: nowrap + overflow-x: auto (siehe Media Query am Ende), und ein
+       zentrierter Flex-Container schiebt überlaufenden Inhalt nach BEIDEN Seiten heraus — der
+       Anfang landet dann im negativen Scrollbereich und ist per Wischen nicht mehr erreichbar.
+       "safe" fällt genau in diesem Fall automatisch auf linksbündig zurück. Die erste Zeile ist
+       der Rückfall für Browser, die das Schlüsselwort nicht kennen. */
     body.simple-mode .formatting-toolbar {
       zoom: 1.2;
+      justify-content: center;
+      justify-content: safe center;
     }
 
     body.simple-mode .table-controls {
@@ -3276,6 +3286,16 @@ return rgba;});});}).call(this);
       cursor: pointer;
       font-size: 13px;
       font-family: inherit;
+    }
+
+    /* Trennt die "Weitere Aktionen"-Zeile vom darüberliegenden Block der Formatvorlagen ab (siehe
+       openBlockFormatMenu()) — sie konvertiert nichts, sondern wechselt in ein anderes Menü, und
+       soll deshalb nicht als weitere Formatvorlage gelesen werden. */
+    .slash-menu-item.with-divider {
+      border-top: 1px solid var(--border-color);
+      border-radius: 0 0 5px 5px;
+      margin-top: 4px;
+      padding-top: 9px;
     }
 
     .slash-menu-item.selected {
@@ -6043,14 +6063,31 @@ return rgba;});});}).call(this);
        and blockHandleWidth() below, which this sizing intentionally matches) -- this block is
        the CSS half of that same touch/no-hover concern, not a screen-size one. */
     @media (hover: none) {
+      /* Reported as "zu breit und zu nah am Text" auf dem Telefon. Beides hatte dieselbe Ursache:
+         der Anfasser brauchte 36px + 4px Abstand = 40px Rinne, .preview-pane hat auf schmalen
+         Viewports aber nur 16px Innenabstand (siehe Media Query am Ende) — positionBlockHandle()s
+         Math.max(2, ...) klemmte ihn deshalb auf 2px, wo seine 36px Breite bis x=38 reichten und
+         damit über den bei x=16 beginnenden Text liefen. Schmaler (28×36 statt 36×40) UND mit
+         echtem Platz dafür (padding-left unten) statt nur einem davon. Die Trefferfläche bleibt
+         dank .block-handle::before (6px Aufschlag ringsum) mit 40×48px klar über der
+         Daumenbreite — verkleinert wird nur der sichtbare Kasten, nicht das Ziel. */
       .block-handle {
-        width: 36px;
-        height: 40px;
+        width: 28px;
+        height: 36px;
       }
 
       .block-handle svg {
-        width: 16px;
-        height: 26px;
+        width: 14px;
+        height: 22px;
+      }
+
+      /* Die Rinne, in der der Anfasser sitzt (28px breit + 10px Abstand zum Text, siehe
+         blockHandleGap()). Ohne sie gibt es links schlicht keinen Platz, in den er ausweichen
+         könnte, und jede Verkleinerung allein würde ihn nur etwas weniger weit über den Text
+         schieben statt gar nicht. Gilt nur für Geräte ohne Mauszeiger — am Desktop reichen die
+         ohnehin vorhandenen 32px. */
+      .preview-pane {
+        padding-left: 42px;
       }
 
       .bubble-toolbar .toolbar-btn,
@@ -6308,17 +6345,34 @@ return rgba;});});}).call(this);
 
   <!-- Formatierungsmenüleiste -->
   <div class="formatting-toolbar" id="formattingToolbar">
-    <div class="heading-picker" title="Überschrift einfügen">
+    <!-- Covers far more than headings now (Absatz, Zitat, Code, Einrückung), per report: in Simple
+         Modus every other formatting control carries .simple-hide, so this select is the ONLY
+         formatting entry point left there — "In der Werkzeugleiste werden nur Überschriften zur
+         Auswahl angezeigt. Es bräuchte hier aber auch Absatzformat, Zitat, Code und Einrückung."
+         Grouped with <optgroup> so the heading levels don't drown the four new entries. -->
+    <div class="heading-picker" title="Format">
       <span class="heading-picker-icon"><svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M2,12H5a1,1,0,0,0,0-2H4.635l.586-1.692H8.779L9.365,10H9a1,1,0,0,0,0,2h3a1,1,0,0,0,0-2h-.518L8.945,2.673A1,1,0,0,0,8,2H6a1,1,0,0,0-.945.673L2.518,10H2a1,1,0,0,0,0,2ZM6.712,4h.576l.8,2.308H5.913ZM23,4a1,1,0,0,1-1,1H15a1,1,0,0,1,0-2h7A1,1,0,0,1,23,4Zm0,6a1,1,0,0,1-1,1H15a1,1,0,0,1,0-2h7A1,1,0,0,1,23,10Zm0,5a1,1,0,0,1-1,1H2a1,1,0,0,1,0-2H22A1,1,0,0,1,23,15Zm0,6a1,1,0,0,1-1,1H2a1,1,0,0,1,0-2H22A1,1,0,0,1,23,21Z"/></svg></span>
-      <select id="headingSelect" class="toolbar-select fmt-btn" title="Überschrift einfügen"
-            onchange="if (this.value) insertFormatting(this.value); this.selectedIndex = 0;">
-      <option value="" selected>Überschrift</option>
-      <option value="h1">Überschrift 1</option>
-      <option value="h2">Überschrift 2</option>
-      <option value="h3">Überschrift 3</option>
-      <option value="h4">Überschrift 4</option>
-      <option value="h5">Überschrift 5</option>
-      <option value="h6">Überschrift 6</option>
+      <select id="headingSelect" class="toolbar-select fmt-btn" title="Absatzformat, Überschrift, Zitat, Code, Einrückung"
+            onchange="if (this.value) applyToolbarFormat(this.value); this.selectedIndex = 0;">
+      <option value="" selected>Format</option>
+      <option value="paragraph">Absatz</option>
+      <optgroup label="Überschrift">
+        <option value="h1">Überschrift 1</option>
+        <option value="h2">Überschrift 2</option>
+        <option value="h3">Überschrift 3</option>
+        <option value="h4">Überschrift 4</option>
+        <option value="h5">Überschrift 5</option>
+        <option value="h6">Überschrift 6</option>
+      </optgroup>
+      <optgroup label="Block">
+        <option value="quote">Zitat</option>
+        <option value="code">Code (im Text)</option>
+        <option value="codeblock">Code-Block</option>
+      </optgroup>
+      <optgroup label="Einrückung">
+        <option value="indent">Einzug vergrößern</option>
+        <option value="outdent">Einzug verkleinern</option>
+      </optgroup>
       </select>
     </div>
     <div class="toolbar-divider"></div>
@@ -11687,6 +11741,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // bestehenden Logik oben (die die Leiste ohnehin ausblendet, sobald kein Quelltext sichtbar
       // ist). Voll unterscheidet sich weiterhin allein durch die längst vorhandene .simple-hide-
       // Regel, sobald simpleMode korrekt mitgeführt wird.
+      // Siehe applyFormattingToolbarVisibility() -- die Regel steht bewusst an EINER Stelle, weil
+      // updatePreview() sie ebenfalls anwenden muss und eine zweite, abweichende Kopie dort die
+      // Leiste im Simple Modus bei jedem Tastendruck wieder ausgeblendet hat.
       // Bug fix (per explicit request): Simple Modus zeigte die Werkzeugleiste bisher NUR bei
       // sichtbarem Quelltext -- dieselbe !showEditor-Bedingung, die für Voll (dort mit Split-View)
       // sinnvoll ist, blendete sie in Simple aber auch dann aus, wenn (jetzt der Default, siehe
@@ -11696,8 +11753,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // -- die WYSIWYG-Vorschau ist ja die live editierbare Oberfläche, auf der die Formatierungs-
       // Buttons genauso wirken wie im Quelltext (siehe applyPreviewFormat()). Nur für Voll (und
       // jeden sonstigen/zukünftigen Modus) bleibt die alte !showEditor-Abhängigkeit bestehen.
-      document.getElementById('formattingToolbar').style.display =
-        (canvasNoBox || operatingMode === 'focus' || (operatingMode !== 'simple' && !showEditor)) ? 'none' : 'flex';
+      applyFormattingToolbarVisibility(canvasNoBox);
       // Hält #burgerViewSelector (Fokus-Modus, siehe changeBurgerViewMode()) synchron mit dem
       // tatsächlichen showEditor/showPreview-Zustand, auch wenn der über einen ANDEREN Weg
       // geändert wurde (z.B. Tastenkürzel, Tab-Wechsel) -- null-sicher, da diese Funktion auch vor
@@ -11706,6 +11762,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (burgerViewSel) burgerViewSel.value = showEditor && showPreview ? 'split' : (showPreview ? 'preview' : 'source');
       updateThemePickerForCanvasMode(canvasNoBox);
       updateTableControlsVisibility();
+    }
+
+    // Single source of truth for whether #formattingToolbar is shown. It has TWO callers that both
+    // legitimately need to apply it — applyPaneVisibility() (on every view change) and
+    // updatePreview() (which must re-assert it because the toolbar is a sibling of <main>, not a
+    // descendant, so the CSS "main.canvas-tab-active ..." rules that hide the editor pane cannot
+    // reach it). Those two used to carry SEPARATE copies of the rule, and the updatePreview() copy
+    // was never taught the Simple-Modus exception: it hid the toolbar whenever !showEditor, which
+    // in Simple Modus' preview-only default is always true. Since updatePreview() runs on every
+    // keystroke, applyPaneVisibility() kept showing the toolbar and the very next keystroke kept
+    // hiding it again — reported exactly that way ("Auf dem Smartphone verschwindet die
+    // Werkzeugleiste leider immer wieder im Simple Modus"; not phone-specific in the end, just far
+    // more noticeable there, since Simple Modus is where phones normally sit).
+    function applyFormattingToolbarVisibility(canvasWithoutOpenBox) {
+      const hidden = canvasWithoutOpenBox ||
+        operatingMode === 'focus' ||
+        (operatingMode !== 'simple' && !showEditor);
+      document.getElementById('formattingToolbar').style.display = hidden ? 'none' : 'flex';
     }
 
     // --- SIMPLE MODUS (reduced toolbar preset for touch/low-vision/distraction-free use) ---
@@ -12599,10 +12673,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // #formattingToolbar is a sibling of <main>, not a descendant of it (it lives directly
       // under <body>, alongside the tab bar) -- so the CSS descendant-selector trick that hides
       // .editor-pane/.pane-resizer via "main.canvas-tab-active ..." can't reach it, unlike those
-      // two. Mirrors applyPaneVisibility()'s own showEditor-based rule for the non-canvas case,
-      // with isCanvas (unless a box is open) forcing it closed regardless of showEditor's actual
-      // (untouched) value.
-      document.getElementById('formattingToolbar').style.display = ((isCanvas && !isEditingCanvasBox) || !showEditor) ? 'none' : 'flex';
+      // two, and this function has to re-assert its visibility itself. The rule lives in
+      // applyFormattingToolbarVisibility() rather than being spelled out here a second time: this
+      // line used to carry its own copy that predated Simple Modus and hid the toolbar on every
+      // keystroke there. See that function's own comment.
+      applyFormattingToolbarVisibility(isCanvas && !isEditingCanvasBox);
       // Same reasoning, same "sibling of <main>, not a descendant" limitation as the formatting
       // toolbar above -- see updateThemePickerForCanvasMode()'s own comment for why this swaps to
       // a background-color picker for the canvas chrome itself rather than just disappearing.
@@ -15559,7 +15634,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // block's own left edge on a touch device (still positioned as if it were the smaller,
     // mouse-sized 22px handle).
     function blockHandleWidth() {
-      return noHoverMedia.matches ? 36 : 22;
+      return noHoverMedia.matches ? 28 : 22;
+    }
+
+    // Horizontal breathing room between the handle's own right edge and the block's left edge.
+    // Wider on touch, per report ("Der Block Anfasser ist vor allem auf der Mobiltelefon Ansicht
+    // zu breit und zu nah am Text. Etwas mehr Abstand wäre gut.") — a fingertip covers far more
+    // than a mouse cursor, so a gap that reads as generous with a pointer reads as touching the
+    // text without one. Must stay in sync with .preview-pane's own touch padding-left, which is
+    // what reserves the room for both this gap and the handle itself.
+    function blockHandleGap() {
+      return noHoverMedia.matches ? 10 : 4;
     }
 
     // Positions #blockHandle against `el`'s own rect, converted into #mainContainer-relative
@@ -15584,7 +15669,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // .markdown-body ul/ol's own 2em padding-left) renders inside the <ul>/<ol>'s own padding
       // box, to the LEFT of the <li>'s own border box but to the RIGHT of the list's own left
       // edge -- confirmed directly, not just reasoned about: positioning the handle
-      // blockHandleWidth()+4px left of the <li>'s own rect.left (correct for every OTHER block
+      // blockHandleWidth()+blockHandleGap() left of the <li>'s own rect.left (correct for every OTHER block
       // type, which has no such marker gutter) placed it squarely inside that padding zone,
       // right where the bullet/number renders. Fixed by anchoring a list-item handle to its
       // immediate parent <ul>/<ol>'s own left edge instead of the <li>'s -- the marker can only
@@ -15595,7 +15680,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // block's handle already uses, instead of a shifted-right one.
       const leftAnchorRect = (el.tagName === 'LI' && el.parentElement) ? el.parentElement.getBoundingClientRect() : blockRect;
       const top = Math.max(blockRect.top, paneRect.top);
-      handle.style.left = Math.max(2, leftAnchorRect.left - containerRect.left - blockHandleWidth() - 4) + 'px';
+      handle.style.left = Math.max(2, leftAnchorRect.left - containerRect.left - blockHandleWidth() - blockHandleGap()) + 'px';
       handle.style.top = (top - containerRect.top) + 'px';
       handle.classList.add('active');
     }
@@ -15616,7 +15701,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // Reported directly (and reproduced): the handle was "kaum zu erwischen... zu schnell
     // ausgeblendet" (barely catchable, hidden too fast) when actually trying to grab it with a
     // mouse. Root cause: #blockHandle sits OUTSIDE `preview` itself, in .preview-pane's own 32px
-    // left padding (positionBlockHandle() places it at blockRect.left - blockHandleWidth() - 4,
+    // left padding (positionBlockHandle() places it at blockRect.left - blockHandleWidth() - blockHandleGap(),
     // i.e. to the LEFT of the block's own box, which is exactly where that padding lives — see
     // .preview-pane's own CSS) — confirmed directly, not just reasoned about. The pointermove
     // handler below only ever treats "over the handle itself" or "over a block inside preview" as
@@ -16368,7 +16453,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // they render exactly as before (empty icon slot, no checkmark) through this same function.
     function renderBlockHandleMenuButtons(menu) {
       menu.innerHTML = blockHandleMenuActions.map((a, i) =>
-        '<button type="button" class="slash-menu-item' + (a.current ? ' current' : '') + (i === blockHandleMenuSelectedIndex ? ' selected' : '') + '" style="' +
+        '<button type="button" class="slash-menu-item' + (a.current ? ' current' : '') + (a.divider ? ' with-divider' : '') + (i === blockHandleMenuSelectedIndex ? ' selected' : '') + '" style="' +
         (a.disabled ? 'opacity:.4;cursor:default;' : '') + '" onmousedown="event.preventDefault()" onclick="activateBlockHandleMenuAction(' + i + ')" onmouseenter="blockHandleMenuSetSelection(' + i + ')">' +
         (a.icon || '') + '<span>' + escapeHtmlText(a.label) + '</span>' +
         (a.current ? '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-left:auto;width:14px;height:14px;flex-shrink:0;"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') +
@@ -16558,6 +16643,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           }
         },
       }));
+      // Makes the move/duplicate/delete actions reachable without a right-click — see
+      // openBlockActionMenuForCurrentTarget()'s own comment. Appended here rather than added to
+      // BLOCK_TURN_INTO_TYPES because it is not a "turn into" type at all: it never converts
+      // anything, it swaps this menu's contents for the action menu. `divider` gives it a
+      // separating rule so it doesn't read as one more format option.
+      blockHandleMenuActions.push({
+        label: 'Weitere Aktionen …',
+        divider: true,
+        icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>',
+        // Deferred by a tick, and that is load-bearing rather than stylistic. The click that
+        // activated this row keeps bubbling up to the document-level "close the menu when clicking
+        // outside it" listener. Opening the action menu synchronously means that listener then sees
+        // an .active menu whose innerHTML has just been replaced — so e.target, the button that was
+        // clicked, is no longer a descendant of it, `!menu.contains(e.target)` reads true, and the
+        // freshly opened menu is closed again in the same gesture. Letting the click finish first
+        // sidesteps that entirely.
+        run: () => { setTimeout(openBlockActionMenuForCurrentTarget, 0); },
+      });
       // Keyboard nav starts from the block's own current type (already checkmarked, per the .current
       // class above) rather than always index 0 -- ArrowDown/ArrowUp from here moves relative to
       // what's already active, matching what the checkmark already shows is selected.
@@ -16667,21 +16770,49 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // (openBlockHandleMenu/openListItemHandleMenu, both otherwise unreachable now that a plain
     // click opens the "turn into" format menu instead — see openBlockFormatMenu()'s own comment on
     // that switch) rather than dropping that functionality entirely.
-    document.getElementById('blockHandle').addEventListener('contextmenu', (e) => {
-      if (!blockHandleTargetEl) return;
-      e.preventDefault();
+    // Extracted from the 'contextmenu' listener below so the two touch-reachable entry points can
+    // reuse it verbatim: right-click has no equivalent on a touchscreen, and the move/duplicate/
+    // delete actions were reachable NOWHERE else — reported directly ("Das Rechtsmenü ist auf einem
+    // Touchscreen nicht erreichbar. Wir bräuchten ein anderes Konzept für die rechtsklick
+    // Funktionen."). The two additions are a long-press on the handle (the conventional touch
+    // stand-in for right-click, see the pointerdown listener) and a "Weitere Aktionen" row at the
+    // bottom of the format menu a plain tap already opens (see openBlockFormatMenu) — gesture for
+    // people who expect one, visible row for people who don't, neither replacing right-click on a
+    // mouse. Returns false when the target can't be resolved, so a caller can decide what to do.
+    function openBlockActionMenuForCurrentTarget() {
+      if (!blockHandleTargetEl) return false;
       closeSlashMenu();
+      blurForBlockHandleMenu();
       if (blockHandleTargetKind === 'item') {
         const listEl = blockHandleTargetEl.parentElement;
         const blockIndex = [...preview.children].indexOf(listEl);
         const itemIndex = listEl ? [...listEl.children].indexOf(blockHandleTargetEl) : -1;
-        if (blockIndex === -1 || itemIndex === -1) return;
+        if (blockIndex === -1 || itemIndex === -1) return false;
         openListItemHandleMenu({ blockIndex, itemIndex });
       } else {
         const sourceIndex = [...preview.children].indexOf(blockHandleTargetEl);
-        if (sourceIndex === -1) return;
+        if (sourceIndex === -1) return false;
         openBlockHandleMenu(sourceIndex);
       }
+      return true;
+    }
+
+    // Drops the caret out of the editing surface before a block-handle menu opens, so a phone's
+    // on-screen keyboard folds away instead of covering the menu — reported directly ("Beim
+    // Linksklick sollten beim Aufrufen des Menüs der Tastatur Fokus verschwinden, weil die
+    // Bildschirm Tastatur bei der Bedienung im Weg ist"). Safe for every menu action: each one
+    // re-establishes what it needs itself, either from block/item indices (the extract/convert
+    // paths) or via restoreSlashMenuSelection() from stored source offsets (the applyPreviewFormat
+    // path) — none of them read window.getSelection() as it happens to stand when the menu opens.
+    function blurForBlockHandleMenu() {
+      const active = document.activeElement;
+      if (active && typeof active.blur === 'function' && (active === preview || active === editor)) active.blur();
+    }
+
+    document.getElementById('blockHandle').addEventListener('contextmenu', (e) => {
+      if (!blockHandleTargetEl) return;
+      e.preventDefault();
+      openBlockActionMenuForCurrentTarget();
     });
 
     // Bug fix: reported directly — right-clicking the handle showed the correct move/duplicate/
@@ -16697,11 +16828,36 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // than the primary (left) one here — a real drag/format-menu-click gesture is only ever
     // initiated with button 0; right-click's own handling stays entirely in the 'contextmenu'
     // listener above, which already runs unaffected by this guard.
+    // Long-press timer, the touch stand-in for right-click (see
+    // openBlockActionMenuForCurrentTarget's own comment). Armed on every primary pointerdown but
+    // only ever fires when the press neither moved far enough to become a drag nor ended first —
+    // both of those clear it. 500ms matches the platform convention for a press-and-hold.
+    let blockHandleLongPressTimer = null;
+
+    function clearBlockHandleLongPress() {
+      if (blockHandleLongPressTimer === null) return;
+      clearTimeout(blockHandleLongPressTimer);
+      blockHandleLongPressTimer = null;
+    }
+
     document.getElementById('blockHandle').addEventListener('pointerdown', (e) => {
       if (!blockHandleTargetEl || e.button !== 0) return;
       e.preventDefault();
       closeBlockHandleMenu();
       closeSlashMenu();
+      clearBlockHandleLongPress();
+      blockHandleLongPressTimer = setTimeout(() => {
+        blockHandleLongPressTimer = null;
+        // Guarded on the drag not having started: a press held still for half a second while
+        // already dragging must not yank a menu open mid-gesture.
+        if (!blockDragState || blockDragState.moved) return;
+        if (openBlockActionMenuForCurrentTarget()) {
+          // Consumes the gesture so the following pointerup does not also open the format menu on
+          // top of the action menu that just replaced it -- the same collision the right-click
+          // e.button guard below already exists to prevent, reached by a different route.
+          blockDragState = null;
+        }
+      }, 500);
       if (blockHandleTargetKind === 'item') {
         const listEl = blockHandleTargetEl.parentElement;
         const blockIndex = [...preview.children].indexOf(listEl);
@@ -16731,6 +16887,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // enough to swallow a genuine short drag.
       if (!blockDragState.moved && Math.abs(e.clientY - blockDragState.startY) > 8) {
         blockDragState.moved = true;
+        clearBlockHandleLongPress(); // this is a drag, not a press-and-hold
         blockDragState.sourceEl.classList.add('block-being-dragged');
         document.getElementById('blockHandle').classList.add('dragging');
       }
@@ -16745,6 +16902,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     });
 
     document.getElementById('blockHandle').addEventListener('pointerup', () => {
+      clearBlockHandleLongPress();
       if (!blockDragState) return;
       const state = blockDragState;
       blockDragState = null;
@@ -16755,6 +16913,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // A plain click opens the "turn into" format menu (see openBlockFormatMenu()'s own
         // comment) — state already carries exactly the blockIndex/itemIndex (or sourceIndex) that
         // function needs, no dataset re-derivation necessary.
+        blurForBlockHandleMenu();
         if (state.kind === 'item') {
           openBlockFormatMenu('item', state.blockIndex, state.itemIndex);
         } else {
@@ -18267,6 +18426,30 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       updatePreview();
     }
 
+    // Dispatcher for #headingSelect, which since gaining Absatz/Zitat/Code/Einrückung covers two
+    // kinds of operation that live in different places: block/inline formats (insertFormatting or
+    // its WYSIWYG twin applyPreviewFormat) and indentation (indentLines or handlePreviewTab).
+    //
+    // Which editing surface to target is decided from the SELECTION, not document.activeElement —
+    // by the time a <select>'s change event fires, focus has moved to the select itself, so the
+    // usual `document.activeElement === preview` test every keyboard shortcut uses reads false
+    // here. window.getSelection() still points into the preview though: a <select> is a form
+    // control and, like a <textarea>, is exempt from collapsing the document Selection (the bubble
+    // toolbar's own header comment documents this same exemption, which is why its select works
+    // without the preventDefault() dance its buttons need). That makes "is the live selection
+    // inside the preview" both the accurate question and a cheap one to ask.
+    function applyToolbarFormat(value) {
+      const sel = window.getSelection();
+      const inPreview = sel && sel.rangeCount > 0 && preview.contains(sel.getRangeAt(0).startContainer);
+      if (value === 'indent' || value === 'outdent') {
+        if (inPreview) handlePreviewTab(value);
+        else indentLines(value);
+        return;
+      }
+      if (inPreview) applyPreviewFormat(value);
+      else insertFormatting(value);
+    }
+
     function insertFormatting(type) {
       if (editor.disabled) return;
       if (type === 'bold' || type === 'italic' || type === 'strike' || type === 'code') {
@@ -18708,8 +18891,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       document.getElementById('fmtTaskBtn').classList.toggle('active', blockType === 'task');
       document.getElementById('fmtQuoteBtn').classList.toggle('active', blockType === 'quote');
 
+      // 'quote' joins the reflected values now that it is selectable here — the indentation entries
+      // deliberately do not, since they are one-shot actions with no "the cursor is currently in an
+      // indent" state to show, and neither does 'paragraph' (falling back to the "Format"
+      // placeholder reads better than permanently displaying "Absatz" for ordinary text).
       const headingSelect = document.getElementById('headingSelect');
-      headingSelect.value = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(blockType) ? blockType : '';
+      headingSelect.value = ['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'quote'].includes(blockType) ? blockType : '';
 
       // Studio Pro: the bubble toolbar's own controls mirror the same blockType/inlineActive this
       // function just computed from editor.selectionStart — rather than a second function
