@@ -20174,10 +20174,26 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!s) return { value: null, currency: null };
       s = stripInlineMarkdownWrapper(s);
       if (!s) return { value: null, currency: null };
+      // `spaced` merkt sich, ob im Ausgangswert ein Leerzeichen zwischen Zahl und Währungszeichen
+      // stand ("10 €" vs. "10€") -- formatTableFormulaResult() gibt das Ergebnis dann genauso aus.
+      // Ohne diese Information ging die Leerstelle beim .trim() unten verloren, und aus lauter
+      // "10 €"-Zellen wurde eine Summe "25€"; gemeldet als "das Leerzeichen im Ergebnis soll auch
+      // mit". Gespiegelt statt fest eingebaut, weil sich die Schreibweise je nach Symbol
+      // unterscheidet -- "25 €" ist üblich, "$25" ebenso, und beides steht so schon in der Quelle.
       let currency = null;
       for (const sym of FORMULA_CURRENCY_SYMBOLS) {
-        if (s.startsWith(sym)) { currency = { symbol: sym, position: 'prefix' }; s = s.slice(sym.length).trim(); break; }
-        if (s.endsWith(sym)) { currency = { symbol: sym, position: 'suffix' }; s = s.slice(0, -sym.length).trim(); break; }
+        if (s.startsWith(sym)) {
+          const rest = s.slice(sym.length);
+          currency = { symbol: sym, position: 'prefix', spaced: /^\s/.test(rest) };
+          s = rest.trim();
+          break;
+        }
+        if (s.endsWith(sym)) {
+          const rest = s.slice(0, -sym.length);
+          currency = { symbol: sym, position: 'suffix', spaced: /\s$/.test(rest) };
+          s = rest.trim();
+          break;
+        }
       }
       if (!s) return { value: null, currency };
       if (/^-?\d+,\d+$/.test(s)) s = s.replace(',', '.');
@@ -20361,7 +20377,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const rounded = Math.round(result.value * 100) / 100;
       const s = String(rounded).replace('.', ',');
       if (!result.currency) return s;
-      return result.currency.position === 'prefix' ? (result.currency.symbol + s) : (s + result.currency.symbol);
+      // Trennzeichen wie im Ausgangswert -- siehe parseNumericTableCell()'s eigenen Kommentar.
+      const trenner = result.currency.spaced ? ' ' : '';
+      return result.currency.position === 'prefix'
+        ? (result.currency.symbol + trenner + s)
+        : (s + trenner + result.currency.symbol);
     }
 
     // Row/col-indexed raw cell text for one table block (see findAllMarkdownTableBlocks's own
