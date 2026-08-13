@@ -22360,6 +22360,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function commitTableEdit(lines, newCursorOffset) {
       editor.value = lines.join('\n');
+      // Der Fokus geht nur dann ins Quelltextfeld, wenn dieses auch die bearbeitete Fläche ist.
+      // Im reinen Vorschaumodus, wo die Leiste seit updateTableControlsVisibility() ebenfalls
+      // erscheint, wäre das ein Sprung in ein unsichtbares Element -- und der anschliessende
+      // Neuaufbau der Vorschau würde den Cursor dort ersatzlos verlieren.
+      // finishPreviewStructuralEdit() erledigt Neuaufbau, Cursor-Wiederherstellung an der
+      // gewünschten Quelltextposition und recordHistory() in der richtigen Reihenfolge -- dieselbe
+      // Aufteilung wie bei finishAssetInsertion() für das Einfügen von Medien.
+      if (previewIsLiveEditingSurface()) {
+        editor.setSelectionRange(newCursorOffset, newCursorOffset);
+        finishPreviewStructuralEdit(newCursorOffset);
+        return;
+      }
       editor.focus();
       editor.setSelectionRange(newCursorOffset, newCursorOffset);
       recordHistory();
@@ -22552,7 +22564,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function updateTableControlsVisibility() {
       const bar = document.getElementById('tableControls');
       if (!bar) return;
-      bar.style.display = (showEditor && !editor.disabled && findTableBlock()) ? 'flex' : 'none';
+      // Früher an showEditor gebunden, mit der Begründung, die Leiste betreffe das Bearbeiten von
+      // Quelltext, den man ohne sichtbaren Editor gar nicht sieht. Das stimmt seit der
+      // WYSIWYG-Vorschau nicht mehr: die Vorschau IST dort die Bearbeitungsfläche, Tabellenzellen
+      // werden direkt in ihr getippt (siehe syncPreviewCellToSource()), und der Cursor in einer
+      // Zelle wird über den selectionchange-Hörer ohnehin nach editor.selectionStart gespiegelt --
+      // findTableBlock() unten findet die Tabelle also genauso. Ohne die Leiste liessen sich im
+      // reinen Vorschaumodus Zeilen und Spalten überhaupt nicht einfügen, löschen oder verschieben.
+      // CSV bleibt davon unberührt: dessen Vorschau ist nicht editierbar (previewIsLiveEditingSurface()
+      // verlangt Markdown), also greift dort weiterhin nur der showEditor-Zweig.
+      const bearbeitbar = showEditor || previewIsLiveEditingSurface();
+      bar.style.display = (bearbeitbar && !editor.disabled && findTableBlock()) ? 'flex' : 'none';
     }
 
     // --- SMART ENTER KEY FOR LIST CONTINUATION ---
