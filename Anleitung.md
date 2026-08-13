@@ -1,30 +1,32 @@
-# Markdown Studio – Ausführliche Anleitung
+# Markdown Studio Pro – Ausführliche Anleitung
 
-Diese Anleitung beschreibt alle Funktionen von Markdown Studio Schritt für Schritt. Für einen schnellen Funktionsüberblick siehe die [README](./README.md); für technische Details zur Umsetzung siehe [`CLAUDE.md`](./CLAUDE.md).
+Diese Anleitung beschreibt alle Funktionen von Markdown Studio Pro Schritt für Schritt. Für einen schnellen Funktionsüberblick siehe die [README](./README.md); für technische Details zur Umsetzung siehe [`CLAUDE.md`](./CLAUDE.md).
 
-Markdown Studio läuft komplett im Browser, ohne Installation und ohne Server — alle Dokumente werden lokal auf deinem Gerät gespeichert (bzw. optional über WebDAV mit anderen Geräten synchronisiert, siehe [Abschnitt 13](#13-webdav-synchronisierung-zwischen-mehreren-geräten)).
+Markdown Studio Pro läuft komplett im Browser, ohne Installation und ohne Server — alle Dokumente werden lokal auf deinem Gerät gespeichert (bzw. optional über WebDAV mit anderen Geräten synchronisiert, siehe [Abschnitt 15](#15-webdav-synchronisierung-zwischen-mehreren-geräten)).
 
 ## Inhaltsverzeichnis
 
 1. [Erste Schritte](#1-erste-schritte)
 2. [Dokumente und Tabs](#2-dokumente-und-tabs)
-3. [Text formatieren](#3-text-formatieren)
-4. [Tabellen und CSV](#4-tabellen-und-csv)
-5. [Bilder, Fotos, Zeichnungen und Piktogramme einfügen](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)
-6. [PDF-Dateien als Arbeitsblatt bearbeiten](#6-pdf-dateien-als-arbeitsblatt-bearbeiten)
-7. [Audio, Video und Web-Einbettungen](#7-audio-video-und-web-einbettungen)
-8. [Inhaltsverzeichnis-Panel in der Vorschau](#8-inhaltsverzeichnis-panel-in-der-vorschau)
-9. [Vorlesemodus](#9-vorlesemodus)
-10. [Präsentationen erstellen](#10-präsentationen-erstellen)
-11. [Designs, Ansicht und Fokus-Modi](#11-designs-ansicht-und-fokus-modi)
-12. [Suchen und Ersetzen](#12-suchen-und-ersetzen)
-13. [WebDAV-Synchronisierung zwischen mehreren Geräten](#13-webdav-synchronisierung-zwischen-mehreren-geräten)
-14. [Export und Teilen](#14-export-und-teilen)
-15. [Tastenkürzel](#15-tastenkürzel)
-16. [Speicherplatz und Datenschutz](#16-speicherplatz-und-datenschutz)
-17. [Tipps und häufige Fragen](#17-tipps-und-häufige-fragen)
-18. [Direktlinks mit URL-Parametern](#18-direktlinks-mit-url-parametern)
-19. [Canvas-Modus (freie Notizfläche)](#19-canvas-modus-freie-notizfläche)
+3. [In der Vorschau schreiben (WYSIWYG)](#3-in-der-vorschau-schreiben-wysiwyg)
+4. [Betriebsarten: Fokus, Simple, Voll](#4-betriebsarten-fokus-simple-voll)
+5. [Text formatieren](#5-text-formatieren)
+6. [Tabellen und CSV](#6-tabellen-und-csv)
+7. [Bilder, Fotos, Zeichnungen und Piktogramme einfügen](#7-bilder-fotos-zeichnungen-und-piktogramme-einfügen)
+8. [PDF-Dateien als Arbeitsblatt bearbeiten](#8-pdf-dateien-als-arbeitsblatt-bearbeiten)
+9. [Audio, Video und Web-Einbettungen](#9-audio-video-und-web-einbettungen)
+10. [Inhaltsverzeichnis-Panel in der Vorschau](#10-inhaltsverzeichnis-panel-in-der-vorschau)
+11. [Vorlesemodus](#11-vorlesemodus)
+12. [Präsentationen erstellen](#12-präsentationen-erstellen)
+13. [Designs, Ansicht und Fokus-Modi](#13-designs-ansicht-und-fokus-modi)
+14. [Suchen und Ersetzen](#14-suchen-und-ersetzen)
+15. [WebDAV-Synchronisierung zwischen mehreren Geräten](#15-webdav-synchronisierung-zwischen-mehreren-geräten)
+16. [Export und Teilen](#16-export-und-teilen)
+17. [Tastenkürzel](#17-tastenkürzel)
+18. [Speicherplatz und Datenschutz](#18-speicherplatz-und-datenschutz)
+19. [Tipps und häufige Fragen](#19-tipps-und-häufige-fragen)
+20. [Direktlinks mit URL-Parametern](#20-direktlinks-mit-url-parametern)
+21. [Canvas-Modus (freie Notizfläche)](#21-canvas-modus-freie-notizfläche)
 
 ---
 
@@ -37,15 +39,15 @@ Markdown Studio lässt sich auf zwei Arten nutzen:
 
 Auf einem Smartphone oder Tablet lässt sich die Web-Version über „Zum Home-Bildschirm hinzufügen" (iOS) installieren und startet dann wie eine eigenständige App ohne Browser-Kopfzeile.
 
-**Die Oberfläche im Überblick** (von oben nach unten):
+**Die Oberfläche im Überblick:**
 
-- **Kopfzeile** — Neu, Öffnen, Speichern, Rückgängig/Wiederherstellen, Suchen, Formatierung aufräumen, Rechtschreibprüfung, Editor/Vorschau ein-/ausblenden, synchrones Scrollen, Zoom, Vollbild, Präsentationsmodus, HTML-Export, Drucken, Formatiert kopieren, WebDAV-Sync, Design-Auswahl, Simple-Schalter, Tastenkürzel-Hilfe
-- **Tableiste** — alle offenen Dokumente, „+" für einen neuen leeren Tab
-- **Formatierungsleiste** — Überschriften, Textformatierung, Listen, Medien, Tabellen
-- **Editor (links) und Vorschau (rechts)** — durch einen ziehbaren Trenner getrennt, live synchronisiert
-- **Fußleiste** — Wörter/Zeichen der aktuellen Notiz, Gesamtgröße aller offenen Notizen, Lizenzhinweis
+- **Notizleiste-Knopf** (oben links) — öffnet die Liste aller offenen Notizen, wahlweise als Overlay oder angepinnt als feste Seitenspalte
+- **Burger-Menü ☰** (oben rechts) — alle Aktionen an einer Stelle: Betriebsart, Ansicht, Inhaltsbreite, Datei-Aktionen, Suchen, Exporte, WebDAV, Design, Tastenkürzel-Hilfe und „Über"
+- **Schreibfläche** — je nach gewählter Ansicht die Vorschau (in der direkt geschrieben wird), der Quelltext oder beides nebeneinander mit ziehbarem Trenner
+- **Formatierungsleiste** — nur in den Betriebsarten Simple und Voll sichtbar (siehe [Abschnitt 4](#4-betriebsarten-fokus-simple-voll))
+- **Fußleiste** — Wörter/Zeichen der aktuellen Notiz, Speicherplatzanzeige, sowie Zoom, Vollbild und Präsentationsmodus
 
-Direkt beim ersten Start ist eine „Willkommen"-Notiz mit einer kurzen Funktionsübersicht bereits geöffnet.
+Beim ersten Start ist eine „Willkommen"-Notiz mit einer Funktionsübersicht bereits geöffnet. Standardmäßig startet die App im **Fokus-Modus** und zeigt nur die Vorschau — schreib einfach direkt hinein (siehe [Abschnitt 3](#3-in-der-vorschau-schreiben-wysiwyg)).
 
 ## 2. Dokumente und Tabs
 
@@ -58,20 +60,92 @@ Ein unbenanntes Dokument übernimmt automatisch die erste `#`-Überschrift als D
 
 ### Öffnen und Speichern
 
-- **📂 Öffnen** lädt eine oder mehrere Dateien von der Festplatte (Markdown, TXT, CSV, JSON, HTML, PDF — siehe [Abschnitt 6](#6-pdf-dateien-als-arbeitsblatt-bearbeiten) für PDFs).
+- **📂 Öffnen** lädt eine oder mehrere Dateien von der Festplatte (Markdown, TXT, CSV, JSON, HTML, PDF — siehe [Abschnitt 8](#8-pdf-dateien-als-arbeitsblatt-bearbeiten) für PDFs).
 - **💾 Speichern** (auch `Strg`/`Cmd`+`S`) fragt immer nach einem Speicherort — genau wie „Speichern unter" —, statt ohne Rückfrage in eine zuvor gewählte Datei zu schreiben: In Chrome/Edge öffnet sich der native Ordnerauswahl-Dialog, standardmäßig im zuletzt für genau diese Notiz verwendeten Ordner auf diesem Gerät. In Browsern ohne diese Funktion (z. B. Firefox, Safari, die meisten mobilen Browser) landet die Datei automatisch im Download-Ordner — ein Hinweis erklärt das jedes Mal, samt Tipp, wie sich in den Browser-Einstellungen doch noch eine Ordnerauswahl aktivieren lässt.
 - Eine Datei lässt sich auch per **Drag & Drop** direkt ins Browserfenster ziehen, um sie zu öffnen.
 - Alle offenen Tabs werden zusätzlich automatisch im Browser (lokal) gespeichert — beim nächsten Öffnen der App sind alle Notizen unverändert wieder da, auch ohne sie manuell gespeichert zu haben.
 
 ### Tabs umbenennen und Format wechseln
 
-Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit einem Format-Dropdown (`.md` / `.txt` / `.csv` / `.json` / `.html`). So lässt sich ein Dokument gezielt in ein anderes Dateiformat konvertieren, z. B. um eine Tabelle als CSV weiterzuverarbeiten. `Enter` bestätigt, `Escape` bricht ab. Bei einem Canvas-Dokument (siehe [Abschnitt 19](#19-canvas-modus-freie-notizfläche)) zeigt das Umbenennen-Feld kein Format-Dropdown — eine Canvas-Fläche ist kein Text-Format und lässt sich nicht in eines der anderen umwandeln, nur der Name lässt sich ändern.
+Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit einem Format-Dropdown (`.md` / `.txt` / `.csv` / `.json` / `.html`). So lässt sich ein Dokument gezielt in ein anderes Dateiformat konvertieren, z. B. um eine Tabelle als CSV weiterzuverarbeiten. `Enter` bestätigt, `Escape` bricht ab. Bei einem Canvas-Dokument (siehe [Abschnitt 21](#21-canvas-modus-freie-notizfläche)) zeigt das Umbenennen-Feld kein Format-Dropdown — eine Canvas-Fläche ist kein Text-Format und lässt sich nicht in eines der anderen umwandeln, nur der Name lässt sich ändern.
 
 ### Tabs neu anordnen
 
 Ein Tab lässt sich per Ziehen (Maus gedrückt halten und bewegen) an eine andere Stelle in der Tableiste verschieben — die neue Reihenfolge bleibt wie gewohnt geräteweit gespeichert.
 
-## 3. Text formatieren
+## 3. In der Vorschau schreiben (WYSIWYG)
+
+Der wichtigste Unterschied zu früheren Versionen: **die Vorschau ist selbst das Eingabefeld**. Du klickst hinein und schreibst direkt im fertigen Layout — Überschriften sind groß, Fettes ist fett, Listen haben Aufzählungszeichen. Gespeichert wird trotzdem ganz normales Markdown, das sich unverändert weitergeben lässt.
+
+Der klassische Quelltext-Editor bleibt vollständig erhalten. Über das Burger-Menü ☰ → **Ansicht** lässt sich jederzeit zwischen **Vorschau**, **Quelltext** und **Split** (beides nebeneinander) wechseln. Beide Ansichten bleiben dabei zeichengenau synchron.
+
+### Live-Formatierung
+
+Formatierung entsteht beim Tippen:
+
+- `**` tippen erzeugt sofort ein Paar (`****`) mit dem Cursor in der Mitte — was du dazwischen schreibst, wird live fett dargestellt. Beim Verlassen (Pfeiltaste nach rechts oder Klick woanders hin) verschwinden die Sternchen und nur der fette Text bleibt sichtbar.
+- Genauso funktionieren `~~` (durchgestrichen) und `` ` `` (Code).
+- Wer die Zeichen lieber selbst komplett tippt (`**Wort**`), bekommt dasselbe Ergebnis.
+
+### Zeilenkürzel
+
+Am Zeilenanfang getippt, wandelt sich die Zeile sofort um:
+
+| Eingabe | Ergebnis |
+| --- | --- |
+| `# ` bis `###### ` | Überschrift 1–6 |
+| `- ` oder `* ` | Aufzählung |
+| `1. ` | Nummerierte Liste |
+| `- [ ] ` | Checkbox |
+| `> ` | Zitat |
+| `---` | Trennlinie |
+
+### Slash-Menü
+
+`/` tippen öffnet ein Menü mit allen Blocktypen — Überschriften, Listen, Checkbox, Zitat, Code-Block, Tabelle, Trennlinie, Bild, Zeichnung und mehr. Weitertippen filtert die Liste, Pfeiltasten wählen aus, `Enter` fügt ein, `Escape` schließt.
+
+### Block-Anfasser
+
+Fährst du mit der Maus über einen Absatz, erscheint links daneben ein kleines Griffsymbol:
+
+- **Linksklick** öffnet „Umwandeln in" — Absatz, Überschrift 1–6, Aufzählung, Nummerierte Liste, Checkbox, Zitat oder Code-Block. Der aktuelle Typ ist mit einem Haken markiert; ein erneuter Klick darauf wandelt zurück in einen normalen Absatz.
+- **Ziehen** verschiebt den Absatz oder Listenpunkt an eine andere Stelle.
+- **Rechtsklick** öffnet ein Menü mit Duplizieren, Löschen, Nach oben/unten verschieben und „Zeile darüber/darunter einfügen".
+
+### Auswahl-Werkzeugleiste
+
+Markierst du Text in der Vorschau, erscheint direkt darüber eine kleine Leiste mit Fett, Kursiv, Durchgestrichen, Code, einer Überschriftenauswahl und Textfarbe — praktisch, wenn die große Werkzeugleiste (z. B. im Fokus-Modus) gar nicht eingeblendet ist.
+
+### Tastatur
+
+Die Vorschau verhält sich bei Tastatureingaben wie ein normaler Texteditor:
+
+- **Enter** erzeugt einen neuen Absatz — wie in jedem Textprogramm. In einer Liste setzt Enter die Liste fort (auch dann, wenn der Punkt mehrere Zeilen hat); auf einem leeren Listenpunkt verlässt Enter die Liste. Hinter einer Einbettung (Bild, Audio, Zeichnung) entsteht ebenfalls sofort ein neuer Absatz.
+- **`Umschalt`+`Enter`** erzeugt einen **bedingten Absatz** — einen Zeilenumbruch *innerhalb* desselben Absatzes bzw. Listenpunkts. Im Quelltext entspricht das einem einfachen Zeilenumbruch statt einer Leerzeile.
+- **Rücktaste** am Absatzanfang verbindet den Absatz mit dem vorherigen, **Entf** am Absatzende mit dem folgenden — genau wie im Quelltext.
+- **Tabulator** rückt ein bzw. verschachtelt einen Listenpunkt, `Umschalt`+`Tab` rückt wieder aus.
+- **Rückgängig/Wiederherstellen** (`Strg`/`Cmd`+`Z` bzw. `+Umschalt+Z`) funktioniert in beiden Ansichten.
+- **`Alt`/`Option`+Rücktaste** löscht das Wort links vom Cursor.
+
+Auf iPhone und iPad funktionieren zusätzlich die Textwerkzeuge des Systems: Autokorrektur, die Wortvorschlagsleiste und der Doppel-Leerzeichen-Punkt.
+
+## 4. Betriebsarten: Fokus, Simple, Voll
+
+Über das Burger-Menü ☰ → **Betriebsart** lässt sich einstellen, wie viel Oberfläche sichtbar ist. Die Wahl bleibt geräteweit gespeichert.
+
+- **Fokus** (Standard) — nur der Text. Keine Titelzeile, keine Werkzeugleiste; alle Aktionen stecken im Burger-Menü. Für konzentriertes Schreiben.
+- **Simple** — große Schrift (Zoom 130 %), Design „Clean" und eine stark reduzierte Werkzeugleiste mit nur den wichtigsten Knöpfen (Überschrift, Bild, Foto, Zeichnung, Audio). Es gibt hier keine geteilte Ansicht, nur Vorschau **oder** Quelltext. Gedacht für Tablets, jüngere Nutzer:innen oder eine bewusst aufgeräumte Umgebung. Auch per Link mit `?simple=true` bzw. `?simple=false` schaltbar.
+- **Voll** — alle Werkzeuge sichtbar, inklusive vollständiger Formatierungsleiste und Titelzeile.
+
+### Die Oberfläche
+
+- **Burger-Menü ☰** (oben rechts) — Betriebsart, Ansicht, Inhaltsbreite, Neu, Öffnen, Speichern, Formatiert kopieren, Rückgängig/Wiederherstellen, Suchen & Ersetzen, Abstände optimieren, Rechtschreibprüfung, Exporte (HTML, Drucken/PDF, E-Mail), WebDAV-Einstellungen, Design und „Über" mit Versionsnummer.
+- **Notizleiste** (Button oben links) — die Liste aller offenen Notizen, untereinander statt als Tableiste. Ein Klick öffnet sie als Overlay; über das Pin-Symbol wird daraus eine feste Seitenspalte, neben der das Notizfenster entsprechend schmaler wird.
+- **Fußleiste** — links Wörter/Zeichen, mittig die Speicherplatzanzeige, rechts Zoom, Vollbild und Präsentationsmodus.
+- **Inhaltsbreite** — in der Einzel-Vorschau wahlweise „Schmal" (zentriert, etwa DIN-A4-Breite) oder „Breit" (volle Fensterbreite). Auf schmalen Bildschirmen wird ohnehin immer die volle Breite genutzt.
+- **Synchrones Scrollen** — der kleine Knopf oben auf der Trennlinie zwischen Quelltext und Vorschau; nur in der geteilten Ansicht sichtbar.
+
+## 5. Text formatieren
 
 Die Formatierungsleiste unter der Tableiste bietet:
 
@@ -111,7 +185,7 @@ Die beiden Paletten sind bewusst unterschiedlich: Bei der **Textfarbe** stehen k
 
 **Hintergrundfarbe in Tabellenzellen** füllt dabei die ganze Zelle aus (wie eine Zellfüllung in Excel), nicht nur den markierten Text — dazu einfach mit dem Cursor in der gewünschten Zelle stehen und eine Hintergrundfarbe wählen, unabhängig davon, was gerade markiert ist.
 
-## 4. Tabellen und CSV
+## 6. Tabellen und CSV
 
 Eine Tabelle über den **Tabelle**-Button in der Formatierungsleiste einfügen (leeres Grundgerüst) oder direkt Markdown-Syntax tippen. Sobald der Cursor innerhalb einer Tabelle steht, erscheint eine eigene Werkzeugleiste darüber:
 
@@ -155,7 +229,7 @@ Ein Klick außerhalb der Zelle oder `Esc` schließt die beiden Buttons wieder, o
 
 **Formel auf Nachbarzellen ausfüllen (Ausfüllkästchen):** Jede Formelzelle hat unten rechts an ihrem orangenen Rahmen ein kleines Quadrat — genau wie das Ausfüllkästchen in Excel. Daran klicken und waagerecht oder senkrecht in Nachbarzellen ziehen kopiert die Formel dorthin, wobei sich Zeilen- bzw. Spaltenbezüge automatisch an die neue Position anpassen (`A1+A2` wird beim Ziehen um eine Spalte nach rechts zu `B1+B2`, beim Ziehen um eine Zeile nach unten zu `A2+A3`). Praktisch, um z. B. eine Formel für Zeilensummen einmal zu bauen und dann für alle weiteren Zeilen einer Tabelle zu übernehmen, ohne sie jedes Mal neu zusammenzuklicken.
 
-## 5. Bilder, Fotos, Zeichnungen und Piktogramme einfügen
+## 7. Bilder, Fotos, Zeichnungen und Piktogramme einfügen
 
 ### Bilder einfügen
 
@@ -210,7 +284,7 @@ Jedes Bild kann einen sichtbaren Text darunter bekommen — über die optionale 
 
 ### Alt-Text bearbeiten
 
-Jedes eingefügte Bild/Foto/jede Zeichnung/jedes Piktogramm bekommt automatisch einen sprechfreundlichen Standard-Alt-Text („Das ist ein Bild." / „Das ist ein Foto." / „Das ist eine Zeichnung." / „Das ist ein Piktogramm."), der z. B. im [Vorlesemodus](#9-vorlesemodus) vorgelesen wird. Beim Überfahren eines Bildes in der Vorschau erscheint unten rechts ein „🏷️ Alt-Text"-Button — er markiert den Alt-Text direkt im Quelltext zum Überschreiben.
+Jedes eingefügte Bild/Foto/jede Zeichnung/jedes Piktogramm bekommt automatisch einen sprechfreundlichen Standard-Alt-Text („Das ist ein Bild." / „Das ist ein Foto." / „Das ist eine Zeichnung." / „Das ist ein Piktogramm."), der z. B. im [Vorlesemodus](#11-vorlesemodus) vorgelesen wird. Beim Überfahren eines Bildes in der Vorschau erscheint unten rechts ein „🏷️ Alt-Text"-Button — er markiert den Alt-Text direkt im Quelltext zum Überschreiben.
 
 ### Bildgröße und Rahmen anpassen
 
@@ -224,7 +298,7 @@ Jedes Bild — egal ob eingefügtes Foto, Zeichnung, Piktogramm oder verlinktes 
 
 Die Einstellung wird direkt im Bildverweis im Quelltext gespeichert (unsichtbar als kleiner Zusatz an der Bildadresse) und bleibt beim Speichern, erneuten Öffnen und über WebDAV-Synchronisierung erhalten — genau wie bei jedem anderen Bild. Ein unverändertes Bild (100 % Breite, kein Rahmen) bekommt keinen solchen Zusatz und sieht im Quelltext exakt so aus wie bisher.
 
-## 6. PDF-Dateien als Arbeitsblatt bearbeiten
+## 8. PDF-Dateien als Arbeitsblatt bearbeiten
 
 Eine sehr nützliche Funktion für Arbeitsblätter, Formulare oder gescannte Dokumente: eine PDF-Datei öffnen und einzelne Seiten direkt beschriften.
 
@@ -233,12 +307,12 @@ Eine sehr nützliche Funktion für Arbeitsblätter, Formulare oder gescannte Dok
 1. Eine PDF-Datei über **📂 Öffnen** auswählen oder direkt ins Fenster ziehen — der Dialog „📄 PDF öffnen" erscheint.
 2. Auswählen, welche Seiten geladen werden sollen: „Nur die erste Seite", „Alle Seiten" oder „Bestimmte Seiten" (z. B. `1-3,5`).
 3. **📥 Öffnen** klicken. Es wird eine neue, eigene Notiz erstellt; jede gewählte Seite landet dort als eigener Abschnitt („## Seite 1", „## Seite 2", …) mit dem Seitenbild direkt darunter.
-4. Eine Seite anklicken (bzw. „✏️ Bearbeiten" beim Überfahren) öffnet sie im Zeichen-Editor — dort lässt sich direkt auf dem Arbeitsblatt schreiben, markieren oder zeichnen, genau wie bei einer normalen Zeichnung (siehe [Abschnitt 5](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)). Beim ersten Öffnen wird die Seite automatisch passend positioniert und skaliert.
+4. Eine Seite anklicken (bzw. „✏️ Bearbeiten" beim Überfahren) öffnet sie im Zeichen-Editor — dort lässt sich direkt auf dem Arbeitsblatt schreiben, markieren oder zeichnen, genau wie bei einer normalen Zeichnung (siehe [Abschnitt 7](#7-bilder-fotos-zeichnungen-und-piktogramme-einfügen)). Beim ersten Öffnen wird die Seite automatisch passend positioniert und skaliert.
 5. **💾 Speichern** im Zeichen-Editor sichert die Beschriftung in genau dieser Seite.
 
-**Hinweis bei großen/mehrseitigen PDFs:** Da jede Seite als Bild eingebettet wird, kann das Speichern einer sehr großen, mit vielen Anmerkungen versehenen Seite spürbar länger dauern — die App wartet in diesem Fall bis zu 30 Sekunden, bevor sie einen Fehler meldet; ein erneuter Klick auf „Speichern" hilft, falls es doch einmal zu einer Fehlermeldung kommt. Bei sehr vielen/großen importierten Seiten weist die App zusätzlich per Hinweis auf hohen Speicherbedarf hin und empfiehlt, die Notiz per WebDAV zu sichern (siehe [Abschnitt 13](#13-webdav-synchronisierung-zwischen-mehreren-geräten) und [Abschnitt 16](#16-speicherplatz-und-datenschutz)).
+**Hinweis bei großen/mehrseitigen PDFs:** Da jede Seite als Bild eingebettet wird, kann das Speichern einer sehr großen, mit vielen Anmerkungen versehenen Seite spürbar länger dauern — die App wartet in diesem Fall bis zu 30 Sekunden, bevor sie einen Fehler meldet; ein erneuter Klick auf „Speichern" hilft, falls es doch einmal zu einer Fehlermeldung kommt. Bei sehr vielen/großen importierten Seiten weist die App zusätzlich per Hinweis auf hohen Speicherbedarf hin und empfiehlt, die Notiz per WebDAV zu sichern (siehe [Abschnitt 15](#15-webdav-synchronisierung-zwischen-mehreren-geräten) und [Abschnitt 18](#18-speicherplatz-und-datenschutz)).
 
-## 7. Audio, Video und Web-Einbettungen
+## 9. Audio, Video und Web-Einbettungen
 
 ### Sprachaufnahme und Audiodateien
 
@@ -266,35 +340,35 @@ Anders als bei Bildern oder Videos wird hier der vollständige, roh editierbare 
 |---|---|
 | `src` | Adresse der einzubetten Seite (leer vorbelegt) |
 | `width` / `height` | Breite und Höhe des eingebetteten Fensters |
-| `title` | Alt-Text-Gegenstück fürs Einbetten — wird im [Vorlesemodus](#9-vorlesemodus) vorgelesen |
+| `title` | Alt-Text-Gegenstück fürs Einbetten — wird im [Vorlesemodus](#11-vorlesemodus) vorgelesen |
 | `allowfullscreen` / `allow="fullscreen"` | erlaubt der eingebetteten Seite, in den Vollbildmodus zu wechseln |
 
 Der voreingestellte `title`-Text „Das ist eine Einbettung." lässt sich wie jeder andere Text direkt im Quelltext überschreiben.
 
-## 8. Inhaltsverzeichnis-Panel in der Vorschau
+## 10. Inhaltsverzeichnis-Panel in der Vorschau
 
 Der schwebende Button oben rechts über der Vorschau (Listen-Symbol) öffnet ein Inhaltsverzeichnis aus allen Überschriften (H1–H6) des Dokuments. Ein Klick auf einen Eintrag springt direkt zur passenden Stelle in der Vorschau. Das Panel bleibt beim Scrollen sichtbar an seiner Position und schließt sich automatisch bei Klick daneben, per `Escape` oder wenn die Vorschau ausgeblendet wird.
 
-## 9. Vorlesemodus
+## 11. Vorlesemodus
 
 Der 🔊-Button (oben rechts neben dem Inhaltsverzeichnis-Button) liest das aktuelle Dokument laut vor und hebt dabei Wort für Wort den gerade gesprochenen Text hervor.
 
 - **Klick** startet das Vorlesen, **erneuter Klick** pausiert an derselben Stelle, **noch ein Klick** setzt fort.
-- Bilder, Fotos, Zeichnungen und Piktogramme werden mit ihrem Alt-Text (siehe [Abschnitt 5](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)) angekündigt, sofern einer gesetzt ist — sonst mit einer generischen Ankündigung („Hier ist ein Bild." usw.). Videos werden immer als „Hier ist ein Video." angekündigt. Eine [Web-Einbettung](#7-audio-video-und-web-einbettungen) wird immer mit ihrem Titel-Text vorgelesen.
+- Bilder, Fotos, Zeichnungen und Piktogramme werden mit ihrem Alt-Text (siehe [Abschnitt 7](#7-bilder-fotos-zeichnungen-und-piktogramme-einfügen)) angekündigt, sofern einer gesetzt ist — sonst mit einer generischen Ankündigung („Hier ist ein Bild." usw.). Videos werden immer als „Hier ist ein Video." angekündigt. Eine [Web-Einbettung](#9-audio-video-und-web-einbettungen) wird immer mit ihrem Titel-Text vorgelesen.
 - Sprachaufnahmen und eingefügte Audiodateien werden während des Vorlesens tatsächlich abgespielt.
 - Das Vorlesen stoppt automatisch beim Tab-Wechsel, beim Bearbeiten des Texts oder wenn die Vorschau ausgeblendet wird — nie mitten im Text unbemerkt weiterlaufend im Hintergrund.
-- Steht der Vorlesemodus innerhalb einer Präsentation (siehe [Abschnitt 10](#10-präsentationen-erstellen)) am Ende einer Folie an, blättert er automatisch zur nächsten Folie weiter und liest dort fort.
-- Der [Canvas-Modus](#19-canvas-modus-freie-notizfläche) hat einen eigenen Vorlesen-Button, der alle Notizzettel der Reihe nach vorliest — siehe dort.
+- Steht der Vorlesemodus innerhalb einer Präsentation (siehe [Abschnitt 12](#12-präsentationen-erstellen)) am Ende einer Folie an, blättert er automatisch zur nächsten Folie weiter und liest dort fort.
+- Der [Canvas-Modus](#21-canvas-modus-freie-notizfläche) hat einen eigenen Vorlesen-Button, der alle Notizzettel der Reihe nach vorliest — siehe dort.
 
-Der Vorlesemodus funktioniert identisch in der Live-Vorschau, im Präsentationsmodus und in beiden HTML-Exporten (siehe [Abschnitt 14](#14-export-und-teilen)) — eine exportierte Datei liest sich also auch offline und ohne diese App selbst vor.
+Der Vorlesemodus funktioniert identisch in der Live-Vorschau, im Präsentationsmodus und in beiden HTML-Exporten (siehe [Abschnitt 16](#16-export-und-teilen)) — eine exportierte Datei liest sich also auch offline und ohne diese App selbst vor.
 
-## 10. Präsentationen erstellen
+## 12. Präsentationen erstellen
 
 Aus jedem Dokument lässt sich mit einem Klick eine Bildschirmpräsentation machen — ganz ohne separates Präsentationsprogramm.
 
 **Folien trennen:** eine Zeile mit nur `---` (oder `***` bzw. `___`), am Zeilenanfang oder nach einer Leerzeile, trennt zwei Folien voneinander. Die mitgelieferte „Präsentation"-Vorlage (über ✨ Neu) zeigt das direkt an einem Beispiel.
 
-**Präsentationsmodus starten:** Button in der Kopfzeile (Bildschirm-Symbol). Navigation:
+**Präsentationsmodus starten:** Button rechts unten in der Fußleiste (Bildschirm-Symbol). Navigation:
 
 - Pfeiltasten oder Leertaste (Tastatur)
 - Linke Bildschirmhälfte anklicken/antippen = vorherige Folie, rechte Hälfte = nächste Folie
@@ -304,15 +378,15 @@ Aus jedem Dokument lässt sich mit einem Klick eine Bildschirmpräsentation mach
 
 **Weitere Werkzeuge innerhalb der Präsentation:** ein eigenes Inhaltsverzeichnis unten links (springt zur ersten Überschrift jeder Folie), der Vorlesemodus oben links sowie eine Folienzähler-Anzeige unten rechts.
 
-## 11. Designs, Ansicht und Fokus-Modi
+## 13. Designs, Ansicht und Fokus-Modi
 
 ### Designs
 
-15 Vorschau-Designs stehen über das Dropdown in der Kopfzeile zur Auswahl: GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (mit farbiger Code-Hervorhebung). Das Design wird **pro Tab** gemerkt, nicht global für die ganze App — jedes Dokument kann also sein eigenes Design haben, und diese Wahl wird bei aktivem WebDAV-Sync mit übertragen. Eine neue Notiz startet dabei immer im Design „GitHub Light“, unabhängig davon, welches Design in der zuvor aktiven Notiz eingestellt war.
+15 Vorschau-Designs stehen über das Dropdown im Burger-Menü ☰ zur Auswahl: GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (mit farbiger Code-Hervorhebung). Das Design wird **pro Tab** gemerkt, nicht global für die ganze App — jedes Dokument kann also sein eigenes Design haben, und diese Wahl wird bei aktivem WebDAV-Sync mit übertragen. Eine neue Notiz startet dabei immer im Design „GitHub Light“, unabhängig davon, welches Design in der zuvor aktiven Notiz eingestellt war.
 
 ### Editor/Vorschau und geteilte Ansicht
 
-- Editor bzw. Vorschau lassen sich einzeln ausblenden (zwei Buttons in der Kopfzeile), um mehr Platz für die jeweils andere Seite zu haben.
+- Editor bzw. Vorschau lassen sich einzeln ausblenden — über das Burger-Menü ☰ → **Ansicht** (Vorschau / Quelltext / Split), in der Betriebsart Voll zusätzlich über zwei Buttons in der Kopfzeile.
 - Der Trenner zwischen Editor und Vorschau lässt sich per Maus/Touch frei in beide Richtungen ziehen.
 - Sowohl welche Bereiche gerade sichtbar sind als auch die Position des Trenners werden **pro Notiz** gemerkt (genau wie das Design oben) und bei aktivem WebDAV-Sync mit übertragen — jedes Dokument öffnet also wieder genau in der Ansicht, in der es zuletzt verlassen wurde. Eine neu erstellte Notiz startet dabei immer bei einer 50/50-Aufteilung mit beiden Bereichen sichtbar, unabhängig von der zuvor aktiven Notiz.
 - **Synchrones Scrollen** (Doppelpfeil-Symbol) hält Editor und Vorschau beim Scrollen prozentual aufeinander abgestimmt; lässt sich bei Bedarf abschalten.
@@ -324,19 +398,19 @@ Blendet Kopf-, Fuß- und Tableiste sowie alle Menüs aus. Auf den meisten Gerät
 
 ### Simple Modus
 
-Der „Simple"-Schalter oben rechts reduziert die Werkzeugleisten auf das Nötigste (Öffnen, Speichern, Rückgängig/Wiederherstellen, Quelltext/Vorschau als einfacher Umschalter statt Splitscreen, Zoom, Vollbild sowie Überschrift/Bild/Foto/Zeichnung/Audio), stellt automatisch das Design „Clean" und eine größere Zoomstufe ein und springt beim Einfügen von Medien direkt in die Vorschau. Praktisch für Tablets, jüngere Nutzer:innen oder eine bewusst aufgeräumte Schreibumgebung. Lässt sich auch direkt per Link mit angehängtem `?simple=true` aktiviert (bzw. `?simple=false` deaktiviert) öffnen — siehe [Abschnitt 18](#18-direktlinks-mit-url-parametern).
+Der „Simple"-Schalter oben rechts reduziert die Werkzeugleisten auf das Nötigste (Öffnen, Speichern, Rückgängig/Wiederherstellen, Quelltext/Vorschau als einfacher Umschalter statt Splitscreen, Zoom, Vollbild sowie Überschrift/Bild/Foto/Zeichnung/Audio), stellt automatisch das Design „Clean" und eine größere Zoomstufe ein und springt beim Einfügen von Medien direkt in die Vorschau. Praktisch für Tablets, jüngere Nutzer:innen oder eine bewusst aufgeräumte Schreibumgebung. Lässt sich auch direkt per Link mit angehängtem `?simple=true` aktiviert (bzw. `?simple=false` deaktiviert) öffnen — siehe [Abschnitt 20](#20-direktlinks-mit-url-parametern).
 
-## 12. Suchen und Ersetzen
+## 14. Suchen und Ersetzen
 
 **🔍 Suchen** (auch `Strg`/`Cmd`+`F`) öffnet die Suchleiste mit Treffer-Zähler („3 von 12") und `‹`/`›`-Navigation zwischen allen Fundstellen. Über die Checkbox „Ersetzen" lässt sich zusätzlich ein Ersetzen-Feld einblenden, mit „Ersetzen" (nur aktueller Treffer) und „Alle ersetzen".
 
-## 13. WebDAV-Synchronisierung zwischen mehreren Geräten
+## 15. WebDAV-Synchronisierung zwischen mehreren Geräten
 
 Dokumente lassen sich zwischen mehreren Geräten (z. B. Laptop und Tablet) über einen eigenen WebDAV-Speicher synchronisieren (z. B. Nextcloud). Es wird dabei nur eine einzelne JSON-Datei am angegebenen Ort verwendet — kein Ordner-Browsing, keine sonstigen Berechtigungen nötig.
 
 **Einrichtung:**
 
-1. ☁️-Button in der Kopfzeile öffnet die WebDAV-Einstellungen.
+1. **WebDAV-Einstellungen** im Burger-Menü ☰ öffnen (bei eingerichteter Verbindung liegt zusätzlich ein ☁️-Button in der Kopfzeile, der dieselben Einstellungen öffnet).
 2. **Server-URL** eintragen — entweder die genaue Zieldatei oder einfach ein Ordner (die App hängt dann automatisch `markdown-studio-sync.json` an).
 3. **Benutzername** und **App-Kennwort** eintragen (bei den meisten Cloud-Diensten ein separat erstelltes App-Kennwort, nicht das Hauptpasswort).
 4. „Automatisch synchronisieren" aktivieren und ein Intervall wählen, oder manuell über „🔄 Jetzt synchronisieren" synchronisieren.
@@ -349,15 +423,15 @@ Der ☁️-Button färbt sich **hellgrün**, sobald mindestens eine Synchronisie
 
 **Zugangsdaten auf ein anderes Gerät übertragen:** „📄 Konfigurationsdatei öffnen" in den WebDAV-Einstellungen erstellt eine vorausgefüllte Notiz mit der Server-URL (Benutzername/Passwort bewusst leer gelassen). Diese Notiz auf dem zweiten Gerät öffnen, Zugangsdaten ergänzen — die App erkennt das Format automatisch und übernimmt die Einstellungen direkt, ohne das Einstellungsfenster manuell öffnen zu müssen.
 
-## 14. Export und Teilen
+## 16. Export und Teilen
 
 - **Als eigenständige HTML-Datei exportieren** — erzeugt eine einzelne, komplett unabhängige HTML-Datei mit dem aktuellen Design, die sich in jedem Browser ohne diese App öffnen lässt (inklusive funktionierendem Vorlesemodus und Inhaltsverzeichnis). Enthält das Dokument Folientrennlinien (`---`), fragt die App zusätzlich, ob stattdessen als **eBook-Widget** exportiert werden soll — eine eigenständige, klickbare Diaschau-Datei mit denselben Übergängen wie der Präsentationsmodus.
 - **🖨️ Drucken / Als PDF speichern** — nutzt den normalen Druckdialog des Browsers; nur die Vorschau wird gedruckt, im aktuell gewählten Design (inklusive Hintergrundfarben).
 - **📋 Formatierte Notiz in die Zwischenablage kopieren** — kopiert das gerenderte Dokument (Überschriften, Fett/Kursiv, Listen, Tabellen, Bilder) als formatierten Text, bereit zum Einfügen in Word, Outlook, Gmail o. Ä. Für exakte Absatz-Abstände zählt hier auch die Anzahl mehrerer aufeinanderfolgender Leerzeilen im Quelltext.
 
-## 15. Tastenkürzel
+## 17. Tastenkürzel
 
-Für so gut wie jede Funktion aus Kopfzeile, Formatierungsleiste und Tabellen-Werkzeugen gibt es ein Tastenkürzel — viele davon von Haus aus vorbelegt, alle über das ⌨️-Symbol in der Kopfzeile einzeln auf eine eigene Kombination umlegbar. Auf Mac und iPad wird automatisch `Cmd` (⌘) statt `Strg` verwendet, erkennbar an den ⌘/⌥/⇧-Symbolen im Tastenkürzel-Fenster und in den Buttons-Tooltips.
+Für so gut wie jede Funktion aus Menü, Formatierungsleiste und Tabellen-Werkzeugen gibt es ein Tastenkürzel — viele davon von Haus aus vorbelegt, alle über die Tastenkürzel-Hilfe im Burger-Menü ☰ einzeln auf eine eigene Kombination umlegbar. Auf Mac und iPad wird automatisch `Cmd` (⌘) statt `Strg` verwendet, erkennbar an den ⌘/⌥/⇧-Symbolen im Tastenkürzel-Fenster und in den Buttons-Tooltips.
 
 ### Vorbelegte Tastenkombinationen
 
@@ -434,29 +508,29 @@ Foto/Zeichnung/Clipart/Sprachaufnahme/Video einfügen sowie alle Tabellen-Zeilen
 
 ### Eigene Tastenkombinationen zuweisen
 
-Im Tastenkürzel-Fenster (⌨️-Symbol) steht neben jeder Aktion die aktuell zugewiesene Kombination als anklickbarer Button. Ein Klick darauf startet die Aufnahme („Taste drücken …") — einfach die gewünschte Kombination drücken (dabei muss mindestens `Strg` oder `Alt` gehalten werden, damit normales Tippen im Editor nie blockiert werden kann) und die neue Zuordnung ist sofort aktiv. War die Kombination bereits einer anderen Aktion zugewiesen, wird sie dort automatisch entfernt und eine kurze Meldung zeigt an, wovon sie „geklaut" wurde. `Esc` während der Aufnahme bricht sie ohne Änderung ab.
+Im Tastenkürzel-Fenster (Burger-Menü ☰) steht neben jeder Aktion die aktuell zugewiesene Kombination als anklickbarer Button. Ein Klick darauf startet die Aufnahme („Taste drücken …") — einfach die gewünschte Kombination drücken (dabei muss mindestens `Strg` oder `Alt` gehalten werden, damit normales Tippen im Editor nie blockiert werden kann) und die neue Zuordnung ist sofort aktiv. War die Kombination bereits einer anderen Aktion zugewiesen, wird sie dort automatisch entfernt und eine kurze Meldung zeigt an, wovon sie „geklaut" wurde. `Esc` während der Aufnahme bricht sie ohne Änderung ab.
 
 Ein kleines ↺-Symbol neben einer geänderten Kombination setzt nur diese eine Aktion auf ihren Standard zurück; „Alle auf Standard zurücksetzen" oben im Fenster setzt die komplette Liste zurück. Alle Änderungen werden geräteweit gespeichert (unabhängig von einzelnen Dokumenten) und bleiben nach einem Neuladen der Seite erhalten.
 
-## 16. Speicherplatz und Datenschutz
+## 18. Speicherplatz und Datenschutz
 
-Alle Dokumente und eingefügten Medien werden ausschließlich lokal im Browser gespeichert — es findet keine Übertragung an einen Server statt, außer wenn WebDAV-Synchronisierung aktiv eingerichtet wurde (siehe [Abschnitt 13](#13-webdav-synchronisierung-zwischen-mehreren-geräten)), und dann nur an das selbst angegebene Ziel.
+Alle Dokumente und eingefügten Medien werden ausschließlich lokal im Browser gespeichert — es findet keine Übertragung an einen Server statt, außer wenn WebDAV-Synchronisierung aktiv eingerichtet wurde (siehe [Abschnitt 15](#15-webdav-synchronisierung-zwischen-mehreren-geräten)), und dann nur an das selbst angegebene Ziel.
 
 Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere Anhänge (Bilder, Zeichnungen, PDF-Seiten, Audio) liegen in IndexedDB, das deutlich mehr Kapazität bietet. Die Fußleiste zeigt rechts neben der Wort-/Zeichen-Statistik der aktuellen Notiz einen Prozentbalken sowie die reine Datengröße aller aktuell geöffneten Notizen zusammen. Der Prozentwert bezieht sich dabei auf das jeweils knappere der beiden Speicher — meist `localStorage`, das ein deutlich kleineres, festes Limit hat (wenige MB) als IndexedDB, wo die eigentlichen Anhänge liegen; ein `~` davor zeigt an, dass es sich um eine Schätzung handelt (die genaue `localStorage`-Grenze lässt sich nicht browserübergreifend zuverlässig abfragen). Sollte der Speicherplatz des Browsers dennoch einmal knapp werden, erscheint zusätzlich ein kleines Warndreieck am betroffenen Tab.
 
 **Empfehlung bei sehr großen Dokumenten** (viele/hochauflösende Bilder, umfangreiche PDF-Importe): regelmäßig über WebDAV sichern oder als Datei exportieren — das lokale lokale Speicherlimit des Browsers ist zwar großzügig, aber nicht unbegrenzt.
 
-## 17. Tipps und häufige Fragen
+## 19. Tipps und häufige Fragen
 
-**Wie öffne ich dasselbe Dokument auf einem anderen Gerät?** Entweder die gespeicherte `.md`-Datei übertragen (sie ist vollständig eigenständig, inklusive aller eingebetteten Bilder als Base64-Daten) oder WebDAV-Synchronisierung einrichten (siehe [Abschnitt 13](#13-webdav-synchronisierung-zwischen-mehreren-geräten)).
+**Wie öffne ich dasselbe Dokument auf einem anderen Gerät?** Entweder die gespeicherte `.md`-Datei übertragen (sie ist vollständig eigenständig, inklusive aller eingebetteten Bilder als Base64-Daten) oder WebDAV-Synchronisierung einrichten (siehe [Abschnitt 15](#15-webdav-synchronisierung-zwischen-mehreren-geräten)).
 
 **Bleibt eine Zeichnung nach dem Speichern der Datei weiter bearbeitbar?** Ja, solange die Notiz innerhalb dieser App geöffnet bleibt oder als `.md`-Datei wieder in dieser App geöffnet wird. Wird die Datei dagegen extern bearbeitet oder in einer anderen Markdown-App geöffnet, geht diese Information verloren — sie erscheint dann als normales, nicht mehr per Doppelklick bearbeitbares Bild.
 
-**Funktioniert die App ohne Internetverbindung?** Ja — sowohl die online gehostete Version (nach dem ersten Laden) als auch besonders die lokal heruntergeladene `Markdown-Editor.html` funktionieren komplett offline. Nur Kamera, Mikrofon, WebDAV-Synchronisierung und die Clipart-Suche (siehe [Abschnitt 5](#5-bilder-fotos-zeichnungen-und-piktogramme-einfügen)) benötigen die jeweilige Geräteberechtigung bzw. eine Verbindung zum eigenen Server bzw. zu ARASAAC.
+**Funktioniert die App ohne Internetverbindung?** Ja — sowohl die online gehostete Version (nach dem ersten Laden) als auch besonders die lokal heruntergeladene `Markdown-Editor.html` funktionieren komplett offline. Nur Kamera, Mikrofon, WebDAV-Synchronisierung und die Clipart-Suche (siehe [Abschnitt 7](#7-bilder-fotos-zeichnungen-und-piktogramme-einfügen)) benötigen die jeweilige Geräteberechtigung bzw. eine Verbindung zum eigenen Server bzw. zu ARASAAC.
 
 **Wo werden Video-Links abgespielt?** Eingebettete YouTube-/Vimeo-Videos benötigen zum Abspielen eine echte Internetverbindung sowie einen Aufruf über `http(s)://` (nicht `file://`) — beim lokalen Öffnen der Datei direkt vom Dateisystem wird stattdessen ein Hinweis mit Link zum Original angezeigt.
 
-## 18. Direktlinks mit URL-Parametern
+## 20. Direktlinks mit URL-Parametern
 
 An die Adresse der App lassen sich Parameter anhängen, um sie in einem bestimmten Zustand zu öffnen — praktisch für Lesezeichen, geteilte Links oder eigene Verknüpfungen (z. B. auf dem Startbildschirm eines Tablets). Alle Parameter lassen sich auch kombinieren (`?localstorage=false&view=preview&url=...`).
 
@@ -478,7 +552,7 @@ Legt fest, welcher Bereich beim Öffnen sichtbar ist — unabhängig davon, was 
 
 Beispiel: `https://majort0m0.github.io/Markdown-Editor/?view=preview` öffnet die App direkt in der reinen Lesevorschau.
 
-**Hinweis:** Wie bei `?simple=true` (siehe [Abschnitt 11](#11-designs-ansicht-und-fokus-modi)) wird die so gewählte Ansicht als neuer Stand gespeichert und bleibt auch bei einem späteren Öffnen ohne den Parameter bestehen — bis sie manuell oder über einen erneuten `?view=`-Link geändert wird.
+**Hinweis:** Wie bei `?simple=true` (siehe [Abschnitt 13](#13-designs-ansicht-und-fokus-modi)) wird die so gewählte Ansicht als neuer Stand gespeichert und bleibt auch bei einem späteren Öffnen ohne den Parameter bestehen — bis sie manuell oder über einen erneuten `?view=`-Link geändert wird.
 
 ### Ein Dokument automatisch öffnen: `?url=`
 
@@ -526,7 +600,7 @@ https://majort0m0.github.io/Markdown-Editor/?view=kiosk
 
 ### Simple Modus per Link erzwingen: `?simple=true` / `?simple=false`
 
-Aktiviert bzw. deaktiviert den [Simple Modus](#11-designs-ansicht-und-fokus-modi) beim Öffnen, unabhängig davon, was zuletzt in diesem Browser eingestellt war — genau wie bei `?view=` bleibt die so gewählte Einstellung anschließend als neuer Stand gespeichert:
+Aktiviert bzw. deaktiviert den [Simple Modus](#13-designs-ansicht-und-fokus-modi) beim Öffnen, unabhängig davon, was zuletzt in diesem Browser eingestellt war — genau wie bei `?view=` bleibt die so gewählte Einstellung anschließend als neuer Stand gespeichert:
 
 ```
 https://majort0m0.github.io/Markdown-Editor/?simple=true
@@ -535,7 +609,7 @@ https://majort0m0.github.io/Markdown-Editor/?simple=false
 
 Praktisch z. B. für einen Lesezeichen-Link auf einem Tablet, der immer im reduzierten Simple Modus startet, oder umgekehrt einen Link, der ihn zuverlässig wieder ausschaltet.
 
-## 19. Canvas-Modus (freie Notizfläche)
+## 21. Canvas-Modus (freie Notizfläche)
 
 Der Canvas-Modus ist ein eigener Dokumenttyp (`.canvas`) für eine frei gestaltbare DIN-A4-Seite: statt eines einzelnen, linearen Dokuments lassen sich beliebig viele frei platzierbare, unabhängig voneinander bearbeitbare Notizzettel („Boxen") auf einer Fläche anordnen — z. B. für ein Moodboard, ein visuelles Arbeitsblatt oder eine freie Sammlung von Notizen, Bildern und Zeichnungen.
 
@@ -549,31 +623,31 @@ Der Canvas-Modus ist ein eigener Dokumenttyp (`.canvas`) für eine frei gestaltb
 - **Box auswählen:** einmal auf eine Box klicken — sie bekommt einen Rahmen mit Anfassern an den Ecken sowie einen Löschen-Button (Papierkorb-Symbol) oben rechts.
 - **Box verschieben/skalieren:** bei ausgewählter Box am Rand ziehen zum Verschieben, an einer Eckmarkierung ziehen zum Ändern der Größe.
 - **Box bearbeiten:** eine bereits ausgewählte Box ein zweites Mal anklicken (oder direkt doppelklicken) öffnet sie zur Bearbeitung — mit vollständigem Quelltext-Editor und derselben Formatierungsleiste wie bei einem normalen Dokument. Innerhalb einer Box funktioniert alles genauso wie in einem gewöhnlichen Dokument: Formatierung, Bilder, Fotos, Zeichnungen, Piktogramme, Tabellen, Audio, Video, Web-Einbettungen.
-- **Bearbeitung verlassen:** ausschließlich über den **Quelltext**-Button in der Kopfzeile — ein Klick daneben auf die Canvas-Fläche schließt die Box bewusst *nicht*, damit sich die Fläche bei geöffneter Box weiterhin mit der Maus verschieben lässt (siehe „Navigation" unten).
+- **Bearbeitung verlassen:** ausschließlich über den **Quelltext**-Umschalter (Kopfzeile in der Betriebsart Voll, sonst Burger-Menü ☰ → Ansicht) — ein Klick daneben auf die Canvas-Fläche schließt die Box bewusst *nicht*, damit sich die Fläche bei geöffneter Box weiterhin mit der Maus verschieben lässt (siehe „Navigation" unten).
 
 ### Design und Zoom pro Box
 
-Jede Box hat ihr eigenes **Design** (Dropdown in der Kopfzeile, sobald die Box geöffnet ist) — neue Boxen starten immer mit dem Design „Clean". Ebenso hat jede Box ihre eigene **Zoomstufe**: Die Zoom-Buttons in der Kopfzeile wirken sich bei geöffneter Box ausschließlich auf diese eine Box aus (Quelltext und Vorschau gemeinsam) — alle anderen Boxen behalten ihre eigene, unabhängig gespeicherte Zoomstufe. Neue Boxen starten bei 100 %; beim erneuten Öffnen einer Box wird ihre zuletzt eingestellte Zoomstufe exakt wiederhergestellt.
+Jede Box hat ihr eigenes **Design** (Dropdown im Burger-Menü ☰, sobald die Box geöffnet ist) — neue Boxen starten immer mit dem Design „Clean". Ebenso hat jede Box ihre eigene **Zoomstufe**: Die Zoom-Buttons in der Fußleiste wirken sich bei geöffneter Box ausschließlich auf diese eine Box aus (Quelltext und Vorschau gemeinsam) — alle anderen Boxen behalten ihre eigene, unabhängig gespeicherte Zoomstufe. Neue Boxen starten bei 100 %; beim erneuten Öffnen einer Box wird ihre zuletzt eingestellte Zoomstufe exakt wiederhergestellt.
 
 ### Navigation: Verschieben und Zoomen der Fläche
 
-Solange keine Box geöffnet ist, ersetzt eine kleine Übersichtskarte unten rechts (mit Pfeil-Buttons zum Verschieben) die normale Formatierungsleiste, und die Zoom-Buttons in der Kopfzeile steuern in diesem Zustand den Zoom der gesamten Fläche statt Editor/Vorschau. Die Fläche lässt sich außerdem direkt mit der Maus verschieben — durch Klicken und Ziehen auf einen leeren Bereich der Canvas, auch während eine Box gerade geöffnet ist.
+Solange keine Box geöffnet ist, ersetzt eine kleine Übersichtskarte unten rechts (mit Pfeil-Buttons zum Verschieben) die normale Formatierungsleiste, und die Zoom-Buttons in der Fußleiste steuern in diesem Zustand den Zoom der gesamten Fläche statt Editor/Vorschau. Die Fläche lässt sich außerdem direkt mit der Maus verschieben — durch Klicken und Ziehen auf einen leeren Bereich der Canvas, auch während eine Box gerade geöffnet ist.
 
 ### Hintergrundfarbe
 
-Ist keine Box geöffnet, erscheint an der Stelle der Design-Auswahl in der Kopfzeile stattdessen ein Farbwähler — damit lässt sich der Canvas selbst (die Seite, nicht eine einzelne Box) mit einer eigenen Hintergrundfarbe versehen.
+Ist keine Box geöffnet, erscheint an der Stelle der Design-Auswahl im Burger-Menü ☰ stattdessen ein Farbwähler — damit lässt sich der Canvas selbst (die Seite, nicht eine einzelne Box) mit einer eigenen Hintergrundfarbe versehen.
 
 ### Vorlesemodus im Canvas
 
-Ein eigener 🔊-Button oben links über der Canvas-Fläche liest alle Boxen der Reihe nach vor — von oben links beginnend, zeilenweise in Leserichtung. Die gerade vorgelesene Box wird dabei automatisch in den sichtbaren Bereich verschoben und wie im normalen [Vorlesemodus](#9-vorlesemodus) Wort für Wort hervorgehoben; eingebettete Bilder, Zeichnungen, Audiodateien und Web-Einbettungen werden dabei genauso behandelt. Da Boxen frei auf der Fläche platziert sind, gibt es keine hundertprozentig eindeutige Leserichtung — bei unregelmäßig angeordneten oder überlappenden Boxen kann die tatsächliche Reihenfolge daher gelegentlich von der Erwartung abweichen.
+Ein eigener 🔊-Button oben links über der Canvas-Fläche liest alle Boxen der Reihe nach vor — von oben links beginnend, zeilenweise in Leserichtung. Die gerade vorgelesene Box wird dabei automatisch in den sichtbaren Bereich verschoben und wie im normalen [Vorlesemodus](#11-vorlesemodus) Wort für Wort hervorgehoben; eingebettete Bilder, Zeichnungen, Audiodateien und Web-Einbettungen werden dabei genauso behandelt. Da Boxen frei auf der Fläche platziert sind, gibt es keine hundertprozentig eindeutige Leserichtung — bei unregelmäßig angeordneten oder überlappenden Boxen kann die tatsächliche Reihenfolge daher gelegentlich von der Erwartung abweichen.
 
 ### Präsentationsmodus im Canvas
 
-Der [Präsentationsmodus](#10-präsentationen-erstellen) lässt sich auch auf ein Canvas-Dokument anwenden: jede Box wird dabei zu einer eigenen Folie, in derselben Leserichtung wie der Vorlesemodus (siehe oben) und jeweils mit dem eigenen Design der Box. Enthält eine Box selbst Folientrennlinien (`---`), wird sie zusätzlich in mehrere aufeinanderfolgende Folien aufgeteilt statt nur eine einzige zu ergeben.
+Der [Präsentationsmodus](#12-präsentationen-erstellen) lässt sich auch auf ein Canvas-Dokument anwenden: jede Box wird dabei zu einer eigenen Folie, in derselben Leserichtung wie der Vorlesemodus (siehe oben) und jeweils mit dem eigenen Design der Box. Enthält eine Box selbst Folientrennlinien (`---`), wird sie zusätzlich in mehrere aufeinanderfolgende Folien aufgeteilt statt nur eine einzige zu ergeben.
 
 ### Export
 
-**Als eigenständige HTML-Datei exportieren** (siehe [Abschnitt 14](#14-export-und-teilen)) erzeugt bei einem Canvas-Dokument eine eigenständige Seite mit exakt demselben Layout (Boxen an derselben Position und Größe) und einem eigenen, funktionierenden Vorlesen-Button — auch außerhalb dieser App nutzbar.
+**Als eigenständige HTML-Datei exportieren** (siehe [Abschnitt 16](#16-export-und-teilen)) erzeugt bei einem Canvas-Dokument eine eigenständige Seite mit exakt demselben Layout (Boxen an derselben Position und Größe) und einem eigenen, funktionierenden Vorlesen-Button — auch außerhalb dieser App nutzbar.
 
 **🖨️ Drucken / Als PDF speichern** druckt die Canvas-Seite passend auf ein DIN-A4-Blatt (Hoch- oder Querformat, je nach Seitenausrichtung) — unabhängig davon, wie weit die Fläche gerade im Browserfenster gezoomt oder verschoben ist.
 

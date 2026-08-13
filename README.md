@@ -1,20 +1,32 @@
-# 📝 Markdown Studio
+# 📝 Markdown Studio Pro
 
-Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft — keine Installation, kein Build, keine Serverseite. Die gesamte App steckt in einer einzigen HTML-Datei.
+Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatierung erscheint live beim Tippen, gespeichert wird trotzdem reines Markdown. Läuft komplett im Browser: keine Installation, kein Build, keine Serverseite. Die gesamte App steckt in einer einzigen HTML-Datei.
+
+> **Neu in Version 2.0:** Die Vorschau ist jetzt selbst der Editor (WYSIWYG mit Live-Formatierung), dazu ein Slash-Menü, Block-Anfasser zum Umwandeln und Verschieben, drei Betriebsarten (Fokus/Simple/Voll) und eine aufgeräumte Oberfläche mit Burger-Menü und vertikaler Notizleiste. Der klassische Quelltext-Editor bleibt vollständig erhalten und ist jederzeit umschaltbar.
 
 **🔗 Direkt ausprobieren:** [majort0m0.github.io/Markdown-Editor](https://majort0m0.github.io/Markdown-Editor/)
-**📖 Ausführliche Anleitung:** [Anleitung.md](./Anleitung.md) — Schritt-für-Schritt-Beschreibungen aller Funktionen (auch in der App selbst über das ⌨️-Symbol verlinkt)
+**📖 Ausführliche Anleitung:** [Anleitung.md](./Anleitung.md) — Schritt-für-Schritt-Beschreibungen aller Funktionen (auch in der App selbst über das Burger-Menü ☰ verlinkt)
 
 ![Screenshot des Markdown Studio Editors mit mehreren Tabs, Formatierungsleiste und Live-Vorschau](./docs/screenshot.png)
 
 ## ✨ Funktionen
+
+### Direkt bearbeitbare Vorschau (WYSIWYG)
+- **Live-Formatierung beim Schreiben** — die Vorschau ist selbst das Eingabefeld: Überschriften, Fett/Kursiv, Listen und Zitate erscheinen sofort, während getippt wird. Die Delimiter (`**`, `` ` ``, …) bleiben nur solange sichtbar-gedimmt, wie der Cursor in der Formatierung steht, und verschwinden beim Verlassen — darunter bleibt immer normales Markdown, das sich unverändert speichern und weitergeben lässt
+- **Markdown-Kürzel** wie im Quelltext — `# ` für Überschriften, `- `/`1. `/`- [ ] ` für Listen, `> ` für Zitate, `---` für eine Trennlinie: direkt in der Vorschau getippt, wandelt sich die Zeile sofort um. Auto-Paarung für `**`, `~~` und `` ` `` inklusive
+- **Slash-Menü** — `/` tippen öffnet ein durchsuchbares Menü für Überschriften, Listen, Tabellen, Code-Block, Zitat, Trennlinie, Bild, Zeichnung und mehr
+- **Block-Anfasser** — das Griffsymbol links neben jedem Absatz: Linksklick öffnet ein „Umwandeln in"-Menü (Absatz, Überschrift 1–6, Aufzählung, Nummeriert, Checkbox, Zitat, Code-Block), Ziehen sortiert Absätze und Listenpunkte um, Rechtsklick bietet Duplizieren, Löschen, Verschieben und „Zeile darüber/darunter einfügen"
+- **Auswahl-Werkzeugleiste** — Text in der Vorschau markieren blendet eine kleine Leiste mit Fett/Kursiv/Durchgestrichen/Code, Überschriftenwahl und Textfarbe direkt an der Auswahl ein
+- **Tabellen, Bilder, Zeichnungen und Audio bleiben an Ort und Stelle bearbeitbar** — Tabellenzellen direkt in der Vorschau beschreiben, Zeichnungen per Klick erneut öffnen, Einbettungen mit Enter einen neuen Absatz dahinter anlegen
+- **Vertraute Tastenbelegung** — `Enter` erzeugt einen neuen Absatz (in Listen den nächsten Listenpunkt, auf einem leeren Punkt verlässt es die Liste), `Umschalt`+`Enter` einen bedingten Absatz innerhalb desselben Blocks; Rücktaste/Entf an den Absatzgrenzen verbinden Absätze wie im Quelltext. Auf iPhone/iPad greifen zusätzlich die Textwerkzeuge des Systems (Autokorrektur, Wortvorschläge, Doppel-Leerzeichen-Punkt)
+- **Quelltext jederzeit** — über das Menü zwischen Vorschau, Quelltext und geteilter Ansicht wechseln; beide Ansichten bleiben zeichengenau synchron
 
 ### Dokumente & Dateiformate
 - **Mehrere Tabs** — beliebig viele Dokumente gleichzeitig offen, mit Autospeicherung im Browser (Text/Metadaten in LocalStorage, größere Anhänge wie Bilder/PDFs in IndexedDB für deutlich mehr Speicherplatz); ein Prozentbalken in der Fußleiste zeigt den belegten Speicherplatz sowie die Größe aller aktuell geöffneten Notizen zusammen an
 - **Markdown, CSV, JSON, HTML und TXT** in derselben App: CSV und JSON werden als Tabelle bzw. hübsch formatiert mit Syntax-Hervorhebung angezeigt; HTML-Dateien bekommen eine echte Syntax-Hervorhebung im Editor **und** eine echte gerenderte Web-Vorschau (in einer abgeschotteten Sandbox, damit fremder HTML/JS-Code nichts im Editor selbst anrichten kann); TXT-Dateien werden unverändert als reiner Text angezeigt
 - **Tabs umbenennen & Format wechseln** — Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit Format-Dropdown (Markdown/TXT/CSV/JSON/HTML), um ein Dokument gezielt in ein anderes Format zu konvertieren (bei Canvas-Dokumenten nur der Name, ohne Format-Wechsel, da eine Canvas-Fläche kein Text-basiertes Format ist)
 - **Tab-Reihenfolge per Drag & Drop** ändern — einen Tab in der Tableiste an die gewünschte Stelle ziehen
-- **14 Dokumentvorlagen** über den ✨-Button — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan und eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt)
+- **14 Dokumentvorlagen** über „Neu" im Burger-Menü ☰ — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan und eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt)
 - **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
 - **Speichern** fragt immer nach einem Speicherort (funktioniert also immer wie „Speichern unter") — mit nativem Ordnerauswahl-Dialog, der standardmäßig im zuletzt für diese Notiz verwendeten Ordner öffnet, sofern der Browser das unterstützt; sonst ein Download mit Hinweis darauf
 
@@ -41,7 +53,7 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **Bildunterschriften** — jedes Bild kann über die Markdown-Bildsyntax (`![Alt](Adresse "Bildunterschrift")`) eine sichtbare Beschriftung darunter bekommen, in Vorschau, Präsentationsmodus und beiden HTML-Exporten
 - **📐 Bildgröße und Rahmen** — jedes Bild (auch Zeichnungen und Piktogramme) lässt sich per Schieberegler auf 25–100 % verkleinern und mit einem farbigen, in Dicke und Eckenradius einstellbaren Rahmen versehen, direkt über einen Button beim Überfahren des Bildes; die Einstellung bleibt beim Speichern, erneuten Öffnen und über WebDAV erhalten
 - **📄 PDF als Arbeitsblatt öffnen** — eine PDF-Datei öffnen oder hineinziehen, eine oder mehrere Seiten auswählen (einzeln, alle, oder ein Seitenbereich wie „1-3,5"); jede gewählte Seite wird direkt in den Zeichen-Editor geladen und kann dort beschriftet werden. Landet automatisch in einer neuen, eigenen Notiz — bei mehreren Seiten alle untereinander, mit automatischem Weiterschalten zur nächsten Seite nach dem Speichern
-- **🎙️ Sprachaufnahmen und Audiodateien** — direkt über das Mikrofon aufnehmen oder eine vorhandene Audiodatei (`.wav`/`.ogg`/`.mp3`/`.m4a`) per Copy-Paste, Drag & Drop oder Datei-Dialog einfügen, in der Vorschau über einen Player abspielbar
+- **🎙️ Sprachaufnahmen und Audiodateien** — direkt über das Mikrofon aufnehmen oder eine vorhandene Audiodatei (`.wav`/`.ogg`/`.mp3`/`.m4a`) per Copy-Paste, Drag & Drop oder Datei-Dialog einfügen, in der Vorschau über einen Player abspielbar. Während einer laufenden Aufnahme erscheint am unteren Bildrand eine Steuerung mit Aufnahmedauer sowie Record-, Pause- und Beenden-Knopf — unabhängig davon, welche Betriebsart oder Ansicht gerade aktiv ist
 - **🎬 Video einbetten** — YouTube- oder Vimeo-Link (oder eine direkte Videodatei-URL) einfügen, wird in der Vorschau automatisch als eingebetteter Player angezeigt
 - **🌐 Web-Einbettungen (iframe)** — beliebige Webseiten oder Web-Widgets einbetten; erzeugt direkt editierbaren HTML-Code (Breite, Höhe, Vollbild-Erlaubnis, …) statt eines versteckten Einstellungsdialogs, inklusive vorlesbarem Titel-Text als Alt-Text-Gegenstück
 - **Tabellenfeste Einfügung** — Bild, Foto, Zeichnung, Piktogramm oder Sprachaufnahme mit dem Cursor in einer Tabellenzelle eingefügt, verzichtet auf die sonst übliche Leerzeile danach, damit die Tabellenstruktur erhalten bleibt
@@ -57,26 +69,34 @@ Ein schlanker Markdown-Editor mit Live-Vorschau, der komplett im Browser läuft 
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau
 - **Inhaltsverzeichnis** — schwebender Button über der Vorschau, Klick auf eine Überschrift springt direkt dorthin
 - **15 Designs** — GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (inkl. farbiger Code-Hervorhebung); das Design wird pro Tab gemerkt und über WebDAV mitsynchronisiert, statt für die ganze App zu gelten — eine neue Notiz startet dabei immer im Design „GitHub Light“
-- **Fokus-Modi** — Editor oder Vorschau einzeln ausblenden, plus echter **Vollbildmodus** (mit Fallback für iOS Safari); welcher Bereich gerade sichtbar ist, wird ebenfalls pro Notiz gemerkt und synchronisiert
+- **Ansicht wechseln** — Vorschau, Quelltext oder geteilte Ansicht; plus echter **Vollbildmodus** (mit Fallback für iOS Safari). Welcher Bereich sichtbar ist, wird pro Notiz gemerkt und synchronisiert, und eine neu angelegte Notiz übernimmt die gerade eingestellte Ansicht
 - **Präsentationsmodus** — Folien werden automatisch an Trennlinien (`---`) aufgeteilt und lassen sich per Tastatur, Klick oder Touch durchblättern, mit automatischer Zentrierung für reine Titel- bzw. Text-Folien
-- **Simple Modus** — ein „Simple"-Schalter in der Kopfzeile reduziert Kopf- und Werkzeugleiste auf das Nötigste (Öffnen, Speichern, Formatiert kopieren, Rückgängig/Wiederherstellen, Quelltext/Vorschau als reiner Umschalter, Zoom, Vollbild sowie Überschrift/Bild/Foto/Zeichnung/Piktogramm/Audio), stellt automatisch das Design „Clean" und eine größere Zoomstufe ein und springt beim Einfügen von Bild, Foto, Zeichnung, Piktogramm oder Audioaufnahme direkt in die Vorschau — praktisch für Tablets, jüngere Nutzer:innen oder eine aufgeräumte Schreibumgebung. Bleibt geräteweit gespeichert und lässt sich auch per Link mit `?simple=true`/`?simple=false` gezielt an- bzw. ausgeschaltet öffnen
+- **Inhaltsbreite** — im Einzel-Vorschaumodus wahlweise „Schmal" (zentriert, etwa DIN-A4-Textbreite) oder „Breit" (volle Fensterbreite); auf schmalen Bildschirmen wird ohnehin immer die volle Breite genutzt
+
+### Betriebsarten und Oberfläche
+- **Drei Betriebsarten** über das Burger-Menü: **Fokus** (Standard — nur der Text, keine Titelzeile, keine Werkzeugleiste, alle Aktionen im Menü), **Simple** (große Schrift, Design „Clean", stark reduzierte Werkzeugleiste — für Tablets, jüngere Nutzer:innen oder ablenkungsfreies Schreiben) und **Voll** (alle Werkzeuge sichtbar). Die Einstellung bleibt geräteweit gespeichert; `?simple=true`/`?simple=false` schaltet den Simple Modus auch per Link
+- **Burger-Menü** — Öffnen, Speichern, Neu, Suchen & Ersetzen, Rechtschreibprüfung, Designwahl, Exporte, WebDAV-Einstellungen und „Über" mit Versionsnummer an einer Stelle statt in einer vollen Symbolleiste
+- **Vertikale Notizleiste** — Button oben links öffnet die Notizliste als Overlay; angepinnt wird daraus eine feste Seitenspalte neben dem Notizfenster. Umbenennen, Umsortieren per Drag & Drop und Schließen funktionieren dort wie in der klassischen Tableiste
+- **Fußleiste** — Zoom, Vollbild und Präsentation rechts unten, dazu Wort-/Zeichenzähler und Speicherplatzanzeige
+- **Synchrones Scrollen** — Schalter direkt oben auf der Trennlinie, sichtbar nur in der geteilten Ansicht
 
 ### Synchronisation & Export
 - **WebDAV-Synchronisierung** zwischen mehreren Geräten — automatisch bei Änderungen, in Intervallen oder manuell, inkl. Konfliktbehandlung (lokale Version behalten, Server-Version übernehmen oder beide als getrennte Dokumente behalten); der Sync-Button färbt sich hellgrün bei erfolgreich bestehender Verbindung, mit einem dunkelgrünen Ring als Countdown bis zur nächsten automatischen Synchronisierung, und erfolgreich synchronisierte Tabs bekommen einen grünen Rand in der Tableiste
 - **Export** als eigenständige HTML-Datei oder direkt **Drucken/als PDF speichern**
+- **Per E-Mail versenden** — öffnet das E-Mail-Programm des Geräts mit dem Notiztitel als Betreff und dem gerenderten Text (ohne Markdown-Zeichen) als Nachricht
 - **Formatierte Notiz in die Zwischenablage kopieren** (zum Einfügen in Word, Outlook, Gmail, …)
 
 ### Sonstiges
 - **Responsiv** — Bedienleisten werden auf schmalen Bildschirmen (z. B. iPhone) horizontal scrollbar, Editor/Vorschau stapeln sich übereinander
 - **Installierbar** — App-Icon und Web-Manifest, auf iOS über „Zum Home-Bildschirm“ startbar wie eine echte App
-- **Tastenkürzel-Hilfe** über das ⌨️-Symbol in der Kopfzeile — zeigt alle Kombinationen und erlaubt, sie direkt dort anzupassen
+- **Tastenkürzel-Hilfe** über das Burger-Menü ☰ — zeigt alle Kombinationen und erlaubt, sie direkt dort anzupassen
 - **URL-Parameter für Direktlinks** — `?view=source`/`?view=preview`/`?view=split` legt die Startansicht unabhängig von zuvor gespeicherten Einstellungen fest; `?url=<Adresse-einer-.md-Datei>` öffnet automatisch ein Dokument von einer beliebigen (CORS-freigegebenen) Web-Adresse, ohne beim erneuten Öffnen desselben Links doppelt zu importieren; `?localstorage=false` startet die App bewusst ohne die gespeicherten Notizen zu laden (z. B. für Vorführungen) — zusammen mit `?url=` wird dann ausschließlich die dort angegebene Notiz geöffnet; `?view=kiosk` geht noch weiter und speichert während der ganzen Sitzung nichts im Browser (echter Kiosk-/Vorführ-Link, ohne Spuren). Alle Parameter lassen sich mit `?simple=true`/`?simple=false` kombinieren, um den Simple Modus gezielt an- oder auszuschalten. Details in der [Anleitung](./Anleitung.md#18-direktlinks-mit-url-parametern)
 
 ## 🚀 Verwenden
 
 **Im Browser:** Einfach den [Live-Link](https://majort0m0.github.io/Markdown-Editor/) öffnen.
 
-**Lokal:** `Markdown-Editor.html` herunterladen und im Browser öffnen (Doppelklick genügt) — funktioniert auch offline, da alle Bibliotheken (inklusive des eingebauten Zeichen-Editors und der PDF-Verarbeitung) bereits in der Datei enthalten sind. Dadurch ist die Datei mit ca. 13 MB spürbar größer als ein gewöhnlicher Markdown-Editor, lässt sich aber weiterhin als einzelne Datei weitergeben.
+**Lokal:** `Markdown-Editor.html` herunterladen und im Browser öffnen (Doppelklick genügt) — funktioniert auch offline, da alle Bibliotheken (inklusive des eingebauten Zeichen-Editors und der PDF-Verarbeitung) bereits in der Datei enthalten sind. Dadurch ist die Datei mit ca. 14 MB spürbar größer als ein gewöhnlicher Markdown-Editor, lässt sich aber weiterhin als einzelne Datei weitergeben.
 
 ## 🛠️ Entwicklung
 
