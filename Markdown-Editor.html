@@ -2487,6 +2487,58 @@ return rgba;});});}).call(this);
       justify-self: end;
     }
 
+    /* Teleprompter: Regler tauscht mit der Speicheranzeige, damit das Raster gleich bleibt. */
+    .teleprompter-bar {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    body.teleprompter-active .teleprompter-bar { display: flex; }
+    body.teleprompter-active .footer-storage { display: none; }
+
+    .teleprompter-bar input[type="range"] {
+      width: 150px;
+      max-width: 32vw;
+    }
+
+    .teleprompter-bar #teleprompterSpeedLabel {
+      font-variant-numeric: tabular-nums;
+      min-width: 26px;
+      text-align: right;
+    }
+
+    .teleprompter-play {
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      border-radius: 5px;
+      width: 24px;
+      height: 20px;
+      line-height: 1;
+      padding: 0;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .teleprompter-hint {
+      color: var(--text-muted);
+    }
+
+    /* Auf schmalen Viewports ist für den Hinweistext kein Platz — der Regler selbst und die
+       Tastenkürzel funktionieren unverändert, nur die Beschriftung entfällt. */
+    @media (max-width: 780px) {
+      .teleprompter-hint { display: none; }
+    }
+
+    /* Während des Laufs ist die Vorschau bewusst nicht editierbar (siehe startTeleprompter()) —
+       ein Text-Cursor, der über den scrollenden Text wandert, wäre nur störend, und die
+       Pfeiltasten gehören hier der Steuerung. */
+    body.teleprompter-active #markdownPreview {
+      caret-color: transparent;
+    }
+
     /* Studio Pro UI redesign: Zoom/Vollbild/Präsentation wandern hierher (siehe <footer>-HTML) --
        dieselben .icon-btn-Elemente, nur kompakter skaliert, damit sie in die schmale Fußzeile
        passen (34px/18px-Icons wären hier deutlich zu groß). */
@@ -4837,6 +4889,17 @@ return rgba;});});}).call(this);
       width: 1%;
     }
 
+    /* Zwischenüberschrift innerhalb der Tabelle. width:1% aus der Regel darüber gilt für die erste
+       Zelle jeder Zeile — bei einer über beide Spalten laufenden Zelle würde das die Überschrift
+       auf ein Wort zusammenquetschen, deshalb hier zurückgesetzt. */
+    .shortcuts-table td.shortcuts-section {
+      width: auto;
+      padding-top: 16px;
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: normal;
+    }
+
     .shortcuts-help-links {
       display: flex;
       flex-direction: column;
@@ -6739,6 +6802,17 @@ return rgba;});});}).call(this);
   <footer class="app-footer">
     <span id="docStats" class="footer-stats"></span>
     <span id="storageIndicator" class="footer-storage"><span class="footer-separator"></span><span class="footer-storage-bar"><span class="footer-storage-bar-fill"></span></span><span class="footer-storage-text"></span><span class="footer-separator"></span></span>
+    <!-- Nur im Teleprompter-Modus sichtbar; nimmt dann exakt den Platz der Speicheranzeige ein
+         (siehe body.teleprompter-active-Regeln), damit das 3-Spalten-Raster der Fußleiste
+         unverändert bleibt und nichts umbricht. -->
+    <span id="teleprompterBar" class="teleprompter-bar">
+      <button type="button" id="teleprompterPlayBtn" class="teleprompter-play" onclick="toggleTeleprompterRunning()" title="Start/Stopp (Pfeil links/rechts)">⏸</button>
+      <label for="teleprompterSpeed">Tempo</label>
+      <input type="range" id="teleprompterSpeed" min="10" max="300" step="5" value="45"
+             oninput="setTeleprompterSpeed(Number(this.value))" title="Geschwindigkeit (Pfeil hoch/runter)">
+      <span id="teleprompterSpeedLabel">45</span>
+      <span class="teleprompter-hint">Umschalt/Leertaste halten = Pause · Esc beendet</span>
+    </span>
     <!-- Studio Pro UI redesign: aus der Kopfzeile hierher verschoben (gleiche ids/onclicks, siehe
          die Kommentare bei #burgerMenuBtn) -- der Lizenzlink ist stattdessen jetzt Teil des
          Burger-Menü-"Über"-Blocks (#aboutVersionText). -->
@@ -6746,6 +6820,7 @@ return rgba;});});}).call(this);
       <button id="zoomOutBtn" class="icon-btn" onclick="zoomOut()" title="Verkleinern (Strg/Cmd + -)"><svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.1922 12.6064C10.0236 13.4816 8.57234 14 7 14C3.13401 14 0 10.866 0 7C0 3.13401 3.13401 0 7 0C10.866 0 14 3.13401 14 7C14 8.57234 13.4816 10.0236 12.6064 11.1922L15.7071 14.2929L14.2929 15.7071L11.1922 12.6064ZM10 6V8L4 8V6L10 6Z" fill="currentColor"/></svg></button>
       <button id="zoomInBtn" class="icon-btn" onclick="zoomIn()" title="Vergrößern (Strg/Cmd + +)"><svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.1922 12.6064C10.0236 13.4816 8.57234 14 7 14C3.13401 14 0 10.866 0 7C0 3.13401 3.13401 0 7 0C10.866 0 14 3.13401 14 7C14 8.57234 13.4816 10.0236 12.6064 11.1922L15.7071 14.2929L14.2929 15.7071L11.1922 12.6064ZM4 6H6L6 4L8 4L8 6L10 6V8L8 8V10H6V8L4 8L4 6Z" fill="currentColor"/></svg></button>
       <button id="fullscreenBtn" class="icon-btn" onclick="toggleFullscreen()" title="Fokus-/Vollbildmodus ein-/ausschalten (blendet Menüs, Kopf-, Fußleiste und Tableiste aus)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.00002 3.99998H4.00004L4 9M20 8.99999V4L15 3.99997M15 20H20L20 15M4 15L4 20L9.00002 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button id="teleprompterBtn" class="icon-btn" onclick="toggleTeleprompterMode()" title="Teleprompter-Modus (Notiz scrollt automatisch nach oben)"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.75" y="4.75" width="18.5" height="12.5" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M6.5 14.5H17.5M6.5 11.5H17.5M9 8.5H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M12 22V19M9 22H15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
       <button id="presentationBtn" class="icon-btn" onclick="startPresentation()" title="Präsentationsmodus starten (Folien werden durch eine Trennlinie --- getrennt)"><svg fill="currentColor" viewBox="0 0 60 60" id="Capa_1" version="1.1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><g><path d="M60,4H31V1c0-0.553-0.447-1-1-1s-1,0.447-1,1v3H0v42h27.586L15.293,58.293c-0.391,0.391-0.391,1.023,0,1.414   C15.488,59.902,15.744,60,16,60s0.512-0.098,0.707-0.293L29,47.414V57c0,0.553,0.447,1,1,1s1-0.447,1-1v-9.586l12.293,12.293   C43.488,59.902,43.744,60,44,60s0.512-0.098,0.707-0.293c0.391-0.391,0.391-1.023,0-1.414L32.414,46H60V4z M58,44H2V6h56V44z"/><path d="M36,42c0.553,0,1-0.447,1-1v-3c0-0.553-0.447-1-1-1s-1,0.447-1,1v3C35,41.553,35.447,42,36,42z"/><path d="M40,33c-0.553,0-1,0.447-1,1v7c0,0.553,0.447,1,1,1s1-0.447,1-1v-7C41,33.447,40.553,33,40,33z"/><path d="M44,35c-0.553,0-1,0.447-1,1v5c0,0.553,0.447,1,1,1s1-0.447,1-1v-5C45,35.447,44.553,35,44,35z"/><path d="M48,28c-0.553,0-1,0.447-1,1v12c0,0.553,0.447,1,1,1s1-0.447,1-1V29C49,28.447,48.553,28,48,28z"/><path d="M52,32c-0.553,0-1,0.447-1,1v8c0,0.553,0.447,1,1,1s1-0.447,1-1v-8C53,32.447,52.553,32,52,32z"/><path d="M8,38h10c0.553,0,1-0.447,1-1s-0.447-1-1-1H8c-0.553,0-1,0.447-1,1S7.447,38,8,38z"/><path d="M23,40H8c-0.553,0-1,0.447-1,1s0.447,1,1,1h15c0.553,0,1-0.447,1-1S23.553,40,23,40z"/><path d="M29.955,18.607c-0.018-0.239-0.047-0.474-0.08-0.708c-0.02-0.142-0.04-0.284-0.065-0.425c-0.047-0.263-0.106-0.521-0.17-0.778c-0.029-0.115-0.056-0.231-0.089-0.345c-0.076-0.265-0.164-0.525-0.258-0.782c-0.04-0.11-0.078-0.221-0.121-0.33c-0.096-0.241-0.205-0.475-0.317-0.707c-0.06-0.124-0.116-0.25-0.18-0.372c-0.103-0.195-0.216-0.382-0.33-0.57c-0.091-0.152-0.178-0.306-0.276-0.454c-0.088-0.131-0.185-0.255-0.278-0.383c-0.138-0.19-0.272-0.382-0.422-0.564c0-0.001-0.001-0.001-0.002-0.002c-0.233-0.283-0.476-0.558-0.737-0.819c-0.25-0.25-0.514-0.481-0.784-0.705c-0.014-0.011-0.026-0.024-0.039-0.035c-0.173-0.142-0.355-0.269-0.535-0.4C25.135,10.126,25,10.02,24.856,9.925c-0.136-0.09-0.278-0.17-0.417-0.254c-0.201-0.122-0.403-0.243-0.612-0.353c-0.109-0.057-0.222-0.107-0.333-0.161C23.249,9.038,23,8.924,22.745,8.822c-0.098-0.039-0.197-0.072-0.295-0.108c-0.267-0.098-0.537-0.189-0.813-0.268c-0.108-0.031-0.218-0.057-0.327-0.084c-0.26-0.066-0.522-0.125-0.789-0.173c-0.141-0.026-0.284-0.045-0.426-0.065c-0.232-0.032-0.464-0.06-0.7-0.079c-0.18-0.014-0.361-0.022-0.542-0.027C18.735,8.014,18.619,8,18.5,8c-0.09,0-0.178,0.011-0.268,0.014c-0.088,0.002-0.175-0.006-0.264-0.002l-0.395,0.024l-0.01,0.011C11.66,8.527,7,13.475,7,19.5C7,25.841,12.159,31,18.5,31c2.879,0,5.508-1.071,7.528-2.827c0.028-0.022,0.062-0.032,0.088-0.058c0.016-0.016,0.021-0.037,0.036-0.054c2.125-1.901,3.542-4.571,3.799-7.574l0.019-0.016l0.02-0.44c0.004-0.088-0.004-0.174-0.002-0.262C29.988,19.679,30,19.591,30,19.5c0-0.122-0.015-0.241-0.018-0.362C29.976,18.96,29.969,18.784,29.955,18.607z M19,10.025c0.099,0.005,0.199,0.007,0.298,0.015c0.104,0.008,0.208,0.018,0.311,0.03c0.227,0.027,0.451,0.061,0.673,0.103c0.067,0.013,0.134,0.024,0.201,0.038c0.272,0.058,0.541,0.126,0.804,0.207c0.016,0.005,0.033,0.009,0.049,0.014c2.962,0.928,5.304,3.27,6.232,6.232c0.005,0.016,0.009,0.033,0.014,0.049c0.081,0.263,0.149,0.531,0.207,0.804c0.014,0.067,0.025,0.134,0.038,0.201c0.042,0.222,0.076,0.446,0.103,0.673c0.012,0.103,0.021,0.207,0.03,0.311c0.008,0.098,0.01,0.199,0.015,0.298H19V10.025z M9,19.5c0-4.727,3.474-8.647,8-9.37v9.833l0.001,0.031c0,0.005,0.001,0.009,0.001,0.014L17.037,21h0.549l6.31,6.31C22.362,28.373,20.504,29,18.5,29C13.262,29,9,24.738,9,19.5z M25.411,25.997L20.414,21h7.456C27.564,22.917,26.686,24.643,25.411,25.997z"/><path d="M39,15h8c0.553,0,1-0.447,1-1s-0.447-1-1-1h-8c-0.553,0-1,0.447-1,1S38.447,15,39,15z"/><path d="M51.3,13.29C51.109,13.47,51,13.729,51,14c0,0.27,0.109,0.53,0.29,0.7C51.479,14.89,51.729,15,52,15   c0.26,0,0.52-0.11,0.71-0.29C52.89,14.52,53,14.26,53,14s-0.11-0.521-0.29-0.71C52.33,12.92,51.649,12.93,51.3,13.29z"/><path d="M49,10h3c0.553,0,1-0.447,1-1s-0.447-1-1-1h-3c-0.553,0-1,0.447-1,1S48.447,10,49,10z"/><path d="M39,10h2c0.553,0,1-0.447,1-1s-0.447-1-1-1h-2c-0.553,0-1,0.447-1,1S38.447,10,39,10z"/><path d="M45,10c0.27,0,0.52-0.11,0.71-0.29C45.89,9.52,46,9.27,46,9c0-0.271-0.11-0.521-0.29-0.71c-0.37-0.37-1.061-0.37-1.42,0   C44.109,8.479,44,8.729,44,9c0,0.27,0.109,0.52,0.29,0.71C44.479,9.89,44.729,10,45,10z"/></g></svg></button>
     </div>
   </footer>
@@ -6762,6 +6837,11 @@ return rgba;});});}).call(this);
         <tr><td><kbd>Enter</kbd> in einer Liste</td><td>Listenpunkt fortsetzen (Aufzählung, Nummerierung, Aufgaben)</td></tr>
         <tr><td><kbd>Enter</kbd> auf leerem Listenpunkt</td><td>Liste beenden</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Fenster/Dialog schließen</td></tr>
+        <tr><td colspan="2" class="shortcuts-section">Teleprompter-Modus</td></tr>
+        <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Schneller / langsamer</td></tr>
+        <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>Start / Stopp</td></tr>
+        <tr><td><kbd>Umschalt</kbd> oder <kbd>Leertaste</kbd> halten</td><td>Vorübergehend anhalten</td></tr>
+        <tr><td><kbd>Esc</kbd></td><td>Teleprompter beenden</td></tr>
       </table>
       <div class="shortcuts-modal-toolbar">
         <button class="shortcuts-reset-all-btn" type="button" onclick="resetAllShortcuts()">Alle auf Standard zurücksetzen</button>
@@ -8442,6 +8522,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         contentWidthMode: contentWidthMode,
         wysiwygEnabled: wysiwygEnabled,
         lastTemplateId: lastTemplateId,
+        teleprompterSpeed: teleprompterSpeed,
         webdavPendingDeletions: webdavPendingDeletions
       };
       // localStorage.setItem() can throw (almost always QuotaExceededError — a tab with several
@@ -8576,6 +8657,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         spellcheckEnabled = !!state.spellcheckEnabled;
         splitRatio = state.splitRatio !== undefined ? state.splitRatio : 50;
         zoomLevel = state.zoomLevel !== undefined ? state.zoomLevel : 100;
+        // Geraetelokale UI-Einstellung wie Zoom/Split -- der Modus selbst wird bewusst NICHT
+        // wiederhergestellt: ein Teleprompter, der beim Oeffnen der App von selbst losliefe,
+        // waere eine Ueberraschung, kein Komfort. Nur das eingestellte Tempo bleibt erhalten.
+        teleprompterSpeed = state.teleprompterSpeed !== undefined ? state.teleprompterSpeed : 45;
         // Falls back to the OLD simpleMode boolean (pre-dating operatingMode) when no
         // operatingMode key exists yet, so a session that had Simple Modus on before this upgrade
         // lands on 'simple' rather than silently resetting to the new 'focus' default -- otherwise
@@ -12461,7 +12546,181 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       presentationSlideEl.style.maxWidth = showEditor ? (100 - splitRatio) + '%' : 'none';
     }
 
+    // --- TELEPROMPTER (automatisch nach oben laufender Text) ---
+    //
+    // Bewusst KEIN eigener Overlay-Modus wie die Präsentation: der Text soll genau so aussehen wie
+    // beim Lesen, in derselben Vorschau, mit demselben Design und Zoom. Der Modus ändert deshalb
+    // nur drei Dinge — er scrollt, er blendet den Regler in der Fußleiste ein, und er nimmt der
+    // Vorschau vorübergehend die Editierbarkeit (sonst gehörten die Pfeiltasten dem Text-Cursor
+    // statt der Steuerung, und ein blinkender Cursor liefe mit dem Text mit).
+    let teleprompterActive = false;
+    let teleprompterRunning = false;
+    let teleprompterSpeed = 45;        // Pixel pro Sekunde
+    let teleprompterHeldPause = false; // Umschalt/Leertaste gedrückt gehalten
+    let teleprompterRafId = null;
+    let teleprompterLastFrame = 0;
+    let teleprompterScrollAcc = 0;     // Bruchteile von Pixeln zwischen den Frames
+    let teleprompterRestore = null;
+
+    const TELEPROMPTER_SPEED_MIN = 10;
+    const TELEPROMPTER_SPEED_MAX = 300;
+    const TELEPROMPTER_SPEED_STEP = 5;
+
+    function toggleTeleprompterMode() {
+      if (teleprompterActive) stopTeleprompter();
+      else startTeleprompter();
+    }
+
+    function startTeleprompter() {
+      const tab = getCurrentTab();
+      if (!tab) return;
+      if (tab.fileType === 'canvas' && !canvasEditingBoxId) {
+        showToast('Der Teleprompter braucht eine Notiz mit Fließtext.');
+        return;
+      }
+      // Die Vorschau ist die Lesefläche. Ist sie ausgeblendet (z.B. reine Quelltext-Ansicht), wird
+      // sie für die Dauer des Modus eingeblendet und danach exakt wiederhergestellt — inklusive
+      // der Editierbarkeit, die updatePreview() sonst bei jedem Rendern neu setzen würde.
+      teleprompterRestore = { showEditor, showPreview, contentEditable: preview.contentEditable };
+      if (!showPreview) {
+        showPreview = true;
+        showEditor = false;
+        applyPaneVisibility();
+      }
+      teleprompterActive = true;
+      teleprompterRunning = true;
+      teleprompterHeldPause = false;
+      teleprompterScrollAcc = 0;
+      document.body.classList.add('teleprompter-active');
+      document.getElementById('teleprompterBtn').classList.add('active');
+      preview.contentEditable = 'false';
+      applyTeleprompterSpeedToUi();
+      updateTeleprompterPlayButton();
+      teleprompterLastFrame = 0;
+      teleprompterRafId = requestAnimationFrame(teleprompterFrame);
+    }
+
+    function stopTeleprompter() {
+      if (!teleprompterActive) return;
+      teleprompterActive = false;
+      teleprompterRunning = false;
+      teleprompterHeldPause = false;
+      if (teleprompterRafId !== null) { cancelAnimationFrame(teleprompterRafId); teleprompterRafId = null; }
+      document.body.classList.remove('teleprompter-active');
+      document.getElementById('teleprompterBtn').classList.remove('active');
+      const restore = teleprompterRestore;
+      teleprompterRestore = null;
+      if (restore) {
+        preview.contentEditable = restore.contentEditable;
+        if (restore.showPreview !== showPreview || restore.showEditor !== showEditor) {
+          showEditor = restore.showEditor;
+          showPreview = restore.showPreview;
+          applyPaneVisibility();
+        }
+      }
+      // Sicherheitsnetz: updatePreview() leitet die Editierbarkeit ohnehin aus dem Dateityp ab, das
+      // hier ist nur für den Fall, dass zwischendurch nichts neu gerendert wurde.
+      updatePreview();
+    }
+
+    function toggleTeleprompterRunning() {
+      if (!teleprompterActive) return;
+      teleprompterRunning = !teleprompterRunning;
+      teleprompterLastFrame = 0; // sonst holt der erste Frame nach dem Weiterlaufen die Pause nach
+      updateTeleprompterPlayButton();
+    }
+
+    function updateTeleprompterPlayButton() {
+      const btn = document.getElementById('teleprompterPlayBtn');
+      if (btn) btn.textContent = teleprompterRunning ? '⏸' : '▶';
+    }
+
+    function setTeleprompterSpeed(value) {
+      teleprompterSpeed = Math.max(TELEPROMPTER_SPEED_MIN, Math.min(TELEPROMPTER_SPEED_MAX, Math.round(value)));
+      applyTeleprompterSpeedToUi();
+      saveStateToLocalStorage();
+    }
+
+    function applyTeleprompterSpeedToUi() {
+      const slider = document.getElementById('teleprompterSpeed');
+      const label = document.getElementById('teleprompterSpeedLabel');
+      if (slider) slider.value = String(teleprompterSpeed);
+      if (label) label.textContent = String(teleprompterSpeed);
+    }
+
+    function adjustTeleprompterSpeed(delta) {
+      setTeleprompterSpeed(teleprompterSpeed + delta);
+    }
+
+    // Bruchteile werden über teleprompterScrollAcc aufsummiert, statt pro Frame zu runden: bei
+    // 10 px/s und 60 Hz sind das 0,17 px pro Frame — gerundet wäre das dauerhaft 0, der Text
+    // stünde also bei niedrigem Tempo einfach still.
+    function teleprompterFrame(timestamp) {
+      if (!teleprompterActive) return;
+      teleprompterRafId = requestAnimationFrame(teleprompterFrame);
+      if (!teleprompterLastFrame) { teleprompterLastFrame = timestamp; return; }
+      const deltaSec = Math.min(0.25, (timestamp - teleprompterLastFrame) / 1000); // Deckel gegen Sprünge nach Tab-Wechsel
+      teleprompterLastFrame = timestamp;
+      if (!teleprompterRunning || teleprompterHeldPause) return;
+
+      teleprompterScrollAcc += teleprompterSpeed * deltaSec;
+      const whole = Math.floor(teleprompterScrollAcc);
+      if (whole < 1) return;
+      teleprompterScrollAcc -= whole;
+
+      const maxScroll = previewPane.scrollHeight - previewPane.clientHeight;
+      if (maxScroll <= 0) return;
+      const next = Math.min(maxScroll, previewPane.scrollTop + whole);
+      previewPane.scrollTop = next;
+      // Am Ende angekommen: anhalten statt weiterzulaufen, aber im Modus bleiben — so lässt sich
+      // per Pfeiltaste zurückspulen und erneut starten, ohne den Modus neu zu öffnen.
+      if (next >= maxScroll - 0.5) {
+        teleprompterRunning = false;
+        updateTeleprompterPlayButton();
+      }
+    }
+
+    // Tastensteuerung. Läuft vor dem übrigen Tastatur-Dispatcher (capture), weil Pfeiltasten und
+    // Leertaste sonst in der Vorschau bzw. in globalen Kürzeln landen würden.
+    document.addEventListener('keydown', (e) => {
+      if (!teleprompterActive) return;
+      // stopPropagation zusaetzlich zu preventDefault: der globale Kuerzel-Dispatcher und die
+      // Escape-Sammelbehandlung haengen am selben document, nur in der Bubble-Phase. Ohne das hier
+      // wuerde Escape zwar den Modus beenden, gleichzeitig aber auch jedes offene Menue schliessen
+      // und die Zellauswahl leeren -- Nebenwirkungen, die niemand angefragt hat.
+      const konsumiere = () => { e.preventDefault(); e.stopPropagation(); };
+      if (e.key === 'Escape') { konsumiere(); stopTeleprompter(); return; }
+      if (e.key === 'ArrowUp') { konsumiere(); adjustTeleprompterSpeed(TELEPROMPTER_SPEED_STEP); return; }
+      if (e.key === 'ArrowDown') { konsumiere(); adjustTeleprompterSpeed(-TELEPROMPTER_SPEED_STEP); return; }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { konsumiere(); toggleTeleprompterRunning(); return; }
+      // Gedrückt halten pausiert, Loslassen läuft weiter — deshalb hier nur setzen, nie umschalten
+      // (eine Taste feuert bei gedrückthalten wiederholt keydown, ein Toggle würde flackern).
+      if (e.key === 'Shift' || e.key === ' ' || e.code === 'Space') {
+        konsumiere();
+        teleprompterHeldPause = true;
+      }
+    }, true);
+
+    document.addEventListener('keyup', (e) => {
+      if (!teleprompterActive) return;
+      if (e.key === 'Shift' || e.key === ' ' || e.code === 'Space') {
+        teleprompterHeldPause = false;
+        teleprompterLastFrame = 0;
+      }
+    }, true);
+
+    // Verliert das Fenster den Fokus, während eine Halte-Taste gedrückt ist, kommt das keyup nie an
+    // — ohne das hier bliebe der Teleprompter dauerhaft pausiert und wirkte kaputt.
+    window.addEventListener('blur', () => {
+      if (!teleprompterActive) return;
+      teleprompterHeldPause = false;
+      teleprompterLastFrame = 0;
+    });
+
     function startPresentation() {
+      // Beide Modi belegen dieselben Tasten (Pfeile, Leertaste, Escape) und scrollen bzw. blaettern
+      // denselben Inhalt -- gleichzeitig ergeben sie keinen sinnvollen Zustand.
+      if (teleprompterActive) stopTeleprompter();
       if (editor.disabled) return;
       // Presentation mode doesn't go through updatePreview(), so its own auto-stop hook there
       // never fires here — and both this and the live-preview engine ultimately share one global
