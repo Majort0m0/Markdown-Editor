@@ -3761,6 +3761,78 @@ return rgba;});});}).call(this);
       caret-color: var(--text-main);
     }
 
+    .audio-trim-card {
+      max-width: 680px;
+      width: min(680px, 94vw);
+    }
+
+    .audio-trim-wave {
+      display: block;
+      width: 100%;
+      height: 90px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--bg-surface);
+    }
+
+    .audio-trim-sliders {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .audio-trim-sliders label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .audio-trim-sliders input[type="range"] {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .audio-trim-sliders span {
+      font-variant-numeric: tabular-nums;
+      min-width: 48px;
+      text-align: right;
+      color: var(--text-main);
+    }
+
+    .audio-trim-info {
+      margin: 12px 0 0;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .audio-trim-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      justify-content: flex-end;
+    }
+
+    .audio-trim-btn {
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .audio-trim-btn.primary {
+      background-color: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
     .preview-repair-banner {
       display: none;
       align-items: center;
@@ -6704,6 +6776,37 @@ return rgba;});});}).call(this);
   </div>
 
   <!-- Image Insert Dialog (paste / drag & drop) -->
+  <!-- Erscheint nach dem Beenden einer Sprachaufnahme, vor dem Einfügen (siehe
+       openAudioTrimDialog()). Backdrop-Klick schließt bewusst NICHT: die Aufnahme existiert an
+       diesem Punkt nur im Speicher, ein versehentlicher Klick daneben würde sie verlieren. -->
+  <div class="modal-overlay" id="audioTrimModal">
+    <div class="modal-card audio-trim-card">
+      <div class="modal-header">
+        <h2>🎙️ Aufnahme zuschneiden</h2>
+        <button class="icon-btn" onclick="closeAudioTrimDialog('verwerfen')" title="Aufnahme verwerfen">✕</button>
+      </div>
+      <canvas id="audioTrimWave" class="audio-trim-wave" width="640" height="90"></canvas>
+      <div class="audio-trim-sliders">
+        <label>Anfang
+          <input type="range" id="audioTrimStart" min="0" max="1000" value="0" step="1"
+                 oninput="onAudioTrimSliderInput('start')">
+          <span id="audioTrimStartLabel">0:00</span>
+        </label>
+        <label>Ende
+          <input type="range" id="audioTrimEnd" min="0" max="1000" value="1000" step="1"
+                 oninput="onAudioTrimSliderInput('end')">
+          <span id="audioTrimEndLabel">0:00</span>
+        </label>
+      </div>
+      <p class="audio-trim-info" id="audioTrimInfo"></p>
+      <div class="audio-trim-actions">
+        <button type="button" class="audio-trim-btn" onclick="playAudioTrimSelection()">▶ Auswahl anhören</button>
+        <button type="button" class="audio-trim-btn" onclick="resetAudioTrimSelection()">↺ Ganze Aufnahme</button>
+        <button type="button" class="audio-trim-btn primary" onclick="closeAudioTrimDialog('einfuegen')">Einfügen</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="imageInsertModal" onclick="if (event.target === this) closeImageDialog(null)">
     <div class="modal-card image-dialog-card">
       <div class="modal-header">
@@ -10723,6 +10826,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
         if (document.getElementById('clipartModal').classList.contains('active')) closeClipartModal();
         if (document.getElementById('cameraModal').classList.contains('active')) closeCameraModal();
+        // Muss über closeAudioTrimDialog() laufen, nicht über ein bloßes Entfernen der Klasse: das
+        // Fenster hält ein offenes Promise, an dem die Aufnahme hängt. Würde es nur optisch
+        // verschwinden, bliebe die Aufnahme unaufgelöst im Speicher liegen und würde weder
+        // eingefügt noch verworfen. 'verwerfen' ist hier die richtige Auflösung — Escape heißt
+        // überall sonst in dieser Datei ebenfalls "abbrechen", nicht "übernehmen".
+        if (document.getElementById('audioTrimModal').classList.contains('active')) closeAudioTrimDialog('verwerfen');
         closeExportChoiceModal();
         closeTemplateModal();
         closeToc();
@@ -23772,7 +23881,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       setAudioRecordingUiState(true);
     }
 
-    function onAudioRecordingStop() {
+    async function onAudioRecordingStop() {
       const blob = new Blob(audioRecorderChunks, { type: (audioMediaRecorder && audioMediaRecorder.mimeType) || 'audio/webm' });
       audioRecorderChunks = [];
       audioRecorderStream.getTracks().forEach(track => track.stop());
@@ -23781,9 +23890,225 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       const target = audioInsertTarget;
       audioInsertTarget = null;
+
+      // Zuschneiden vor dem Einfügen (per Wunsch: "beim beenden einer Aufnahme einen einfachen
+      // Wellenform Balken ... mit der Möglichkeit, den Anfang und das Ende per Schieberegler zu
+      // trimmen bevor es eingefügt wird"). Gibt den ursprünglichen Blob unverändert zurück, wenn
+      // nichts zugeschnitten wurde, null wenn die Aufnahme verworfen wird.
+      const finalBlob = await openAudioTrimDialog(blob);
+      if (!finalBlob) return;
+
       const reader = new FileReader();
       reader.onload = () => insertAudioAsset(reader.result, target);
-      reader.readAsDataURL(blob);
+      reader.readAsDataURL(finalBlob);
+    }
+
+    // --- AUDIO ZUSCHNEIDEN (Wellenform + Anfang/Ende-Schieberegler vor dem Einfügen) ---
+
+    let audioTrimState = null; // { buffer, originalBlob, resolve, startRatio, endRatio, previewSource }
+
+    // Decodes the recording once into an AudioBuffer — needed both to draw the waveform and to cut
+    // it later. A decode failure is not treated as an error worth bothering the user with: the
+    // recording itself is fine, only the optional trim step is unavailable, so it inserts as-is.
+    async function openAudioTrimDialog(blob) {
+      let buffer = null;
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return blob;
+        const ctx = new Ctx();
+        buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
+        ctx.close();
+      } catch (err) {
+        console.warn('Aufnahme konnte nicht analysiert werden, wird ungeschnitten eingefügt:', err);
+        return blob;
+      }
+      if (!buffer || !buffer.duration) return blob;
+
+      return new Promise((resolve) => {
+        audioTrimState = { buffer, originalBlob: blob, resolve, startRatio: 0, endRatio: 1, previewSource: null };
+        document.getElementById('audioTrimStart').value = '0';
+        document.getElementById('audioTrimEnd').value = '1000';
+        document.getElementById('audioTrimModal').classList.add('active');
+        renderAudioTrimUi();
+      });
+    }
+
+    function closeAudioTrimDialog(action) {
+      const state = audioTrimState;
+      if (!state) return;
+      stopAudioTrimPreview();
+      audioTrimState = null;
+      document.getElementById('audioTrimModal').classList.remove('active');
+      if (action !== 'einfuegen') { state.resolve(null); return; }
+      const startSec = state.startRatio * state.buffer.duration;
+      const endSec = state.endRatio * state.buffer.duration;
+      // Untouched sliders hand back the ORIGINAL blob rather than a re-encode. That matters for
+      // size: the recording is compressed (webm/opus), while the cut below can only be written as
+      // uncompressed WAV — there is no encoder for opus available to a page with no dependencies.
+      // So an untrimmed recording keeps its small original form, and only a genuine cut pays for
+      // the conversion (on a shortened clip, which softens it further).
+      const untrimmed = state.startRatio <= 0.0005 && state.endRatio >= 0.9995;
+      if (untrimmed || endSec - startSec < 0.05) { state.resolve(state.originalBlob); return; }
+      state.resolve(encodeAudioBufferSliceToWav(state.buffer, startSec, endSec));
+    }
+
+    function onAudioTrimSliderInput(which) {
+      const state = audioTrimState;
+      if (!state) return;
+      const startEl = document.getElementById('audioTrimStart');
+      const endEl = document.getElementById('audioTrimEnd');
+      let start = Number(startEl.value) / 1000;
+      let end = Number(endEl.value) / 1000;
+      // Keeps a minimum window and stops the two handles from crossing — whichever one the user is
+      // currently dragging wins, the other gives way.
+      const minGap = Math.min(0.02, 0.2 / Math.max(state.buffer.duration, 1));
+      if (end - start < minGap) {
+        if (which === 'start') start = Math.max(0, end - minGap);
+        else end = Math.min(1, start + minGap);
+        startEl.value = String(Math.round(start * 1000));
+        endEl.value = String(Math.round(end * 1000));
+      }
+      state.startRatio = start;
+      state.endRatio = end;
+      stopAudioTrimPreview();
+      renderAudioTrimUi();
+    }
+
+    function resetAudioTrimSelection() {
+      const state = audioTrimState;
+      if (!state) return;
+      state.startRatio = 0;
+      state.endRatio = 1;
+      document.getElementById('audioTrimStart').value = '0';
+      document.getElementById('audioTrimEnd').value = '1000';
+      stopAudioTrimPreview();
+      renderAudioTrimUi();
+    }
+
+    function formatAudioTrimTime(seconds) {
+      const total = Math.max(0, Math.round(seconds));
+      return Math.floor(total / 60) + ':' + String(total % 60).padStart(2, '0');
+    }
+
+    function renderAudioTrimUi() {
+      const state = audioTrimState;
+      if (!state) return;
+      const dur = state.buffer.duration;
+      document.getElementById('audioTrimStartLabel').textContent = formatAudioTrimTime(state.startRatio * dur);
+      document.getElementById('audioTrimEndLabel').textContent = formatAudioTrimTime(state.endRatio * dur);
+      const kept = (state.endRatio - state.startRatio) * dur;
+      document.getElementById('audioTrimInfo').textContent =
+        'Aufnahme ' + formatAudioTrimTime(dur) + ' — ausgewählt ' + formatAudioTrimTime(kept) + '.';
+      drawAudioTrimWaveform();
+    }
+
+    // Peak-per-column waveform: for each pixel column, the loudest sample in the slice of audio it
+    // covers. Cheap, needs no analysis pass, and is what makes speech pauses visible — which is the
+    // whole point of showing a waveform for trimming. Channel 0 only; a mono microphone recording
+    // has just the one anyway, and a stereo one's channels look near-identical at this scale.
+    function drawAudioTrimWaveform() {
+      const state = audioTrimState;
+      const canvas = document.getElementById('audioTrimWave');
+      if (!state || !canvas) return;
+      const ratio = window.devicePixelRatio || 1;
+      const cssWidth = canvas.clientWidth || 640;
+      const cssHeight = 90;
+      canvas.width = Math.round(cssWidth * ratio);
+      canvas.height = Math.round(cssHeight * ratio);
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+      ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+      const data = state.buffer.getChannelData(0);
+      const perColumn = Math.max(1, Math.floor(data.length / cssWidth));
+      const mid = cssHeight / 2;
+      const styles = getComputedStyle(document.body);
+      const accent = styles.getPropertyValue('--accent').trim() || '#2f6feb';
+      const muted = styles.getPropertyValue('--text-muted').trim() || '#8a94a6';
+
+      for (let x = 0; x < cssWidth; x++) {
+        let peak = 0;
+        const from = x * perColumn;
+        const to = Math.min(data.length, from + perColumn);
+        for (let i = from; i < to; i++) {
+          const v = Math.abs(data[i]);
+          if (v > peak) peak = v;
+        }
+        const h = Math.max(1, peak * (cssHeight - 8));
+        const inSelection = (x / cssWidth) >= state.startRatio && (x / cssWidth) <= state.endRatio;
+        ctx.fillStyle = inSelection ? accent : muted;
+        ctx.globalAlpha = inSelection ? 1 : 0.35;
+        ctx.fillRect(x, mid - h / 2, 1, h);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    function stopAudioTrimPreview() {
+      const state = audioTrimState;
+      if (!state || !state.previewSource) return;
+      try { state.previewSource.stop(); } catch (err) { /* schon beendet */ }
+      state.previewSource = null;
+    }
+
+    // Plays exactly the selected span through a fresh AudioContext, so "Auswahl anhören" checks the
+    // actual cut rather than an approximation of it.
+    function playAudioTrimSelection() {
+      const state = audioTrimState;
+      if (!state) return;
+      stopAudioTrimPreview();
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      const ctx = new Ctx();
+      const source = ctx.createBufferSource();
+      source.buffer = state.buffer;
+      source.connect(ctx.destination);
+      const startSec = state.startRatio * state.buffer.duration;
+      const lengthSec = (state.endRatio - state.startRatio) * state.buffer.duration;
+      source.onended = () => { ctx.close(); if (audioTrimState) audioTrimState.previewSource = null; };
+      source.start(0, startSec, lengthSec);
+      state.previewSource = source;
+    }
+
+    // Writes [startSec, endSec) as a 16-bit PCM mono WAV. Mono and 16 bit deliberately: this is
+    // speech from a microphone, where a second channel carries nothing and 16 bit is already beyond
+    // what the source justifies — and every byte here ends up base64-encoded inside the note's own
+    // asset store, so the format's lack of compression is the one thing worth pushing back on.
+    // Channels are averaged rather than dropped so a stereo input does not lose one side entirely.
+    function encodeAudioBufferSliceToWav(buffer, startSec, endSec) {
+      const rate = buffer.sampleRate;
+      const from = Math.max(0, Math.floor(startSec * rate));
+      const to = Math.min(buffer.length, Math.ceil(endSec * rate));
+      const frames = Math.max(0, to - from);
+      const channels = [];
+      for (let c = 0; c < buffer.numberOfChannels; c++) channels.push(buffer.getChannelData(c));
+
+      const bytes = new ArrayBuffer(44 + frames * 2);
+      const view = new DataView(bytes);
+      const writeText = (offset, text) => { for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i)); };
+      writeText(0, 'RIFF');
+      view.setUint32(4, 36 + frames * 2, true);
+      writeText(8, 'WAVE');
+      writeText(12, 'fmt ');
+      view.setUint32(16, 16, true);       // Länge des fmt-Blocks
+      view.setUint16(20, 1, true);        // PCM, unkomprimiert
+      view.setUint16(22, 1, true);        // ein Kanal
+      view.setUint32(24, rate, true);
+      view.setUint32(28, rate * 2, true); // Bytes pro Sekunde
+      view.setUint16(32, 2, true);        // Bytes pro Frame
+      view.setUint16(34, 16, true);       // Bits pro Sample
+      writeText(36, 'data');
+      view.setUint32(40, frames * 2, true);
+
+      let offset = 44;
+      for (let i = 0; i < frames; i++) {
+        let sum = 0;
+        for (let c = 0; c < channels.length; c++) sum += channels[c][from + i];
+        let sample = sum / channels.length;
+        sample = Math.max(-1, Math.min(1, sample));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+        offset += 2;
+      }
+      return new Blob([bytes], { type: 'audio/wav' });
     }
 
     function setAudioRecordingUiState(recording) {
