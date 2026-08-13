@@ -12600,6 +12600,31 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // the previous one, so calling it again against the *same* (not freshly recreated)
         // checkboxes would stack duplicate listeners and fire toggleTaskInMarkdown() once per
         // accumulated listener on a single click.
+        // Bug fix (found while checking canvas mode, but NOT canvas-specific): a genuinely empty
+        // markdown document renders to an empty string, so the contentEditable preview ends up with
+        // no block element at all -- and with nothing to put a caret in, typing there goes nowhere.
+        // Measured directly: after double-clicking a fresh canvas box, four real keystrokes
+        // produced four insertText beforeinput events on #markdownPreview and editor.value still
+        // came back "" (preview.innerHTML was ""), because findSourceOwnerElement() had no owner to
+        // resolve and the native insertion landed in the bare div, to be wiped by the next render.
+        //
+        // Canvas mode is where this actually bites -- every NEW BOX starts empty, so it was the
+        // normal case there rather than an edge case (an ordinary new tab is seeded with
+        // "# <name>\n\n" and so never empty). Reachable outside canvas too, though: select-all +
+        // delete leaves exactly this state.
+        //
+        // Seeded in the SOURCE rather than only in the DOM, deliberately: writing a placeholder
+        // paragraph into innerHTML alone would leave textCharMaps (0 entries, built from the still-
+        // empty editor.value) disagreeing with findWordBlockElements() (1), which is precisely what
+        // previewStructureDesynced exists to catch -- it would trade "cannot type" for "frozen".
+        // A zero-width space is the same placeholder this file already uses everywhere for
+        // "genuinely empty but must stay locatable" (see serializeBlockToMarkdown()'s own empty-
+        // block branch and handlePreviewEnter()'s blank-paragraph seeding), and it is removed again
+        // by that same existing cleanup the moment real text is typed over it.
+        if (!previewIsAuthoring && wysiwygEnabled && tab.fileType === 'markdown' && editor.value === '') {
+          editor.value = '​';
+          if (isEditingCanvasBox) tab.content = editor.value;
+        }
         if (!previewIsAuthoring) {
           preview.innerHTML = renderContentForTab(tab, editor.value);
           attachTaskCheckboxListeners();
@@ -13383,11 +13408,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       canvasEditingBoxId = boxId;
       canvasSelectedBoxId = boxId;
-      // Editing requires the editor pane genuinely visible regardless of whatever showEditor/
-      // showPreview were last left at on some other tab — see the main.canvas-tab-active
-      // :not(.canvas-editing-box) CSS this un-blocks, and the plain main{grid-template-columns:
-      // var(--split-ratio...)} rule it then falls through to once these classes are gone.
-      mainContainer.classList.remove('editor-hidden', 'preview-hidden');
+      // Bug fix (per request: "Hier soll natürlich auch der Live Vorschau Modus direkt in der
+      // Canvas Ansicht innerhalb der Markdown Boxen funktionieren, so dass man kein Split View
+      // Fenster zum Editieren braucht."). This used to force BOTH panes visible
+      // (classList.remove('editor-hidden','preview-hidden')) on every box open, from a time when
+      // editing a box necessarily meant typing into the Quelltext textarea. With the WYSIWYG
+      // preview that is no longer true -- the overlay placed over the box IS a contentEditable
+      // editing surface -- so the current view mode is now respected instead: preview-only edits
+      // straight in the box, Quelltext-only edits in the textarea, Split shows both.
+      //
+      // Removing it also fixed a real mis-positioning bug it was causing: applyPaneVisibility()
+      // further down re-derives those exact classes from showEditor/showPreview and so immediately
+      // undid this removal anyway -- but only AFTER positionCanvasBoxOverlay() had already measured
+      // the box against the temporarily-split layout. Measured directly: the overlay landed 342px
+      // to the RIGHT of the box it was supposed to sit on, leaving two rectangles side by side on
+      // screen (the real box, and its own detached preview). See the reordered call below.
 
       // editor.value MUST be set to this box's content before anything below can run
       // saveStateToLocalStorage() (applyTheme() does, via its own persistence call) — that
@@ -13426,12 +13461,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // ensureCanvasBoxVisible() needs to correctly tell whether the box is actually clipped
       // behind the divider; positionCanvasBoxOverlay() is then called again to pick up whatever
       // pan adjustment that just made.
+      // applyPaneVisibility() must run BEFORE the box is measured: it is what settles the
+      // editor-hidden/preview-hidden classes, and therefore how wide canvasPreview actually is.
+      // Measuring first (as this used to) meant positioning the overlay against a layout that was
+      // about to change out from under it -- see the mis-positioning note where the forced
+      // split-view removal used to sit.
+      applyPaneVisibility(); // toggleEditBtn/togglePreviewBtn's active state now reflects a real open box
       const openedBoxEl = canvasPage.querySelector('[data-box-id="' + boxId + '"]');
       if (openedBoxEl) {
         ensureCanvasBoxVisible(openedBoxEl);
         positionCanvasBoxOverlay();
       }
-      applyPaneVisibility(); // toggleEditBtn/togglePreviewBtn's active state now reflects a real open box
       updateUndoRedoButtons();
       // Deferred: this runs from a pointerdown handler on a plain, non-focusable <div> (the
       // box's own canvas element) — the browser's own default mousedown handling blurs/moves
@@ -13440,7 +13480,39 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // right back off the editor before the user ever got to type. Confirmed directly: opening
       // a box left document.activeElement empty and every keystroke went nowhere. A macrotask
       // runs after the browser's own default action has already completed, so this one wins.
-      setTimeout(() => editor.focus(), 0);
+      //
+      // Bug fix (same request as the split-view change above): this unconditionally focused the
+      // Quelltext textarea, which only made sense while opening a box always forced the editor
+      // pane visible. Once the view mode is respected, focusing a hidden textarea puts focus
+      // nowhere at all -- measured directly after a real double-click: document.activeElement came
+      // back as BODY and no keystroke reached the box. Now focuses whichever surface is actually
+      // on screen: the WYSIWYG preview overlay (which sits over the box and is genuinely
+      // contentEditable -- verified) when the preview is the visible pane, the textarea otherwise.
+      // The caret is placed at the end of the box's existing content so typing continues where the
+      // text stops, rather than silently landing at position 0.
+      setTimeout(() => {
+        if (showPreview && wysiwygEnabled && preview.contentEditable === 'true') {
+          preview.focus();
+          // Resolved through sourceOffsetToDomPosition() rather than by collapsing a range to the
+          // preview's own end. A first version did the latter (selectNodeContents(preview) +
+          // collapse(false)) and produced a caret anchored on #markdownPreview ITSELF, one past the
+          // last block -- findSourceOwnerElement() has no owner for that position, so the
+          // beforeinput handler's "no owner / owners differ" guard preventDefault()'d every single
+          // keystroke. Measured directly: three real keypresses produced three insertText
+          // beforeinput events, no input event at all, and unchanged content. Landing the caret at
+          // the document's own last source offset puts it INSIDE the last real block, which is both
+          // where typing should continue and a position the mapping layer can resolve.
+          const endPos = sourceOffsetToDomPosition(editor.value.length);
+          if (endPos) {
+            const r = document.createRange();
+            r.setStart(endPos.node, endPos.offset);
+            r.collapse(true);
+            sel_replaceSelection(r);
+          }
+        } else {
+          editor.focus();
+        }
+      }, 0);
     }
 
     function closeCanvasBoxEditor() {
@@ -13495,7 +13567,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         docStats.textContent = '';
         return;
       }
-      const text = editor.value;
+      // Zero-width spaces are stripped before counting. They are structural, not content: the
+      // WYSIWYG layer writes one into every genuinely empty block (see serializeBlockToMarkdown(),
+      // and updatePreview()'s seed for an entirely empty document) so the block stays addressable
+      // by the position-mapping layer instead of vanishing from textCharMaps. Counting them made a
+      // brand-new blank note report "1 Woerter . 1 Zeichen" instead of zero, and inflated the count
+      // of any document containing deliberate empty paragraphs by one per paragraph. \S+ would
+      // even have counted a lone ZWSP as a whole word, since it is not whitespace to the regex.
+      const text = editor.value.replace(/\u200B/g, '');
       const chars = text.length;
       const words = (text.trim().match(/\S+/g) || []).length;
       docStats.textContent = `${words} Wörter · ${chars} Zeichen`;
@@ -14702,6 +14781,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // Phase 5 checks for why. Cleared (consumed or not) on every subsequent beforeinput, so it only
     // ever applies to the ONE keystroke immediately following a format's completion.
     let previewFormatBoundaryCursorSrc = null;
+
+    // Armed by tryTypeThroughAdjacentMarker() when it settles a doubled delimiter ("**"/"~~") on
+    // the first of the user's two retyped closing characters, and consumed by the very next
+    // beforeinput. Shape: { char, srcPos }. See tryTypeThroughAdjacentMarker's header comment for
+    // what goes wrong without it.
+    let previewRedundantMarkerChar = null;
 
     // A heading's own data-src-start/data-src-end includes its "#…" marker prefix (see
     // pushInlineLeafCharMap's own comment), but owner.textContent never does — a real <h1> simply
@@ -16690,6 +16775,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const pendingBoundaryCursorSrc = previewFormatBoundaryCursorSrc;
       previewFormatBoundaryCursorSrc = null;
 
+      // Same one-event lifetime as the boundary cursor above, for the same reason: armed by
+      // tryTypeThroughAdjacentMarker() when it settles a DOUBLED marker on its first retyped
+      // character, so the user's immediately-following second character can be recognized as
+      // redundant rather than starting something new. See that function's header comment.
+      const pendingRedundantMarker = previewRedundantMarkerChar;
+      previewRedundantMarkerChar = null;
+
       // Enter is always a structural, source-level operation — see handlePreviewEnter()'s own
       // header comment — checked before the plain-typing allowlist below since it's never let
       // through to native DOM insertion regardless of where the cursor is.
@@ -17002,10 +17094,44 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           if (e.data === '-' && tryMarkdownHrShortcut(anchorOwner, cursorSrc)) { e.preventDefault(); return; }
           if (e.data === '>' && tryMarkdownQuoteCharShortcut(anchorOwner, cursorSrc, range)) { e.preventDefault(); return; }
           if (e.data === '#' && tryMarkdownHeadingCharShortcut(anchorOwner, cursorSrc, range)) { e.preventDefault(); return; }
+          // Swallow the second character of a hand-retyped doubled delimiter. Without this, the
+          // keystroke lands immediately after the just-settled "**"/"~~", where
+          // tryMarkdownAutoPairShortcut's own "is the previous character the same delimiter?" test
+          // reads that marker's own trailing character as the opening half of a NEW doubled
+          // delimiter -- so typing "**fett**" by hand (the natural way to write bold, and what
+          // anyone unaware of auto-pairing does) planted a whole second, empty, invisible bold zone
+          // after the finished one: "**fett**" became "**fett***<ZWSP>**", rendering as literal
+          // asterisks with no bold at all. Reproduced keystroke-by-keystroke, not reasoned about.
+          // The header comment on tryTypeThroughAdjacentMarker used to describe this as a harmless
+          // "lone trailing *" artifact -- that understated it, and it is corrected there now.
+          if (pendingRedundantMarker && e.data === pendingRedundantMarker.char && cursorSrc === pendingRedundantMarker.srcPos) {
+            e.preventDefault();
+            // Hand the "next character belongs HERE, outside the zone" boundary on to the following
+            // keystroke. The settle that armed this recorded that boundary, but it is consumed at
+            // the top of every beforeinput -- so swallowing this keystroke silently dropped it, and
+            // the next character fell back to the native caret, which is still sitting inside the
+            // bold text node: typing "**fe**" then "X" gave "**feX**" instead of "**fe**X".
+            // Measured keystroke-by-keystroke after the swallow itself was already working.
+            previewFormatBoundaryCursorSrc = pendingRedundantMarker.srcPos;
+            return;
+          }
           if (tryTypeThroughAdjacentMarker(range, e.data)) { e.preventDefault(); return; }
           if (tryMarkdownInlineShortcut(anchorOwner, cursorSrc, e.data)) { e.preventDefault(); return; }
           if (tryMarkdownAutoPairShortcut(anchorOwner, cursorSrc, e.data)) { e.preventDefault(); return; }
           if (tryMarkdownGeneralReinterpretShortcut(anchorOwner, cursorSrc, e.data)) { e.preventDefault(); return; }
+
+          // KNOWN GAP, deliberately not patched here: a space typed immediately after a format zone
+          // was just settled (e.g. "**fett** und ~~weg~~") is spliced into editor.value by the
+          // pendingBoundaryCursorSrc branch above and then dropped from the DOM by the re-render,
+          // because marked does not render a trailing space. The next delimiter character is one of
+          // the three that branch deliberately excludes, so it reaches native DOM insertion and is
+          // re-serialized from a DOM that no longer has the space: "und ~~weg~~" comes out as
+          // "und~~weg~~". Splicing those characters into the source instead was implemented and
+          // reverted -- it fixes paragraphs and breaks list items, where a normally typed trailing
+          // space DOES survive in the DOM as Chrome's own U+00A0 and dataset.srcEnd excludes it, so
+          // the same splice lands the delimiter before the space and drags following words into the
+          // zone. Both directions measured keystroke-by-keystroke. A real fix belongs in the caret
+          // mapping for trailing whitespace, not in a per-character special case here.
         }
 
         // Bug fix: reported directly via a full "Basisbedienung" pass and confirmed with a real
@@ -17281,15 +17407,19 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // ALSO affects its own "does the previous character match" check (editor.value[priorSrc - 1]
     // reads as the marker's own second character, not "nothing yet", for the exact same reason),
     // so in practice this settles on the FIRST retyped character of a doubled marker too, not the
-    // second — confirmed directly, not just reasoned about. The user's second, now-redundant
-    // keystroke then lands as a single ordinary literal character right after the (already
-    // correctly settled) format, e.g. retyping "**wichtig**" by hand over an auto-paired zone
-    // yields "**wichtig**" + a lone trailing "*" — a visible, single-character, trivially-
-    // deletable artifact, never a repeat of the invisible-phantom-zone corruption this function
-    // was written to prevent. Left as this narrower, accepted gap rather than chasing a fully
-    // precise two-keystroke detection: retyping already-auto-inserted markers by hand has no
-    // reason to happen once the auto-pair behavior is understood, so it isn't worth the additional
-    // state-tracking complexity a proper fix would need.
+    // second — confirmed directly, not just reasoned about.
+    //
+    // That leaves the user's second keystroke redundant, and simply letting it fall through as an
+    // ordinary character was WRONG, not the harmless artifact an earlier version of this comment
+    // claimed ("a lone trailing *, trivially deletable"). It lands immediately after the just-
+    // settled "**", which is exactly the shape tryMarkdownAutoPairShortcut's own needsDoubled test
+    // looks for — editor.value[cursorSrc - 1] is that marker's own second "*" — so it planted a
+    // whole new empty bold zone right after the finished one: typing "**fett**" by hand yielded
+    // "**fett***<ZWSP>**", which renders as literal asterisks with no bold at all. Since typing
+    // both delimiters by hand is simply how people write bold (nobody knows auto-pairing is even
+    // happening), this was the common path, not an edge case. Reproduced keystroke-by-keystroke.
+    // Fixed by arming previewRedundantMarkerChar below so that second keystroke is swallowed by
+    // the next beforeinput instead — see its declaration and the consuming check in that handler.
     function tryTypeThroughAdjacentMarker(range, insertedChar) {
       const marker = findAdjacentClosingMarker(range);
       if (!marker || !marker.textContent.startsWith(insertedChar)) return false;
@@ -17301,6 +17431,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (afterSrc == null) return false;
       finishPreviewStructuralEdit(afterSrc);
       previewFormatBoundaryCursorSrc = afterSrc;
+      // A doubled marker settles on the FIRST of the two retyped characters (see the header comment
+      // above for why the second-character detection this function attempts can't work), so the
+      // user's second keystroke is redundant. Arm it here to be swallowed by the next beforeinput
+      // rather than letting it fall through as an ordinary character.
+      if (marker.textContent.length > 1) previewRedundantMarkerChar = { char: insertedChar, srcPos: afterSrc };
       return true;
     }
 
