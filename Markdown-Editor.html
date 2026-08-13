@@ -3761,6 +3761,37 @@ return rgba;});});}).call(this);
       caret-color: var(--text-main);
     }
 
+    .preview-repair-banner {
+      display: none;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 0 0 16px;
+      padding: 10px 14px;
+      border: 1px solid #f0b429;
+      border-radius: 6px;
+      background-color: #fff8e1;
+      color: #7a4f01;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .preview-repair-banner.active {
+      display: flex;
+    }
+
+    .preview-repair-banner button {
+      border: 1px solid #f0b429;
+      background-color: #f0b429;
+      color: #3d2800;
+      border-radius: 5px;
+      padding: 5px 12px;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
     .preview-pane {
       grid-column: 3;
       height: 100%;
@@ -4139,6 +4170,14 @@ return rgba;});});}).call(this);
     }
 
     .video-embed-wrapper {
+      /* The element is a <span>, not a <div>, and this is what gives it back the block layout it
+         needs. The tag matters: a <div> is block-level CONTENT, which the HTML parser is required
+         to hoist out of an enclosing <p>, auto-closing that <p> early and splitting one paragraph
+         into three sibling DOM nodes. That split is the confirmed root cause of the whole-document
+         input freeze previewStructureDesynced guards against (one marked.lexer() paragraph token
+         vs. three preview.children). A <span> is phrasing content and stays inside its <p>, so the
+         parser leaves the paragraph intact; display:block keeps it looking exactly as before. */
+      display: block;
       position: relative;
       width: 100%;
       max-width: 100%;
@@ -6572,6 +6611,14 @@ return rgba;});});}).call(this);
       <button type="button" id="syncScrollBtn" class="sync-scroll-toggle-btn active" onclick="toggleSyncScroll()" title="Synchrones Scrollen"><svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M7.293,8.707a1,1,0,0,1,0-1.414l4-4a1,1,0,0,1,1.414,0l4,4a1,1,0,1,1-1.414,1.414L12,5.414,8.707,8.707A1,1,0,0,1,7.293,8.707Zm0,8,4,4a1,1,0,0,0,1.414,0l4-4a1,1,0,0,0-1.414-1.414L12,18.586,8.707,15.293a1,1,0,1,0-1.414,1.414Z"/></svg></button>
     </div>
     <div class="preview-pane" id="previewPane">
+      <!-- Sichtbar nur, wenn previewStructureDesynced greift (siehe updatePreviewRepairBanner()).
+           Bis hierher war dieser Zustand für den Nutzer stumm: die Vorschau nahm einfach keine
+           Eingaben mehr an, ohne zu sagen warum oder was hilft — gemeldet als "Einfrieren des
+           Vorschau Editors", behebbar bisher nur durch Handarbeit im Quelltext. -->
+      <div class="preview-repair-banner" id="previewRepairBanner">
+        <span>Die Vorschau passt gerade nicht zum Quelltext — Eingaben sind vorübergehend gesperrt, damit nichts überschrieben wird.</span>
+        <button type="button" onclick="repairPreviewStructure()">Struktur reparieren</button>
+      </div>
       <div id="markdownPreview" class="markdown-body theme-github-light"></div>
       <iframe id="htmlPreviewFrame" class="html-preview-frame" title="HTML-Vorschau" sandbox="allow-scripts"></iframe>
       <div class="canvas-preview" id="canvasPreview">
@@ -7124,14 +7171,14 @@ return rgba;});});}).call(this);
     function buildVideoEmbedWrapper(rawHref, embedSrc, embedAllow, alt, fallbackHref, fallbackThumb, fallbackLabel) {
       const thumbHtml = fallbackThumb ? '<img src="' + fallbackThumb + '" alt="" loading="lazy">' : '';
       const rawHrefAttr = (rawHref || '').replace(/"/g, '&quot;');
-      return '<div class="video-embed-wrapper" contenteditable="false" data-md-href="' + rawHrefAttr + '" data-md-alt="' + alt + '">' +
+      return '<span class="video-embed-wrapper" contenteditable="false" data-md-href="' + rawHrefAttr + '" data-md-alt="' + alt + '">' +
         '<iframe class="video-embed-live" src="' + embedSrc + '" title="' + alt + '" allow="' + embedAllow + '" allowfullscreen loading="lazy"></iframe>' +
         '<a class="video-embed-fallback" href="' + fallbackHref + '" target="_blank" rel="noopener noreferrer" title="' + alt + '">' +
         thumbHtml +
         '<span class="video-embed-play">▶</span>' +
         '<span class="video-embed-label">' + fallbackLabel + '</span>' +
         '</a>' +
-        '</div>';
+        '</span>';
     }
 
     function getVideoEmbedHtml(href, altText) {
@@ -7164,7 +7211,7 @@ return rgba;});});}).call(this);
         // empirically) — it just fetches the file over HTTP like any other resource — so it needs
         // no fallback and works identically under file:// and http(s).
         const rawHrefAttr = href.replace(/"/g, '&quot;');
-        return '<div class="video-embed-wrapper" contenteditable="false" data-md-href="' + rawHrefAttr + '" data-md-alt="' + alt + '"><video controls src="' + href + '" title="' + alt + '"></video></div>';
+        return '<span class="video-embed-wrapper" contenteditable="false" data-md-href="' + rawHrefAttr + '" data-md-alt="' + alt + '"><video controls src="' + href + '" title="' + alt + '"></video></span>';
       }
 
       return null;
@@ -9001,9 +9048,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         }
         // A silently-pulled remote change (applyRemoteTabToLocal above) can include a theme
         // picked on another device -- reapply it live if it's the tab currently on screen,
-        // same reasoning as the content refresh just above. Simple Modus's forced theme takes
-        // priority regardless, same as everywhere else theme application is gated on it.
-        if (current && !simpleMode && currentTheme !== (current.theme || 'theme-github-light')) {
+        // same reasoning as the content refresh just above. No longer gated on !simpleMode:
+        // that mode stopped overriding the displayed theme at all (see enterSimpleMode()), so a
+        // synced-in theme change must land there too rather than being silently ignored.
+        if (current && currentTheme !== (current.theme || 'theme-github-light')) {
           const tabTheme = current.theme || 'theme-github-light';
           themeSelector.value = tabTheme;
           applyTheme(tabTheme);
@@ -9588,7 +9636,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // inherited from whatever tab happened to be active when it was created (unlike, say,
         // a duplicated/synced-in tab, which does keep its own saved values -- see
         // addRemoteTabAsNewLocalTab()/applyRemoteTabToLocal()).
-        theme: 'theme-github-light',
+        // Clean statt GitHub Light, wenn die Notiz IM Simple Modus entsteht -- der einzige Ort, an
+        // dem dieser Modus überhaupt noch über ein Design entscheidet, und zwar einmalig als echtes
+        // tab.theme (nicht als Anzeige-Override wie früher in enterSimpleMode()). Dadurch überlebt
+        // es das Verlassen des Modus wie jedes selbst gewählte Design, und ein späteres Umschalten
+        // in den Simple Modus lässt bestehende Notizen unangetastet.
+        theme: simpleMode ? 'theme-clean' : 'theme-github-light',
         // Bug fix (per explicit request, überschreibt eine frühere Spezifikation): "Beim Erstellen
         // einer neuen Notiz soll die aktuell eingestellte Ansicht berücksichtigt werden, zB nur
         // Vorschau." Vorher galt "jede neue Notiz startet fix 50/50", mit einer Ausnahme nur für
@@ -9715,15 +9768,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         } else {
           editor.value = targetTab.content;
         }
-        // Themes are per-tab (see changeTheme()/tab.theme); Simple Modus overrides this with a
-        // fixed 'theme-clean' regardless of tab, so switching tabs while it's on deliberately
-        // doesn't touch the visible theme -- each tab's own theme still applies the moment
-        // Simple Modus is turned back off (see toggleSimpleMode()).
-        if (!simpleMode) {
-          const tabTheme = targetTab.theme || 'theme-github-light';
-          themeSelector.value = tabTheme;
-          applyTheme(tabTheme);
-        }
+        // Themes are per-tab (see changeTheme()/tab.theme) — unconditionally, Simple Modus
+        // included. This used to be gated on !simpleMode, which forced every note to display
+        // 'theme-clean' for as long as that mode was on. Reported directly ("Im Simplemodus wird
+        // jedesmal beim Aufrufen einer Notiz das Clean Design ausgewählt. Das soll aber nur beim
+        // Erstellen neuer Notizen im Simple Modus einmalig wirksam sein."). Clean is now applied
+        // once, as a real tab.theme, to notes CREATED in Simple Modus (see createNewTab()) —
+        // nothing else ever has its theme overridden or converted, in either direction.
+        const tabTheme = targetTab.theme || 'theme-github-light';
+        themeSelector.value = tabTheme;
+        applyTheme(tabTheme);
         // Quelltext/Vorschau visibility and the split-divider position are per-tab, same
         // theme-restore pattern just above -- and the same exclusions: Simple Modus overrides
         // both with its own fixed preset regardless of tab (see enterSimpleMode()), and a
@@ -11795,8 +11849,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // "the last-chosen theme" always means the *current* tab's, not a single device-wide value.
     function enterSimpleMode() {
       simpleMode = true;
-      themeSelector.value = 'theme-clean';
-      applyTheme('theme-clean');
+      // Deliberately does NOT touch the theme any more. It used to applyTheme('theme-clean') here,
+      // which made every note render Clean for as long as the mode was on and switched every note
+      // back on leaving it — reported as unwanted ("Es sollen keine bestehenden Designs umgewandelt
+      // werden. oder beim Wechseln des Modus Notizen so auf ein anderes Design umgestellt
+      // werden."). Clean is now a genuine, one-time default for notes CREATED while the mode is on
+      // (see createNewTab()), so it survives leaving Simple Modus like any other chosen theme, and
+      // an existing note keeps whatever it already had no matter which mode is active.
       zoomLevel = 130; // three ZOOM_STEP clicks above the 100 default
       applyZoomLevel();
       // Bug fix (per explicit request): Simple Modus startete bisher im Quelltext -- jetzt
@@ -11827,10 +11886,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       applySplitRatio();
       zoomLevel = 100;
       applyZoomLevel();
+      // No theme restore here either — the counterpart to enterSimpleMode() no longer forcing one.
+      // The active tab is already showing its own theme (switchTab() applies it unconditionally
+      // now), so there is nothing left to put back, and re-applying anything here would be exactly
+      // the "beim Wechseln des Modus Notizen auf ein anderes Design umstellen" that was reported.
+      // themeSelector is kept in sync for the case where the picker was hidden while the mode ran.
       const tab = getCurrentTab();
-      const restoredTheme = (tab && tab.theme) || 'theme-github-light';
-      themeSelector.value = restoredTheme;
-      applyTheme(restoredTheme);
+      themeSelector.value = (tab && tab.theme) || 'theme-github-light';
     }
 
     // Kept as a thin wrapper (rather than removed outright) since it's still the target of the
@@ -12763,9 +12825,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             previewStructureDesynced = wordBlockElements.length !== textCharMaps.length;
             attachTextBlockSourcePositions(wordBlockElements, textCharMaps);
             attachBlockSourcePositions();
+            updatePreviewRepairBanner();
           } else {
             textCharMaps = [];
             previewStructureDesynced = false;
+            updatePreviewRepairBanner();
           }
         } else {
           textWordRanges = [];
@@ -17280,30 +17344,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // still guards mergeBlockWithPrevious() separately — merging two blocks across a block
       // *boundary* is a different, narrower operation this phase doesn't extend.
       //
-      // Video embeds are a deliberate EXCEPTION, still blocked below: .video-embed-wrapper is
-      // block-level HTML (a <div>, needed for its 16:9 aspect-ratio box), which the browser's own
-      // HTML parser refuses to nest inside a <p> at all — assigning innerHTML with one mid-
-      // paragraph silently auto-closes the <p> early and starts the div as its own top-level
-      // sibling, splitting what marked's lexer still sees as ONE paragraph token into THREE
-      // separate preview.children (text-before, the div, text-after). That permanently desyncs
-      // buildBlockSourceMap()'s "Nth token = Nth DOM child" correspondence for the rest of the
-      // document — confirmed directly via selfTestPositionMapping() failing with real round-trip
-      // mismatches the moment a video sits mid-paragraph, not just reasoned about. Images (<span>)
-      // and audio (<audio>) are both inline-safe HTML with no such problem, so only video keeps
-      // the pre-Phase-8 "whole block blocked" treatment; a genuine fix would mean changing
-      // .video-embed-wrapper's own tag/CSS (touching the live preview, presentation mode, and
-      // both HTML exports at once) — out of scope for this phase.
-      //
-      // This is now the SECOND line of defense, not the only one — the previewStructureDesynced
-      // check near the top of this handler already catches the general case (any DOM/char-map
-      // length mismatch, whatever its cause) and blocks the ENTIRE document, not just the video's
-      // own block. This narrower check stays for two reasons: it fires purely from the clicked
-      // block's own DOM shape, with no dependency on whatever textCharMaps happened to compute this
-      // render (a defense-in-depth belt-and-suspenders, in case some future edge case produces a
-      // desync the length check doesn't happen to catch — e.g. two separate mismatches elsewhere in
-      // the document that coincidentally cancel out in the total count); and it documents the one
-      // concrete, confirmed mechanism behind the general check for whoever reads this next.
-      if (anchorOwner.querySelector('.video-embed-wrapper')) { e.preventDefault(); return; }
+      // Video embeds used to be blocked here, and there used to be a long comment explaining that
+      // the block was permanent because .video-embed-wrapper had to be a <div> for its 16:9 box,
+      // that a <div> cannot legally nest inside a <p>, and that a genuine fix was "out of scope".
+      // That fix has since been made: the wrapper is a <span> with display:block (see its own CSS
+      // comment), which is phrasing content, stays inside its paragraph, and produces exactly the
+      // same layout. With the paragraph no longer split, the char map and the DOM agree again —
+      // verified directly: a video mid-paragraph now yields 3 char-map entries against 3 DOM
+      // blocks (it was 3 against 4) with selfTestPositionMapping() clean, where before it tripped
+      // previewStructureDesynced and froze input across the WHOLE document. Blocking the block is
+      // therefore no longer needed, and keeping it would mean a paragraph containing a video stays
+      // permanently uneditable for no reason.
 
       // Studio Pro Phase 5: markdown shortcuts -- only ever attempted for a plain collapsed-
       // cursor insertText, checked after every guard above (single block, no multi-line span, no
@@ -18123,9 +18174,41 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // which produces a beforeinput with inputType 'insertFromPaste' — not in
     // PREVIEW_ALLOWED_INPUT_TYPES (see that constant's own comment), so it was blocked there with
     // nothing converted or inserted at all.
+    // Media files on the clipboard (a screenshot, an image copied from a web page, an audio file, a
+    // PDF), shared verbatim by BOTH paste listeners. It only ever lived in the editor's own
+    // listener before, so pasting an image worked in the Quelltext view and silently did nothing in
+    // the preview — reported directly ("Das Einfügen von Bildern aus der Zwischenablage scheint
+    // nicht mehr zu funktionieren, bzw nur im Quellcode Modus."). Same three file kinds the window
+    // 'drop' handler already accepts, in the same order, so pasting and dropping a given file now
+    // do the same thing; PDF was previously drop-only and is reachable by paste too now.
+    // Returns true when it consumed the event, so each caller can stop.
+    async function handlePastedMediaFiles(e) {
+      const items = e.clipboardData && e.clipboardData.items;
+      if (!items) return false;
+      for (const item of items) {
+        if (item.kind !== 'file') continue;
+        const file = item.getAsFile();
+        if (!file) continue;
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const choice = await requestImageInsertChoice(file);
+          if (choice) insertImageAsset(choice.dataUrl, 'Das ist ein Bild.');
+          return true;
+        }
+        if (isPdfFile(file)) { e.preventDefault(); handlePdfFile(file); return true; }
+        if (isAudioFile(file)) { e.preventDefault(); insertAudioFileAsset(file); return true; }
+      }
+      return false;
+    }
+
     preview.addEventListener('paste', async (e) => {
       const tab = getCurrentTab();
       if (!wysiwygEnabled || !tab || tab.fileType !== 'markdown') return;
+      // Checked before the desync guard and the owner-resolution below: a media file does not need
+      // a resolvable source position in the same way a text paste does — insertImageAsset() and its
+      // siblings splice into editor.value at editor.selectionStart, which the selectionchange
+      // listener keeps in sync with the preview caret independently of the char map.
+      if (await handlePastedMediaFiles(e)) return;
       // Same whole-document safety net as the main beforeinput handler's own check (see
       // previewStructureDesynced's own declaration) — a paste still has to locate a reliable
       // owner element via domPositionToSource below, which this flag means can't be trusted.
@@ -20367,6 +20450,146 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // silent data corruption for every case, including ones not yet discovered.
     let previewStructureDesynced = false;
 
+    // Shows/hides the banner that tells the user the preview is currently refusing input, and why.
+    // Called at the end of every updatePreview() pass, right after the flag is recomputed. Without
+    // it the desync was completely silent: the preview simply stopped accepting keystrokes, with no
+    // explanation and no way out except editing the raw markdown in the Quelltext pane by hand —
+    // reported exactly that way ("Es gab schon wieder ein Einfrieren des Vorschau Editors. Das
+    // lässt sich dann nur im Quelltext Fenster lösen...").
+    function updatePreviewRepairBanner() {
+      const banner = document.getElementById('previewRepairBanner');
+      if (!banner) return;
+      const tab = getCurrentTab();
+      const relevant = previewStructureDesynced && wysiwygEnabled && !!tab && tab.fileType === 'markdown';
+      banner.classList.toggle('active', relevant);
+    }
+
+    // Normalizes the markdown source into a shape whose render matches the char map again — the
+    // same corrections that previously had to be made by hand in the Quelltext pane ("indem man
+    // falsche Absätze löscht oder versehentlich in eine Liste geratene Bilder Assets wieder in die
+    // richtigen Absätze mit Abständen bugsiert"), done for the whole document at once.
+    //
+    // Two normalizations, both matching a confirmed cause of the mismatch:
+    //  1. A media reference (image/drawing/audio/video, all written with image syntax here) that
+    //     shares a line with other content, or sits directly against a neighbouring line, gets its
+    //     own block with blank lines around it. A block-level embed the renderer hoists out of its
+    //     surrounding <p> is THE documented cause of the "one paragraph token, three DOM children"
+    //     split this flag exists to catch (see previewStructureDesynced's own comment), and a media
+    //     reference swallowed into a list item is the case reported here.
+    //  2. Runs of three or more blank lines collapse to one blank line — "falsche Absätze". marked
+    //     folds them into a single separator anyway, so they carry no meaning in the render, but
+    //     they do leave stray empty source blocks behind for the mapping to trip over.
+    //
+    // Deliberately conservative: it never reorders or deletes real content, only whitespace and
+    // line breaks around media references, so running it when it turns out not to be needed cannot
+    // damage a document. Recorded as one undoable step, so a repair the user dislikes is one
+    // Cmd+Z away.
+    function repairPreviewStructure() {
+      const tab = getCurrentTab();
+      if (!tab || tab.fileType !== 'markdown') return;
+      const before = editor.value;
+      const repaired = normalizeMarkdownBlockStructure(before);
+      if (repaired === before) {
+        // Nothing to normalize, but the render itself may simply have gone stale — rebuilding from
+        // source recomputes both the DOM and the char map from the same input, which clears a
+        // mismatch caused by a render that ran against different content than the map did.
+        updatePreview();
+        showToast(previewStructureDesynced
+          ? 'Die Struktur ließ sich nicht automatisch reparieren. Bitte im Quelltext prüfen.'
+          : 'Vorschau wieder synchron.');
+        return;
+      }
+      editor.value = repaired;
+      markActiveTabModified();
+      updatePreview();
+      recordHistory();
+      saveStateToLocalStorage();
+      showToast(previewStructureDesynced
+        ? 'Struktur bereinigt, aber die Vorschau passt noch nicht. Bitte im Quelltext prüfen.'
+        : 'Struktur repariert — die Vorschau nimmt wieder Eingaben an.');
+    }
+
+    // Pure text transform, no DOM access, so it stays testable on its own. Skips fenced code blocks
+    // entirely: a line inside one is literal content, and inserting blank lines there would change
+    // what the code says rather than how the document is structured.
+    function normalizeMarkdownBlockStructure(text) {
+      const lines = text.split('\n');
+      const out = [];
+      let inFence = false;
+      const isMediaOnlyLine = (line) => /^\s*(?:[-*+]\s+|\d+[.)]\s+)?!\[[^\]]*\]\([^)]*\)\s*$/.test(line);
+      const mediaBody = (line) => line.replace(/^\s*(?:[-*+]\s+|\d+[.)]\s+)/, '').trim();
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (/^\s*(?:```|~~~)/.test(line)) { inFence = !inFence; out.push(line); continue; }
+        if (inFence) { out.push(line); continue; }
+        // Blank-line collapse lives here, inside the fence-aware loop, rather than as a regex over
+        // the finished text. A global /\n{3,}/ replace at the end also reached INTO code fences and
+        // silently rewrote the code itself — caught by a test case that put deliberate blank lines
+        // in a fenced block and got them collapsed.
+        if (line.trim() === '' && out.length && out[out.length - 1].trim() === '') continue;
+        // A VIDEO reference sharing a line with other text is the one confirmed mechanism behind
+        // this whole safety net (see previewStructureDesynced's own comment): .video-embed-wrapper
+        // is block-level, so the HTML parser hoists it out of the surrounding <p>, auto-closes that
+        // <p> early and turns one paragraph token into three DOM children. Split onto its own line
+        // with blank lines around it, which is the only shape that renders without that split.
+        // Restricted to video on purpose — images and audio are inline-safe HTML and have no such
+        // problem, so reflowing prose around them would be a change with nothing to gain.
+        const videoSplit = splitLineAroundVideoReference(line);
+        if (videoSplit) {
+          videoSplit.forEach((part, idx) => {
+            if (idx > 0 && out.length && out[out.length - 1].trim() !== '') out.push('');
+            out.push(part);
+          });
+          continue;
+        }
+        if (isMediaOnlyLine(line)) {
+          // Strip any list marker in front of it and stand the reference on its own, separated by a
+          // blank line on each side. A list item that contains nothing but a media reference is
+          // exactly the "versehentlich in eine Liste geratene Bilder Assets" case.
+          while (out.length && out[out.length - 1].trim() === '') out.pop();
+          if (out.length) out.push('');
+          out.push(mediaBody(line));
+          // Consume any blank lines that already follow, so the single one added below is the only
+          // separator regardless of what was there before.
+          while (i + 1 < lines.length && lines[i + 1].trim() === '') i++;
+          if (i + 1 < lines.length) out.push('');
+          continue;
+        }
+        out.push(line);
+      }
+      return out.join('\n');
+    }
+
+    // Returns the line broken into [textBefore?, videoRef, textAfter?] when it holds a video
+    // reference alongside other content, or null when there is nothing to split (no video
+    // reference, or the line already consists of nothing but one). Classification mirrors
+    // hljsRenderer.image()'s own video test exactly — same three regexes, same trailing-title
+    // stripping — so "what counts as a video here" cannot drift from what actually renders as one.
+    function splitLineAroundVideoReference(line) {
+      const refRe = /!\[[^\]]*\]\(([^)]*)\)/g;
+      const parts = [];
+      let lastEnd = 0;
+      let found = false;
+      let m;
+      while ((m = refRe.exec(line)) !== null) {
+        const href = m[1].replace(/\s+"[^"]*"\s*$/, '').trim();
+        const isVideo = YOUTUBE_URL_RE.test(href) || VIMEO_URL_RE.test(href) || VIDEO_FILE_URL_RE.test(href);
+        if (!isVideo) continue;
+        found = true;
+        const before = line.slice(lastEnd, m.index);
+        if (before.trim() !== '') parts.push(before.trim());
+        parts.push(m[0]);
+        lastEnd = m.index + m[0].length;
+      }
+      if (!found) return null;
+      const rest = line.slice(lastEnd);
+      if (rest.trim() !== '') parts.push(rest.trim());
+      // Already a standalone reference on its own line: nothing to do, and returning it would make
+      // the caller insert pointless blank lines around something that is already correct.
+      if (parts.length === 1 && parts[0] === line.trim()) return null;
+      return parts;
+    }
+
     // Tags a leaf's own flattened text must NOT include, on top of NESTED_WORD_BLOCK_TAGS' own
     // nested-block exclusions (a list item's sub-list, a paragraph's own... a paragraph can't
     // nest another paragraph, but the set is shared code so it's written generically) — BUTTON/
@@ -22329,7 +22552,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // instead of a hand-duplicated copy that could drift.
         '  .image-caption { display: block; max-width: 100%; margin-top: 4px; font-size: .85em; color: var(--preview-text); opacity: .7; }\n' +
         '  .markdown-body .audio-asset-player { display: block; width: 100%; max-width: 420px; margin: 8px 0; }\n' +
-        '  .video-embed-wrapper { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: 8px; overflow: hidden; background-color: var(--preview-code-bg); align-self: stretch; }\n' +
+        '  .video-embed-wrapper { display: block; position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; margin: 16px 0; border-radius: 8px; overflow: hidden; background-color: var(--preview-code-bg); align-self: stretch; }\n' +
         '  .video-embed-wrapper iframe, .video-embed-wrapper video { display: block; width: 100%; height: 100%; border: 0; }\n' +
         '  .video-embed-fallback { display: none; position: relative; width: 100%; height: 100%; align-items: center; justify-content: center; color: #fff; text-decoration: none; background-color: #000; }\n' +
         '  .video-embed-fallback img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .7; }\n' +
@@ -23172,16 +23395,62 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // same two newlines would splice blank rows into the middle of the table and break its
       // row-per-line structure instead. There, the reference goes in bare, same line, same cell.
       const skipTrailingBreak = isTablePosition(editor.value, start, tab.fileType);
-      const markdownImage = '![' + (defaultAlt || '') + '](asset:' + assetId + ')' + (skipTrailingBreak ? '' : '\n\n');
+      // Leading separator, mirroring the trailing one. Inserting with the caret at the end of a
+      // non-empty line (the normal case — you type a sentence, then paste a picture) used to glue
+      // the reference straight onto that line: "Absatz.\n![Bild](asset:img_1)". marked reads that
+      // as ONE paragraph with a soft break, so the picture becomes part of the preceding sentence's
+      // block instead of standing on its own — the "versehentlich in eine Liste / in den falschen
+      // Absatz geratene Bilder Assets" that had to be untangled by hand in the Quelltext. Skipped
+      // inside a table for the same reason the trailing break is, and skipped when the line is
+      // already empty so nothing gains a stray blank line it did not need.
+      const leadingBreak = (!skipTrailingBreak && needsLeadingBlockBreak(editor.value, start)) ? '\n\n' : '';
+      const markdownImage = leadingBreak + '![' + (defaultAlt || '') + '](asset:' + assetId + ')' + (skipTrailingBreak ? '' : '\n\n');
       editor.value = editor.value.substring(0, start) + markdownImage + editor.value.substring(end);
       const newPos = start + markdownImage.length;
       editor.setSelectionRange(newPos, newPos);
 
+      finishAssetInsertion(newPos);
+      saveStateToLocalStorage();
+      switchToPreviewIfSimpleMode();
+    }
+
+    // Shared tail for every asset-insertion path (image/photo/drawing/PDF page/audio). Splicing
+    // into editor.value is only half the job: when the live WYSIWYG preview is the surface the user
+    // is actually working in, the caret has to be put back INTO the rebuilt preview DOM, which
+    // plain updatePreview() cannot do (it replaces innerHTML wholesale, dropping the selection).
+    // Without this, inserting media while working in the preview left the caret nowhere and typing
+    // afterwards went to the wrong place — the same class of problem the canvas box editor hit.
+    // finishPreviewStructuralEdit() already does markActiveTabModified/updatePreview/caret-restore/
+    // recordHistory in the right order, so the two branches stay equivalent apart from the caret.
+    function finishAssetInsertion(newSrcOffset) {
+      if (previewIsLiveEditingSurface()) {
+        finishPreviewStructuralEdit(newSrcOffset);
+        return;
+      }
       recordHistory();
       markActiveTabModified();
       updatePreview();
-      saveStateToLocalStorage();
-      switchToPreviewIfSimpleMode();
+    }
+
+    // True when splicing a standalone block (a media reference) at `pos` would otherwise land it on
+    // a line that already has content, i.e. when a blank-line separator has to be inserted first.
+    // Looks only at the text between the start of the current line and the insertion point: that is
+    // exactly what decides whether the reference begins its own block or continues an existing one.
+    function needsLeadingBlockBreak(text, pos) {
+      const lineStart = text.lastIndexOf('\n', pos - 1) + 1;
+      return text.slice(lineStart, pos).trim() !== '';
+    }
+
+    // "Is the rendered preview the surface the user is editing in right now?" — true whenever
+    // WYSIWYG is on, the preview is visible, the document is markdown (the only file type the
+    // preview is editable for) and the preview really is contentEditable. Deliberately not based
+    // on document.activeElement: several callers run after a modal, a file picker or a toolbar
+    // button has taken focus away, and the question here is which surface the edit belongs to, not
+    // what happens to hold focus at this instant.
+    function previewIsLiveEditingSurface() {
+      const tab = getCurrentTab();
+      return !!(wysiwygEnabled && showPreview && tab && tab.fileType === 'markdown' &&
+        preview.contentEditable === 'true');
     }
 
     function triggerImageFileInsert() {
@@ -23657,16 +23926,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const stillEditingThisDoc = box ? canvasEditingBoxId === target.boxId : tab.id === activeTabId;
       const contentBeforeSplice = stillEditingThisDoc ? editor.value : doc.content;
       const skipTrailingBreak = isTablePosition(contentBeforeSplice, target.start, doc.fileType);
-      const markdownRef = '![' + label + '](asset:' + assetId + ')' + (skipTrailingBreak ? '' : '\n\n');
+      // Leading separator, same reasoning as insertImageAsset()'s — a recording started with the
+      // caret at the end of a sentence otherwise becomes part of that sentence's own block.
+      const leadingBreak = (!skipTrailingBreak && needsLeadingBlockBreak(contentBeforeSplice, target.start)) ? '\n\n' : '';
+      const markdownRef = leadingBreak + '![' + label + '](asset:' + assetId + ')' + (skipTrailingBreak ? '' : '\n\n');
 
       if (stillEditingThisDoc) {
         editor.value = editor.value.substring(0, target.start) + markdownRef + editor.value.substring(target.end);
         const newPos = target.start + markdownRef.length;
         editor.setSelectionRange(newPos, newPos);
-        editor.focus();
-        recordHistory();
-        markActiveTabModified();
-        updatePreview();
+        // Focus only goes to the Quelltext textarea when that IS the surface being edited —
+        // stealing it away from the live preview would drop the caret out of the document the user
+        // is actually typing in (and, on a phone, close the on-screen keyboard mid-thought).
+        if (!previewIsLiveEditingSurface()) editor.focus();
+        finishAssetInsertion(newPos);
         switchToPreviewIfSimpleMode();
       } else {
         // The user switched away from the recording's tab (or, for a box, closed it / opened a
@@ -25412,7 +25685,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // on the trailing break unconditionally to chain pages together, and a PDF import always
       // appends at the very end of the document — never genuinely "into" a table being edited.
       const skipTrailingBreak = origin !== 'pdf' && isTablePosition(editor.value, start, tab.fileType);
-      const markdownImage = '![' + defaultAlt + '](asset:' + assetId + titlePart + ')' + (skipTrailingBreak ? '' : '\n\n');
+      // Leading separator, same reasoning as insertImageAsset()'s. Harmless for the PDF import
+      // loop: each page's own trailing \n\n already leaves the caret on an empty line, so
+      // needsLeadingBlockBreak() reports false for every page after the first.
+      const leadingBreak = (!skipTrailingBreak && needsLeadingBlockBreak(editor.value, start)) ? '\n\n' : '';
+      const markdownImage = leadingBreak + '![' + defaultAlt + '](asset:' + assetId + titlePart + ')' + (skipTrailingBreak ? '' : '\n\n');
       editor.value = editor.value.substring(0, start) + markdownImage + editor.value.substring(end);
       const newPos = start + markdownImage.length;
       editor.setSelectionRange(newPos, newPos);
@@ -26172,7 +26449,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       replacement: (content, node) => '![' + (node.getAttribute('aria-label') || '') + '](' + (node.getAttribute('data-md-href') || '') + ')',
     });
     turndownService.addRule('studioProVideoEmbed', {
-      filter: (node) => node.nodeName === 'DIV' && node.classList.contains('video-embed-wrapper'),
+      filter: (node) => (node.nodeName === 'SPAN' || node.nodeName === 'DIV') && node.classList.contains('video-embed-wrapper'),
       replacement: (content, node) => '![' + (node.getAttribute('data-md-alt') || 'Video') + '](' + (node.getAttribute('data-md-href') || '') + ')',
     });
     // A formula cell's raw source is the bare, unresolved <span> — no cached value (see
@@ -27135,24 +27412,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     editor.addEventListener('paste', async (e) => {
       if (editor.disabled) return;
       const clipboardData = e.clipboardData;
-      const items = clipboardData && clipboardData.items;
-      if (items) {
-        for (const item of items) {
-          if (item.kind !== 'file') continue;
-          if (item.type.startsWith('image/')) {
-            e.preventDefault();
-            const choice = await requestImageInsertChoice(item.getAsFile());
-            if (choice) insertImageAsset(choice.dataUrl, 'Das ist ein Bild.');
-            return;
-          }
-          const file = item.getAsFile();
-          if (file && isAudioFile(file)) {
-            e.preventDefault();
-            insertAudioFileAsset(file);
-            return;
-          }
-        }
-      }
+      if (await handlePastedMediaFiles(e)) return;
 
       const html = clipboardData && clipboardData.getData('text/html');
       const pasteTab = getCurrentTab();
