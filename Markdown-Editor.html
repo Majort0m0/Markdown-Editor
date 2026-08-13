@@ -18273,6 +18273,23 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         range = caretRange;
       }
 
+      // Counterpart to the seeding branch above: once the block holds real content again, the
+      // placeholder has to disappear from the LIVE DOM too, not just from editor.value.
+      // serializeBlockToMarkdown() already drops a stray ZWSP on its way into the source, but this
+      // path deliberately never re-renders (previewIsAuthoring below), so nothing was removing it
+      // from the text node the user is typing in — it stayed there for the rest of the session.
+      //
+      // Reported as the caret sitting "mitten im letzten getippten Buchstaben", and traced from a
+      // screen recording: after typing into a freshly Enter-created paragraph, editor.value held
+      // "Da s" while the DOM text node held "Da s<ZWSP>" and the caret sat at offset 4 — one
+      // logical position short of the node's end, with an invisible character behind it. How far
+      // left that shifts the drawn caret depends on how the font/shaper treats U+200B, which is
+      // why it looks like "inside the glyph" on some setups and merely "touching it" on others.
+      // The same leftover also made the footer's character count read two too high in the
+      // recording, since the DOM and the source genuinely disagreed.
+      const removedBefore = stripLeftoverPlaceholders(owner, range);
+      if (removedBefore) range = removedBefore;
+
       previewIsAuthoring = true;
       updatePreview();
       previewIsAuthoring = false;
@@ -18293,6 +18310,72 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       inputTimeout = setTimeout(() => {
         recordHistory();
       }, 400);
+    }
+
+    // Removes zero-width-space placeholders from `owner`'s own text nodes once the block has real
+    // content beside them, and returns a corrected caret Range (or null when nothing was removed).
+    //
+    // Only ever touches a block that genuinely has other content: a block whose ONLY content is the
+    // placeholder still needs it — that is exactly what keeps an empty paragraph addressable for
+    // the position mapping (see serializeBlockToMarkdown()'s own empty-block branch). Marker spans
+    // are skipped via the shared isCharMapExcludedElement() walk conditions, so a live-format
+    // zone's own "**" markers are never mistaken for content or damaged here.
+    function stripLeftoverPlaceholders(owner, range) {
+      if (!owner) return null;
+      const flat = flatTextExcludingMarkers(owner) || '';
+      if (flat.indexOf('​') === -1) return null;
+      if (flat.replace(/​/g, '').trim() === '') return null; // genuinely empty: placeholder stays
+
+      const caretNode = range && range.startContainer;
+      let caretOffset = range ? range.startOffset : 0;
+      let caretNodeAfter = caretNode;
+      let touched = false;
+
+      const walker = document.createTreeWalker(owner, NodeFilter.SHOW_TEXT, {
+        acceptNode: (node) => {
+          for (let el = node.parentElement; el && el !== owner; el = el.parentElement) {
+            if (isCharMapExcludedElement(el)) return NodeFilter.FILTER_REJECT;
+          }
+          return node.nodeValue.indexOf('​') === -1 ? NodeFilter.FILTER_SKIP : NodeFilter.FILTER_ACCEPT;
+        },
+      });
+      const affected = [];
+      let n;
+      while ((n = walker.nextNode())) affected.push(n);
+
+      affected.forEach((node) => {
+        const original = node.nodeValue;
+        const cleaned = original.replace(/​/g, '');
+        if (cleaned === original) return;
+        touched = true;
+        if (node === caretNode) {
+          // Every placeholder removed BEFORE the caret shifts it left by one; ones after it don't
+          // move it. Counting them explicitly keeps the caret on the same character it was on,
+          // rather than assuming it sat at the very end.
+          const removedBeforeCaret = (original.slice(0, caretOffset).match(/​/g) || []).length;
+          caretOffset = Math.max(0, caretOffset - removedBeforeCaret);
+        }
+        node.nodeValue = cleaned;
+        // An emptied node would leave a stray zero-length text node behind; dropping it keeps the
+        // DOM in the same shape a real re-render would produce.
+        if (cleaned === '') {
+          if (node === caretNode) { caretNodeAfter = node.parentNode; caretOffset = 0; }
+          node.remove();
+        }
+      });
+
+      if (!touched) return null;
+      if (!caretNodeAfter || !owner.contains(caretNodeAfter)) return null;
+      const corrected = document.createRange();
+      try {
+        corrected.setStart(caretNodeAfter, Math.min(caretOffset, caretNodeAfter.nodeType === Node.TEXT_NODE
+          ? caretNodeAfter.nodeValue.length : caretNodeAfter.childNodes.length));
+      } catch (err) {
+        return null;
+      }
+      corrected.collapse(true);
+      sel_replaceSelection(corrected);
+      return corrected;
     }
 
     // Studio Pro Phase 9: dispatches a completed (non-IME) preview edit to whichever sync path
