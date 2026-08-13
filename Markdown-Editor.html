@@ -1689,6 +1689,43 @@ return rgba;});});}).call(this);
       display: flex;
     }
 
+    /* Ausstieg aus dem Teleprompter ohne Tastatur. Escape und der Fußleisten-Knopf allein
+       reichten nicht: sobald der Teleprompter zusammen mit dem Vollbild läuft, ist die ganze
+       Fußleiste ausgeblendet (siehe die Regel weiter oben) — auf einem Gerät ohne Tastatur gab es
+       dann überhaupt keinen Weg mehr heraus.
+       Position: die drei bestehenden schwebenden Knöpfe belegen right 28px (Inhaltsverzeichnis),
+       70px (Vorlesen) und 112px (Vollbild verlassen), jeweils 34px breit; 154px hält denselben
+       8px-Abstand wie diese untereinander. Deckkraft bewusst höher als beim Vollbild-Ausstieg und
+       Fläche größer: dort hebt ein Hover die Sichtbarkeit an, was auf einem Touchgerät nie
+       passiert — und genau für dieses Gerät existiert dieser Knopf. */
+    .teleprompter-exit-btn {
+      display: none;
+      position: fixed;
+      top: 16px;
+      right: 154px;
+      z-index: 10000;
+      width: 40px;
+      height: 40px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+      font-size: 1.1rem;
+      cursor: pointer;
+      opacity: 0.9;
+    }
+
+    .teleprompter-exit-btn:hover {
+      opacity: 1;
+    }
+
+    body.teleprompter-active .teleprompter-exit-btn {
+      display: flex;
+    }
+
     /* Top Navigation / App Header */
     header {
       background-color: var(--bg-surface);
@@ -5917,7 +5954,7 @@ return rgba;});});}).call(this);
 
     /* Print / PDF export */
     @media print {
-      header, .tab-sidebar-panel, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel, .fullscreen-exit-btn, .tts-toggle-btn,
+      header, .tab-sidebar-panel, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel, .fullscreen-exit-btn, .teleprompter-exit-btn, .tts-toggle-btn,
       /* Studio Pro Phase 11: the floating WYSIWYG UI (bubble toolbar/Phase 4, slash menu/Phase 6,
          block handle+menu+drop-indicator/Phase 7) is shown via a JS-toggled .active class, not
          native CSS :hover the way the pre-existing per-image edit/alt-text buttons are — :hover
@@ -7192,6 +7229,7 @@ return rgba;});});}).call(this);
   </div>
 
   <button id="fullscreenExitBtn" class="fullscreen-exit-btn" onclick="toggleFullscreen()" title="Vollbildmodus verlassen" type="button">✕</button>
+  <button id="teleprompterExitBtn" class="teleprompter-exit-btn" onclick="stopTeleprompter()" title="Teleprompter beenden" type="button">✕</button>
 
   <!-- Presentation Mode: full-viewport slideshow, slides split on a lone "---" line -->
   <div class="presentation-overlay" id="presentationOverlay" onclick="presentationHandleClick(event)">
