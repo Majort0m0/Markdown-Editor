@@ -1689,41 +1689,69 @@ return rgba;});});}).call(this);
       display: flex;
     }
 
-    /* Ausstieg aus dem Teleprompter ohne Tastatur. Escape und der Fußleisten-Knopf allein
-       reichten nicht: sobald der Teleprompter zusammen mit dem Vollbild läuft, ist die ganze
-       Fußleiste ausgeblendet (siehe die Regel weiter oben) — auf einem Gerät ohne Tastatur gab es
-       dann überhaupt keinen Weg mehr heraus.
-       Position: die drei bestehenden schwebenden Knöpfe belegen right 28px (Inhaltsverzeichnis),
-       70px (Vorlesen) und 112px (Vollbild verlassen), jeweils 34px breit; 154px hält denselben
-       8px-Abstand wie diese untereinander. Deckkraft bewusst höher als beim Vollbild-Ausstieg und
-       Fläche größer: dort hebt ein Hover die Sichtbarkeit an, was auf einem Touchgerät nie
-       passiert — und genau für dieses Gerät existiert dieser Knopf. */
-    .teleprompter-exit-btn {
+    /* Teleprompter-Bedienung: schwebend, unten mittig, sichtbar nur im Modus. Sitzt bewusst über
+       allem (z-index wie der Vollbild-Ausstieg), damit sie auch im Vollbild erreichbar bleibt --
+       dort ist die Fußzeile ausgeblendet, und ohne diese Gruppe gäbe es auf einem Gerät ohne
+       Tastatur keinen Weg mehr aus dem Modus heraus. */
+    .teleprompter-controls {
       display: none;
       position: fixed;
-      top: 16px;
-      right: 154px;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
       z-index: 10000;
-      width: 40px;
-      height: 40px;
       align-items: center;
-      justify-content: center;
+      gap: 12px;
+      padding: 8px 14px;
+      border-radius: 26px;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+      max-width: calc(100vw - 32px);
+    }
+
+    body.teleprompter-active .teleprompter-controls {
+      display: flex;
+    }
+
+    /* Größe und Optik bewusst identisch zu .toc-toggle-btn / .tts-toggle-btn -- laut Wunsch
+       "im selben Stil und Größe wie TOC oder Sprachausgabe". */
+    .teleprompter-round-btn {
+      width: 34px;
+      height: 34px;
+      flex-shrink: 0;
       border-radius: 50%;
       border: 1px solid var(--border-color);
       background-color: var(--bg-surface);
       color: var(--text-main);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
-      font-size: 1.1rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
       cursor: pointer;
-      opacity: 0.9;
-    }
-
-    .teleprompter-exit-btn:hover {
-      opacity: 1;
-    }
-
-    body.teleprompter-active .teleprompter-exit-btn {
       display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .teleprompter-round-btn:hover {
+      background-color: #eceff2;
+    }
+
+    .teleprompter-round-btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    /* Ohne Beschriftung, per Wunsch. Die Bahn ist bewusst kräftiger als ein Systemregler in einer
+       Fußzeile, damit sie sich mit dem Daumen treffen lässt. */
+    .teleprompter-speed {
+      width: 160px;
+      max-width: 42vw;
+      min-width: 90px;
+      margin: 0;
+      accent-color: var(--accent);
+      height: 34px;
+      cursor: pointer;
     }
 
     /* Top Navigation / App Header */
@@ -2524,49 +2552,19 @@ return rgba;});});}).call(this);
       justify-self: end;
     }
 
-    /* Teleprompter: Regler tauscht mit der Speicheranzeige, damit das Raster gleich bleibt. */
-    .teleprompter-bar {
+    /* Der Vorlesen-Knopf hat im Teleprompter nichts zu suchen (per Wunsch) -- der Text wird hier
+       selbst gelesen, nicht vorgelesen, und die Bedienung soll auf die drei Elemente unten
+       beschränkt bleiben. */
+    body.teleprompter-active .tts-toggle-btn {
+      display: none !important;
+    }
+
+    /* Fußzeile aus, solange der Teleprompter läuft. Zwei Gründe: die schwebende Bedienung sitzt
+       unten mittig und lag messbar über der Fußzeile (Gruppe 657-709px, Fußzeile ab 698px), und
+       Wortzahl/Speicheranzeige/Zoomknöpfe haben beim Ablesen keinen Zweck. Im Vollbild ist die
+       Fußzeile ohnehin schon ausgeblendet -- damit verhalten sich beide Modi jetzt gleich. */
+    body.teleprompter-active .app-footer {
       display: none;
-      align-items: center;
-      gap: 8px;
-      white-space: nowrap;
-    }
-
-    body.teleprompter-active .teleprompter-bar { display: flex; }
-    body.teleprompter-active .footer-storage { display: none; }
-
-    .teleprompter-bar input[type="range"] {
-      width: 150px;
-      max-width: 32vw;
-    }
-
-    .teleprompter-bar #teleprompterSpeedLabel {
-      font-variant-numeric: tabular-nums;
-      min-width: 26px;
-      text-align: right;
-    }
-
-    .teleprompter-play {
-      border: 1px solid var(--border-color);
-      background-color: var(--bg-surface);
-      color: var(--text-main);
-      border-radius: 5px;
-      width: 24px;
-      height: 20px;
-      line-height: 1;
-      padding: 0;
-      font-size: 11px;
-      cursor: pointer;
-    }
-
-    .teleprompter-hint {
-      color: var(--text-muted);
-    }
-
-    /* Auf schmalen Viewports ist für den Hinweistext kein Platz — der Regler selbst und die
-       Tastenkürzel funktionieren unverändert, nur die Beschriftung entfällt. */
-    @media (max-width: 780px) {
-      .teleprompter-hint { display: none; }
     }
 
     /* Während des Laufs ist die Vorschau bewusst nicht editierbar (siehe startTeleprompter()) —
@@ -5954,7 +5952,7 @@ return rgba;});});}).call(this);
 
     /* Print / PDF export */
     @media print {
-      header, .tab-sidebar-panel, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel, .fullscreen-exit-btn, .teleprompter-exit-btn, .tts-toggle-btn,
+      header, .tab-sidebar-panel, .formatting-toolbar, .search-bar, .editor-pane, .app-footer, .drop-overlay, .modal-overlay, .toc-toggle-btn, .toc-panel, .fullscreen-exit-btn, .teleprompter-controls, .tts-toggle-btn,
       /* Studio Pro Phase 11: the floating WYSIWYG UI (bubble toolbar/Phase 4, slash menu/Phase 6,
          block handle+menu+drop-indicator/Phase 7) is shown via a JS-toggled .active class, not
          native CSS :hover the way the pre-existing per-image edit/alt-text buttons are — :hover
@@ -6840,17 +6838,6 @@ return rgba;});});}).call(this);
   <footer class="app-footer">
     <span id="docStats" class="footer-stats"></span>
     <span id="storageIndicator" class="footer-storage"><span class="footer-separator"></span><span class="footer-storage-bar"><span class="footer-storage-bar-fill"></span></span><span class="footer-storage-text"></span><span class="footer-separator"></span></span>
-    <!-- Nur im Teleprompter-Modus sichtbar; nimmt dann exakt den Platz der Speicheranzeige ein
-         (siehe body.teleprompter-active-Regeln), damit das 3-Spalten-Raster der Fußleiste
-         unverändert bleibt und nichts umbricht. -->
-    <span id="teleprompterBar" class="teleprompter-bar">
-      <button type="button" id="teleprompterPlayBtn" class="teleprompter-play" onclick="toggleTeleprompterRunning()" title="Start/Stopp (Pfeil links/rechts)">⏸</button>
-      <label for="teleprompterSpeed">Tempo</label>
-      <input type="range" id="teleprompterSpeed" min="10" max="300" step="5" value="45"
-             oninput="setTeleprompterSpeed(Number(this.value))" title="Geschwindigkeit (Pfeil hoch/runter)">
-      <span id="teleprompterSpeedLabel">45</span>
-      <span class="teleprompter-hint">Umschalt/Leertaste halten = Pause · Esc beendet</span>
-    </span>
     <!-- Studio Pro UI redesign: aus der Kopfzeile hierher verschoben (gleiche ids/onclicks, siehe
          die Kommentare bei #burgerMenuBtn) -- der Lizenzlink ist stattdessen jetzt Teil des
          Burger-Menü-"Über"-Blocks (#aboutVersionText). -->
@@ -7229,7 +7216,20 @@ return rgba;});});}).call(this);
   </div>
 
   <button id="fullscreenExitBtn" class="fullscreen-exit-btn" onclick="toggleFullscreen()" title="Vollbildmodus verlassen" type="button">✕</button>
-  <button id="teleprompterExitBtn" class="teleprompter-exit-btn" onclick="stopTeleprompter()" title="Teleprompter beenden" type="button">✕</button>
+  <!-- Bedienung des Teleprompters: schwebend, unten mittig, im Stil und in der Größe der übrigen
+       schwebenden Rundknöpfe (.toc-toggle-btn). Lag vorher in der Fußzeile -- dort waren Knopf und
+       Regler klein und unhandlich, und der Beenden-Knopf saß als vierter Knopf oben rechts, weit weg
+       von der eigentlichen Bedienung. -->
+  <div class="teleprompter-controls" id="teleprompterControls">
+    <button type="button" id="teleprompterPlayBtn" class="teleprompter-round-btn" onclick="toggleTeleprompterRunning()" title="Start/Pause (Pfeil links/rechts)">
+      <svg id="teleprompterPlayIcon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M8 5.5v13l11-6.5z"/></svg>
+    </button>
+    <input type="range" id="teleprompterSpeed" class="teleprompter-speed" min="10" max="300" step="5" value="45"
+           oninput="setTeleprompterSpeed(Number(this.value))" title="Geschwindigkeit (Pfeil hoch/runter)">
+    <button type="button" id="teleprompterExitBtn" class="teleprompter-round-btn" onclick="stopTeleprompter()" title="Teleprompter beenden (Esc)">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
 
   <!-- Presentation Mode: full-viewport slideshow, slides split on a lone "---" line -->
   <div class="presentation-overlay" id="presentationOverlay" onclick="presentationHandleClick(event)">
@@ -12598,7 +12598,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     let teleprompterHeldPause = false; // Umschalt/Leertaste gedrückt gehalten
     let teleprompterRafId = null;
     let teleprompterLastFrame = 0;
-    let teleprompterScrollAcc = 0;     // Bruchteile von Pixeln zwischen den Frames
+    let teleprompterScrollPos = 0;     // Scrollposition als Gleitkommazahl, siehe teleprompterFrame()
     let teleprompterRestore = null;
 
     const TELEPROMPTER_SPEED_MIN = 10;
@@ -12627,17 +12627,88 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         applyPaneVisibility();
       }
       teleprompterActive = true;
-      teleprompterRunning = true;
+      // Startet angehalten, per Wunsch: der Text soll erst laufen, wenn Play (oder Pfeil
+      // links/rechts) gedrückt wird -- vorher will man in Ruhe die erste Zeile lesen können.
+      teleprompterRunning = false;
       teleprompterHeldPause = false;
-      teleprompterScrollAcc = 0;
       document.body.classList.add('teleprompter-active');
       document.getElementById('teleprompterBtn').classList.add('active');
       preview.contentEditable = 'false';
       applyTeleprompterSpeedToUi();
       updateTeleprompterPlayButton();
+      applyTeleprompterFraming();
+      // Ganz nach oben, damit die erste Zeile genau in der Bildmitte steht (das Polster oben stammt
+      // aus applyTeleprompterFraming()).
+      previewPane.scrollTop = 0;
+      teleprompterScrollPos = 0;
       teleprompterLastFrame = 0;
       teleprompterRafId = requestAnimationFrame(teleprompterFrame);
     }
+
+    // Polster über und unter dem Text, jeweils halbe Sichtfensterhöhe. Damit steht die erste Zeile
+    // bei Scrollposition 0 senkrecht in der Bildmitte (darüber leerer Raum) und die letzte Zeile am
+    // Ende des Scrollwegs ebenfalls in der Mitte (darunter leerer Raum) -- so angefragt.
+    //
+    // Das Polster sitzt auf #markdownPreview, nicht auf der scrollenden .preview-pane: deren
+    // Innenabstand ist in mehreren Media Queries gesetzt (u.a. die 42px-Rinne für den
+    // Block-Anfasser), den würde ein Inline-Wert hier überschreiben und beim Verlassen falsch
+    // wiederherstellen. Die vorherigen Inline-Werte werden gemerkt und beim Beenden zurückgesetzt.
+    // Der Grobwert (halbe Sichtfensterhöhe) allein reicht nicht: dazwischen liegen noch der eigene
+    // Innenabstand der scrollenden .preview-pane und die halbe Höhe der ersten bzw. letzten Zeile
+    // selbst. Gemessen mit dem reinen Grobwert: die erste Zeile stand 95px zu tief, die letzte 53px
+    // zu hoch. Statt diese Beiträge einzeln nachzurechnen (und bei jeder künftigen CSS-Änderung an
+    // Innenabstand, Zeilenhöhe oder Überschriften-Abstand wieder falsch zu liegen) wird die
+    // Abweichung einmal gemessen und abgezogen -- das stimmt unabhängig davon, was sie verursacht.
+    function applyTeleprompterFraming() {
+      if (!teleprompterActive || !teleprompterRestore) return;
+      if (teleprompterRestore.padTop === undefined) {
+        teleprompterRestore.padTop = preview.style.paddingTop;
+        teleprompterRestore.padBottom = preview.style.paddingBottom;
+      }
+      // Bewusst OHNE Scrollen zu messen. Ein erster Anlauf setzte einen Grobwert, scrollte an den
+      // Anfang bzw. ans Ende und rechnete die dort gemessene Abweichung ins Polster zurück -- das
+      // hing am Scrollzustand und schaukelte sich bei jedem Aufruf auf (Polster sprang von 340 auf
+      // 565 und beim nächsten Aufruf auf 20px). Die Abstände INNERHALB der Vorschau verschieben
+      // sich beim Scrollen dagegen nicht mit: sowohl das Element als auch die Vorschau wandern
+      // gleich weit, ihre Differenz bleibt gleich. Damit lässt sich das Polster direkt ausrechnen,
+      // egal wo gerade gescrollt ist und ohne einen zweiten Durchlauf.
+      const rv = preview.getBoundingClientRect();
+      const rp = previewPane.getBoundingClientRect();
+      const paneStil = getComputedStyle(previewPane);
+      const paneOben = parseFloat(paneStil.paddingTop) || 0;
+      const paneUnten = parseFloat(paneStil.paddingBottom) || 0;
+      const mitte = rp.height / 2;
+
+      const erstes = preview.firstElementChild;
+      if (erstes) {
+        const r = erstes.getBoundingClientRect();
+        const istAbstand = r.top - rv.top;                 // Abstand Oberkante Vorschau -> Zeile
+        const sollAbstand = mitte - paneOben - r.height / 2; // damit die Zeile mittig steht
+        const aktuell = parseFloat(getComputedStyle(preview).paddingTop) || 0;
+        preview.style.paddingTop = Math.max(0, aktuell + (sollAbstand - istAbstand)) + 'px';
+      }
+      const letztes = preview.lastElementChild;
+      if (letztes) {
+        const r = letztes.getBoundingClientRect();
+        const istAbstand = rv.bottom - r.bottom;             // Zeile -> Unterkante Vorschau
+        const sollAbstand = mitte - paneUnten - r.height / 2;
+        const aktuell = parseFloat(getComputedStyle(preview).paddingBottom) || 0;
+        preview.style.paddingBottom = Math.max(0, aktuell + (sollAbstand - istAbstand)) + 'px';
+      }
+      teleprompterScrollPos = previewPane.scrollTop;
+    }
+
+    function clearTeleprompterFraming() {
+      if (!teleprompterRestore || teleprompterRestore.padTop === undefined) return;
+      preview.style.paddingTop = teleprompterRestore.padTop;
+      preview.style.paddingBottom = teleprompterRestore.padBottom;
+    }
+
+    // Die Polsterhöhe hängt an der Sichtfensterhöhe -- dreht jemand das Gerät oder ändert die
+    // Fenstergröße, muss sie mitgehen, sonst steht die erste/letzte Zeile nicht mehr mittig.
+    window.addEventListener('resize', () => {
+      if (teleprompterActive) applyTeleprompterFraming();
+    });
 
     function stopTeleprompter() {
       if (!teleprompterActive) return;
@@ -12647,6 +12718,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (teleprompterRafId !== null) { cancelAnimationFrame(teleprompterRafId); teleprompterRafId = null; }
       document.body.classList.remove('teleprompter-active');
       document.getElementById('teleprompterBtn').classList.remove('active');
+      clearTeleprompterFraming();
       const restore = teleprompterRestore;
       teleprompterRestore = null;
       if (restore) {
@@ -12669,9 +12741,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       updateTeleprompterPlayButton();
     }
 
+    // Zwei SVG-Pfade statt der Zeichen ▶/⏸: die rendern je nach System als Emoji in anderer Größe
+    // und Grundlinie, was in einem 34px-Rundknopf neben zwei SVG-Nachbarn sichtbar aus dem Rahmen
+    // fällt. currentColor sorgt dafür, dass sie sich wie die übrigen Symbole einfärben.
+    const TELEPROMPTER_PLAY_PATH = 'M8 5.5v13l11-6.5z';
+    const TELEPROMPTER_PAUSE_PATH = 'M9 5.5h3v13H9zM14 5.5h3v13h-3z';
+
     function updateTeleprompterPlayButton() {
+      const icon = document.getElementById('teleprompterPlayIcon');
       const btn = document.getElementById('teleprompterPlayBtn');
-      if (btn) btn.textContent = teleprompterRunning ? '⏸' : '▶';
+      if (icon) icon.innerHTML = '<path d="' + (teleprompterRunning ? TELEPROMPTER_PAUSE_PATH : TELEPROMPTER_PLAY_PATH) + '"/>';
+      if (btn) btn.title = teleprompterRunning ? 'Pause (Pfeil links/rechts)' : 'Start (Pfeil links/rechts)';
     }
 
     function setTeleprompterSpeed(value) {
@@ -12680,20 +12760,27 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       saveStateToLocalStorage();
     }
 
+    // Kein Zahlen-Label mehr -- der Regler steht ohne Beschriftung in der schwebenden Gruppe (per
+    // Wunsch). Das Tempo bleibt über den Tooltip und die Reglerposition ablesbar.
     function applyTeleprompterSpeedToUi() {
       const slider = document.getElementById('teleprompterSpeed');
-      const label = document.getElementById('teleprompterSpeedLabel');
-      if (slider) slider.value = String(teleprompterSpeed);
-      if (label) label.textContent = String(teleprompterSpeed);
+      if (slider) {
+        slider.value = String(teleprompterSpeed);
+        slider.title = 'Geschwindigkeit: ' + teleprompterSpeed + ' Pixel/Sekunde (Pfeil hoch/runter)';
+      }
     }
 
     function adjustTeleprompterSpeed(delta) {
       setTeleprompterSpeed(teleprompterSpeed + delta);
     }
 
-    // Bruchteile werden über teleprompterScrollAcc aufsummiert, statt pro Frame zu runden: bei
-    // 10 px/s und 60 Hz sind das 0,17 px pro Frame — gerundet wäre das dauerhaft 0, der Text
-    // stünde also bei niedrigem Tempo einfach still.
+    // Die Position wird als Gleitkommazahl geführt und AUCH so gesetzt. Vorher wurden nur ganze
+    // Pixel geschrieben und der Rest aufsummiert -- bei 45 px/s und 60 Hz sind das 0,75 px pro
+    // Frame, also landete mal in einem Frame 1 px und im nächsten 0 px. Genau dieses ungleichmäßige
+    // Weiterrücken war das gemeldete Ruckeln, besonders auf Telefonen (dort kommt bei höherer
+    // Pixeldichte noch mehr Rundungsverlust dazu). Browser unterstützen gebrochene Scrollpositionen
+    // und setzen sie auf ganze Geräte-Pixel um, was bei 2x/3x-Displays deutlich feinere Schritte
+    // ergibt als ganze CSS-Pixel.
     function teleprompterFrame(timestamp) {
       if (!teleprompterActive) return;
       teleprompterRafId = requestAnimationFrame(teleprompterFrame);
@@ -12702,18 +12789,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       teleprompterLastFrame = timestamp;
       if (!teleprompterRunning || teleprompterHeldPause) return;
 
-      teleprompterScrollAcc += teleprompterSpeed * deltaSec;
-      const whole = Math.floor(teleprompterScrollAcc);
-      if (whole < 1) return;
-      teleprompterScrollAcc -= whole;
-
       const maxScroll = previewPane.scrollHeight - previewPane.clientHeight;
       if (maxScroll <= 0) return;
-      const next = Math.min(maxScroll, previewPane.scrollTop + whole);
-      previewPane.scrollTop = next;
+
+      // Von der tatsächlichen Position ausgehen, wenn zwischendurch jemand von Hand gescrollt hat --
+      // sonst würde der Text an die gemerkte Position zurückspringen. Toleranz von 2px, weil der
+      // Browser die gesetzte Gleitkommazahl auf sein Pixelraster rundet und exakt gleich nie ist.
+      if (Math.abs(previewPane.scrollTop - teleprompterScrollPos) > 2) {
+        teleprompterScrollPos = previewPane.scrollTop;
+      }
+      teleprompterScrollPos = Math.min(maxScroll, teleprompterScrollPos + teleprompterSpeed * deltaSec);
+      previewPane.scrollTop = teleprompterScrollPos;
+
       // Am Ende angekommen: anhalten statt weiterzulaufen, aber im Modus bleiben — so lässt sich
       // per Pfeiltaste zurückspulen und erneut starten, ohne den Modus neu zu öffnen.
-      if (next >= maxScroll - 0.5) {
+      if (teleprompterScrollPos >= maxScroll - 0.5) {
         teleprompterRunning = false;
         updateTeleprompterPlayButton();
       }
