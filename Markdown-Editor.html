@@ -3606,9 +3606,12 @@ return rgba;});});}).call(this);
        bleiben unverändert bestehen, werden aber durch dieses display:none hier wirkungslos --
        harmlos, da order/margin-right auf einem ausgeblendeten Element nichts mehr bewirken; extra
        entfernt statt hier dupliziert, um das Diff klein zu halten. */
-    body.mode-focus .app-title,
+    /* Nachtrag: der Titel bleibt jetzt in JEDER Betriebsart und bei jeder Bildschirmbreite sichtbar
+       ("Der Titel Markdown Studio Pro darf ruhig bei allen Bildschirmauflösungen angezeigt
+       werden") -- ausgeblendet werden nur noch die Quelltext/Vorschau-Buttons, die in Fokus und
+       Simple über das Burger-Menü gewählt werden. Damit entfällt auch die Sonderbehandlung, die
+       ihn zuvor eigens für schmale Bildschirme wieder einblenden musste. */
     body.mode-focus .view-toggle-group,
-    body.mode-simple .app-title,
     body.mode-simple .view-toggle-group {
       display: none;
     }
@@ -6197,8 +6200,6 @@ return rgba;});});}).call(this);
          VERBLEIBENDEN Raum, und weil links ein Knopf steht und rechts zwei, lag er gemessen 18px
          neben der Mitte. max-width lässt beiden Randgruppen ihren Platz -- ein langer Titel wird
          gekürzt, statt den Burger-Knopf über den Rand zu schieben. */
-      body.mode-focus .app-title,
-      body.simple-mode .app-title,
       .app-title {
         display: flex;
         position: absolute;
@@ -6720,6 +6721,7 @@ return rgba;});});}).call(this);
         <option value="quote">Zitat</option>
         <option value="code">Code (im Text)</option>
         <option value="codeblock">Code-Block</option>
+        <option value="details">Eingeklappter Text</option>
       </optgroup>
       <optgroup label="Einrückung">
         <option value="indent">Einzug vergrößern</option>
@@ -6856,14 +6858,32 @@ return rgba;});});}).call(this);
     <button type="button" class="toolbar-btn bubble-btn" id="bubbleCodeBtn" onmousedown="event.preventDefault()" onclick="applyPreviewFormat('code')" title="Code"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 8L5 11.6923L9 16M15 8L19 11.6923L15 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
     <button type="button" class="toolbar-btn bubble-btn" id="bubbleCodeBlockBtn" onmousedown="event.preventDefault()" onclick="applyPreviewFormat('codeblock')" title="Code-Block"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15.5 9L15.6716 9.17157C17.0049 10.5049 17.6716 11.1716 17.6716 12C17.6716 12.8284 17.0049 13.4951 15.6716 14.8284L15.5 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13.2942 7.17041L12.0001 12L10.706 16.8297" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M8.49994 9L8.32837 9.17157C6.99504 10.5049 6.32837 11.1716 6.32837 12C6.32837 12.8284 6.99504 13.4951 8.32837 14.8284L8.49994 15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M22 12C22 16.714 22 19.0711 20.5355 20.5355C19.0711 22 16.714 22 12 22C7.28595 22 4.92893 22 3.46447 20.5355C2 19.0711 2 16.714 2 12C2 7.28595 2 4.92893 3.46447 3.46447C4.92893 2 7.28595 2 12 2C16.714 2 19.0711 2 20.5355 3.46447C21.5093 4.43821 21.8356 5.80655 21.9449 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
     <div class="toolbar-divider"></div>
-    <select class="toolbar-select" id="bubbleHeadingSelect" onchange="applyPreviewFormat(this.value); this.selectedIndex = 0;" title="Überschrift">
+    <!-- Gleicher Umfang wie die Format-Auswahl der Werkzeugleiste, plus "Eingeklappter Text".
+         Gemeldet: "Im Bubble Menü im Dropdown fehlen einige Funktionen, die hier auch praktisch
+         wären, wie Zitat, Einrückung, Eingeklappter Text."
+         Geht über applyToolbarFormat() statt direkt über applyPreviewFormat(): nur dieser Verteiler
+         kennt auch Einzug und Ausrücken, die keine Format-, sondern Zeilenoperationen sind. Er
+         entscheidet anhand der Selektion, welche Fläche gemeint ist -- in der Blase ist das immer
+         die Vorschau, was er von selbst richtig erkennt. -->
+    <select class="toolbar-select" id="bubbleHeadingSelect" onchange="if (this.value) applyToolbarFormat(this.value); this.selectedIndex = 0;" title="Absatzformat, Überschrift, Zitat, Code, Einrückung">
       <option value="paragraph" selected>Absatz</option>
-      <option value="h1">Überschrift 1</option>
-      <option value="h2">Überschrift 2</option>
-      <option value="h3">Überschrift 3</option>
-      <option value="h4">Überschrift 4</option>
-      <option value="h5">Überschrift 5</option>
-      <option value="h6">Überschrift 6</option>
+      <optgroup label="Überschrift">
+        <option value="h1">Überschrift 1</option>
+        <option value="h2">Überschrift 2</option>
+        <option value="h3">Überschrift 3</option>
+        <option value="h4">Überschrift 4</option>
+        <option value="h5">Überschrift 5</option>
+        <option value="h6">Überschrift 6</option>
+      </optgroup>
+      <optgroup label="Block">
+        <option value="quote">Zitat</option>
+        <option value="codeblock">Code-Block</option>
+        <option value="details">Eingeklappter Text</option>
+      </optgroup>
+      <optgroup label="Einrückung">
+        <option value="indent">Einzug vergrößern</option>
+        <option value="outdent">Einzug verkleinern</option>
+      </optgroup>
     </select>
     <div class="toolbar-divider"></div>
     <button type="button" class="toolbar-btn bubble-btn" id="bubbleTextColorBtn" onmousedown="event.preventDefault()" onclick="openPreviewColorPopover('text', this)" title="Textfarbe"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 15L9.8 5.5C10.02 4.95 10.55 4.6 11.14 4.6H12.86C13.45 4.6 13.98 4.95 14.2 5.5L18 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7.6 11H16.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect class="color-swatch-indicator" data-color-kind="text" x="4" y="18.5" width="16" height="3" rx="1" fill="#e03131"/></svg></button>
@@ -17515,12 +17535,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const currentIdx = blockHandleMenuActions.findIndex(a => a.current);
       blockHandleMenuSelectedIndex = currentIdx !== -1 ? currentIdx : 0;
       renderBlockHandleMenuButtons(menu);
-      let left = handleRect.right - containerRect.left + 4;
-      const menuWidth = 220; // matches .slash-menu's own fixed width
-      if (left + menuWidth > window.innerWidth - containerRect.left) left = handleRect.left - containerRect.left - menuWidth - 4;
-      menu.style.left = left + 'px';
-      menu.style.top = (handleRect.top - containerRect.top) + 'px';
-      menu.classList.add('active');
+      placeBlockHandleMenu(menu, handleRect, containerRect);
     }
 
     // Same "position:fixed math against mainContainer" conversion as positionBlockHandle() above,
@@ -17550,12 +17565,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       ];
       blockHandleMenuSelectedIndex = 0; // "Zeile darüber einfügen" -- never disabled, always a safe start
       renderBlockHandleMenuButtons(menu);
-      let left = handleRect.right - containerRect.left + 4;
-      const menuWidth = 220; // matches .slash-menu's own fixed width
-      if (left + menuWidth > window.innerWidth - containerRect.left) left = handleRect.left - containerRect.left - menuWidth - 4;
-      menu.style.left = left + 'px';
-      menu.style.top = (handleRect.top - containerRect.top) + 'px';
-      menu.classList.add('active');
+      placeBlockHandleMenu(menu, handleRect, containerRect);
     }
 
     // Item-level counterpart of openBlockHandleMenu — same menu shell/positioning, wired to the
@@ -17585,12 +17595,39 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       ];
       blockHandleMenuSelectedIndex = 0; // "Zeile darüber einfügen" -- never disabled, always a safe start
       renderBlockHandleMenuButtons(menu);
-      let left = handleRect.right - containerRect.left + 4;
-      const menuWidth = 220;
-      if (left + menuWidth > window.innerWidth - containerRect.left) left = handleRect.left - containerRect.left - menuWidth - 4;
-      menu.style.left = left + 'px';
-      menu.style.top = (handleRect.top - containerRect.top) + 'px';
-      menu.classList.add('active');
+      placeBlockHandleMenu(menu, handleRect, containerRect);
+    }
+
+    // Setzt das Block-Menü neben den Anfasser und hält es dabei vollständig im sichtbaren Bereich.
+    // Ersetzt drei wortgleiche Kopien derselben Rechnung in openBlockFormatMenu(),
+    // openBlockHandleMenu() und openListItemHandleMenu().
+    //
+    // Die alte Fassung begrenzte nur waagerecht. Senkrecht setzte sie das Menü schlicht auf die
+    // Höhe des Anfassers -- bei einem Anfasser nahe dem unteren Rand lief es damit aus dem Bild:
+    // gemessen ragte das Format-Menü 240px und das Aktionsmenü 128px über die Unterkante hinaus,
+    // die betroffenen Einträge waren nicht erreichbar. Jetzt wird nach oben verschoben, sobald
+    // unten kein Platz mehr ist, und in beiden Richtungen auf den Rand geklemmt.
+    //
+    // Gerechnet wird in Bildschirmkoordinaten und erst zum Schluss in Container-Koordinaten
+    // umgerechnet: das Menü ist position:absolute innerhalb von #mainContainer, die Grenzen sind
+    // aber die des Fensters.
+    function placeBlockHandleMenu(menu, handleRect, containerRect) {
+      menu.classList.add('active'); // erst sichtbar machen, sonst ist die gemessene Höhe 0
+      const menuRect = menu.getBoundingClientRect();
+      const breite = menuRect.width || 220;
+      const hoehe = menuRect.height || 0;
+      const rand = 4;
+
+      let links = handleRect.right + rand;
+      if (links + breite > window.innerWidth - rand) links = handleRect.left - breite - rand;
+      links = Math.max(rand, Math.min(links, window.innerWidth - breite - rand));
+
+      let oben = handleRect.top;
+      if (oben + hoehe > window.innerHeight - rand) oben = handleRect.bottom - hoehe;
+      oben = Math.max(rand, Math.min(oben, window.innerHeight - hoehe - rand));
+
+      menu.style.left = (links - containerRect.left) + 'px';
+      menu.style.top = (oben - containerRect.top) + 'px';
     }
 
     function closeBlockHandleMenu() {
