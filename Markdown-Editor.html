@@ -7826,19 +7826,45 @@ return rgba;});});}).call(this);
     // any class itself, and whether the checkbox ends up a direct child of <li> or nested inside
     // a <p> depends on whether the list is "loose" (blank lines between items) — a CSS selector
     // alone can't reliably catch both cases, but this class does regardless of list looseness.
+    // Der Abstand zwischen Aufgaben-Kästchen und Beschriftung, einmal definiert und von beiden
+    // Listenarten (eng wie locker) benutzt. Die Klasse steht in CHAR_MAP_EXCLUDED_CLASSES, das
+    // contenteditable="false" macht ihn beim Tippen unteilbar -- die ausführliche Begründung zu
+    // beidem steht im engen Zweig unten.
+    const TASK_CHECKBOX_GAP_HTML = '<span class="task-checkbox-gap" contenteditable="false"> </span>';
+
     hljsRenderer.listitem = function(item) {
       let itemBody = '';
       if (item.task) {
         const checkbox = this.checkbox({ checked: !!item.checked });
         if (item.loose) {
-          if (item.tokens[0]?.type === 'paragraph') {
-            item.tokens[0].text = checkbox + ' ' + item.tokens[0].text;
-            if (item.tokens[0].tokens && item.tokens[0].tokens.length > 0 && item.tokens[0].tokens[0].type === 'text') {
-              item.tokens[0].tokens[0].text = checkbox + ' ' + item.tokens[0].tokens[0].text;
-              item.tokens[0].tokens[0].escaped = true;
-            }
+          // Der Abstand nach dem Kästchen steckte hier früher als blankes Leerzeichen direkt im
+          // Text der Absatzmarke -- mit der Begründung, im lockeren Fall sei er "echter Inhalt",
+          // den pushInlineLeafCharMap ohnehin mitzählt. Nachgemessen stimmt das nicht: für
+          // "- [ ] eins" umfasst der Quellbereich 6-10 genau "eins" und die Zeichenkarte genau
+          // [6,7,8,9], während der Absatz im DOM " \neins" enthielt. Daraus folgten gleich zwei
+          // Fehler -- die Zeichenzählung lag um zwei daneben, und serializeBlockToMarkdown() gab
+          // " eins" für einen Bereich zurück, der nur "eins" abdeckt, schob also bei jedem
+          // Tastendruck ein weiteres Leerzeichen in den Quelltext (gemeldet als "- [ ]  oder auch
+          // nur bei Checkboxen"). Derselbe ausgeschlossene Abstands-Span wie im engen Zweig unten
+          // behebt beides auf einmal und macht die zwei Fälle endlich gleichförmig.
+          //
+          // Kästchen und Abstand werden als INLINE-Marke ganz vorn in die erste Marke gehängt,
+          // nicht als eigene Marke davor. Der frühere Weg (eine zusätzliche text-Marke voranstellen)
+          // traf ohnehin nie den vorgesehenen Zweig -- nachgemessen ist die erste Marke eines
+          // lockeren Aufgaben-Elements ein 'text'-Token, kein 'paragraph' --, und zwei aufeinander
+          // folgende Marken dieser Art fügt marked mit einem Zeilenumbruch zusammen. Genau der
+          // stand dann im DOM ("\neins") und wurde von Turndown zu ebenjenem überzähligen
+          // Leerzeichen. Inline nebeneinander gesetzt entsteht er gar nicht erst, und der echte
+          // Text bleibt unangetastet -- er muss also auch nicht von Hand maskiert werden.
+          const abstand = TASK_CHECKBOX_GAP_HTML;
+          const ersteMarke = item.tokens[0];
+          if (ersteMarke && (ersteMarke.type === 'text' || ersteMarke.type === 'paragraph') && Array.isArray(ersteMarke.tokens)) {
+            ersteMarke.tokens.unshift({ type: 'html', raw: checkbox + abstand, text: checkbox + abstand, block: false });
           } else {
-            item.tokens.unshift({ type: 'text', raw: checkbox + ' ', text: checkbox + ' ', escaped: true });
+            // Der Nullbreiten-Platzhalter bei einer noch leeren Aufgabe: siehe die ausführliche
+            // Begründung am Ende dieser Funktion, wo der enge Fall dasselbe tut.
+            const inhalt = checkbox + abstand + (item.tokens.length === 0 ? '​' : '');
+            item.tokens.unshift({ type: 'text', raw: inhalt, text: inhalt, escaped: true });
           }
         } else {
           // Studio Pro: the space wrapped in its own span, tagged 'task-checkbox-gap' (see
@@ -7868,10 +7894,31 @@ return rgba;});});}).call(this);
           // problem) makes the browser treat it as a single indivisible unit typing must go
           // strictly around, matching what owner.childNodes.length already assumes when it places
           // the caret right after it.
-          itemBody += checkbox + '<span class="task-checkbox-gap" contenteditable="false"> </span>';
+          itemBody += checkbox + TASK_CHECKBOX_GAP_HTML;
         }
       }
-      itemBody += this.parser.parse(item.tokens, !!item.loose);
+      const parsedBody = this.parser.parse(item.tokens, !!item.loose);
+      itemBody += parsedBody;
+
+      // Eine noch leere Aufgabe bekommt einen Nullbreiten-Platzhalter (U+200B) als echten
+      // Textknoten hinter dem Kästchen. Ohne ihn hat das <li> nur das <input> und den nicht
+      // editierbaren Abstands-Span als Kinder -- und eine Cursorposition, die auf so eine
+      // ELEMENTGRENZE zeigt (owner.childNodes.length, siehe sourceOffsetToDomPosition), hat im
+      // Browser überhaupt keine Geometrie: gemessen liefert sie NULL Rechtecke, während dieselbe
+      // Messung in einem echten Textknoten genau ein Rechteck an der richtigen Stelle ergibt.
+      // Der Browser malt den Strich dann irgendwohin -- gemeldet als "Cursor steht im Kästchen"
+      // bzw. auf schmalen Bildschirmen "ganz rechts am Zeilenende wie in der Zeile darüber".
+      //
+      // Derselbe Platzhalter, den leere Absätze längst benutzen, nur hier im DOM statt im
+      // Quelltext: die Aufgabe ist im Quelltext ja bereits auffindbar ("- [ ] "), es fehlt allein
+      // ein zeichenbarer Anker. stripLeftoverPlaceholders() räumt ihn von selbst weg, sobald echter
+      // Text daneben steht, serializeBlockToMarkdown() wirft ihn beim Zurückschreiben ohnehin raus,
+      // und flatTextExcludingMarkers() zählt ihn nirgends als Inhalt -- es musste dafür also nichts
+      // Neues gebaut werden.
+      // Nicht in Exporten/Präsentation/Zwischenablage (suppressDrawingControls) -- dort wird nichts
+      // bearbeitet, es gäbe also keinen Cursor zu verankern, und die Ausgabe bleibt zeichengenau.
+      if (item.task && !item.loose && !suppressDrawingControls && parsedBody.trim() === '') itemBody += '​';
+
       const taskClass = item.task ? ' class="task-list-item"' : '';
       return '<li' + taskClass + '>' + itemBody + '</li>\n';
     };
@@ -9471,10 +9518,19 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // Same reasoning as the theme reapply just above, for the just-synced tab's own
         // pane-visibility/split-ratio -- see persistTabViewState() and switchTab()'s matching
         // per-tab restore. Canvas tabs are excluded the same way switchTab() excludes them.
-        if (current && !simpleMode && current.fileType !== 'canvas') {
-          const tabShowEditor = current.showEditor !== undefined ? current.showEditor : true;
-          const tabShowPreview = current.showPreview !== undefined ? current.showPreview : true;
-          const tabSplitRatio = current.splitRatio !== undefined ? current.splitRatio : 50;
+        //
+        // realTabForRefresh, nicht current: solange eine Canvas-Box zum Bearbeiten offen ist,
+        // liefert getCurrentTab() das BOX-Objekt, nicht den Tab -- genau die Unterscheidung, die
+        // persistTabViewState() schon bewusst über getActiveTabReal() trifft. Eine Box trägt
+        // fileType 'markdown' (gemessen), also lief die Canvas-Ausnahme hier ins Leere, und da eine
+        // Box gar kein showEditor/showPreview speichert, griffen beide Vorgabewerte: true/true.
+        // Ergebnis war, dass JEDER abgeschlossene Sync die Ansicht auf Split zurückstellte, während
+        // in der Box gearbeitet wurde -- gemeldet als "im Canvas Modus ist die Anzeige immer wieder
+        // in den Split Modus gesprungen". Das "immer wieder" kam vom Autosync-Intervall.
+        if (realTabForRefresh && !simpleMode && realTabForRefresh.fileType !== 'canvas') {
+          const tabShowEditor = realTabForRefresh.showEditor !== undefined ? realTabForRefresh.showEditor : true;
+          const tabShowPreview = realTabForRefresh.showPreview !== undefined ? realTabForRefresh.showPreview : true;
+          const tabSplitRatio = realTabForRefresh.splitRatio !== undefined ? realTabForRefresh.splitRatio : 50;
           if (showEditor !== tabShowEditor || showPreview !== tabShowPreview || splitRatio !== tabSplitRatio) {
             showEditor = tabShowEditor;
             showPreview = tabShowPreview;
@@ -21675,8 +21731,36 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       const itemTokens = item.tokens || [];
       const textLeaves = itemTokens.filter(t => t.type === 'text');
+
+      // Nullänge-Bereich direkt hinter der Markierung (und den Leerzeichen dahinter) für ein
+      // Element ganz ohne Textmarke — die ausführliche Begründung steht im engen Zweig unten.
+      const leerePosition = () => {
+        const rawTrimmed = item.raw.replace(/\n+$/, '');
+        let contentStart = rawStart + rawTrimmed.length;
+        while (contentStart < view.text.length && (view.text[contentStart] === ' ' || view.text[contentStart] === '\t')) contentStart++;
+        return view.toAbs(contentStart);
+      };
+
       if (item.loose) {
         blocks.push({ srcStart: null, srcEnd: null, chars: [] }); // <li> itself owns nothing
+        if (item.task && !textLeaves.length) {
+          // Eine LEERE Aufgaben-Zeile in einer lockeren Liste ("- [ ]" mit Leerzeile davor) hat gar
+          // keine eigene Textmarke, erzeugt in der Vorschau aber trotzdem ZWEI Elemente: hljs-
+          // Renderer.listitem() schiebt für das Kästchen eine Textmarke nach, die parser.parse()
+          // im lockeren Fall in ein <p> einpackt. Gezählt wurden also 7 Blöcke gegen 6 Karten --
+          // genau die Ungleichheit, die previewStructureDesynced auslöst und jede weitere Eingabe
+          // einfriert ("Die Vorschau passt gerade nicht zum Quelltext"), obwohl der Quelltext
+          // vollkommen in Ordnung ist. Gemeldet und nachgestellt mit einer Liste, deren letzter
+          // Punkt eine noch leere Checkbox ist -- der Normalfall unmittelbar nachdem Enter eine
+          // neue Checkbox-Zeile angelegt hat.
+          //
+          // Der Eintrag bekommt denselben echten Nullänge-Bereich wie im engen Zweig, nicht null:
+          // sonst wäre die frische Zeile zwar nicht mehr desynchronisiert, aber mangels Besitzer
+          // auch nicht bespielbar (findSourceOwnerElement fände nichts) -- der Cursor säße dann
+          // sichtbar im Kästchen statt dahinter.
+          const pos = leerePosition();
+          blocks.push({ srcStart: pos, srcEnd: pos, chars: [] });
+        }
         for (const leaf of textLeaves) {
           if (leaf.tokens) pushInlineLeafCharMap(leaf, inner, innerCursor, blocks);
           else blocks.push({ srcStart: null, srcEnd: null, chars: [] });
@@ -21717,10 +21801,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           // newline(s) from item.raw before measuring fixes both raw shapes uniformly: a
           // newline-free raw (list-final case) is left unchanged, while a raw that already
           // includes one now measures up to its own real line end, same as the final-item case.
-          const rawTrimmed = item.raw.replace(/\n+$/, '');
-          let contentStart = rawStart + rawTrimmed.length;
-          while (contentStart < view.text.length && (view.text[contentStart] === ' ' || view.text[contentStart] === '\t')) contentStart++;
-          const emptyPos = view.toAbs(contentStart);
+          const emptyPos = leerePosition();
           blocks.push({ srcStart: emptyPos, srcEnd: emptyPos, chars: [] });
         }
       }
@@ -22545,7 +22626,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // before the checkbox rather than after it. owner.childNodes.length is 0 for the genuinely
       // empty case (identical to before) and correctly skips past the checkbox+space for a task
       // item, with no need to special-case which kind of list this is.
-      if (!chars.length) return { node: owner, offset: owner.childNodes.length };
+      //
+      // Zweiter Anlauf an derselben Stelle: eine Position auf einer Elementgrenze ist zwar logisch
+      // richtig, aber nicht zeichenbar -- gemessen null Geometrie-Rechtecke, worauf der Browser den
+      // Cursorstrich an eine beliebige Stelle malt (gemeldet: im Kästchen bzw. am rechten
+      // Zeilenende). Endet der Block auf einem echten Textknoten -- bei einer leeren Aufgabe ist
+      // das jetzt der Nullbreiten-Platzhalter aus hljsRenderer.listitem() --, wird stattdessen
+      // dessen Ende angesteuert; gemessen genau ein Rechteck, unmittelbar hinter dem Kästchen.
+      if (!chars.length) {
+        const letzterKnoten = owner.lastChild;
+        if (letzterKnoten && letzterKnoten.nodeType === 3) {
+          return { node: letzterKnoten, offset: letzterKnoten.nodeValue.length };
+        }
+        return { node: owner, offset: owner.childNodes.length };
+      }
       let local = chars.length;
       for (let i = 0; i < chars.length; i++) {
         if (chars[i] >= offset) { local = i; break; }
@@ -28077,6 +28171,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // completely untouched in editor.value, exactly as it already was before this keystroke.
       const ownerClone = owner.cloneNode(true);
       ownerClone.querySelectorAll([...NESTED_WORD_BLOCK_TAGS].join(',')).forEach((el) => el.remove());
+      // Der Abstands-Span hinter einem Aufgaben-Kästchen ist reine Optik (siehe hljsRenderer.
+      // listitem()) und gehört nicht zum Textbereich, den data-src-start/-end dieses Blocks
+      // abdeckt. Turndown weiß davon nichts und macht aus ihm ein echtes Leerzeichen -- gemessen
+      // lieferte "erste Aufgabe" (Quellbereich 6-19) beim Zurückschreiben " erste Aufgabe". Da
+      // diese Funktion bei JEDEM Tastendruck läuft und ihr Ergebnis über genau diesen Bereich
+      // gelegt wird, wanderte so bei jeder Eingabe in einer Aufgaben-Zeile ein zusätzliches
+      // Leerzeichen in den Quelltext -- im gemeldeten Beispiel als "- [ ]  oder auch nur bei
+      // Checkboxen" zu sehen. Nur dieser eine Span wird entfernt, nicht die übrigen
+      // CHAR_MAP_EXCLUDED_CLASSES: eine Bild- oder Videohülle trägt echten Inhalt, der beim
+      // Zurückschreiben erhalten bleiben muss.
+      ownerClone.querySelectorAll('.task-checkbox-gap').forEach((el) => el.remove());
       const raw = htmlToMarkdownNoEscape(ownerClone.innerHTML, 'newlines');
       // Bug fix: found via a real repro, not just reasoned about — a blockquote soft-broken via
       // handlePreviewEnter's own beforeIsAtBlockStart case (`> ​\nText`, ZWSP marking the quote's
