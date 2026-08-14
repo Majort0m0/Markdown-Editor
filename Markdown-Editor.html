@@ -1807,6 +1807,14 @@ return rgba;});});}).call(this);
       margin-left: auto;
     }
 
+    /* Reihenfolge per CSS statt über die Markup-Reihenfolge: im Quelltext steht der Burger-Knopf
+       vor der Sync-Anzeige (und dazwischen die versteckten Datei-Eingabefelder), gerendert werden
+       sollte er aber ganz rechts -- "das Burgermenü in allen Ansichten konsistent rechtsbündig, der
+       Sync Button ... rechtsbündig, aber links neben dem Burger Menü". Über order bleibt die
+       Markup-Reihenfolge unangetastet, an der mehrere Kommentare und die Tab-Reihenfolge hängen. */
+    .actions-group #burgerMenuBtn { order: 2; }
+    .actions-group .webdav-btn-wrap { order: 1; }
+
     button, .btn-label {
       background-color: transparent;
       border: 1px solid transparent;
@@ -2544,6 +2552,12 @@ return rgba;});});}).call(this);
       gap: 4px 12px;
       font-size: 0.72rem;
       color: var(--text-muted);
+    }
+
+    /* Der Schrägstrich ist die Kurzform für die Schmalansicht und in der Breitansicht überflüssig --
+       dort trennen die Beschriftungen "Wörter"/"Zeichen" bereits eindeutig. Siehe updateStats(). */
+    .footer-stats .stat-slash {
+      display: none;
     }
 
     .app-footer a {
@@ -6155,17 +6169,80 @@ return rgba;});});}).call(this);
         -webkit-overflow-scrolling: touch;
       }
 
-      /* .actions-group's margin-left:auto (see header CSS) is what keeps it flush against the
-         far right edge on a wide, single-line header -- once header wraps it onto its own line
-         here, that auto margin would instead push it flush *right* on that line, unlike its
-         previous (pre-view-toggle-group) space-between-derived flush-left wrap behavior. Reset
-         it back to flush-left, consistent with how .view-toggle-group/.app-title wrap too. */
-      .actions-group {
-        margin-left: 0;
+      /* Kopfzeile bleibt einzeilig: Seitenleisten-Knopf links, Titel mittig, Sync und Burger
+         rechts. Vorher brach die Zeile um und alles rutschte nach links zusammen (gemeldet mit
+         Bildschirmfoto vom iPhone), weil .actions-group hier sein margin-left:auto verlor und
+         header umbrechen durfte. Beides zurückgenommen; der Titel bekommt stattdessen flex:1 und
+         zentriert sich damit im verbleibenden Raum, unabhängig davon, wie breit die beiden
+         Randgruppen gerade sind. */
+      header {
+        position: relative;
+        flex-wrap: nowrap;
+        justify-content: space-between;
+        gap: 6px;
+        padding: 8px 10px;
       }
 
+      .actions-group {
+        margin-left: 0;
+        flex-shrink: 0;
+        overflow-x: visible; /* die Regel oben gilt für die breite Werkzeugleiste, nicht hier */
+      }
+
+      /* Titel auch in Fokus und Simple sichtbar -- dort ist er sonst bewusst ausgeblendet, aber auf
+         dem Telefon ist die Mitte ohnehin frei ("Mittig zentriert wäre dann doch noch Platz für den
+         Titel").
+         Aus dem Fluss genommen und an der halben Kopfzeilenbreite ausgerichtet, statt als
+         flex:1-Element zwischen den Randgruppen zu sitzen: dort zentriert er sich nur im
+         VERBLEIBENDEN Raum, und weil links ein Knopf steht und rechts zwei, lag er gemessen 18px
+         neben der Mitte. max-width lässt beiden Randgruppen ihren Platz -- ein langer Titel wird
+         gekürzt, statt den Burger-Knopf über den Rand zu schieben. */
+      body.mode-focus .app-title,
+      body.simple-mode .app-title,
       .app-title {
-        font-size: 0.9rem;
+        display: flex;
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: calc(100% - 180px);
+        justify-content: center;
+        order: 0;
+        margin-right: 0;
+        font-size: 0.8rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .app-title svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+      }
+
+      #tabSidebarToggleBtn {
+        flex-shrink: 0;
+      }
+
+      /* Fußzeile einzeilig und schmal: statt "86 Wörter · 700 Zeichen" nur noch "86 / 700"
+         (per Wunsch). nowrap auf der Zelle verhindert, dass die Zahlen doch noch umbrechen --
+         genau das war im gemeldeten Bildschirmfoto zu sehen, wo die Fußzeile drei Zeilen hoch war. */
+      .footer-stats .stat-label,
+      .footer-stats .stat-sep {
+        display: none;
+      }
+
+      .footer-stats .stat-slash {
+        display: inline;
+      }
+
+      .footer-stats {
+        white-space: nowrap;
+      }
+
+      .app-footer {
+        padding: 4px 10px;
+        gap: 4px 8px;
       }
 
       main {
@@ -14411,7 +14488,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const text = editor.value.replace(/\u200B/g, '');
       const chars = text.length;
       const words = (text.trim().match(/\S+/g) || []).length;
-      docStats.textContent = `${words} Wörter · ${chars} Zeichen`;
+      // In Bestandteile zerlegt statt als ein Textstück, damit die Schmalansicht die Beschriftungen
+      // per CSS weglassen kann und nur "86 / 700" übrig bleibt (per Wunsch, damit die Fußzeile auf
+      // dem Telefon einzeilig und schmal bleibt). Der Schrägstrich ist immer im Markup und wird nur
+      // in der jeweils anderen Ansicht ausgeblendet -- so muss diese Funktion nichts über die
+      // Fensterbreite wissen und läuft bei jeder Änderung gleich schnell durch.
+      docStats.innerHTML =
+        '<span class="stat-num">' + words + '</span>' +
+        '<span class="stat-label"> Wörter</span>' +
+        '<span class="stat-sep"> · </span>' +
+        '<span class="stat-slash"> / </span>' +
+        '<span class="stat-num">' + chars + '</span>' +
+        '<span class="stat-label"> Zeichen</span>';
     }
 
     let storageIndicatorUpdateTimeout = null;
