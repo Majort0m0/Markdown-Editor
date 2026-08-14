@@ -7244,8 +7244,13 @@ return rgba;});});}).call(this);
         <input type="password" id="webdavPassInput" autocomplete="off" spellcheck="false">
       </div>
       <div class="settings-field settings-field-row">
-        <label><input type="checkbox" id="webdavAutosyncCheckbox"> Automatisch synchronisieren</label>
-        <select id="webdavIntervalSelect">
+        <!-- Wirken sofort, nicht erst über "Speichern": beides sind Schalter, keine einzugebenden
+             Zugangsdaten. Gemeldet als "das Häkchen kann ich deaktivieren, aber wenn ich das
+             Dialogfeld schließe und wieder öffne, ist es wieder aktiviert" -- die Einstellung ging
+             beim Schließen ohne Speichern verloren, während der Dialog beim Öffnen wieder aus der
+             gespeicherten Konfiguration befüllt wird. Siehe applyWebdavAutosyncSettingNow(). -->
+        <label><input type="checkbox" id="webdavAutosyncCheckbox" onchange="applyWebdavAutosyncSettingNow()"> Automatisch synchronisieren</label>
+        <select id="webdavIntervalSelect" onchange="applyWebdavAutosyncSettingNow()">
           <option value="1">alle 1 Min.</option>
           <option value="5">alle 5 Min.</option>
           <option value="15">alle 15 Min.</option>
@@ -9357,6 +9362,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       webdavSyncInProgress = true;
       updateWebdavSyncUi('syncing');
       saveStateToLocalStorage({ skipWebdavDebounce: true });
+      // Zähler für den Ring UND den Intervall-Auslöser neu starten, sobald überhaupt eine
+      // Synchronisierung läuft -- egal wodurch sie ausgelöst wurde.
+      //
+      // Gemeldet als "der Ring sollte geschlossen sein, wenn der Sync-Zeitpunkt erreicht ist, das
+      // passiert aber oft schon bei 3/4". Ursache: es gibt ZWEI automatische Auslöser -- den
+      // Intervall-Zeitgeber und die 10-Sekunden-Verzögerung nach einer Änderung
+      // (scheduleWebdavDebouncedSync). Der Ring zählte nur auf den ersten herunter, während der
+      // zweite jederzeit dazwischen synchronisierte. Der Ring zeigte damit nicht "Zeit bis zur
+      // nächsten Synchronisierung", sondern nur "Zeit bis zur nächsten Intervall-Synchronisierung".
+      // Jetzt beginnt nach jeder tatsächlichen Synchronisierung ein voller neuer Zyklus -- der Ring
+      // schließt sich genau dann, wenn ohne weitere Änderung der nächste Sync ansteht.
+      scheduleWebdavAutosyncTimer();
 
       try {
         const MAX_ATTEMPTS = 4;
@@ -9585,6 +9602,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const url = (webdavConfig && webdavConfig.url) || '';
       const template = '# Markdown Studio WebDAV Config\n\nURL: ' + url + '\nBenutzername: \nApp Kennwort: \n';
       createNewTab('Markdown Studio WebDAV Config.md', template);
+    }
+
+    // Übernimmt Häkchen und Intervall sofort in die gespeicherte Konfiguration. Bewusst nur diese
+    // beiden Felder: URL, Benutzername und Kennwort gehören zusammen und sollen erst als Ganzes
+    // über "Speichern" wirksam werden -- eine halb getippte Adresse dürfte den laufenden Sync nicht
+    // sofort auf ein unbrauchbares Ziel umstellen. Ist noch gar nichts konfiguriert, gibt es auch
+    // nichts zu übernehmen; der Wunsch bleibt dann im Formular stehen und wird beim Speichern der
+    // Zugangsdaten mitgenommen.
+    function applyWebdavAutosyncSettingNow() {
+      if (!webdavConfig) return;
+      webdavConfig.autosyncEnabled = document.getElementById('webdavAutosyncCheckbox').checked;
+      webdavConfig.autosyncIntervalMinutes = parseInt(document.getElementById('webdavIntervalSelect').value, 10) || 5;
+      saveWebdavConfig();
+      scheduleWebdavAutosyncTimer();
+      updateWebdavStatusText();
     }
 
     function saveWebdavConfigFromModal() {
@@ -14633,7 +14665,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (!activeTab.isModified) {
           activeTab.isModified = true;
           renderTabs();
+          return;
         }
+        // Der grüne Akzent zeigt "über WebDAV gesichert und seitdem unverändert" (isTabSynced()).
+        // Er verschwand bisher nur, wenn dieselbe Änderung auch isModified von false auf true
+        // kippte -- und genau das passiert nach einer Synchronisierung nicht mehr: isModified
+        // bedeutet "noch nicht auf die Festplatte gespeichert" und bleibt über einen Sync hinweg
+        // true. Die Tableiste wurde deshalb nicht neu gezeichnet, und der Akzent blieb stehen,
+        // obwohl die Notiz längst wieder vom Serverstand abwich. Jetzt wird zusätzlich neu
+        // gezeichnet, sobald der angezeigte Akzent nicht mehr zum tatsächlichen Zustand passt --
+        // ein DOM-Vergleich, also kein Neuzeichnen bei jedem Tastendruck.
+        const tabEl = tabList.querySelector('[data-tab-id="' + activeTab.id + '"]');
+        if (tabEl && tabEl.classList.contains('synced') !== isTabSynced(activeTab)) renderTabs();
       }
     }
 
