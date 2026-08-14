@@ -29562,7 +29562,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const knoten = auswahl.getRangeAt(0).startContainer;
       if (!preview.contains(knoten)) return;
       const el = knoten.nodeType === 1 ? knoten : knoten.parentElement;
-      const details = el && el.closest ? el.closest('details') : null;
+      // Nur wenn der Cursor im RUMPF steht, nicht im Titel. Das löst zwei Dinge auf einmal:
+      //
+      // 1. Ein Klick auf den Pfeil klappte den Abschnitt kurz auf und sofort wieder zu, erst der
+      //    zweite Klick wirkte. Ursache ist die Reihenfolge bei einer echten Maus: das Setzen des
+      //    Cursors meldet sich schon beim Drücken, das native Auf- und Zuklappen von <details>
+      //    erst beim Loslassen. Dazwischen lief dieses Aufklappen -- und das native Umschalten
+      //    machte es unmittelbar rückgängig. (Mit nachgestellten Klicks tritt es nicht auf, weil
+      //    dort beide Ereignisse ohne Zwischenschritt aufeinanderfolgen.) Landet der Cursor im
+      //    Titel, rührt der Zustand jetzt allein vom nativen Umschalten her -- kein Wettlauf mehr.
+      //
+      // 2. Der Hinweisrahmen soll nur beim Bearbeiten erscheinen, nicht schon beim bloßen Auf- und
+      //    Zuklappen mit Maus oder Finger. Genau das ist der Unterschied: ein Klick auf den Titel
+      //    öffnet die Klappe, ein Cursor im verborgenen Text heißt, dass daran geschrieben wird.
+      const imTitel = !!(el && el.closest && el.closest('summary'));
+      const details = (!imTitel && el && el.closest) ? el.closest('details') : null;
       if (details && details !== zuletztAufgeklapptesDetails && !details.open) details.open = true;
       zuletztAufgeklapptesDetails = details;
       // Hinweisrahmen nur um den Abschnitt, in dem der Cursor gerade steht (siehe
