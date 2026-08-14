@@ -9645,8 +9645,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // Ergebnis war, dass JEDER abgeschlossene Sync die Ansicht auf Split zurückstellte, während
         // in der Box gearbeitet wurde -- gemeldet als "im Canvas Modus ist die Anzeige immer wieder
         // in den Split Modus gesprungen". Das "immer wieder" kam vom Autosync-Intervall.
-        if (realTabForRefresh && !simpleMode && realTabForRefresh.fileType !== 'canvas') {
-          const tabShowEditor = realTabForRefresh.showEditor !== undefined ? realTabForRefresh.showEditor : true;
+        // Canvas hier nicht mehr ausgenommen und dieselbe Vorgabe wie in switchTab() (Vorschau
+        // statt Split, siehe dort) -- sonst hätte ein Sync die gerade wiederhergestellte Ansicht
+        // einer Canvas-Notiz wieder auf Split gezogen.
+        if (realTabForRefresh && !simpleMode) {
+          const istCanvas = realTabForRefresh.fileType === 'canvas';
+          const tabShowEditor = realTabForRefresh.showEditor !== undefined ? realTabForRefresh.showEditor : !istCanvas;
           const tabShowPreview = realTabForRefresh.showPreview !== undefined ? realTabForRefresh.showPreview : true;
           const tabSplitRatio = realTabForRefresh.splitRatio !== undefined ? realTabForRefresh.splitRatio : 50;
           if (showEditor !== tabShowEditor || showPreview !== tabShowPreview || splitRatio !== tabSplitRatio) {
@@ -10255,8 +10259,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // sind zu dem Zeitpunkt bereits korrekt gesetzt), für jede spätere neue Notiz gilt jetzt
         // dieselbe Übernahme statt des harten 50/50-Resets. splitRatio bleibt bewusst bei 50 --
         // nur "welche Bereiche sichtbar sind" wurde angefragt, nicht der genaue Split-Prozentsatz.
-        showEditor: showEditor,
-        showPreview: showPreview,
+        // Ausnahme davon: eine neue Canvas-Notiz startet immer in der Vorschau. Dort ist "Quelltext"
+        // ja nicht die Ansicht der Notiz, sondern die einer einzelnen Box -- eine geerbte
+        // Split-Einstellung würde bloß dazu führen, dass beim ersten Klick in eine Box unerwartet
+        // der Quelltext aufklappt, genau der gemeldete Fehler.
+        showEditor: fileType === 'canvas' ? false : showEditor,
+        showPreview: fileType === 'canvas' ? true : showPreview,
         splitRatio: 50,
         // A brand-new tab's assets (empty, or already extracted from a pasted/opened document
         // with inline images -- see extractInlineImagesToAssets() above) are already fully in
@@ -10383,13 +10391,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         themeSelector.value = tabTheme;
         applyTheme(tabTheme);
         // Quelltext/Vorschau visibility and the split-divider position are per-tab, same
-        // theme-restore pattern just above -- and the same exclusions: Simple Modus overrides
-        // both with its own fixed preset regardless of tab (see enterSimpleMode()), and a
-        // canvas tab's showEditor/showPreview deliberately stay whatever some other tab last
-        // left them at (see isCanvasWithoutOpenBox()'s own comment) rather than being restored
-        // from the canvas tab's own fields, which only exist here as inheritance leftovers.
-        if (!simpleMode && targetTab.fileType !== 'canvas') {
-          showEditor = targetTab.showEditor !== undefined ? targetTab.showEditor : true;
+        // theme-restore pattern just above. Simple Modus überschreibt beides mit seinem eigenen
+        // festen Preset (siehe enterSimpleMode()) und bleibt deshalb ausgenommen.
+        //
+        // Canvas-Notizen waren hier ebenfalls ausgenommen, mit der Begründung, ihre Felder seien
+        // ohnehin nur Erbstücke. Genau daraus entstand aber der gemeldete Fehler: die Canvas-Notiz
+        // übernahm die Ansicht der zuletzt geöffneten Notiz, und stand die im Split, klappte beim
+        // Öffnen einer Box der Quelltext mit auf ("jetzt öffnet sich im canvas modus wieder die
+        // split ansicht, wenn man in eine box klickt"). Sie bekommen jetzt eine eigene gespeicherte
+        // Ansicht wie jede andere Notiz -- mit Vorschau als Vorgabe statt Split, damit eine Box
+        // ohne ausdrückliche Wahl immer in der Vorschau aufgeht. Der Quelltext erscheint dadurch
+        // weiterhin nie von selbst: solange keine Box offen ist, blendet ihn die CSS-Regel
+        // main.canvas-tab-active:not(.canvas-editing-box) unabhängig davon aus.
+        if (!simpleMode) {
+          const istCanvas = targetTab.fileType === 'canvas';
+          showEditor = targetTab.showEditor !== undefined ? targetTab.showEditor : !istCanvas;
           showPreview = targetTab.showPreview !== undefined ? targetTab.showPreview : true;
           splitRatio = targetTab.splitRatio !== undefined ? targetTab.splitRatio : 50;
           applySplitRatio();
@@ -12345,9 +12361,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // Uses getActiveTabReal() rather than getCurrentTab(): while a canvas box is open for
     // editing, getCurrentTab() returns the *box* object, not the real tab, and writing these
     // fields onto a box would leak into that box's own serialized canvasData JSON.
+    // Canvas-Notizen sind hier nicht mehr ausgenommen: nur wenn sie ihre Ansicht auch SPEICHERN
+    // dürfen, kann switchTab() sie beim nächsten Mal wiederherstellen -- sonst erben sie wieder die
+    // Ansicht irgendeiner anderen Notiz (siehe die Begründung dort). Aufgerufen wird das nur von
+    // echten Bedienschritten (Quelltext/Vorschau umschalten, Trennlinie ziehen), eine ausdrückliche
+    // Wahl also, genau wie bei jeder anderen Notiz.
     function persistTabViewState() {
       const tab = getActiveTabReal();
-      if (!tab || simpleMode || tab.fileType === 'canvas') return;
+      if (!tab || simpleMode) return;
       tab.showEditor = showEditor;
       tab.showPreview = showPreview;
       tab.splitRatio = splitRatio;
