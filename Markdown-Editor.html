@@ -7411,6 +7411,8 @@ return rgba;});});}).call(this);
         <tr><td><kbd>Tab</kbd> / <kbd>Umschalt</kbd> + <kbd>Tab</kbd></td><td>Einzug / Ausrücken</td></tr>
         <tr><td><kbd>Enter</kbd> in einer Liste</td><td>Listenpunkt fortsetzen (Aufzählung, Nummerierung, Aufgaben)</td></tr>
         <tr><td><kbd>Enter</kbd> auf leerem Listenpunkt</td><td>Liste beenden</td></tr>
+        <tr><td><kbd>Enter</kbd> im Titel eines eingeklappten Abschnitts</td><td>In den verborgenen Text springen</td></tr>
+        <tr><td><kbd>Enter</kbd> auf leerem Absatz im verborgenen Text</td><td>Abschnitt verlassen und normal weiterschreiben</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Fenster/Dialog schließen</td></tr>
         <tr><td colspan="2" class="shortcuts-section">Teleprompter-Modus</td></tr>
         <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Schneller / langsamer</td></tr>
@@ -16012,6 +16014,49 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // "collapse an empty soft-break line first" step is deliberately KEPT for plain Enter: pressing
     // Enter while sitting on an empty Shift+Enter line now cleans that line up instead of stacking
     // another one, which is what stops the "zu viele leere Absätze im Quelltext" accumulation.
+    // Enter auf einem leeren letzten Absatz verlässt den einklappbaren Abschnitt und setzt einen
+    // gewöhnlichen Absatz dahinter. Ohne das gab es aus einem Abschnitt gar keinen Weg heraus:
+    // gemessen erzeugte Enter im Rumpf immer nur den nächsten Absatz INNERHALB, beliebig oft --
+    // ein normaler Absatz danach (oder ein zweiter Abschnitt) war in der Vorschau unerreichbar.
+    //
+    // Bewusst dieselbe Geste, die diese App bei Listen schon kennt und die auch im
+    // Tastenkürzel-Fenster steht: "Enter auf leerem Listenpunkt beendet die Liste". Der erste Enter
+    // legt also wie gewohnt einen weiteren Absatz im Abschnitt an, der zweite -- auf dem dann noch
+    // leeren Absatz -- geht hinaus. Der leere Absatz wird dabei mitsamt seiner Leerzeile entfernt,
+    // damit im Quelltext kein Rest zurückbleibt.
+    function tryLeaveDetailsFromEmptyParagraph(owner) {
+      if (!owner || owner.tagName !== 'P') return false;
+      const details = owner.closest('details');
+      if (!details || !preview.contains(details)) return false;
+      // Nur vom LETZTEN Block des Abschnitts aus: mittendrin bedeutet Enter weiterhin schlicht
+      // "neuer Absatz hier".
+      const bloecke = [...details.querySelectorAll('[data-src-start]')];
+      if (bloecke[bloecke.length - 1] !== owner) return false;
+      // Und nur, wenn dieser Absatz wirklich leer ist -- der Nullbreiten-Platzhalter zählt nicht
+      // als Inhalt (siehe insertFormatting()'s 'details'-Zweig).
+      if (owner.textContent.replace(/​/g, '').trim() !== '') return false;
+
+      const pStart = Number(owner.dataset.srcStart);
+      const pEnd = Number(owner.dataset.srcEnd);
+      const detailsEnde = Number(details.dataset.blockEnd);
+      if (!Number.isFinite(pStart) || !Number.isFinite(pEnd) || !Number.isFinite(detailsEnde)) return false;
+
+      const text = editor.value;
+      const zeilenStart = text.lastIndexOf('\n', pStart - 1) + 1;
+      // Der leere Absatz endet immer auf "\n\n" vor dem schließenden Tag -- die Leerzeile gehört
+      // zu ihm und muss mit weg, sonst bliebe eine doppelte Leerzeile im Abschnitt stehen.
+      const schnittEnde = Math.min(pEnd + 2, detailsEnde);
+      if (schnittEnde <= zeilenStart) return false;
+
+      const ohneAbsatz = text.slice(0, zeilenStart) + text.slice(schnittEnde);
+      const neuesEnde = detailsEnde - (schnittEnde - zeilenStart);
+      // Derselbe Platzhalter wie überall: ein leerer Absatz ist sonst kein auffindbarer Block, in
+      // den sich der Cursor setzen ließe.
+      editor.value = ohneAbsatz.slice(0, neuesEnde) + '\n\n​' + ohneAbsatz.slice(neuesEnde);
+      finishPreviewStructuralEdit(neuesEnde + 2);
+      return true;
+    }
+
     function handlePreviewEnter(explicitCursorSrc, softBreak) {
       let cursorSrc = explicitCursorSrc;
       // ownerTag stays null for the deferredCreate-driven call (explicitCursorSrc set, see
@@ -16051,6 +16096,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           ownerIsAtomicIslandBlock = !!ownerMap && ownerMap.chars.length === 0 &&
             !!owner.querySelector('[contenteditable="false"]');
           ownerIsListItem = !!owner.closest('li');
+          if (tryLeaveDetailsFromEmptyParagraph(owner)) return;
         }
       }
 
