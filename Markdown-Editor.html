@@ -2567,6 +2567,15 @@ return rgba;});});}).call(this);
       display: none;
     }
 
+    /* Kopfzeile ebenfalls aus (per Wunsch) -- damit bleibt vom Bildschirm nur der Text und die
+       schwebende Bedienung unten. Erreichbar bleibt alles Nötige: Abbrechen und Tempo unten, das
+       Inhaltsverzeichnis als schwebender Knopf oben rechts. Dass die Lesefläche dadurch höher wird,
+       ist unkritisch -- applyTeleprompterFraming() läuft in startTeleprompter() erst NACH dem
+       Setzen dieser Klasse und rechnet also schon mit der neuen Höhe. */
+    body.teleprompter-active header {
+      display: none;
+    }
+
     /* Während des Laufs ist die Vorschau bewusst nicht editierbar (siehe startTeleprompter()) —
        ein Text-Cursor, der über den scrollenden Text wandert, wäre nur störend, und die
        Pfeiltasten gehören hier der Steuerung. */
@@ -11062,7 +11071,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         entry.title = h.textContent;
         entry.style.paddingLeft = (12 + (level - 1) * 14) + 'px';
         entry.onclick = () => {
-          h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Im Teleprompter mittig statt oben ausrichten und die Stelle als neuen Ausgangspunkt
+          // übernehmen (per Wunsch: "dann soll diese Überschrift vertikal mittig zentriert werden
+          // und ab hier gescrollt werden"). Ohne das würde die Überschrift an den oberen Rand
+          // springen und der Lauf danach an die zuvor gemerkte Position zurückziehen.
+          // Bewusst ohne 'smooth': eine noch laufende Scroll-Animation würde mit dem eigenen
+          // Bildlauf des Teleprompters um dieselbe scrollTop-Eigenschaft konkurrieren.
+          if (teleprompterActive) {
+            teleprompterCenterOnRect(h.getBoundingClientRect());
+          } else {
+            h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
           closeToc();
         };
         panel.appendChild(entry);
@@ -12636,11 +12655,23 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       preview.contentEditable = 'false';
       applyTeleprompterSpeedToUi();
       updateTeleprompterPlayButton();
+      // Cursorstelle VOR der Rahmung merken: applyTeleprompterFraming() setzt Polster und
+      // verschiebt damit alles nach unten, danach wäre das Rechteck nicht mehr das gleiche.
+      const cursorRect = teleprompterCursorRect();
+      const cursorVersatzImFeld = cursorRect ? (cursorRect.top - previewPane.getBoundingClientRect().top) : null;
       applyTeleprompterFraming();
-      // Ganz nach oben, damit die erste Zeile genau in der Bildmitte steht (das Polster oben stammt
-      // aus applyTeleprompterFraming()).
-      previewPane.scrollTop = 0;
-      teleprompterScrollPos = 0;
+
+      // Ausgangsposition richtet sich nach dem Cursor (per Wunsch: "wenn der Cursor beim Aufrufen
+      // irgendwo in der Mitte der Notiz war, dann soll ... hier mittig starten"). Nach der Rahmung
+      // wird die Stelle erneut bestimmt, weil das Polster die Zeile inzwischen verschoben hat.
+      // Ohne Cursor in der Notiz bleibt es beim Anfang -- dort steht dann die erste Zeile mittig.
+      const nachRahmung = cursorVersatzImFeld === null ? null : teleprompterCursorRect();
+      if (nachRahmung) {
+        teleprompterCenterOnRect(nachRahmung);
+      } else {
+        previewPane.scrollTop = 0;
+        teleprompterScrollPos = 0;
+      }
       teleprompterLastFrame = 0;
       teleprompterRafId = requestAnimationFrame(teleprompterFrame);
     }
@@ -12698,6 +12729,48 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       teleprompterScrollPos = previewPane.scrollTop;
     }
 
+    // Scrollt so, dass `rect` (ein Bildschirmrechteck) senkrecht in der Mitte der Lesefläche steht,
+    // und übernimmt die Position gleich als Ausgangspunkt für den weiteren Lauf. Relativ gerechnet
+    // -- aus der aktuellen Position plus dem Abstand zur Mitte -- statt aus absoluten Offsets: das
+    // stimmt unabhängig von Polstern, Innenabständen und Blockabständen, dieselbe Überlegung wie
+    // bei applyTeleprompterFraming().
+    function teleprompterCenterOnRect(rect) {
+      if (!rect) return;
+      const rp = previewPane.getBoundingClientRect();
+      const versatz = (rect.top + rect.height / 2) - (rp.top + rp.height / 2);
+      const max = Math.max(0, previewPane.scrollHeight - previewPane.clientHeight);
+      previewPane.scrollTop = Math.max(0, Math.min(max, previewPane.scrollTop + versatz));
+      teleprompterScrollPos = previewPane.scrollTop;
+    }
+
+    // Rechteck der Stelle, an der der Cursor beim Aufrufen des Modus stand. Der zusammengeklappte
+    // Bereich liefert das Rechteck der ZEILE, in der er steht -- genauer als das umgebende Element,
+    // das bei einem langen Absatz mehrere Zeilen hoch ist. Reicht das nicht (kein Cursor in der
+    // Vorschau, etwa weil zuletzt im Quelltext gearbeitet wurde), wird die Quelltextposition über
+    // die vorhandene Positionsabbildung in die Vorschau übersetzt.
+    function teleprompterCursorRect() {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && preview.contains(sel.getRangeAt(0).startContainer)) {
+        const r = sel.getRangeAt(0).getBoundingClientRect();
+        if (r && (r.height > 0 || r.top !== 0)) return r;
+      }
+      const pos = sourceOffsetToDomPosition(editor.selectionStart);
+      if (pos && pos.node) {
+        try {
+          const r = document.createRange();
+          r.setStart(pos.node, pos.offset);
+          r.collapse(true);
+          const rect = r.getBoundingClientRect();
+          if (rect && (rect.height > 0 || rect.top !== 0)) return rect;
+          const el = pos.node.nodeType === Node.TEXT_NODE ? pos.node.parentElement : pos.node;
+          return el ? el.getBoundingClientRect() : null;
+        } catch (err) {
+          return null;
+        }
+      }
+      return null;
+    }
+
     function clearTeleprompterFraming() {
       if (!teleprompterRestore || teleprompterRestore.padTop === undefined) return;
       preview.style.paddingTop = teleprompterRestore.padTop;
@@ -12738,6 +12811,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!teleprompterActive) return;
       teleprompterRunning = !teleprompterRunning;
       teleprompterLastFrame = 0; // sonst holt der erste Frame nach dem Weiterlaufen die Pause nach
+      // Beim Starten dort weitermachen, wo die Notiz gerade steht: solange nicht gescrollt wird,
+      // kann der Nutzer die Notiz frei von Hand an die gewünschte Stelle schieben, und Play soll
+      // genau von dort loslaufen (per Wunsch). teleprompterFrame() hat dafür zwar eine 2px-Toleranz,
+      // die aber erst beim nächsten Frame greift -- hier explizit zu übernehmen ist eindeutiger und
+      // verhindert einen sichtbaren Ruck im ersten Frame.
+      if (teleprompterRunning) teleprompterScrollPos = previewPane.scrollTop;
       updateTeleprompterPlayButton();
     }
 
