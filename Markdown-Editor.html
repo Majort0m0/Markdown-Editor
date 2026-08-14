@@ -19179,6 +19179,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         }
         if (markdown) {
           e.preventDefault();
+          // Auch hier umschreiben, nicht nur im Nur-Text-Zweig unten: eine Kopie aus der Vorschau
+          // landet als formatiertes HTML auf der Zwischenablage und nimmt deshalb genau diesen Weg.
+          // htmlToMarkdown() liefert dabei die blosse Kennung zurueck (gemessen:
+          // "![Bild A](asset:img_1)", ohne Bilddaten), die sonst gegen die Bilder der ZIELnotiz
+          // aufgeloest wuerde -- der gemeldete Fehler.
+          const umgeschrieben = /asset:[A-Za-z0-9_]+/.test(markdown) ? remapPastedAssetReferences(markdown, tab) : null;
+          if (umgeschrieben !== null) markdown = umgeschrieben;
           markdown = await embedExternalPasteImages(markdown, tab);
           insertMarkdownAtPreviewRange(range, markdown);
           return;
@@ -24555,6 +24562,25 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return assetId;
     }
 
+    // Vergibt eine freie Kennung für eine eingefügte Datei und behält dabei die Vorsilbe der
+    // ursprünglichen bei ('audio_' statt 'img_'). Rein kosmetisch -- welche Art von Einbettung
+    // gerendert wird, entscheiden allein die Marker-Karten (audioAssetIds & Co.), nicht der Name --
+    // aber eine Sprachaufnahme, die nach dem Einfügen plötzlich 'img_3' heißt, liest sich im
+    // Quelltext schlicht falsch. Zähler und Ablage sind dieselben wie in registerImageAsset().
+    function registerPastedAsset(tab, dataUrl, originalId) {
+      const vorsilbe = /^([A-Za-z]+_)/.exec(originalId || '');
+      if (!vorsilbe || vorsilbe[1] === 'img_') return registerImageAsset(tab, dataUrl);
+      if (!tab.assets) tab.assets = {};
+      let assetId;
+      do {
+        tab.assetCounter = (tab.assetCounter || 0) + 1;
+        assetId = vorsilbe[1] + tab.assetCounter;
+      } while (assetId in tab.assets);
+      tab.assets[assetId] = dataUrl;
+      persistAssetToIndexedDb(tab, assetId);
+      return assetId;
+    }
+
     function insertImageAsset(dataUrl, defaultAlt) {
       if (editor.disabled) return;
       const tab = getCurrentTab();
@@ -28786,7 +28812,51 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const tab = getCurrentTab();
       const start = editor.selectionStart, end = editor.selectionEnd;
       if (!tab || start === end) { internalClipboardSnapshot = null; return; }
-      const text = editor.value.slice(start, end);
+      captureInternalClipboardSnapshotFromText(editor.value.slice(start, end), tab);
+    }
+
+    // Gegenstück für die WYSIWYG-Vorschau. Dort gibt es keine Textfeld-Auswahl, aus der sich der
+    // Quelltext-Ausschnitt ablesen liesse -- beide Enden der Bereichsauswahl werden deshalb über
+    // die vorhandene Positionsabbildung in Quelltextpositionen übersetzt.
+    //
+    // Ohne das griff der ganze Mechanismus beim Arbeiten in der Vorschau nie: der Schnappschuss
+    // hing ausschliesslich am copy/cut des Quelltextfelds. Gemeldet und nachgestellt -- zwei Notizen
+    // mit je einem anderen Bild, beide unter asset:img_1; der Inhalt der einen in die andere
+    // kopiert zeigte zweimal DEREN Bild, weil die eingefügte Referenz gegen die Bilder der
+    // Zielnotiz aufgelöst wird. Gemessen: internalClipboardSnapshot blieb beim Kopieren in der
+    // Vorschau null.
+    function captureInternalClipboardSnapshotFromPreview() {
+      const tab = getCurrentTab();
+      const sel = window.getSelection();
+      if (!tab || !sel || sel.rangeCount === 0 || sel.isCollapsed) { internalClipboardSnapshot = null; return; }
+      const range = sel.getRangeAt(0);
+      if (!preview.contains(range.startContainer) || !preview.contains(range.endContainer)) return;
+      let a = domPositionToSource(range.startContainer, range.startOffset);
+      let b = domPositionToSource(range.endContainer, range.endOffset);
+
+      // Rückfall über die Quellbereiche der berührten Blöcke. Nötig für den häufigsten Fall
+      // überhaupt, "alles markieren": dann liegen beide Grenzen auf dem Vorschau-Element selbst,
+      // nicht in einem Text, und domPositionToSource() hat dafür keinen Besitzer -- gemessen blieb
+      // der Schnappschuss dabei leer. Über die enthaltenen Textknoten zu gehen reicht hier nicht:
+      // ein Bild-Absatz hat gar keinen eigenen Text (nur die Hover-Schaltflächen, die alle auf den
+      // Absatzanfang zeigen), sein Bereich fiele also hinten aus der Auswahl heraus -- genau der
+      // Teil, um den es hier geht. data-src-start/-end am Block deckt ihn dagegen vollständig ab.
+      if (a == null || b == null) {
+        let min = null, max = null;
+        preview.querySelectorAll('[data-src-start]').forEach(el => {
+          if (!range.intersectsNode(el)) return;
+          const s = parseInt(el.dataset.srcStart, 10), e = parseInt(el.dataset.srcEnd, 10);
+          if (!isNaN(s) && (min === null || s < min)) min = s;
+          if (!isNaN(e) && (max === null || e > max)) max = e;
+        });
+        if (a == null) a = min;
+        if (b == null) b = max;
+      }
+      if (a == null || b == null) { internalClipboardSnapshot = null; return; }
+      captureInternalClipboardSnapshotFromText(editor.value.slice(Math.min(a, b), Math.max(a, b)), tab);
+    }
+
+    function captureInternalClipboardSnapshotFromText(text, tab) {
       const ids = new Set();
       let m;
       const idRe = /asset:([A-Za-z0-9_]+)/g;
@@ -28806,6 +28876,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     editor.addEventListener('copy', captureInternalClipboardSnapshot);
     editor.addEventListener('cut', captureInternalClipboardSnapshot);
+    preview.addEventListener('copy', captureInternalClipboardSnapshotFromPreview);
+    preview.addEventListener('cut', captureInternalClipboardSnapshotFromPreview);
 
     // Rewrites any asset:ID reference in freshly pasted text against internalClipboardSnapshot
     // (above), copying the real byte data into destTab under whichever ID it ends up using.
@@ -28814,13 +28886,26 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // same bytes under it — the latter is the common "paste back into the very note it was copied
     // from" case, e.g. duplicating a paragraph that contains an image. A real collision (the ID is
     // already taken by *different* data — the reported bug) mints a fresh one instead, the same
-    // 'img_' + assetCounter scheme every other insert path uses (see registerImageAsset()).
+    // prefix + assetCounter scheme every other insert path uses (see registerPastedAsset()).
     // Returns the rewritten text, or null if there was nothing to remap (no snapshot for this
     // exact paste, or it referenced no id this snapshot actually has data for) — the caller then
     // leaves the paste to fall through to the native, unmodified path.
     function remapPastedAssetReferences(text, destTab) {
       const snapshot = internalClipboardSnapshot;
-      if (!snapshot || !snapshot.text.includes(text)) return null;
+      if (!snapshot) return null;
+      // Zwei Wege, dieselbe Frage zu beantworten: "stammt dieser Einfügevorgang aus unserer eigenen
+      // Kopie?". Der Textvergleich ist das starke Signal und gilt weiter für einen einfachen
+      // Textkopiervorgang. Er scheitert aber, sobald der Weg über die Vorschau läuft: dort steht
+      // formatiertes HTML auf der Zwischenablage, das htmlToMarkdown() zurückwandelt -- und dabei
+      // normalisiert Turndown Leerzeichen und Zeilenenden, sodass das Ergebnis kein wörtlicher
+      // Ausschnitt des Originals mehr ist (gemessen: Quelle endete auf "\n", die Rückwandlung
+      // nicht). Deshalb genügt ersatzweise, dass JEDE im Text vorkommende Kennung auch im
+      // Schnappschuss liegt -- genau das ist die Voraussetzung dafür, dass die Umschreibung
+      // überhaupt etwas Sinnvolles tun kann.
+      const kennungen = (text.match(/asset:([A-Za-z0-9_]+)/g) || []).map(s => s.slice(6));
+      const passtZumSchnappschuss = snapshot.text.includes(text) ||
+        (kennungen.length > 0 && kennungen.every(id => id in snapshot.assets));
+      if (!passtZumSchnappschuss) return null;
       if (!destTab.assets) destTab.assets = {};
 
       const idMap = {};
@@ -28829,8 +28914,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (!(id in snapshot.assets)) return match;
         if (!(id in idMap)) {
           const existing = destTab.assets[id];
-          const finalId = (existing === undefined || existing === snapshot.assets[id]) ? id : registerImageAsset(destTab, snapshot.assets[id]);
-          if (finalId === id) destTab.assets[id] = snapshot.assets[id]; // registerImageAsset() already wrote it for the fresh-id branch
+          const finalId = (existing === undefined || existing === snapshot.assets[id]) ? id : registerPastedAsset(destTab, snapshot.assets[id], id);
+          if (finalId === id) destTab.assets[id] = snapshot.assets[id]; // registerPastedAsset() already wrote it for the fresh-id branch
           if (snapshot.drawingAssetIds[id]) { destTab.drawingAssetIds = destTab.drawingAssetIds || {}; destTab.drawingAssetIds[finalId] = true; }
           if (snapshot.rawDrawingAssetIds[id]) { destTab.rawDrawingAssetIds = destTab.rawDrawingAssetIds || {}; destTab.rawDrawingAssetIds[finalId] = true; }
           if (snapshot.pdfDrawingAssetIds[id]) { destTab.pdfDrawingAssetIds = destTab.pdfDrawingAssetIds || {}; destTab.pdfDrawingAssetIds[finalId] = true; }
@@ -28875,6 +28960,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         }
         if (markdown) {
           e.preventDefault();
+          // Gleiche Ergänzung wie im HTML-Zweig des Vorschau-Handlers: eine Kopie aus der Vorschau
+          // kann auch hier ankommen (Quelltext offen, Kopie aus der Vorschau daneben).
+          const umgeschrieben = /asset:[A-Za-z0-9_]+/.test(markdown) ? remapPastedAssetReferences(markdown, pasteTab) : null;
+          if (umgeschrieben !== null) markdown = umgeschrieben;
           markdown = await embedExternalPasteImages(markdown, pasteTab);
           insertPlainTextAtCursor(markdown);
         }
