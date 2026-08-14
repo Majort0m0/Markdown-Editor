@@ -12961,9 +12961,23 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       updateBurgerModeSelector();
     }
 
+    // Die Betriebsart bringt ihre Ansicht mit: Fokus und Simple starten in der reinen Vorschau,
+    // Voll im geteilten Fenster. Vorher blieb die Ansicht einfach stehen, und wer aus Simple heraus
+    // wechselte, landete sogar zwangsläufig im Split -- exitSimpleModePreset() stellt darauf zurück,
+    // gleich wohin es geht. Gemeldet als "wenn ich im burger menü den Fokus Modus auswähle wird
+    // immer auch automatisch split view gewählt".
+    //
+    // Bewusst hier und nicht in applyOperatingMode(): das ist der Weg, den eine ausdrückliche Wahl
+    // im Menü nimmt. applyOperatingMode() läuft auch beim Laden der Seite, und dort würde ein
+    // Erzwingen die pro Notiz gemerkte Ansicht bei jedem Start überschreiben. Dieselbe Trennung wie
+    // bei applyTheme()/changeTheme() und applyContentWidth()/changeContentWidth().
     function changeOperatingMode(mode) {
       operatingMode = mode;
       applyOperatingMode(mode);
+      showEditor = (mode === 'voll');
+      showPreview = true;
+      applyPaneVisibility();
+      persistTabViewState();
       saveStateToLocalStorage();
     }
 
