@@ -20539,10 +20539,31 @@ Zentrale Kernaussage oder Zitat für diese Folie.
             // one click; cursor always lands right after <summary> since that's what needs typing
             // first either way (an empty summary has nothing else to fill in yet, and text already
             // selected already covers the body).
+            //
+            // Ohne ausgewählten Text bekommen Titel und Rumpf je einen Nullbreiten-Platzhalter.
+            // Gemeldet als "die Eingabe von Eingeklapptem Text ist im Vorschau Modus ziemlich
+            // kompliziert", und nachgemessen war sie das aus zwei Gründen: der Cursor im leeren
+            // <summary> hatte NULL Geometrie-Rechtecke, war also unsichtbar, und der Rumpf bestand
+            // im Quelltext nur aus einer Leerzeile -- er ergab gar keinen Block, den man in der
+            // Vorschau hätte anklicken können. Der Inhalt ließ sich also überhaupt nur im
+            // Quelltext eintragen.
+            //
+            // Der Platzhalter ist derselbe, den leere Absätze längst benutzen (siehe
+            // handlePreviewEnter): U+200B ist für marked kein Leerraum und wird deshalb zu einem
+            // echten, wenn auch unsichtbaren Absatz -- ein anklickbarer Ort mit zeichenbarem
+            // Cursor. serializeBlockToMarkdown() wirft ihn wieder heraus, sobald wirklich etwas
+            // getippt wird. Mit ausgewähltem Text bleibt alles wie bisher: der Text IST dann der
+            // Rumpf, es fehlt nichts, was ein Platzhalter erst auffindbar machen müsste.
+            //
+            // Der Titel-Platzhalter gilt in BEIDEN Fällen: der Cursor landet immer im noch leeren
+            // Titel, und dort ist er ohne ihn unsichtbar -- gleich ob der Rumpf schon aus
+            // ausgewähltem Text besteht oder nicht. Nur der Rumpf-Platzhalter entfällt bei einer
+            // Auswahl, denn dann steht dort ja bereits Text.
+            const platzhalter = previewFormatInsertion ? '​' : '';
             const prefix = '\n\n<details>\n<summary>';
             const suffix = selection
-              ? '</summary>\n\n' + selection + '\n\n</details>\n\n'
-              : '</summary>\n\n</details>\n\n';
+              ? platzhalter + '</summary>\n\n' + selection + '\n\n</details>\n\n'
+              : platzhalter + '</summary>\n\n' + (platzhalter || '') + '\n\n</details>\n\n';
             replacement = prefix + suffix;
             newCursorPos = start + prefix.length;
             break;
@@ -20878,7 +20899,24 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // implementation that could drift from the textarea's own behavior. Called from the bubble
     // toolbar's own buttons/select and from the shortcut dispatcher's own preview special-case
     // above (see PREVIEW_SHORTCUT_ACTION_IDS).
+    // Wahr, solange eine Formatierung über die WYSIWYG-Vorschau läuft. Nur der 'details'-Zweig in
+    // insertFormatting() liest sie: seine unsichtbaren Platzhalter sind eine reine Cursorhilfe für
+    // die Vorschau und hätten im Quelltextfeld keinen Nutzen -- dort bliebe bloß ein unsichtbares
+    // Zeichen im gespeicherten Dokument zurück, das niemand mehr entfernt. Dieselbe Bauart wie
+    // suppressDrawingControls: eine Flagge, die eine geteilte Funktion für die Dauer eines Aufrufs
+    // umschaltet.
+    let previewFormatInsertion = false;
+
     function applyPreviewFormat(type) {
+      try {
+        previewFormatInsertion = true;
+        applyPreviewFormatInner(type);
+      } finally {
+        previewFormatInsertion = false;
+      }
+    }
+
+    function applyPreviewFormatInner(type) {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
       const range = sel.getRangeAt(0);
@@ -21356,6 +21394,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (noHoverMedia.matches && !blockHandleTypingPause && sel && sel.rangeCount > 0) {
           showBlockHandleForCurrentSelection();
         }
+        openDetailsAroundCaret(sel);
       }
     });
 
@@ -29038,7 +29077,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // HTML text, never markdown (marked's raw-HTML-block handling never recurses into it), so
         // Turndown's job below (reconstructing markdown SYNTAX from rendered HTML) is exactly wrong
         // here too -- textContent already gives back the literal characters, verbatim.
-        return owner.textContent;
+        //
+        // Bis auf den Nullbreiten-Platzhalter, mit dem ein frisch eingefügter Abschnitt seinen noch
+        // leeren Titel bespielbar hält (siehe insertFormatting()'s 'details'-Zweig): der ist reine
+        // Cursorhilfe und hat im Quelltext nichts verloren, sobald wirklich getippt wurde -- genau
+        // wie im PRE-Zweig direkt darüber. Bleibt der Titel leer, schreibt ihn der Zweig unten beim
+        // nächsten Rendern ohnehin neu.
+        return owner.textContent.replace(/​/g, '');
       }
       // Bug fix: 'newlines' (not the default full .trim()) — a genuinely-typed trailing space
       // (e.g. the space right before where the user is about to type "/" to open the slash menu)
@@ -29385,8 +29430,61 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // a code block's own content legitimately can be, so there's no "\n WITHIN the same block"
     // behavior to give it here the way handleCodeBlockBeforeInput() gives Enter inside a fenced
     // block.
+    // Setzt den Cursor aus dem Titel eines einklappbaren Abschnitts in dessen Rumpf. Der Rumpf ist
+    // der erste Block innerhalb des <details>, der nicht der Titel ist -- seit ein frisch
+    // eingefügter Abschnitt dort einen Platzhalterabsatz mitbringt (siehe insertFormatting()'s
+    // 'details'-Zweig), gibt es den auch dann, wenn noch nichts geschrieben wurde.
+    function moveCaretIntoDetailsBody(summaryEl) {
+      const details = summaryEl.closest('details');
+      const rumpf = details && details.querySelector('[data-src-start]:not(summary)');
+      if (!rumpf) return false;
+      const ziel = Number(rumpf.dataset.srcStart);
+      if (!Number.isFinite(ziel)) return false;
+      const pos = sourceOffsetToDomPosition(ziel);
+      if (!pos) return false;
+      const r = document.createRange();
+      r.setStart(pos.node, pos.offset);
+      r.collapse(true);
+      sel_replaceSelection(r);
+      editor.setSelectionRange(ziel, ziel);
+      // Sofort, nicht erst über das selectionchange-Ereignis: das kommt asynchron, und bis dahin
+      // hätte der Nutzer schon in einen unsichtbaren Rumpf getippt.
+      openDetailsAroundCaret();
+      return true;
+    }
+
+    // Zuletzt wegen des Cursors aufgeklappter Abschnitt. Der Vergleich merkt sich das ELEMENT, nicht
+    // bloß "war schon offen": nach einem vollständigen Neuaufbau der Vorschau ist es ein anderes
+    // Element, der Abschnitt geht also wieder auf -- genau richtig, weil der Cursor ja weiterhin
+    // darin steht. Klappt der Nutzer ihn dagegen selbst zu, während der Cursor drin bleibt, ist es
+    // dasselbe Element wie zuvor und er bleibt zu.
+    let zuletztAufgeklapptesDetails = null;
+
+    // Ein eingeklappter Abschnitt zeigt seinen Rumpf nicht an -- gemessen null sichtbare Höhe. Wer
+    // dort hineinschreibt, tippte also blind, was die Eingabe erst recht kompliziert machte. Sobald
+    // der Cursor in einen Abschnitt wandert, klappt er deshalb auf. Über die Auswahl statt über
+    // Klicks, damit es gleichermaßen für den Sprung aus dem Titel (Enter), einen Klick in den Rumpf
+    // und das Wiederherstellen des Cursors nach einem Neuaufbau gilt. Der eingeklappte Zustand im
+    // Quelltext bleibt unberührt: aufgeklappt wird nur die Anzeige, nicht das Dokument.
+    function openDetailsAroundCaret(sel) {
+      const auswahl = sel || window.getSelection();
+      if (!auswahl || auswahl.rangeCount === 0) return;
+      const knoten = auswahl.getRangeAt(0).startContainer;
+      if (!preview.contains(knoten)) return;
+      const el = knoten.nodeType === 1 ? knoten : knoten.parentElement;
+      const details = el && el.closest ? el.closest('details') : null;
+      if (details && details !== zuletztAufgeklapptesDetails && !details.open) details.open = true;
+      zuletztAufgeklapptesDetails = details;
+    }
+
     function handleSummaryBeforeInput(e, owner, range) {
-      if (e.inputType === 'insertParagraph') { e.preventDefault(); return; }
+      // Enter im Titel springt in den Rumpf, statt wirkungslos zu verpuffen. Ein <summary> ist eine
+      // einzelne Zeile, ein Zeilenumbruch darin ergibt nichts -- deshalb wurde das Ereignis hier
+      // bisher schlicht abgewiesen. Da Titel und Rumpf beim Einfügen ohnehin nacheinander gefüllt
+      // werden, ist das Weiterspringen die naheliegende Bedeutung und erspart den gezielten Klick
+      // in den Rumpf. Das preventDefault() bleibt in jedem Fall: der Browser dürfte auch dann
+      // keinen Umbruch in den Titel schreiben, wenn der Rumpf einmal nicht auffindbar ist.
+      if (e.inputType === 'insertParagraph') { e.preventDefault(); moveCaretIntoDetailsBody(owner); return; }
       if (!PREVIEW_ALLOWED_INPUT_TYPES.has(e.inputType)) { e.preventDefault(); return; }
       // Everything else (insertText, deleteContentBackward/Forward, deleteByCut, composition)
       // falls through to native handling, picked up by the ordinary 'input' listener's
