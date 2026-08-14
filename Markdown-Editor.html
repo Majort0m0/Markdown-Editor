@@ -2177,7 +2177,14 @@ return rgba;});});}).call(this);
       gap: 2px;
       overflow-y: auto;
       scrollbar-width: thin;
-      flex: 1;
+      /* Nur so hoch wie ihr Inhalt (statt flex:1), damit der "+ Neue Notiz"-Knopf darunter direkt
+         an die letzte Notiz anschließt und nicht ans untere Panelende gedrückt wird -- im
+         angehefteten Zustand ist das Panel bildschirmhoch, dort fiel der Abstand am stärksten auf
+         ("Im angehefteten Zustand ist der Button ganz unten. Lieber wäre es mir, der Button wäre
+         unter der letzten Notiz direkt anschließend."). Passen die Notizen nicht mehr in die
+         verfügbare Höhe, schrumpft die Liste (min-height:0) und scrollt wie bisher; der Knopf
+         bleibt dann unmittelbar unter ihrem sichtbaren Ende. */
+      flex: 0 1 auto;
       min-height: 0;
       padding: 6px;
     }
@@ -2292,21 +2299,30 @@ return rgba;});});}).call(this);
       min-width: 0;
     }
 
+    /* Gelb hinterlegt, damit er ins Auge springt (per Wunsch). Weicher Ton statt kräftigem Gelb:
+       der Knopf sitzt direkt unter der Notizliste und soll auffallen, ohne mit der blauen
+       Markierung der aktiven Notiz um Aufmerksamkeit zu ringen. Die frühere Trennlinie nach oben
+       entfällt -- die farbige Fläche grenzt sich jetzt von selbst ab, und seit die Liste nur noch
+       so hoch wie ihr Inhalt ist, wäre eine Linie quer durch leeren Panelraum ohnehin verwirrend.
+       Eigener Innenabstand und Radius, damit er als Fläche innerhalb des Panels lesbar bleibt. */
     .add-tab-btn {
-      background: transparent;
-      border: none;
-      border-top: 1px solid var(--border-color);
+      background-color: #fff3bf;
+      border: 1px solid #ffe066;
+      border-radius: 6px;
+      margin: 0 6px 6px;
       font-size: 0.82rem;
+      font-weight: 600;
       padding: 8px 10px;
-      color: var(--text-muted);
+      color: #7a5b00;
       cursor: pointer;
       text-align: left;
       flex-shrink: 0;
     }
 
     .add-tab-btn:hover {
-      background-color: #f0f3f6;
-      color: var(--text-main);
+      background-color: #ffec99;
+      border-color: #ffd43b;
+      color: #5c4400;
     }
 
     /* Markdown Formatting Toolbar */
@@ -8351,6 +8367,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     let lastTemplateId = 'blank';
 
+    // Die Willkommensnotiz ist eine einmalige Begrüßung, kein Vorlagentext. Ohne diesen Merker
+    // entschied allein "es ist gerade keine Notiz offen" darüber, ob sie erzeugt wird -- wer alle
+    // Notizen schloss und dann auf "+ Neue Notiz" drückte, bekam sie also wieder, statt einer
+    // leeren Notiz. Gemeldet genau so. Wird beim Speichern mitgeschrieben (siehe
+    // saveStateToLocalStorage), gilt also dauerhaft und nicht nur für die laufende Sitzung.
+    let welcomeNoteUsed = false;
+
     function openTemplateModal() {
       renderTemplateGrid();
       document.getElementById('templateModal').classList.add('active');
@@ -8817,6 +8840,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         contentWidthMode: contentWidthMode,
         wysiwygEnabled: wysiwygEnabled,
         lastTemplateId: lastTemplateId,
+        welcomeNoteUsed: welcomeNoteUsed,
         teleprompterSpeed: teleprompterSpeed,
         webdavPendingDeletions: webdavPendingDeletions
       };
@@ -8973,6 +8997,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // removed can never silently reintroduce the classic, non-WYSIWYG behavior with no UI
         // left to turn it back off again.
         lastTemplateId = state.lastTemplateId || 'blank';
+        // Rückfall für Sitzungen, die vor diesem Merker gespeichert wurden: wer schon Notizen hat,
+        // hat die Willkommensnotiz längst gesehen -- sie darf dort nicht nachträglich wieder
+        // auftauchen, bloß weil das Feld im gespeicherten Zustand noch fehlt.
+        welcomeNoteUsed = state.welcomeNoteUsed !== undefined
+          ? !!state.welcomeNoteUsed
+          : (Array.isArray(state.tabs) && state.tabs.length > 0);
         webdavPendingDeletions = state.webdavPendingDeletions || [];
 
         themeSelector.value = currentTheme;
@@ -10100,7 +10130,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     async function createNewTab(name = null, content = null, fileHandle = null, nativeFilePath = null) {
       const tabId = 'tab_' + tabIdCounter++;
       const tabName = name || 'Notiz ' + (tabs.length + 1) + '.md';
-      const rawContent = content !== null ? content : (tabs.length === 0 ? defaultContent : '# ' + tabName.replace('.md', '') + '\n\n');
+      // Die Willkommensnotiz nur beim allerersten Mal, danach nie wieder -- siehe welcomeNoteUsed.
+      const nimmWillkommen = content === null && tabs.length === 0 && !welcomeNoteUsed;
+      if (nimmWillkommen) welcomeNoteUsed = true;
+      const rawContent = content !== null ? content : (nimmWillkommen ? defaultContent : '# ' + tabName.replace('.md', '') + '\n\n');
       const fileType = getFileTypeFromName(tabName);
 
       // A document matching the "Markdown Studio WebDAV Config" template is a credential
