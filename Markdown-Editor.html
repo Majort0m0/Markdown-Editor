@@ -3643,15 +3643,26 @@ return rgba;});});}).call(this);
       flex: 1;
     }
 
+    /* Untereinander statt in einer Zeile: seit Hilfe und Anleitung hier stehen (vorher am Ende des
+       Tastenkürzel-Fensters), wären drei Verweise nebeneinander nicht mehr lesbar. */
     .burger-menu-about {
-      padding: 8px 8px 4px;
+      padding: 8px 8px 6px;
       font-size: 12px;
       color: var(--text-muted);
       line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
     }
 
     .burger-menu-about a {
       color: var(--text-muted);
+      text-decoration: none;
+    }
+
+    .burger-menu-about a:hover {
+      color: var(--accent);
+      text-decoration: underline;
     }
 
     /* Studio Pro UI redesign: Fokus blendet Titel und die Quelltext/Vorschau-Buttons komplett aus
@@ -5321,27 +5332,6 @@ return rgba;});});}).call(this);
       font-weight: 600;
       color: var(--text-main);
       white-space: normal;
-    }
-
-    .shortcuts-help-links {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid var(--border-color);
-    }
-
-    .shortcuts-help-links a {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      text-decoration: none;
-    }
-
-    .shortcuts-help-links a:hover {
-      color: var(--accent);
-      text-decoration: underline;
     }
 
     .shortcuts-table tr:last-child td {
@@ -7066,6 +7056,8 @@ return rgba;});});}).call(this);
 
     <div class="burger-menu-about">
       <div id="aboutVersionText"></div>
+      <a href="https://github.com/Majort0m0/Markdown-Editor#readme" target="_blank" rel="noopener noreferrer">❓ Hilfe &amp; Dokumentation</a>
+      <a href="https://github.com/Majort0m0/Markdown-Editor/blob/main/Anleitung.md" target="_blank" rel="noopener noreferrer">📖 Ausführliche Anleitung</a>
       <a href="https://lernsachen.blog" target="_blank" rel="noopener noreferrer">CC-BY-NC Lernsachen.blog</a>
     </div>
   </div>
@@ -7432,10 +7424,9 @@ return rgba;});});}).call(this);
       </div>
       <div id="shortcutsListContainer"></div>
       <p class="shortcuts-hint" id="shortcutsHintText"></p>
-      <div class="shortcuts-help-links">
-        <a href="https://github.com/Majort0m0/Markdown-Editor#readme" target="_blank" rel="noopener noreferrer">❓ Hilfe &amp; Dokumentation (README auf GitHub)</a>
-        <a href="https://github.com/Majort0m0/Markdown-Editor/blob/main/Anleitung.md" target="_blank" rel="noopener noreferrer">📖 Ausführliche Anleitung mit Schritt-für-Schritt-Beispielen</a>
-      </div>
+      <!-- Hier standen Hilfe/Dokumentation und die ausführliche Anleitung. Verschoben in den
+           "Über"-Bereich des Burger-Menüs zu App-Name, Version und Lizenz -- dort sucht man sie,
+           während sie am Ende einer Tastenkürzel-Liste kaum zu finden waren. -->
     </div>
   </div>
 
