@@ -12974,7 +12974,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     function changeOperatingMode(mode) {
       operatingMode = mode;
       applyOperatingMode(mode);
-      showEditor = (mode === 'voll');
+      // Canvas-Notizen bleiben von der Split-Vorgabe ausgenommen ("bei Canvas keine automatischen
+      // Split Darstellung"): dort bedeutet "Quelltext" nicht die Ansicht der Notiz, sondern die
+      // einer einzelnen Box, und die soll sich nur öffnen, wenn man das ausdrücklich für diese
+      // Tafel wählt -- nicht als Nebenwirkung eines Betriebsartwechsels.
+      const istCanvas = (getActiveTabReal() || {}).fileType === 'canvas';
+      showEditor = (mode === 'voll') && !istCanvas;
       showPreview = true;
       applyPaneVisibility();
       persistTabViewState();
