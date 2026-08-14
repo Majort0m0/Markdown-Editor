@@ -6873,7 +6873,8 @@ return rgba;});});}).call(this);
         <tr><td><kbd>Esc</kbd></td><td>Fenster/Dialog schließen</td></tr>
         <tr><td colspan="2" class="shortcuts-section">Teleprompter-Modus</td></tr>
         <tr><td><kbd>↑</kbd> / <kbd>↓</kbd></td><td>Schneller / langsamer</td></tr>
-        <tr><td><kbd>←</kbd> / <kbd>→</kbd></td><td>Start / Stopp</td></tr>
+        <tr><td><kbd>→</kbd></td><td>Start / Pause</td></tr>
+        <tr><td><kbd>←</kbd> halten</td><td>Zurückspulen</td></tr>
         <tr><td><kbd>Umschalt</kbd> oder <kbd>Leertaste</kbd> halten</td><td>Vorübergehend anhalten</td></tr>
         <tr><td><kbd>Esc</kbd></td><td>Teleprompter beenden</td></tr>
       </table>
@@ -7230,10 +7231,10 @@ return rgba;});});}).call(this);
        Regler klein und unhandlich, und der Beenden-Knopf saß als vierter Knopf oben rechts, weit weg
        von der eigentlichen Bedienung. -->
   <div class="teleprompter-controls" id="teleprompterControls">
-    <button type="button" id="teleprompterPlayBtn" class="teleprompter-round-btn" onclick="toggleTeleprompterRunning()" title="Start/Pause (Pfeil links/rechts)">
+    <button type="button" id="teleprompterPlayBtn" class="teleprompter-round-btn" onclick="toggleTeleprompterRunning()" title="Start/Pause (Pfeil rechts)">
       <svg id="teleprompterPlayIcon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M8 5.5v13l11-6.5z"/></svg>
     </button>
-    <input type="range" id="teleprompterSpeed" class="teleprompter-speed" min="10" max="300" step="5" value="45"
+    <input type="range" id="teleprompterSpeed" class="teleprompter-speed" min="10" max="300" step="5" value="20"
            oninput="setTeleprompterSpeed(Number(this.value))" title="Geschwindigkeit (Pfeil hoch/runter)">
     <button type="button" id="teleprompterExitBtn" class="teleprompter-round-btn" onclick="stopTeleprompter()" title="Teleprompter beenden (Esc)">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -8708,7 +8709,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // Geraetelokale UI-Einstellung wie Zoom/Split -- der Modus selbst wird bewusst NICHT
         // wiederhergestellt: ein Teleprompter, der beim Oeffnen der App von selbst losliefe,
         // waere eine Ueberraschung, kein Komfort. Nur das eingestellte Tempo bleibt erhalten.
-        teleprompterSpeed = state.teleprompterSpeed !== undefined ? state.teleprompterSpeed : 45;
+        // Einmalige Umstellung auf den neuen, langsameren Startwert: wer noch exakt den alten
+        // Vorgabewert 45 gespeichert hat, hat ihn nie bewusst gewaehlt -- sonst bliebe die
+        // Aenderung fuer jeden unsichtbar, der den Teleprompter schon einmal geoeffnet hat. Ein
+        // absichtlich eingestellter anderer Wert bleibt unangetastet.
+        const gespeichertesTempo = state.teleprompterSpeed;
+        teleprompterSpeed = (gespeichertesTempo === undefined || gespeichertesTempo === 45) ? 20 : gespeichertesTempo;
         // Falls back to the OLD simpleMode boolean (pre-dating operatingMode) when no
         // operatingMode key exists yet, so a session that had Simple Modus on before this upgrade
         // lands on 'simple' rather than silently resetting to the new 'focus' default -- otherwise
@@ -12613,8 +12619,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // statt der Steuerung, und ein blinkender Cursor liefe mit dem Text mit).
     let teleprompterActive = false;
     let teleprompterRunning = false;
-    let teleprompterSpeed = 45;        // Pixel pro Sekunde
+    // Startwert bewusst nahe am unteren Ende der Reglerbahn (10-300): ein Teleprompter wird
+    // lieber langsam begonnen und dann hochgezogen als andersherum.
+    let teleprompterSpeed = 20;        // Pixel pro Sekunde
     let teleprompterHeldPause = false; // Umschalt/Leertaste gedrückt gehalten
+    let teleprompterRewind = false;    // Pfeil links gedrückt gehalten (Rücklauf)
     let teleprompterRafId = null;
     let teleprompterLastFrame = 0;
     let teleprompterScrollPos = 0;     // Scrollposition als Gleitkommazahl, siehe teleprompterFrame()
@@ -12623,6 +12632,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     const TELEPROMPTER_SPEED_MIN = 10;
     const TELEPROMPTER_SPEED_MAX = 300;
     const TELEPROMPTER_SPEED_STEP = 5;
+    // Rücklauf bei gehaltener Pfeil-links-Taste: 20% der Reglerbahn, also 20% des Hoechstwerts.
+    const TELEPROMPTER_REWIND_SPEED = Math.round(TELEPROMPTER_SPEED_MAX * 0.2);
 
     function toggleTeleprompterMode() {
       if (teleprompterActive) stopTeleprompter();
@@ -12830,7 +12841,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const icon = document.getElementById('teleprompterPlayIcon');
       const btn = document.getElementById('teleprompterPlayBtn');
       if (icon) icon.innerHTML = '<path d="' + (teleprompterRunning ? TELEPROMPTER_PAUSE_PATH : TELEPROMPTER_PLAY_PATH) + '"/>';
-      if (btn) btn.title = teleprompterRunning ? 'Pause (Pfeil links/rechts)' : 'Start (Pfeil links/rechts)';
+      if (btn) btn.title = teleprompterRunning ? 'Pause (Pfeil rechts)' : 'Start (Pfeil rechts)';
     }
 
     function setTeleprompterSpeed(value) {
@@ -12866,7 +12877,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!teleprompterLastFrame) { teleprompterLastFrame = timestamp; return; }
       const deltaSec = Math.min(0.25, (timestamp - teleprompterLastFrame) / 1000); // Deckel gegen Sprünge nach Tab-Wechsel
       teleprompterLastFrame = timestamp;
-      if (!teleprompterRunning || teleprompterHeldPause) return;
+      // Der Rücklauf hat Vorrang und läuft unabhängig davon, ob gerade gescrollt wird oder pausiert
+      // ist -- gedrückt halten heisst zurückspulen, egal in welchem Zustand.
+      if (!teleprompterRewind && (!teleprompterRunning || teleprompterHeldPause)) return;
 
       const maxScroll = previewPane.scrollHeight - previewPane.clientHeight;
       if (maxScroll <= 0) return;
@@ -12877,12 +12890,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (Math.abs(previewPane.scrollTop - teleprompterScrollPos) > 2) {
         teleprompterScrollPos = previewPane.scrollTop;
       }
-      teleprompterScrollPos = Math.min(maxScroll, teleprompterScrollPos + teleprompterSpeed * deltaSec);
+
+      const schritt = teleprompterRewind ? -TELEPROMPTER_REWIND_SPEED : teleprompterSpeed;
+      teleprompterScrollPos = Math.max(0, Math.min(maxScroll, teleprompterScrollPos + schritt * deltaSec));
       previewPane.scrollTop = teleprompterScrollPos;
 
       // Am Ende angekommen: anhalten statt weiterzulaufen, aber im Modus bleiben — so lässt sich
-      // per Pfeiltaste zurückspulen und erneut starten, ohne den Modus neu zu öffnen.
-      if (teleprompterScrollPos >= maxScroll - 0.5) {
+      // zurückspulen und erneut starten, ohne den Modus neu zu öffnen. Beim Rücklauf greift das
+      // nicht, sonst würde das Zurückspulen vom Ende aus sofort wieder auf Pause schalten.
+      if (!teleprompterRewind && teleprompterScrollPos >= maxScroll - 0.5) {
         teleprompterRunning = false;
         updateTeleprompterPlayButton();
       }
@@ -12900,7 +12916,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (e.key === 'Escape') { konsumiere(); stopTeleprompter(); return; }
       if (e.key === 'ArrowUp') { konsumiere(); adjustTeleprompterSpeed(TELEPROMPTER_SPEED_STEP); return; }
       if (e.key === 'ArrowDown') { konsumiere(); adjustTeleprompterSpeed(-TELEPROMPTER_SPEED_STEP); return; }
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { konsumiere(); toggleTeleprompterRunning(); return; }
+      if (e.key === 'ArrowRight') { konsumiere(); toggleTeleprompterRunning(); return; }
+      // Pfeil links spult zurück, solange die Taste gehalten wird. Wie bei der Haltepause nur
+      // gesetzt, nie umgeschaltet: eine gehaltene Taste feuert keydown wiederholt.
+      if (e.key === 'ArrowLeft') { konsumiere(); teleprompterRewind = true; return; }
       // Gedrückt halten pausiert, Loslassen läuft weiter — deshalb hier nur setzen, nie umschalten
       // (eine Taste feuert bei gedrückthalten wiederholt keydown, ein Toggle würde flackern).
       if (e.key === 'Shift' || e.key === ' ' || e.code === 'Space') {
@@ -12911,6 +12930,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     document.addEventListener('keyup', (e) => {
       if (!teleprompterActive) return;
+      if (e.key === 'ArrowLeft') { teleprompterRewind = false; teleprompterLastFrame = 0; return; }
       if (e.key === 'Shift' || e.key === ' ' || e.code === 'Space') {
         teleprompterHeldPause = false;
         teleprompterLastFrame = 0;
@@ -12922,6 +12942,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     window.addEventListener('blur', () => {
       if (!teleprompterActive) return;
       teleprompterHeldPause = false;
+      teleprompterRewind = false;
       teleprompterLastFrame = 0;
     });
 
