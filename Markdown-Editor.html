@@ -6353,6 +6353,31 @@ return rgba;});});}).call(this);
         right: 58px;
       }
 
+      /* Auswahlblase zweizeilig statt abgeschnitten. Gemeldet mit Bildschirmfoto: auf dem Telefon
+         reichte die einzeilige Leiste über den rechten Bildschirmrand hinaus, die Farbknöpfe waren
+         nicht erreichbar. updateBubbleToolbar() misst die Leiste erst NACH dem Einblenden und
+         begrenzt sie dann auf den sichtbaren Bereich -- der Umbruch wird also von der vorhandenen
+         Positionierung korrekt mitgerechnet, sowohl in der Breite als auch in der Höhe (die Leiste
+         klappt weiterhin unter die Auswahl, wenn oben kein Platz ist).
+         Die Trennstriche entfallen hier: an einem Zeilenanfang stehend wirken sie wie ein
+         verrutschtes Element, und die Gruppierung ist durch den Umbruch ohnehin sichtbar. */
+      .bubble-toolbar {
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: calc(100vw - 8px);
+      }
+
+      .bubble-toolbar .toolbar-divider {
+        display: none;
+      }
+
+      /* Die Format-Auswahl in der Blase bekommt dieselbe Behandlung wie die in der Werkzeugleiste:
+         ohne Begrenzung beansprucht sie allein eine halbe Zeile. Hier bleibt die Beschriftung
+         erhalten -- in der Blase gibt es kein Symbol daneben, das sie ersetzen könnte. */
+      .bubble-toolbar .toolbar-select {
+        max-width: 132px;
+      }
+
       .template-grid {
         grid-template-columns: 1fr;
       }
