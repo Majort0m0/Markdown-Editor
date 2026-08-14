@@ -6165,6 +6165,22 @@ return rgba;});});}).call(this);
         display: none !important;
       }
 
+      /* Der Kasten um eine Box ist Bedienhilfe beim Anordnen, kein Inhalt -- "nur die Boxinhalte
+         ohne Rahmen ins PDF". Betrifft alle drei Zustände auf einmal, weil sie sich denselben
+         border teilen: den grauen Normalrahmen, den blauen Auswahlrahmen (im gemeldeten
+         Bildschirmfoto um die Zeichnung herum zu sehen) und den roten Balken unten, mit dem eine zu
+         kleine Box auf abgeschnittenen Inhalt hinweist -- ein Warnhinweis fürs Bearbeiten, der auf
+         Papier nichts zu suchen hat. Der eigene Hintergrund der Box entfällt gleich mit; sichtbar
+         war er ohnehin nie (.canvas-box-content deckt die Box zu 100% ab), er gehört aber genauso
+         zur Ausstattung wie der Rahmen. box-sizing:border-box lässt die Boxmaße dabei unverändert,
+         die mm-Positionen auf der Seite verschieben sich also nicht.
+         Der Themenhintergrund des Inhalts bleibt bewusst stehen: bei einem dunklen Boxdesign hängt
+         die Lesbarkeit der hellen Schrift daran. */
+      main.canvas-tab-active .canvas-box {
+        border: none !important;
+        background-color: transparent !important;
+      }
+
       main.canvas-tab-active .canvas-preview {
         display: block !important;
         background: none !important;
