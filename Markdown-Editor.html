@@ -6237,6 +6237,37 @@ return rgba;});});}).call(this);
         right: 20px;
       }
 
+      /* Format-Auswahl auf Symbolgröße eingedampft. Gemeldet mit Bildschirmfoto: im Simple Modus
+         auf dem Telefon nahm sie mit Beschriftung "Format" und nativem Pfeil so viel Breite ein,
+         dass die übrigen Symbole aus der Leiste geschoben wurden.
+         Umgesetzt als unsichtbares <select> ÜBER dem Symbol statt über ein eigenes Menü: das native
+         Auswahlfeld bleibt damit vollständig erhalten -- inklusive der Gruppen, der Bedienung per
+         Tastatur und der system-eigenen Auswahlliste, die auf einem Telefon ohnehin als große,
+         gut treffbare Liste erscheint. Sichtbar ist nur noch das Symbol, angetippt wird das
+         Auswahlfeld. Gleiche Kantenlänge wie .toolbar-btn, damit es sich in die Reihe einfügt. */
+      .heading-picker {
+        position: relative;
+        width: 30px;
+        height: 30px;
+        flex-shrink: 0;
+        gap: 0;
+        justify-content: center;
+      }
+
+      .heading-picker-icon {
+        padding: 0;
+      }
+
+      #headingSelect {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        opacity: 0;
+        background-image: none;
+      }
+
       .toc-toggle-btn {
         right: 16px;
       }
