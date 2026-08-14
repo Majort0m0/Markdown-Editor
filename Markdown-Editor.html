@@ -3169,6 +3169,19 @@ return rgba;});});}).call(this);
       border-bottom: 4px solid #e53935;
     }
 
+    /* Während eine Box bearbeitet wird, liegt die echte Vorschau als Overlay genau über ihr (siehe
+       #markdownPreview.canvas-box-overlay) und zeigt denselben Inhalt. Die Box darf ihn dann nicht
+       zusätzlich selbst zeichnen. Solange jedes Design eine deckende Fläche mitbrachte, fiel das nie
+       auf -- das Overlay verdeckte den Inhalt darunter einfach. Seit Clean durchsichtig ist, schien
+       er hindurch: gemeldet als "die Schrift ist irgendwie gedoppelt", und tatsächlich standen dort
+       zwei leicht versetzte Fassungen desselben Textes übereinander (das Overlay ist eigens
+       skaliert, die Box sitzt in der skalierten Seite).
+       visibility statt display, damit die Box ihre Maße unverändert behält -- an ihnen richtet sich
+       das Overlay ja gerade aus. */
+    .canvas-box.editing .canvas-box-content {
+      visibility: hidden;
+    }
+
     .canvas-box-content {
       width: 100%;
       height: 100%;
@@ -14752,7 +14765,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       tab.canvasData.boxes.forEach(box => {
         const el = document.createElement('div');
-        el.className = 'canvas-box' + (box.id === canvasSelectedBoxId ? ' selected' : '');
+        // 'editing' blendet den eigenen Inhalt der Box aus, solange die Vorschau als Overlay
+        // darüber liegt (siehe die CSS-Regel dort) -- die Box würde ihn sonst doppelt zeigen.
+        el.className = 'canvas-box' + (box.id === canvasSelectedBoxId ? ' selected' : '') +
+          (box.id === canvasEditingBoxId ? ' editing' : '');
         el.style.left = box.x + 'mm';
         el.style.top = box.y + 'mm';
         el.style.width = box.w + 'mm';
