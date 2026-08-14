@@ -17432,6 +17432,36 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       document.getElementById('blockHandle').classList.remove('active');
     }
 
+    // Der Anfasser folgt der Maus, blieb aber liegen, sobald man die Hand von ihr nahm und weiter
+    // tippte oder mit den Pfeiltasten navigierte -- er zeigte dann auf einen Block, mit dem man
+    // längst nichts mehr zu tun hatte. Zwei Auslöser blenden ihn jetzt aus: eine Ruhezeit ohne
+    // Mausbewegung und jeder Tastendruck. Beides nur auf Geräten mit Zeigegerät; auf Touch hängt
+    // der Anfasser am Cursor statt am Zeiger (siehe den selectionchange-Zweig) und ist dort der
+    // einzige Weg zu den Blockfunktionen -- ihn dort wegzunehmen würde ihn unerreichbar machen.
+    const BLOCK_HANDLE_IDLE_MS = 2500;
+    let blockHandleIdleTimer = null;
+
+    function armBlockHandleIdleTimer() {
+      if (noHoverMedia.matches) return;
+      clearTimeout(blockHandleIdleTimer);
+      blockHandleIdleTimer = setTimeout(() => {
+        // Nicht ausblenden, während er gerade benutzt wird: unter dem ruhenden Zeiger (man zielt
+        // ja gerade darauf) oder bei offenem Blockmenü, das von ihm aus geöffnet wurde.
+        const handle = document.getElementById('blockHandle');
+        const menu = document.getElementById('blockHandleMenu');
+        if (menu.classList.contains('active')) return;
+        if (handle.matches(':hover')) return;
+        hideBlockHandle();
+      }, BLOCK_HANDLE_IDLE_MS);
+    }
+
+    function hideBlockHandleOnKeyboardUse() {
+      if (noHoverMedia.matches) return;
+      if (document.getElementById('blockHandleMenu').classList.contains('active')) return;
+      clearTimeout(blockHandleIdleTimer);
+      hideBlockHandle();
+    }
+
     // Reported directly (and reproduced): the handle was "kaum zu erwischen... zu schnell
     // ausgeblendet" (barely catchable, hidden too fast) when actually trying to grab it with a
     // mouse. Root cause: #blockHandle sits OUTSIDE `preview` itself, in .preview-pane's own 32px
@@ -17498,6 +17528,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // already gets its own 'item'-kind handle everywhere else.
     mainContainer.addEventListener('pointermove', (e) => {
       if (blockDragState) return; // drag has its own pointermove handler below
+      // Ganz vorn und ohne weitere Bedingung: jede Mausbewegung im Hauptbereich zählt als "der
+      // Zeiger ist noch da", auch die über dem Anfasser selbst -- sonst liefe die Ruhezeit
+      // ausgerechnet dann ab, wenn man ihn gerade anvisiert.
+      armBlockHandleIdleTimer();
       const handle = document.getElementById('blockHandle');
       const menu = document.getElementById('blockHandleMenu');
       if (handle.contains(e.target) || menu.contains(e.target)) return; // stay put while hovering the handle/menu themselves
@@ -17517,6 +17551,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       showBlockHandleFor(blockEl, 'top');
     });
     mainContainer.addEventListener('pointerleave', () => hideBlockHandle());
+
+    // Tippen und Pfeiltasten blenden ihn sofort aus -- genau der gemeldete Fall. Auf document, damit
+    // es gleichermaßen für die Vorschau und das Quelltextfeld gilt; Modifikatoren allein zählen
+    // nicht, sonst verschwände er schon beim Antippen von Umschalt oder Strg, während man noch mit
+    // der Maus zielt.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
+      hideBlockHandleOnKeyboardUse();
+    });
 
     // Keeps the handle aligned with its target block while the user scrolls the preview pane —
     // positionBlockHandle() itself already both repositions AND hides it once the block scrolls
