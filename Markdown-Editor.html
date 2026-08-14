@@ -17455,9 +17455,50 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }, BLOCK_HANDLE_IDLE_MS);
     }
 
+    // Auf Touch verschwindet der Anfasser beim Schreiben und kommt kurz nach dem letzten Anschlag
+    // von selbst zurück -- so gewählt, weil er dort der einzige Weg zu den Blockfunktionen ist: ihn
+    // wie bei der Maus nach einer Ruhezeit ganz wegzunehmen, hieße, vor jedem Verschieben oder
+    // Umwandeln erst wieder in den Block tippen zu müssen.
+    const BLOCK_HANDLE_TOUCH_RETURN_MS = 1000;
+    let blockHandleTouchReturnTimer = null;
+    // Während dieser Pause darf ihn der selectionchange-Zweig nicht sofort wieder einblenden --
+    // Tippen bewegt ja den Cursor und löst damit genau dieses Ereignis aus, das Ausblenden wäre
+    // andernfalls im selben Moment wieder rückgängig gemacht.
+    let blockHandleTypingPause = false;
+
+    // Zeigt den Anfasser an dem Block, in dem der Cursor gerade steht. Aus dem selectionchange-
+    // Zweig herausgezogen, weil die Rückkehr nach der Schreibpause dieselbe Entscheidung trifft.
+    function showBlockHandleForCurrentSelection() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const range = sel.getRangeAt(0);
+      if (!preview.contains(range.startContainer)) return;
+      const liEl = findListItemPreviewBlock(range.startContainer);
+      if (liEl) { showBlockHandleFor(liEl, 'item'); return; }
+      const blockEl = findTopLevelPreviewBlock(range.startContainer);
+      if (blockEl) showBlockHandleFor(blockEl, 'top');
+    }
+
+    // Ein Antippen beendet die Schreibpause sofort: wer eine andere Stelle antippt, will dort
+    // weiterarbeiten und soll den Anfasser nicht erst abwarten müssen.
+    function endBlockHandleTypingPause() {
+      if (!blockHandleTypingPause) return;
+      blockHandleTypingPause = false;
+      clearTimeout(blockHandleTouchReturnTimer);
+    }
+
     function hideBlockHandleOnKeyboardUse() {
-      if (noHoverMedia.matches) return;
       if (document.getElementById('blockHandleMenu').classList.contains('active')) return;
+      if (noHoverMedia.matches) {
+        blockHandleTypingPause = true;
+        hideBlockHandle();
+        clearTimeout(blockHandleTouchReturnTimer);
+        blockHandleTouchReturnTimer = setTimeout(() => {
+          blockHandleTypingPause = false;
+          showBlockHandleForCurrentSelection();
+        }, BLOCK_HANDLE_TOUCH_RETURN_MS);
+        return;
+      }
       clearTimeout(blockHandleIdleTimer);
       hideBlockHandle();
     }
@@ -17560,6 +17601,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (e.key === 'Shift' || e.key === 'Control' || e.key === 'Alt' || e.key === 'Meta') return;
       hideBlockHandleOnKeyboardUse();
     });
+
+    // Zusätzlich zum keydown: Bildschirmtastaturen melden nicht jeden Anschlag als Taste (bei
+    // Autokorrektur und Diktat kommt teils nur ein input-Ereignis), und gerade dort soll die Regel
+    // ja greifen. input feuert in jedem dieser Fälle.
+    preview.addEventListener('input', () => hideBlockHandleOnKeyboardUse());
+    // Antippen/Klicken beendet eine laufende Schreibpause sofort (siehe dort).
+    preview.addEventListener('pointerdown', () => endBlockHandleTypingPause());
 
     // Keeps the handle aligned with its target block while the user scrolls the preview pane —
     // positionBlockHandle() itself already both repositions AND hides it once the block scrolls
@@ -21302,14 +21350,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // block, its handle stays put (no continuous hover tracking needed to keep it there)
         // rather than requiring a hover gesture that can't occur on this input type at all.
         // Gated on noHoverMedia so mouse users keep the exact hover-only behavior unchanged.
-        if (noHoverMedia.matches && sel && sel.rangeCount > 0) {
-          const range = sel.getRangeAt(0);
-          const liEl = findListItemPreviewBlock(range.startContainer);
-          if (liEl) { showBlockHandleFor(liEl, 'item'); }
-          else {
-            const blockEl = findTopLevelPreviewBlock(range.startContainer);
-            if (blockEl) showBlockHandleFor(blockEl, 'top');
-          }
+        // Nicht während der Schreibpause: Tippen bewegt den Cursor und löst damit genau dieses
+        // Ereignis aus -- ohne die Bedingung wäre der Anfasser im selben Moment wieder da, in dem
+        // hideBlockHandleOnKeyboardUse() ihn ausgeblendet hat, und das Ausblenden bliebe wirkungslos.
+        if (noHoverMedia.matches && !blockHandleTypingPause && sel && sel.rangeCount > 0) {
+          showBlockHandleForCurrentSelection();
         }
       }
     });
