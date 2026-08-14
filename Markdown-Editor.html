@@ -1765,14 +1765,30 @@ return rgba;});});}).call(this);
       padding: 8px 16px;
       display: flex;
       align-items: center;
-      /* flex-start (not space-between) + .actions-group's own margin-left:auto below --
-         mathematically identical to space-between for the previous two-child layout (title,
-         actions-group), but now that .view-toggle-group is a third child sitting between them,
-         space-between would spread slack space evenly across all three instead of keeping the
-         new group flush against the title on wide viewports. */
+      /* Genau drei Kinder: .header-left, .app-title, .actions-group. Die beiden Randbereiche
+         bekommen dieselbe flex-Basis (1 1 0) und wachsen damit immer gleich breit, egal wie viele
+         Knöpfe gerade in welchem stehen -- dadurch liegt der Titel dazwischen exakt auf der Mitte
+         der Kopfzeile, in JEDER Betriebsart und bei jeder Bildschirmbreite. Vorher lag er dort, wo
+         der Fluss ihn ablegte, und das war je nach Fall etwas anderes: gemessen 554px links der
+         Mitte in Voll und Fokus, 508px RECHTS davon in Simple (dort schob ihn eine eigene
+         order-Regel nach rechts), und nur unterhalb von 640px war er über eine
+         position:absolute-Sonderregel tatsächlich mittig. Genau das war als "je nach Betriebsart
+         und Bildschirmbreite unterschiedlich" gemeldet.
+         Kein Umbruch mehr: eine umbrechende Kopfzeile hätte keine gemeinsame Mitte, an der sich
+         etwas ausrichten ließe. Stattdessen schrumpfen die Bereiche (min-width:0) und der Titel
+         wird notfalls mit Auslassungspunkten gekürzt. */
       justify-content: flex-start;
       gap: 12px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1 1 0;
+      min-width: 0;
+      justify-content: flex-start;
     }
 
     .app-title {
@@ -1780,9 +1796,33 @@ return rgba;});});}).call(this);
       font-weight: 700;
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
       color: var(--text-main);
       white-space: nowrap;
+      /* Schrumpfen erlaubt, wachsen nicht: der Titel behält seine natürliche Breite, solange sie
+         passt, und weicht erst zurück, wenn die Randbereiche den Platz wirklich brauchen. */
+      flex: 0 1 auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      /* Die Obergrenze sichert beiden Randbereichen je mindestens ~110px zu -- so viel braucht der
+         breitere von beiden (links, im Voll-Modus: Seitenleiste plus Quelltext/Vorschau) bei
+         Telefongröße, gemessen. Ohne sie behielte der Titel seine volle Breite, die gleich breiten
+         Randbereiche fielen darunter, und die Knöpfe lägen unter dem Titel. Wird es enger als das,
+         kürzt sich lieber der Titel mit Auslassungspunkten, als dass er die Mitte verlässt --
+         "konsequent konsistent immer horizontal mittig" hat hier Vorrang. Auf dem Schreibtisch
+         greift die Grenze nie: dort ist 100%-252px stets größer als die natürliche Titelbreite. */
+      max-width: calc(100% - 252px);
+    }
+
+    /* In Fokus und Simple sind die Quelltext/Vorschau-Knöpfe ausgeblendet (siehe .view-toggle-group
+       weiter unten), links steht dann nur noch der Seitenleisten-Knopf. Breiter ist dort die RECHTE
+       Gruppe mit gemessen 70px, der nötige Abzug also entsprechend kleiner -- ohne diese Staffelung
+       würde der Titel auf dem Telefon gekürzt, obwohl reichlich Platz ist. */
+    body.mode-focus .app-title,
+    body.mode-simple .app-title {
+      max-width: calc(100% - 172px);
     }
 
     .app-title svg {
@@ -1805,10 +1845,14 @@ return rgba;});});}).call(this);
       display: flex;
       align-items: center;
       gap: 2px;
-      flex-wrap: wrap;
-      /* Pushes the rest of the toolbar to the far right, same visual result the old
-         justify-content:space-between produced when this was header's only other child. */
-      margin-left: auto;
+      flex-wrap: nowrap;
+      /* Gegenstück zu .header-left: dieselbe flex-Basis, damit beide Randbereiche gleich breit
+         bleiben und der Titel dazwischen mittig liegt (siehe header). justify-content:flex-end
+         ersetzt das frühere margin-left:auto -- das hätte hier zusätzlich zum flex-Wachstum
+         gewirkt und die Gleichheit der beiden Seiten wieder zunichte gemacht. */
+      flex: 1 1 0;
+      min-width: 0;
+      justify-content: flex-end;
     }
 
     /* Reihenfolge per CSS statt über die Markup-Reihenfolge: im Quelltext steht der Burger-Knopf
@@ -1955,37 +1999,13 @@ return rgba;});});}).call(this);
       padding: 0 4px;
     }
 
-    /* Simple Modus header layout: the remaining action buttons move to the left edge, the
-       app title/logo moves to the right, and the Simple toggle itself stays pinned at the very
-       right -- past the title. order swaps which of header's three direct flex children (.app-
-       title, .view-toggle-group, .actions-group) sits on which side; .simple-mode-toggle can't
-       be reordered the same way since it's nested inside .actions-group (order only reorders
-       siblings within their own flex container, not across nesting), so it's pulled out of the
-       flex flow with position: absolute instead, positioned relative to header. .app-title gets
-       a matching reserved right margin so its text never runs under the absolutely-positioned
-       toggle. .view-toggle-group shares .actions-group's order (1) so Quelltext/Vorschau -- kept
-       visible in Simple Modus like the rest of that left-aligned set -- stay grouped with it;
-       DOM order (view-toggle-group before actions-group) puts it just left of the other buttons. */
-    body.simple-mode header {
-      position: relative;
-    }
-
-    body.simple-mode .actions-group,
-    body.simple-mode .view-toggle-group {
-      order: 1;
-    }
-
-    body.simple-mode .app-title {
-      order: 2;
-      margin-right: 92px;
-    }
-
-    body.simple-mode .simple-mode-toggle {
-      position: absolute;
-      top: 50%;
-      right: 16px;
-      transform: translateY(-50%);
-    }
+    /* Hier stand die Sonderanordnung der Kopfzeile für Simple Modus: die Knöpfe nach links, der
+       Titel per order:2 nach rechts, und der damalige Simple-Umschalter absolut an den rechten
+       Rand. Entfernt, weil der Titel jetzt in jeder Betriebsart mittig steht ("ich hätte es gerne
+       konsequent konsistent immer horizontal mittig in der obersten Symbolleiste") -- die order-
+       Regel war gemessen genau das, was ihn in Simple 508px rechts der Mitte schob. Der Umschalter,
+       um den herum das Ganze gebaut war, existiert ohnehin nicht mehr: die Betriebsart wird seit dem
+       Umbau im Burger-Menü gewählt, .simple-mode-toggle kam im Markup gar nicht mehr vor. */
 
     .theme-picker {
       display: flex;
@@ -6193,47 +6213,38 @@ return rgba;});});}).call(this);
         -webkit-overflow-scrolling: touch;
       }
 
-      /* Kopfzeile bleibt einzeilig: Seitenleisten-Knopf links, Titel mittig, Sync und Burger
-         rechts. Vorher brach die Zeile um und alles rutschte nach links zusammen (gemeldet mit
-         Bildschirmfoto vom iPhone), weil .actions-group hier sein margin-left:auto verlor und
-         header umbrechen durfte. Beides zurückgenommen; der Titel bekommt stattdessen flex:1 und
-         zentriert sich damit im verbleibenden Raum, unabhängig davon, wie breit die beiden
-         Randgruppen gerade sind. */
+      /* Nur noch enger gesetzt -- einzeilig und mittiger Titel sind seit der Dreiteilung der
+         Kopfzeile (siehe header/.header-left/.actions-group oben) für jede Breite dasselbe
+         Verhalten und brauchen hier keine eigene Fassung mehr. */
       header {
-        position: relative;
-        flex-wrap: nowrap;
-        justify-content: space-between;
         gap: 6px;
         padding: 8px 10px;
       }
 
+      .header-left {
+        gap: 6px;
+      }
+
+      /* Die beiden Trennstriche um Quelltext/Vorschau sind reine Zier und kosten zusammen gemessen
+         30px -- genau der Platz, der auf dem Telefon darüber entscheidet, ob der mittige Titel noch
+         vollständig hineinpasst oder gekürzt werden muss. Nur in der linken Kopfzeilengruppe
+         ausgeblendet; die Trenner in der Werkzeugleiste bleiben unberührt. */
+      .header-left .action-divider {
+        display: none;
+      }
+
       .actions-group {
-        margin-left: 0;
-        flex-shrink: 0;
         overflow-x: visible; /* die Regel oben gilt für die breite Werkzeugleiste, nicht hier */
       }
 
-      /* Titel auch in Fokus und Simple sichtbar -- dort ist er sonst bewusst ausgeblendet, aber auf
-         dem Telefon ist die Mitte ohnehin frei ("Mittig zentriert wäre dann doch noch Platz für den
-         Titel").
-         Aus dem Fluss genommen und an der halben Kopfzeilenbreite ausgerichtet, statt als
-         flex:1-Element zwischen den Randgruppen zu sitzen: dort zentriert er sich nur im
-         VERBLEIBENDEN Raum, und weil links ein Knopf steht und rechts zwei, lag er gemessen 18px
-         neben der Mitte. max-width lässt beiden Randgruppen ihren Platz -- ein langer Titel wird
-         gekürzt, statt den Burger-Knopf über den Rand zu schieben. */
+      /* Nur noch kleiner gesetzt. Die frühere position:absolute-Zentrierung an der halben
+         Kopfzeilenbreite ist entfallen: sie war die einzige Breite, bei der der Titel überhaupt
+         mittig saß, und genau daraus entstand der gemeldete Unterschied je nach Bildschirmbreite.
+         Die Zentrierung leisten jetzt für alle Breiten die zwei gleich breiten Randbereiche (siehe
+         header oben), und weil der Titel damit wieder im Fluss liegt, kann er die Randbereiche auch
+         nicht mehr überlappen -- das max-width, das das vorher verhindern musste, entfällt mit. */
       .app-title {
-        display: flex;
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        max-width: calc(100% - 180px);
-        justify-content: center;
-        order: 0;
-        margin-right: 0;
         font-size: 0.8rem;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       .app-title svg {
@@ -6547,20 +6558,29 @@ return rgba;});});}).call(this);
          alte body.simple-mode-Reihenfolge .actions-group/.view-toggle-group auf order:1 setzt --
          dieser Button behaelt seine Default-order:0 und bleibt dadurch immer vorne). Siehe
          #tabSidebarPanel/.app-body-row weiter unten fuer das Overlay-vs-angeheftet-Verhalten. -->
-    <button id="tabSidebarToggleBtn" class="icon-btn" onclick="toggleTabSidebar()" title="Notizen anzeigen/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="4" x2="9" y2="20" stroke="currentColor" stroke-width="1.5"/></svg></button>
+    <!-- Alles Linke in einer eigenen Gruppe, damit die Kopfzeile aus genau DREI Bereichen besteht:
+         links, Titel, rechts. Nur so lassen sich die beiden Randbereiche gleich breit halten und der
+         Titel damit exakt mittig -- siehe .header-left/.actions-group's flex:1 1 0. Vorher waren der
+         Seitenleisten-Knopf und die Ansicht-Knöpfe zwei getrennte Geschwister neben dem Titel, und
+         der Titel saß schlicht dort, wo der Fluss ihn ablegte (gemessen 554px links der Mitte). Die
+         Ansicht-Knöpfe stehen deshalb jetzt VOR dem Titel im Quelltext; sichtbar lagen sie ohnehin
+         schon links davon. -->
+    <div class="header-left">
+      <button id="tabSidebarToggleBtn" class="icon-btn" onclick="toggleTabSidebar()" title="Notizen anzeigen/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="4" x2="9" y2="20" stroke="currentColor" stroke-width="1.5"/></svg></button>
+      <!-- Quelltext/Vorschau: prominent, orange-accented view toggles right after the title -->
+      <div class="view-toggle-group">
+        <div class="action-divider"></div>
+        <button id="toggleEditBtn" class="icon-btn active" onclick="toggleEditor()" title="Quelltext/Bearbeiten-Ansicht ein-/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.0184 7.36446C14.1256 6.96436 13.8882 6.55311 13.4881 6.4459C13.088 6.3387 12.6767 6.57614 12.5695 6.97623L9.98131 16.6355C9.8741 17.0356 10.1115 17.4468 10.5116 17.5541C10.9117 17.6613 11.323 17.4238 11.4302 17.0237L14.0184 7.36446Z" fill="currentColor"/><path d="M16.0303 8.46967C15.7374 8.17678 15.2626 8.17678 14.9697 8.46967C14.6768 8.76256 14.6768 9.23744 14.9697 9.53033L15.1412 9.7019C15.8229 10.3836 16.2797 10.8426 16.5753 11.2301C16.8577 11.6002 16.9216 11.8157 16.9216 12C16.9216 12.1843 16.8577 12.3998 16.5753 12.7699C16.2797 13.1574 15.8229 13.6164 15.1412 14.2981L14.9697 14.4697C14.6768 14.7626 14.6768 15.2374 14.9697 15.5303C15.2626 15.8232 15.7374 15.8232 16.0303 15.5303L16.2387 15.322C16.874 14.6867 17.4038 14.1569 17.7678 13.6798C18.1521 13.1762 18.4216 12.6441 18.4216 12C18.4216 11.3559 18.1521 10.8238 17.7678 10.3202C17.4038 9.84307 16.874 9.31331 16.2387 8.67801L16.0303 8.46967Z" fill="currentColor"/><path d="M7.96986 8.46967C8.26275 8.17678 8.73762 8.17678 9.03052 8.46967C9.32341 8.76256 9.32341 9.23744 9.03052 9.53033L8.85894 9.7019C8.17729 10.3836 7.72052 10.8426 7.42488 11.2301C7.14245 11.6002 7.07861 11.8157 7.07861 12C7.07861 12.1843 7.14245 12.3998 7.42488 12.7699C7.72052 13.1574 8.17729 13.6164 8.85894 14.2981L9.03052 14.4697C9.32341 14.7626 9.32341 15.2374 9.03052 15.5303C8.73762 15.8232 8.26275 15.8232 7.96986 15.5303L7.76151 15.322C7.12618 14.6867 6.59637 14.1569 6.23235 13.6798C5.84811 13.1762 5.57861 12.6441 5.57861 12C5.57861 11.3559 5.84811 10.8238 6.23235 10.3202C6.59637 9.84307 7.12617 9.31332 7.7615 8.67802L7.96986 8.46967Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11.9426 1.25C9.63423 1.24999 7.82519 1.24998 6.41371 1.43975C4.96897 1.63399 3.82895 2.03933 2.93414 2.93414C2.03933 3.82895 1.63399 4.96897 1.43975 6.41371C1.24998 7.82519 1.24999 9.63423 1.25 11.9426V12.0574C1.24999 14.3658 1.24998 16.1748 1.43975 17.5863C1.63399 19.031 2.03933 20.1711 2.93414 21.0659C3.82895 21.9607 4.96897 22.366 6.41371 22.5603C7.82519 22.75 9.63423 22.75 11.9426 22.75H12.0574C14.3658 22.75 16.1748 22.75 17.5863 22.5603C19.031 22.366 20.1711 21.9607 21.0659 21.0659C21.9607 20.1711 22.366 19.031 22.5603 17.5863C22.75 16.1748 22.75 14.3658 22.75 12.0574V11.9426C22.75 9.63423 22.75 7.82519 22.5603 6.41371C22.366 4.96897 21.9607 3.82895 21.0659 2.93414C20.1711 2.03933 19.031 1.63399 17.5863 1.43975C16.1748 1.24998 14.3658 1.24999 12.0574 1.25H11.9426ZM3.9948 3.9948C4.56445 3.42514 5.33517 3.09825 6.61358 2.92637C7.91356 2.75159 9.62178 2.75 12 2.75C14.3782 2.75 16.0864 2.75159 17.3864 2.92637C18.6648 3.09825 19.4355 3.42514 20.0052 3.9948C20.5749 4.56445 20.9018 5.33517 21.0736 6.61358C21.2484 7.91356 21.25 9.62178 21.25 12C21.25 14.3782 21.2484 16.0864 21.0736 17.3864C20.9018 18.6648 20.5749 19.4355 20.0052 20.0052C19.4355 20.5749 18.6648 20.9018 17.3864 21.0736C16.0864 21.2484 14.3782 21.25 12 21.25C9.62178 21.25 7.91356 21.2484 6.61358 21.0736C5.33517 20.9018 4.56445 20.5749 3.9948 20.0052C3.42514 19.4355 3.09825 18.6648 2.92637 17.3864C2.75159 16.0864 2.75 14.3782 2.75 12C2.75 9.62178 2.75159 7.91356 2.92637 6.61358C3.09825 5.33517 3.42514 4.56445 3.9948 3.9948Z" fill="currentColor"/></svg></button>
+        <button id="togglePreviewBtn" class="icon-btn active" onclick="togglePreview()" title="Vorschau ein-/ausblenden"><svg fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" enable-background="new 0 0 52 52" xml:space="preserve"><g><path d="M51.8,25.1C47.1,15.6,37.3,9,26,9S4.9,15.6,0.2,25.1c-0.3,0.6-0.3,1.3,0,1.8C4.9,36.4,14.7,43,26,43
+  		s21.1-6.6,25.8-16.1C52.1,26.3,52.1,25.7,51.8,25.1z M26,37c-6.1,0-11-4.9-11-11s4.9-11,11-11s11,4.9,11,11S32.1,37,26,37z"/><path d="M26,19c-3.9,0-7,3.1-7,7s3.1,7,7,7s7-3.1,7-7S29.9,19,26,19z"/></g></svg></button>
+        <div class="action-divider"></div>
+      </div>
+
+    </div>
 
     <div class="app-title">
       <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M42 26V40C42 41.1046 41.1046 42 40 42H8C6.89543 42 6 41.1046 6 40V8C6 6.89543 6.89543 6 8 6L22 6" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 26.7199V34H21.3172L42 13.3081L34.6951 6L14 26.7199Z" fill="#2F88FF" stroke="currentColor" stroke-width="4" stroke-linejoin="round"/></svg>
       Markdown Studio Pro
-    </div>
-
-    <!-- Quelltext/Vorschau: prominent, orange-accented view toggles right after the title -->
-    <div class="view-toggle-group">
-      <div class="action-divider"></div>
-      <button id="toggleEditBtn" class="icon-btn active" onclick="toggleEditor()" title="Quelltext/Bearbeiten-Ansicht ein-/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14.0184 7.36446C14.1256 6.96436 13.8882 6.55311 13.4881 6.4459C13.088 6.3387 12.6767 6.57614 12.5695 6.97623L9.98131 16.6355C9.8741 17.0356 10.1115 17.4468 10.5116 17.5541C10.9117 17.6613 11.323 17.4238 11.4302 17.0237L14.0184 7.36446Z" fill="currentColor"/><path d="M16.0303 8.46967C15.7374 8.17678 15.2626 8.17678 14.9697 8.46967C14.6768 8.76256 14.6768 9.23744 14.9697 9.53033L15.1412 9.7019C15.8229 10.3836 16.2797 10.8426 16.5753 11.2301C16.8577 11.6002 16.9216 11.8157 16.9216 12C16.9216 12.1843 16.8577 12.3998 16.5753 12.7699C16.2797 13.1574 15.8229 13.6164 15.1412 14.2981L14.9697 14.4697C14.6768 14.7626 14.6768 15.2374 14.9697 15.5303C15.2626 15.8232 15.7374 15.8232 16.0303 15.5303L16.2387 15.322C16.874 14.6867 17.4038 14.1569 17.7678 13.6798C18.1521 13.1762 18.4216 12.6441 18.4216 12C18.4216 11.3559 18.1521 10.8238 17.7678 10.3202C17.4038 9.84307 16.874 9.31331 16.2387 8.67801L16.0303 8.46967Z" fill="currentColor"/><path d="M7.96986 8.46967C8.26275 8.17678 8.73762 8.17678 9.03052 8.46967C9.32341 8.76256 9.32341 9.23744 9.03052 9.53033L8.85894 9.7019C8.17729 10.3836 7.72052 10.8426 7.42488 11.2301C7.14245 11.6002 7.07861 11.8157 7.07861 12C7.07861 12.1843 7.14245 12.3998 7.42488 12.7699C7.72052 13.1574 8.17729 13.6164 8.85894 14.2981L9.03052 14.4697C9.32341 14.7626 9.32341 15.2374 9.03052 15.5303C8.73762 15.8232 8.26275 15.8232 7.96986 15.5303L7.76151 15.322C7.12618 14.6867 6.59637 14.1569 6.23235 13.6798C5.84811 13.1762 5.57861 12.6441 5.57861 12C5.57861 11.3559 5.84811 10.8238 6.23235 10.3202C6.59637 9.84307 7.12617 9.31332 7.7615 8.67802L7.96986 8.46967Z" fill="currentColor"/><path fill-rule="evenodd" clip-rule="evenodd" d="M11.9426 1.25C9.63423 1.24999 7.82519 1.24998 6.41371 1.43975C4.96897 1.63399 3.82895 2.03933 2.93414 2.93414C2.03933 3.82895 1.63399 4.96897 1.43975 6.41371C1.24998 7.82519 1.24999 9.63423 1.25 11.9426V12.0574C1.24999 14.3658 1.24998 16.1748 1.43975 17.5863C1.63399 19.031 2.03933 20.1711 2.93414 21.0659C3.82895 21.9607 4.96897 22.366 6.41371 22.5603C7.82519 22.75 9.63423 22.75 11.9426 22.75H12.0574C14.3658 22.75 16.1748 22.75 17.5863 22.5603C19.031 22.366 20.1711 21.9607 21.0659 21.0659C21.9607 20.1711 22.366 19.031 22.5603 17.5863C22.75 16.1748 22.75 14.3658 22.75 12.0574V11.9426C22.75 9.63423 22.75 7.82519 22.5603 6.41371C22.366 4.96897 21.9607 3.82895 21.0659 2.93414C20.1711 2.03933 19.031 1.63399 17.5863 1.43975C16.1748 1.24998 14.3658 1.24999 12.0574 1.25H11.9426ZM3.9948 3.9948C4.56445 3.42514 5.33517 3.09825 6.61358 2.92637C7.91356 2.75159 9.62178 2.75 12 2.75C14.3782 2.75 16.0864 2.75159 17.3864 2.92637C18.6648 3.09825 19.4355 3.42514 20.0052 3.9948C20.5749 4.56445 20.9018 5.33517 21.0736 6.61358C21.2484 7.91356 21.25 9.62178 21.25 12C21.25 14.3782 21.2484 16.0864 21.0736 17.3864C20.9018 18.6648 20.5749 19.4355 20.0052 20.0052C19.4355 20.5749 18.6648 20.9018 17.3864 21.0736C16.0864 21.2484 14.3782 21.25 12 21.25C9.62178 21.25 7.91356 21.2484 6.61358 21.0736C5.33517 20.9018 4.56445 20.5749 3.9948 20.0052C3.42514 19.4355 3.09825 18.6648 2.92637 17.3864C2.75159 16.0864 2.75 14.3782 2.75 12C2.75 9.62178 2.75159 7.91356 2.92637 6.61358C3.09825 5.33517 3.42514 4.56445 3.9948 3.9948Z" fill="currentColor"/></svg></button>
-      <button id="togglePreviewBtn" class="icon-btn active" onclick="togglePreview()" title="Vorschau ein-/ausblenden"><svg fill="currentColor" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 52 52" enable-background="new 0 0 52 52" xml:space="preserve"><g><path d="M51.8,25.1C47.1,15.6,37.3,9,26,9S4.9,15.6,0.2,25.1c-0.3,0.6-0.3,1.3,0,1.8C4.9,36.4,14.7,43,26,43
-		s21.1-6.6,25.8-16.1C52.1,26.3,52.1,25.7,51.8,25.1z M26,37c-6.1,0-11-4.9-11-11s4.9-11,11-11s11,4.9,11,11S32.1,37,26,37z"/><path d="M26,19c-3.9,0-7,3.1-7,7s3.1,7,7,7s7-3.1,7-7S29.9,19,26,19z"/></g></svg></button>
-      <div class="action-divider"></div>
     </div>
 
     <div class="actions-group">
