@@ -3152,7 +3152,12 @@ return rgba;});});}).call(this);
     .canvas-box {
       position: absolute;
       border: 1px solid #ccc;
-      background-color: #fffef2;
+      /* Kein eigener Hintergrund mehr (war ein blasses Notizzettel-Gelb): den Ton hat nie jemand
+         gesehen, weil .canvas-box-content die Box zu 100% abdeckt und bis dahin jedes Design eine
+         eigene Fläche mitbrachte. Seit Clean durchsichtig ist (siehe dort), würde er plötzlich
+         durchscheinen und genau das verhindern, worum es dabei geht -- die Box soll dann den
+         Seitenhintergrund zeigen, nicht ein verstecktes Gelb. */
+      background-color: transparent;
       box-sizing: border-box;
     }
 
@@ -4250,8 +4255,20 @@ return rgba;});});}).call(this);
        #000), a muted low-saturation link color instead of a vivid brand blue, and barely-there
        borders — "clean" as in understated, not "clean" as in stark/high-contrast (that's
        High Contrast's job). */
+    /* Clean ist das einzige Design ohne eigene Hintergrundfarbe -- gewünscht als saubere Lösung
+       dafür, dass Boxen auf dem Canvas direkt auf der Seite stehen sollen statt als weiße Karten
+       darauf: "wäre es auch möglich, dass das Clean Design einfach einen durchsichtigen hintergrund
+       hat während alle anderen designs eine jeweilige hintergundfarbe haben". Wirkt überall gleich,
+       nicht nur beim Drucken: eine Clean-Box zeigt den Seitenhintergrund des Canvas, eine gewöhnliche
+       Notiz mit Clean den Untergrund der Vorschaufläche (--bg-surface, gemessen #ffffff -- also
+       unverändert weiß wie bisher). Alle anderen Designs behalten ihre Farbe.
+       --preview-bg-solid ist der Ausweichwert für die eine Stelle, die diese Variable NICHT als
+       Fläche, sondern als Schriftfarbe benutzt: die Wortmarkierung beim Vorlesen setzt den Text auf
+       Hintergrundfarbe, damit er sich von der farbigen Markierung abhebt -- "durchsichtig" wäre
+       dort schlicht unsichtbar. Nur hier nötig, weil nur Clean überhaupt durchsichtig ist. */
     .theme-clean {
-      --preview-bg: #ffffff;
+      --preview-bg: transparent;
+      --preview-bg-solid: #ffffff;
       --preview-text: #333333;
       --preview-link: #4a90d9;
       --preview-code-bg: #f7f7f7;
@@ -4602,7 +4619,9 @@ return rgba;});});}).call(this);
        getMarkdownTypographyCss() below for the exported-document copy of these same two rules. */
     .tts-word-active {
       background-color: var(--preview-link);
-      color: var(--preview-bg);
+      /* --preview-bg-solid nur dort gesetzt, wo --preview-bg durchsichtig ist (siehe .theme-clean);
+         sonst greift der zweite Wert und alles bleibt wie bisher. */
+      color: var(--preview-bg-solid, var(--preview-bg));
       border-radius: 3px;
       box-shadow: 0 0 0 2px var(--preview-link);
     }
@@ -6170,15 +6189,14 @@ return rgba;});});}).call(this);
          border teilen: den grauen Normalrahmen, den blauen Auswahlrahmen (im gemeldeten
          Bildschirmfoto um die Zeichnung herum zu sehen) und den roten Balken unten, mit dem eine zu
          kleine Box auf abgeschnittenen Inhalt hinweist -- ein Warnhinweis fürs Bearbeiten, der auf
-         Papier nichts zu suchen hat. Der eigene Hintergrund der Box entfällt gleich mit; sichtbar
-         war er ohnehin nie (.canvas-box-content deckt die Box zu 100% ab), er gehört aber genauso
-         zur Ausstattung wie der Rahmen. box-sizing:border-box lässt die Boxmaße dabei unverändert,
-         die mm-Positionen auf der Seite verschieben sich also nicht.
-         Der Themenhintergrund des Inhalts bleibt bewusst stehen: bei einem dunklen Boxdesign hängt
-         die Lesbarkeit der hellen Schrift daran. */
+         Papier nichts zu suchen hat. box-sizing:border-box lässt die Boxmaße dabei unverändert, die
+         mm-Positionen auf der Seite verschieben sich also nicht.
+         Der Themenhintergrund des Inhalts bleibt hier bewusst stehen: bei einem dunklen Boxdesign
+         hängt die Lesbarkeit der hellen Schrift daran. Wer eine Box ohne Fläche auf dem Papier will,
+         gibt ihr das Design "Clean" -- das ist als einziges durchsichtig (siehe .theme-clean), und
+         zwar am Bildschirm wie im Druck. */
       main.canvas-tab-active .canvas-box {
         border: none !important;
-        background-color: transparent !important;
       }
 
       main.canvas-tab-active .canvas-preview {
@@ -24022,7 +24040,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // Vorlesen (TTS) highlight — same two rules as the live app's own .tts-word-active/
         // .tts-active-media (see the CSS comment there), duplicated here since this function's
         // output is shared by both exports and neither has the live app's own <style> block.
-        '  .tts-word-active { background-color: var(--preview-link); color: var(--preview-bg); border-radius: 3px; box-shadow: 0 0 0 2px var(--preview-link); }\n' +
+        '  .tts-word-active { background-color: var(--preview-link); color: var(--preview-bg-solid, var(--preview-bg)); border-radius: 3px; box-shadow: 0 0 0 2px var(--preview-link); }\n' +
         '  .tts-active-media { outline: 3px solid var(--preview-link); outline-offset: 2px; border-radius: 6px; }\n'
       );
     }
@@ -24266,8 +24284,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       suppressDrawingControls = false;
 
       const cs = getComputedStyle(preview);
-      const previewVars = ['--preview-bg', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
-        .map(name => `        ${name}: ${cs.getPropertyValue(name).trim()};`)
+      // --preview-bg-solid steht nur bei Designs, deren --preview-bg durchsichtig ist (bisher nur
+      // Clean, siehe dort). Ohne Mitkopieren fiele die Wortmarkierung beim Vorlesen im Export auf
+      // den durchsichtigen Wert zurueck und waere unsichtbar. Leere Werte werden herausgefiltert,
+      // damit fuer alle anderen Designs keine ungueltige Deklaration im Export landet.
+      const previewVars = ['--preview-bg', '--preview-bg-solid', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
+        .map(name => [name, cs.getPropertyValue(name).trim()])
+        .filter(([, value]) => value !== '')
+        .map(([name, value]) => `        ${name}: ${value};`)
         .join('\n');
       const hljsCss = DARK_THEMES.has(currentTheme)
         ? document.getElementById('hljs-theme-dark').textContent
@@ -24305,8 +24329,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!currentTab) return;
 
       const cs = getComputedStyle(preview);
-      const previewVars = ['--preview-bg', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
-        .map(name => `        ${name}: ${cs.getPropertyValue(name).trim()};`)
+      // --preview-bg-solid steht nur bei Designs, deren --preview-bg durchsichtig ist (bisher nur
+      // Clean, siehe dort). Ohne Mitkopieren fiele die Wortmarkierung beim Vorlesen im Export auf
+      // den durchsichtigen Wert zurueck und waere unsichtbar. Leere Werte werden herausgefiltert,
+      // damit fuer alle anderen Designs keine ungueltige Deklaration im Export landet.
+      const previewVars = ['--preview-bg', '--preview-bg-solid', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
+        .map(name => [name, cs.getPropertyValue(name).trim()])
+        .filter(([, value]) => value !== '')
+        .map(([name, value]) => `        ${name}: ${value};`)
         .join('\n');
 
       const hljsCss = DARK_THEMES.has(currentTheme)
@@ -24375,8 +24405,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!currentTab) return;
 
       const cs = getComputedStyle(preview);
-      const previewVars = ['--preview-bg', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
-        .map(name => `        ${name}: ${cs.getPropertyValue(name).trim()};`)
+      // --preview-bg-solid steht nur bei Designs, deren --preview-bg durchsichtig ist (bisher nur
+      // Clean, siehe dort). Ohne Mitkopieren fiele die Wortmarkierung beim Vorlesen im Export auf
+      // den durchsichtigen Wert zurueck und waere unsichtbar. Leere Werte werden herausgefiltert,
+      // damit fuer alle anderen Designs keine ungueltige Deklaration im Export landet.
+      const previewVars = ['--preview-bg', '--preview-bg-solid', '--preview-text', '--preview-link', '--preview-code-bg', '--preview-border', '--preview-header-border']
+        .map(name => [name, cs.getPropertyValue(name).trim()])
+        .filter(([, value]) => value !== '')
+        .map(([name, value]) => `        ${name}: ${value};`)
         .join('\n');
 
       const hljsCss = DARK_THEMES.has(currentTheme)
