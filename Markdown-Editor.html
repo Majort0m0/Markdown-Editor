@@ -4330,6 +4330,28 @@ return rgba;});});}).call(this);
       }
     }
 
+    /* Die Flächen neben der schmalen Spalte bekommen ein dezentes helles Grau, damit die Notiz als
+       Seite darauf liegt statt als Streifen im Weiß zu verschwinden. --bg-app ist genau der Ton, den
+       die App ohnehin als ruhigen Untergrund verwendet -- kein neu erfundenes Grau.
+       Drei Dinge sind dabei bewusst so gewählt:
+       1. `screen` statt der allgemeinen Bedingung darüber: eine (min-width: 900px)-Abfrage trifft
+          beim Drucken auch auf die Papierbreite zu, das Grau würde also mit aufs Blatt wandern.
+       2. Die Seite selbst braucht jetzt einen eigenen deckenden Hintergrund, sonst schiene das Grau
+          durch: --preview-bg-solid greift für Clean (durchsichtig, siehe dort), der zweite Wert für
+          jedes andere Design. Ohne das wäre eine Clean-Notiz vollflächig grau.
+       3. Canvas ausgenommen: dessen Boxinhalte tragen dieselbe Klasse .markdown-body, und eine
+          geöffnete Box liegt als Overlay ebenfalls darin -- beide würden sonst eine Fläche
+          bekommen und genau die Durchsichtigkeit von Clean wieder zunichte machen. */
+    @media screen and (min-width: 900px) {
+      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .preview-pane {
+        background-color: var(--bg-app);
+      }
+
+      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body {
+        background-color: var(--preview-bg-solid, var(--preview-bg));
+      }
+    }
+
     /* Bug fix: reported directly ("Im Vorschau Fenster ist jetzt ein blauer Rand... Der Vorschau
        Modus soll immer WYSIWYG sein"). Nothing in this app's own CSS ever styled a focus state for
        #markdownPreview -- confirmed directly via getComputedStyle() that the visible blue ring was
