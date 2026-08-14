@@ -1595,6 +1595,10 @@ return rgba;});});}).call(this);
       --text-muted: #656d76;
       --accent: #0969da;
       --accent-hover: #0451a5;
+      /* --accent bei 45% Deckkraft, als eigene Variable statt color-mix(): die Funktion gibt es
+         erst ab iOS Safari 16.2, und dieses Projekt soll ohne neuere CSS-Abhängigkeiten auskommen.
+         Beim Ändern von --accent hier mit anpassen -- benutzt vom Canvas-Fokusrahmen. */
+      --accent-soft: rgba(9, 105, 218, 0.45);
       /* Dedicated accent for the Quelltext/Vorschau view toggles only (see #toggleEditBtn/
          #togglePreviewBtn below) -- deliberately a different hue from --accent so this specific
          pair stands out from every other icon-btn's active/hover state. A solid fill (not a tint)
@@ -3094,6 +3098,19 @@ return rgba;});});}).call(this);
       background-color: #fff;
       box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
       transform-origin: 0 0;
+    }
+
+    /* Der Canvas selbst ist "aktiv", solange keine Box ausgewählt oder geöffnet ist -- dann und nur
+       dann wirken Zoom und Hintergrundfarbe auf die Seite statt auf eine Box (siehe
+       isCanvasWithoutOpenBoxForZoom()/updateThemePickerForCanvasMode()). Bis dahin war dieser
+       Zustand unsichtbar, und weil ein Klick auf den Hintergrund die geöffnete Box nicht schloss,
+       war er praktisch auch nicht mehr erreichbar. Bewusst als outline und nicht als border: eine
+       border würde die Seitenmaße verändern und damit die mm-Positionen aller Boxen verschieben.
+       Dezent gehalten (halbtransparenter Akzent, kleiner Abstand) -- es ist ein Hinweis, kein
+       Rahmen, der mit der Auswahlmarkierung einer Box konkurrieren soll. */
+    .canvas-page.canvas-focused {
+      outline: 2px solid var(--accent-soft);
+      outline-offset: 4px;
     }
 
     .canvas-box {
@@ -6139,6 +6156,10 @@ return rgba;});});}).call(this);
         transform: scale(0.98) !important;
         transform-origin: top left !important;
         box-shadow: none !important;
+        /* Der Fokusrahmen (.canvas-page.canvas-focused) ist reine Bedienhilfe und hat auf Papier
+           bzw. im PDF nichts verloren -- anders als der box-shadow daneben würde er sonst wirklich
+           mitgedruckt werden. */
+        outline: none !important;
         width: 205.8mm !important;
         height: 291.06mm !important;
         page: canvas-portrait;
@@ -13917,9 +13938,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // angeklickt wird, erhalten die Ränder der Box dynamische Anfasser") — the corner resize
     // handles still sit on the border as that spec describes; moving moved off the border
     // entirely to its own button above the box (see .canvas-box-move-handle's CSS comment).
+    // Der Fokusrahmen der Seite (siehe .canvas-page.canvas-focused): sichtbar genau dann, wenn
+    // keine Box ausgewählt und keine geöffnet ist -- also genau dann, wenn Zoom und Hintergrundfarbe
+    // auf den Canvas wirken. Als eigene Funktion, weil außer renderCanvasBoxes() auch das Öffnen und
+    // Schließen einer Box diesen Zustand ändert.
+    function updateCanvasFocusRing() {
+      canvasPage.classList.toggle('canvas-focused', !canvasSelectedBoxId && !canvasEditingBoxId);
+    }
+
     function renderCanvasBoxes() {
       const tab = getActiveTabReal();
       if (!tab || !tab.canvasData) return;
+      updateCanvasFocusRing();
       canvasPage.querySelectorAll('.canvas-box').forEach(el => el.remove());
 
       tab.canvasData.boxes.forEach(box => {
@@ -14264,6 +14294,23 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           setCanvasAddMode(false);
         }
       }
+      // Ein Druck auf den Hintergrund (Seite oder graue Fläche daneben) startet immer auch ein
+      // Verschieben der Ansicht -- deshalb lässt sich erst HIER, beim Loslassen, sagen, ob es ein
+      // echtes Ziehen war oder bloß ein Klick. War es ein Klick, gibt der Canvas alle Box-Fokusse
+      // frei und wird selbst aktiv: "wenn man auf den canvas hintergrund oder vielleicht auch neben
+      // den canvas drückt, dass dann alle aktiven Fokusse auf Markdownboxen verschwinden und der
+      // canvas Hintergrund selbst aktiv ist. Dann greifen auch Zoom und Design für den canvas."
+      //
+      // Es gab hier früher einen eigenen "Klick außerhalb schließt die Box"-Lauscher, der bewusst
+      // entfernt wurde, weil er auf pointerdown ansetzte und damit jedes Ziehen der Ansicht sofort
+      // die offene Box schloss. Genau dieser Grund entfällt bei der Auswertung auf pointerup gegen
+      // dieselbe Klick-oder-Ziehen-Schwelle, die das Erzeugen einer Box oben schon benutzt: ein
+      // Verschieben der Ansicht lässt die geöffnete Box unberührt, nur ein stehender Klick schließt.
+      if (drag.type === 'pan' && canvasEditingBoxId) {
+        const panDistPx = Math.hypot(e.clientX - drag.startClientX, e.clientY - drag.startClientY);
+        if (panDistPx < CANVAS_CLICK_VS_DRAG_THRESHOLD_PX) closeCanvasBoxEditor();
+      }
+
       // 'move'/'resize' already mutated the box object in place via onCanvasPointerMove.
       renderCanvasBoxes();
       syncCanvasContentToTab(tab);
@@ -14309,10 +14356,21 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // den Rahmen. Einmal Klicken in die Box bei aktiviertem Rahmen öffnet den Quellcode
         // Modus." The box body has no other meaning to reassign here — moving/resizing already
         // requires grabbing an edge/handle specifically, handled above.
-        if (canvasSelectedBoxId === boxEl.dataset.boxId) {
-          openCanvasBoxEditor(boxEl.dataset.boxId);
+        //
+        // Wird gerade schon EINE Box bearbeitet, wechselt ein Klick auf eine ANDERE direkt dorthin,
+        // ohne den Umweg über den ersten Auswahlklick. Vorher blieb dabei die alte Box geöffnet
+        // (ihr Overlay lag weiter über ihr), während die neue nur ausgewählt wurde -- zwei Boxen
+        // sahen gleichzeitig aktiv aus, und der Tastaturfokus landete gemessen auf BODY, also
+        // nirgends: getippt werden konnte danach in keiner der beiden. Das ist das gemeldete
+        // "Fokusproblem beim Wechsel von einer Box zur anderen". Da der Wunsch zu bearbeiten in
+        // diesem Zustand bereits feststeht, ist der Direktwechsel auch der kürzere Weg;
+        // openCanvasBoxEditor() wählt die neue Box ohnehin mit aus, ihre Griffe zum Verschieben und
+        // Skalieren erscheinen also im selben Klick.
+        const angeklickt = boxEl.dataset.boxId;
+        if (canvasSelectedBoxId === angeklickt || (canvasEditingBoxId && canvasEditingBoxId !== angeklickt)) {
+          openCanvasBoxEditor(angeklickt);
         } else {
-          selectCanvasBox(boxEl.dataset.boxId);
+          selectCanvasBox(angeklickt);
         }
         return;
       }
