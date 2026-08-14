@@ -6063,7 +6063,20 @@ return rgba;});});}).call(this);
          JS-getriebene Overlay seit Phase 11 wurde nicht automatisch gegen diese Liste geprueft").
          Eine laufende Aufnahme ist ein realistischer Zustand beim Drucken (die Steuerung ist ja
          gerade deshalb dauerhaft sichtbar), gehoert aber nie ins PDF. */
-      #colorPickerPopover, #imageStylePopover, #formulaConfirmBtn, #formulaEditOverlayBtn, #formulaFreezeOverlayBtn, #audioRecordControls {
+      /* Nachtrag (gemeldet mit Bildschirmfoto der Druckvorschau): Das Burger-Menü stand mitten im
+         PDF, quer über dem Notizinhalt. Es ist dabei der wahrscheinlichste Fall von allen -- der
+         Menüpunkt "Drucken / PDF" liegt ja IN diesem Menü, es ist beim Auslösen also praktisch
+         immer offen. Beim Umbau der Kopfzeile ins Burger-Menü wurde es dieser Liste nie hinzugefügt.
+         Erneut mechanisch nachgeprüft statt geraten (jedes sichtbare Element außerhalb von
+         .preview-pane gegen die Ausblendregeln dieses Blocks gehalten, per Element.matches über die
+         ganze Vorfahrenkette): dabei kamen drei weitere heraus, die ebenfalls keine Regel hatten --
+         .toast (eine Meldung kann beim Drucken gerade eingeblendet sein), .pane-resizer samt dem
+         darin sitzenden Sync-Scroll-Knopf (die Trennlinie ist im Split sichtbar, die Quelltextseite
+         daneben wird ausgeblendet, die Linie selbst blieb) und .presentation-overlay (deckt beim
+         Drucken aus dem Präsentationsmodus heraus die ganze Seite ab; das Ausblenden erfasst seine
+         Bedienelemente gleich mit). */
+      #colorPickerPopover, #imageStylePopover, #formulaConfirmBtn, #formulaEditOverlayBtn, #formulaFreezeOverlayBtn, #audioRecordControls,
+      .burger-menu-panel, .toast, .pane-resizer, .presentation-overlay {
         display: none !important;
       }
 
