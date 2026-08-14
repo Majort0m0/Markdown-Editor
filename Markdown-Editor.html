@@ -4347,8 +4347,33 @@ return rgba;});});}).call(this);
         background-color: var(--bg-app);
       }
 
+      /* Innenabstand und ein zarter Schatten, damit die Spalte als Blatt auf dem Grau liegt statt
+         als farbiger Streifen. Der Abstand ersetzt die sonst geltenden 20px und wirkt wie ein
+         Seitenrand; weil .markdown-body mit border-box rechnet, bleibt das Blatt dabei bei seinen
+         850px und der Text wird schmaler -- genau so herum wie auf Papier, wo der Rand vom Blatt
+         abgeht und nicht dazukommt.
+         Der Schatten ist bewusst zweistufig: eine enge, dunklere Lage zeichnet die Blattkante, eine
+         weite, sehr helle darunter gibt die Höhe. Ein einzelner großer Schatten wirkt an der Kante
+         entweder zu hart oder verwaschen. */
       body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body {
         background-color: var(--preview-bg-solid, var(--preview-bg));
+        padding: 48px 56px;
+        margin-bottom: 24px;
+        border-radius: 3px;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.07), 0 8px 28px rgba(0, 0, 0, 0.07);
+      }
+
+      /* Der eigene obere Abstand der ersten Überschrift (gemessen 44,8px) käme zum Seitenrand oben
+         noch hinzu und ließe den Text im Blatt nach unten rutschen; unten dasselbe mit dem Abstand
+         des letzten Absatzes. Beides auf null, damit allein der Seitenrand die Blattkanten bestimmt
+         und oben wie unten gleich viel Luft bleibt. Nur die direkten Kinder -- verschachtelte erste
+         Elemente (etwa in einem Zitat) behalten ihre Abstände. */
+      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body > :first-child {
+        margin-top: 0;
+      }
+
+      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body > :last-child {
+        margin-bottom: 0;
       }
     }
 
