@@ -4291,6 +4291,183 @@ return rgba;});});}).call(this);
       font-family: Verdana, "Segoe UI", sans-serif;
     }
 
+    /* Das 16. Design: selbst zusammenstellbar (siehe openCustomThemeEditor()). Die Werte hier sind
+       nur der Ausgangspunkt für den Editor und der Rückfall, solange nichts eigenes gespeichert ist
+       -- im Betrieb überschreibt sie die von applyCustomThemeStyle() erzeugte Regel, die als
+       späteres Stylesheet gewinnt. Dass Custom ein ganz gewöhnliches Design mit denselben sechs
+       Variablen ist, ist der eigentliche Trick: alles Nachgelagerte (Vorschau, Canvas-Boxen, Druck,
+       die drei Exportvorlagen) funktioniert damit unverändert, ohne einen einzigen Sonderfall. */
+    .theme-custom {
+      --preview-bg: #ffffff;
+      --preview-text: #1f2328;
+      --preview-link: #0969da;
+      --preview-code-bg: #f6f8fa;
+      --preview-border: #d0d7de;
+      --preview-header-border: #d8dee4;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* Designauswahl: 4x4-Raster mit abstrakten Vorschaukacheln. Feste vier Spalten statt
+       auto-fit -- die 4x4-Anordnung war ausdrücklich gewünscht; erst unterhalb der Schwelle unten
+       wird auf zwei Spalten umgebrochen, weil 16 Kacheln nebeneinander auf einem Telefon
+       unbedienbar klein würden. */
+    .theme-modal-card {
+      max-width: 720px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+    }
+
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      padding: 4px;
+    }
+
+    .theme-card {
+      border: 2px solid var(--border-color);
+      border-radius: 10px;
+      background: none;
+      padding: 0;
+      overflow: hidden;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      /* Muss ausdrücklich stehen: die allgemeine Knopf-Regel dieser Datei setzt align-items:center,
+         wodurch die Vorschau als schmaler senkrechter Streifen in der Mitte zusammenschnurrte statt
+         die Kachel auszufüllen. */
+      align-items: stretch;
+      transition: border-color 0.12s ease, transform 0.12s ease;
+    }
+
+    .theme-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    .theme-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+    }
+
+    /* Die Vorschau selbst: eine Miniatur aus reinen Farbflächen -- Überschriftenbalken mit
+       Unterlinie, zwei Textzeilen, ein Akzentbalken (Links) und ein Code-Feld. Kein echter Text,
+       sondern "abstrakt die wesentlichen Farbakzente", wie gewünscht. Die Farben kommen zur
+       Laufzeit aus dem jeweiligen Design selbst (siehe buildThemeCardPreview()), sind hier also
+       nirgends ein zweites Mal aufgeschrieben. */
+    .theme-card-preview {
+      height: 84px;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+      justify-content: flex-start;
+    }
+
+    .theme-card-preview .tp-head {
+      height: 9px;
+      width: 62%;
+      border-radius: 2px;
+    }
+
+    .theme-card-preview .tp-rule {
+      height: 2px;
+      width: 100%;
+      border-radius: 1px;
+    }
+
+    .theme-card-preview .tp-line {
+      height: 5px;
+      border-radius: 2px;
+      opacity: 0.55;
+    }
+
+    .theme-card-preview .tp-row {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      width: 100%;
+    }
+
+    .theme-card-preview .tp-link {
+      height: 5px;
+      width: 34%;
+      border-radius: 2px;
+    }
+
+    .theme-card-preview .tp-code {
+      height: 14px;
+      flex: 1;
+      border-radius: 3px;
+      border: 1px solid;
+    }
+
+    .theme-card-label {
+      padding: 6px 8px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-main);
+      background-color: var(--bg-surface);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .theme-card-edit {
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    /* Editor für das Custom-Design: schlichte Beschriftung-links/Steuerelement-rechts-Zeilen. */
+    .custom-theme-editor {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 4px;
+    }
+
+    .custom-theme-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: var(--text-main);
+    }
+
+    .custom-theme-row input[type="color"] {
+      width: 44px;
+      height: 28px;
+      padding: 2px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background-color: var(--bg-surface);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .custom-theme-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-top: 4px;
+    }
+
+    @media (max-width: 640px) {
+      .theme-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
     .markdown-body {
       background-color: var(--preview-bg);
       color: var(--preview-text);
@@ -6793,7 +6970,8 @@ return rgba;});});}).call(this);
 
     <div class="theme-picker">
       <span class="theme-picker-icon" title="Design wechseln"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path fill="currentColor" fill-rule="evenodd" d="M524,109 L522.497699,109 C522.214844,109 522,109.223858 522,109.5 C522,109.768066 522.222827,110 522.497699,110 L524,110 L524,111.502301 C524,111.785156 524.223858,112 524.5,112 C524.768066,112 525,111.777173 525,111.502301 L525,110 L526.502301,110 C526.785156,110 527,109.776142 527,109.5 C527,109.231934 526.777173,109 526.502301,109 L525,109 L525,107.497699 C525,107.214844 524.776142,107 524.5,107 C524.231934,107 524,107.222827 524,107.497699 L524,109 Z M519,112 C519,107.581722 522.590712,104 527,104 C531.418278,104 535,107.590712 535,112 C535,116.418278 531.409288,120 527,120 C522.581722,120 519,116.409288 519,112 Z M532,107.100505 C529.26633,104.366835 524.834175,104.366835 522.100505,107.100505 C519.366835,109.834175 519.366835,114.26633 522.100505,117 L532,107.100505 Z M528,114.5 C528,114.223858 528.215057,114 528.490479,114 L531.509521,114 C531.780405,114 532,114.231934 532,114.5 C532,114.776142 531.784943,115 531.509521,115 L528.490479,115 C528.219595,115 528,114.768066 528,114.5 Z" transform="translate(-519 -104)"/></svg></span>
-      <select id="themeSelector" class="style-select" title="Design wechseln" onchange="changeTheme(this.value)">
+      <button id="themePickerBtn" class="style-select theme-picker-btn" title="Design wählen (Strg/Cmd + Alt + Z)" onclick="openThemeModal()">Design</button>
+      <select id="themeSelector" class="style-select" title="Design wechseln" onchange="changeTheme(this.value)" hidden>
         <option value="theme-github-light">GitHub Light</option>
         <option value="theme-github-dark">GitHub Dark</option>
         <option value="theme-solarized">Solarized Paper</option>
@@ -6809,6 +6987,7 @@ return rgba;});});}).call(this);
         <option value="theme-journal">Journal</option>
         <option value="theme-clean">Clean</option>
         <option value="theme-bunt">Bunt</option>
+        <option value="theme-custom">Custom</option>
       </select>
       <input type="color" id="canvasBgColorInput" class="canvas-bg-color-input" title="Canvas-Hintergrundfarbe" onchange="changeCanvasBackgroundColor(this.value)">
     </div>
@@ -7493,6 +7672,46 @@ return rgba;});});}).call(this);
         <button class="icon-btn" onclick="closeTemplateModal()" title="Abbrechen">✕</button>
       </div>
       <div class="template-grid" id="templateGrid"></div>
+    </div>
+  </div>
+
+  <!-- Designauswahl. Zwei Ansichten im selben Fenster: das 4x4-Raster und der Custom-Editor; es ist
+       immer genau eine sichtbar (siehe showThemeGridView()/openCustomThemeEditor()), damit der
+       Editor nicht als drittes Fenster über zwei anderen liegt. -->
+  <div class="modal-overlay" id="themeModal" onclick="if (event.target === this) closeThemeModal()">
+    <div class="modal-card theme-modal-card">
+      <div class="modal-header">
+        <h2 id="themeModalTitle">Design wählen</h2>
+        <button class="icon-btn" onclick="closeThemeModal()" title="Schließen">✕</button>
+      </div>
+      <div class="theme-grid" id="themeGrid"></div>
+      <div class="custom-theme-editor" id="customThemeEditor" style="display: none;">
+        <div class="custom-theme-row"><span>Hintergrund</span><input type="color" id="ctBg" oninput="updateCustomThemeFromEditor()"></div>
+        <div class="custom-theme-row"><span>Text</span><input type="color" id="ctText" oninput="updateCustomThemeFromEditor()"></div>
+        <div class="custom-theme-row"><span>Links / Akzent</span><input type="color" id="ctLink" oninput="updateCustomThemeFromEditor()"></div>
+        <div class="custom-theme-row"><span>Code-Fläche</span><input type="color" id="ctCodeBg" oninput="updateCustomThemeFromEditor()"></div>
+        <div class="custom-theme-row"><span>Rahmen</span><input type="color" id="ctBorder" oninput="updateCustomThemeFromEditor()"></div>
+        <div class="custom-theme-row"><span>Überschriften-Linie</span><input type="color" id="ctHeaderBorder" oninput="updateCustomThemeFromEditor()"></div>
+        <div class="custom-theme-row">
+          <span>Schriftart</span>
+          <select class="style-select" id="ctFont" onchange="updateCustomThemeFromEditor()">
+            <option value="sans">Serifenlos</option>
+            <option value="serif">Serif</option>
+            <option value="mono">Monospace</option>
+          </select>
+        </div>
+        <div class="custom-theme-row">
+          <span>Code-Einfärbung</span>
+          <select class="style-select" id="ctCodeDark" onchange="updateCustomThemeFromEditor()">
+            <option value="light">Hell</option>
+            <option value="dark">Dunkel</option>
+          </select>
+        </div>
+        <div class="custom-theme-actions">
+          <button class="btn-label" onclick="resetCustomTheme()">Zurücksetzen</button>
+          <button class="btn-label" onclick="showThemeGridView()">Fertig</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -8935,6 +9154,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         wysiwygEnabled: wysiwygEnabled,
         lastTemplateId: lastTemplateId,
         welcomeNoteUsed: welcomeNoteUsed,
+        customTheme: customTheme,
         teleprompterSpeed: teleprompterSpeed,
         webdavPendingDeletions: webdavPendingDeletions
       };
@@ -9094,6 +9314,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // Rückfall für Sitzungen, die vor diesem Merker gespeichert wurden: wer schon Notizen hat,
         // hat die Willkommensnotiz längst gesehen -- sie darf dort nicht nachträglich wieder
         // auftauchen, bloß weil das Feld im gespeicherten Zustand noch fehlt.
+        // Feldweise übernommen statt den gespeicherten Stand einfach zu übernehmen: so bleibt eine
+        // vor einer späteren Erweiterung gespeicherte Palette vollständig, weil neu hinzugekommene
+        // Felder ihren Grundwert behalten.
+        customTheme = { ...DEFAULT_CUSTOM_THEME, ...(state.customTheme || {}) };
         welcomeNoteUsed = state.welcomeNoteUsed !== undefined
           ? !!state.welcomeNoteUsed
           : (Array.isArray(state.tabs) && state.tabs.length > 0);
@@ -11035,6 +11259,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       { id: 'toc', category: 'Ansicht', label: 'Inhaltsverzeichnis umschalten', run: () => toggleToc(), def: { ctrl: true, alt: true, code: 'KeyO' } },
       { id: 'tts', category: 'Ansicht', label: 'Vorlesen starten/pausieren', run: () => previewTts.toggle(), def: { ctrl: true, alt: true, code: 'KeyU' } },
       { id: 'simpleMode', category: 'Ansicht', label: 'Simple Modus umschalten', run: () => toggleSimpleMode(), def: { ctrl: true, alt: true, code: 'KeyS' } }, // not KeyM -- Cmd+Option+M is macOS's own "Minimize All" (OS-level, not even reaching the browser)
+      { id: 'themePicker', category: 'Ansicht', label: 'Design wählen', run: () => openThemeModal(), def: { ctrl: true, alt: true, code: 'KeyZ' } }, // KeyD waere naeher an "Design", ist aber schon der einklappbare Abschnitt; KeyC/KeyI/KeyM/KeyH scheiden wegen macOS- bzw. Chrome-eigener Belegung aus
       { id: 'shortcutsHelp', category: 'Ansicht', label: 'Tastenkürzel anzeigen', run: () => openShortcutsModal(), def: { ctrl: true, alt: true, code: 'Slash' } },
     ];
 
@@ -11398,6 +11623,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (document.getElementById('audioTrimModal').classList.contains('active')) closeAudioTrimDialog('verwerfen');
         closeExportChoiceModal();
         closeTemplateModal();
+        closeThemeModal();
         closeToc();
         closeColorPopover();
         document.getElementById('bubbleToolbar').classList.remove('active');
@@ -12474,7 +12700,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // Called from both applyPaneVisibility() and updatePreview(), the two places that already
     // needed to know canvasNoBox for their own, unrelated reasons.
     function updateThemePickerForCanvasMode(canvasNoBox) {
-      themeSelector.style.display = canvasNoBox ? 'none' : '';
+      // Umgeschaltet wird jetzt der Knopf, nicht mehr das Auswahlfeld: das ist seit der
+      // Designauswahl im Modalfenster dauerhaft unsichtbar und dient nur noch als Liste der
+      // verfügbaren Designs und als Träger des aktuellen Werts (siehe openThemeModal()).
+      document.getElementById('themePickerBtn').style.display = canvasNoBox ? 'none' : '';
       canvasBgColorInput.style.display = canvasNoBox ? '' : 'none';
       document.querySelector('.theme-picker-icon').title = canvasNoBox ? 'Canvas-Hintergrundfarbe wählen' : 'Design wechseln';
       if (canvasNoBox) {
@@ -13600,6 +13829,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         lightStyle.media = 'all';
         darkStyle.media = 'not all';
       }
+      // Im Knopf der Werkzeugleiste steht der Name des aktuellen Designs. Hier und nicht in
+      // changeTheme(), damit auch die rein programmatischen Wege (Notizwechsel, Laden, Öffnen einer
+      // Canvas-Box) die Beschriftung mitziehen -- sie alle laufen über applyTheme().
+      updateThemeButtonLabel();
       saveStateToLocalStorage();
     }
 
@@ -13611,6 +13844,208 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const tab = getCurrentTab();
       if (tab) tab.theme = themeClass;
       applyTheme(themeClass);
+    }
+
+    // --- DESIGNAUSWAHL (4x4-Raster) UND CUSTOM-DESIGN ---
+
+    // Die drei wählbaren Schriftfamilien des Custom-Designs. Bewusst dieselben Stapel, die auch die
+    // mitgelieferten Designs benutzen (Systemschrift, Georgia, die Code-Schrift), statt neuer
+    // Schriftwünsche, die auf einem fremden Gerät womöglich gar nicht vorhanden sind.
+    const CUSTOM_THEME_FONTS = {
+      sans: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+      serif: '"Georgia", "Times New Roman", serif',
+      mono: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace'
+    };
+
+    const DEFAULT_CUSTOM_THEME = {
+      bg: '#ffffff', text: '#1f2328', link: '#0969da',
+      codeBg: '#f6f8fa', border: '#d0d7de', headerBorder: '#d8dee4',
+      font: 'sans', codeDark: false
+    };
+
+    // Geräteweit, nicht pro Notiz -- so entschieden: es gibt genau EINE selbst gebaute Palette, und
+    // jede Notiz (und jede Canvas-Box), die auf "Custom" steht, zeigt sie. Liegt deshalb bei den
+    // übrigen Einstellungen in localStorage und reist nicht über WebDAV mit den Dokumenten.
+    let customTheme = { ...DEFAULT_CUSTOM_THEME };
+
+    // Schreibt die Palette als echte CSS-Regel in ein eigenes <style> im <head>. Das ist der Kern
+    // des Ganzen: dadurch ist Custom für alles Nachgelagerte ein Design wie jedes andere -- die
+    // Vorschau, Canvas-Boxen, der Druck und die drei Exportvorlagen lesen dieselben sechs Variablen
+    // und brauchen keinen einzigen Sonderfall. Die Regel steht am Ende des <head> und gewinnt
+    // dadurch gegen die statischen Grundwerte von .theme-custom bei gleicher Spezifität.
+    function applyCustomThemeStyle() {
+      let el = document.getElementById('customThemeStyle');
+      if (!el) {
+        el = document.createElement('style');
+        el.id = 'customThemeStyle';
+        document.head.appendChild(el);
+      }
+      const schrift = CUSTOM_THEME_FONTS[customTheme.font] || CUSTOM_THEME_FONTS.sans;
+      el.textContent = '.theme-custom {' +
+        '--preview-bg:' + customTheme.bg + ';' +
+        '--preview-text:' + customTheme.text + ';' +
+        '--preview-link:' + customTheme.link + ';' +
+        '--preview-code-bg:' + customTheme.codeBg + ';' +
+        '--preview-border:' + customTheme.border + ';' +
+        '--preview-header-border:' + customTheme.headerBorder + ';' +
+        'font-family:' + schrift + ';' +
+        '}';
+      // DARK_THEMES entscheidet, welches der beiden hljs-Stylesheets aktiv ist (siehe applyTheme()).
+      // Custom kommt je nach Wahl hinein oder heraus -- die Menge ist genau dafür da, dass diese
+      // Entscheidung an einer Stelle steht.
+      if (customTheme.codeDark) DARK_THEMES.add('theme-custom');
+      else DARK_THEMES.delete('theme-custom');
+      if (currentTheme === 'theme-custom') applyTheme('theme-custom'); // Code-Einfärbung sofort nachziehen
+    }
+
+    function updateThemeButtonLabel() {
+      const btn = document.getElementById('themePickerBtn');
+      if (!btn) return;
+      const opt = [...themeSelector.options].find(o => o.value === currentTheme);
+      btn.textContent = opt ? opt.textContent : 'Design';
+    }
+
+    function openThemeModal() {
+      closeBurgerMenu();
+      renderThemeGrid();
+      showThemeGridView();
+      document.getElementById('themeModal').classList.add('active');
+    }
+
+    function closeThemeModal() {
+      document.getElementById('themeModal').classList.remove('active');
+    }
+
+    function showThemeGridView() {
+      document.getElementById('themeGrid').style.display = '';
+      document.getElementById('customThemeEditor').style.display = 'none';
+      document.getElementById('themeModalTitle').textContent = 'Design wählen';
+      renderThemeGrid(); // Die Custom-Kachel soll die eben bearbeitete Palette zeigen
+    }
+
+    // Liest die sechs Farben eines Designs aus dem Design selbst, statt sie hier ein zweites Mal
+    // aufzuschreiben: ein unsichtbares Element bekommt kurz dessen Klasse, die Werte werden
+    // abgelesen, das Element verschwindet wieder. Neue Designs erscheinen dadurch von allein korrekt
+    // im Raster, ohne dass hier etwas nachgepflegt werden muss.
+    function readThemeColors(themeClass) {
+      const probe = document.createElement('div');
+      probe.className = 'markdown-body ' + themeClass;
+      probe.style.cssText = 'position:absolute;left:-9999px;top:0;width:1px;height:1px;visibility:hidden;pointer-events:none';
+      document.body.appendChild(probe);
+      const cs = getComputedStyle(probe);
+      const lies = (name) => cs.getPropertyValue(name).trim();
+      const farben = {
+        // Clean ist durchsichtig (siehe .theme-clean) -- für die Kachel braucht es eine echte
+        // Fläche, sonst schiene der Fensterhintergrund durch und die Vorschau wäre nichtssagend.
+        bg: lies('--preview-bg-solid') || lies('--preview-bg'),
+        text: lies('--preview-text'),
+        link: lies('--preview-link'),
+        codeBg: lies('--preview-code-bg'),
+        border: lies('--preview-border'),
+        headerBorder: lies('--preview-header-border')
+      };
+      probe.remove();
+      return farben;
+    }
+
+    function buildThemeCardPreview(farben) {
+      const wrap = document.createElement('div');
+      wrap.className = 'theme-card-preview';
+      wrap.style.backgroundColor = farben.bg;
+      const balken = (klasse, farbe, breite) => {
+        const d = document.createElement('div');
+        d.className = klasse;
+        if (farbe) d.style.backgroundColor = farbe;
+        if (breite) d.style.width = breite;
+        return d;
+      };
+      wrap.appendChild(balken('tp-head', farben.text));
+      wrap.appendChild(balken('tp-rule', farben.headerBorder));
+      wrap.appendChild(balken('tp-line', farben.text, '92%'));
+      const reihe = document.createElement('div');
+      reihe.className = 'tp-row';
+      reihe.appendChild(balken('tp-link', farben.link));
+      const code = balken('tp-code', farben.codeBg);
+      code.style.borderColor = farben.border;
+      reihe.appendChild(code);
+      wrap.appendChild(reihe);
+      return wrap;
+    }
+
+    // Die 16 Einträge kommen aus dem (versteckten) #themeSelector -- eine zweite Liste hier wäre
+    // genau die Art Dopplung, die beim nächsten neuen Design auseinanderläuft.
+    function renderThemeGrid() {
+      const grid = document.getElementById('themeGrid');
+      grid.innerHTML = '';
+      [...themeSelector.options].forEach(opt => {
+        const karte = document.createElement('button');
+        karte.type = 'button';
+        karte.className = 'theme-card' + (opt.value === currentTheme ? ' selected' : '');
+        karte.title = opt.textContent;
+        karte.onclick = () => selectThemeFromModal(opt.value);
+        karte.appendChild(buildThemeCardPreview(readThemeColors(opt.value)));
+        const label = document.createElement('div');
+        label.className = 'theme-card-label';
+        const name = document.createElement('span');
+        name.textContent = opt.textContent;
+        label.appendChild(name);
+        if (opt.value === 'theme-custom') {
+          const stift = document.createElement('span');
+          stift.className = 'theme-card-edit';
+          stift.textContent = 'bearbeiten';
+          label.appendChild(stift);
+        }
+        karte.appendChild(label);
+        grid.appendChild(karte);
+      });
+    }
+
+    // Custom wird beim Anwählen zusätzlich zum Bearbeiten geöffnet ("Bei Auswahl soll über einen
+    // Editor ein individuelles Design erstellt werden können") -- alle anderen wenden nur an und
+    // schließen. Ein erneuter Klick auf die Custom-Kachel führt später wieder in den Editor, was
+    // gleichzeitig der Weg ist, eine bestehende Palette nachzubessern.
+    function selectThemeFromModal(themeClass) {
+      changeTheme(themeClass);
+      if (themeClass === 'theme-custom') openCustomThemeEditor();
+      else closeThemeModal();
+    }
+
+    function openCustomThemeEditor() {
+      document.getElementById('ctBg').value = customTheme.bg;
+      document.getElementById('ctText').value = customTheme.text;
+      document.getElementById('ctLink').value = customTheme.link;
+      document.getElementById('ctCodeBg').value = customTheme.codeBg;
+      document.getElementById('ctBorder').value = customTheme.border;
+      document.getElementById('ctHeaderBorder').value = customTheme.headerBorder;
+      document.getElementById('ctFont').value = customTheme.font;
+      document.getElementById('ctCodeDark').value = customTheme.codeDark ? 'dark' : 'light';
+      document.getElementById('themeGrid').style.display = 'none';
+      document.getElementById('customThemeEditor').style.display = '';
+      document.getElementById('themeModalTitle').textContent = 'Custom-Design bearbeiten';
+    }
+
+    // Jede Änderung wirkt sofort auf die Notiz im Hintergrund -- ein "Übernehmen"-Knopf würde nur
+    // dazwischenstehen, weil man das Ergebnis ohnehin live sehen will, während man Farben schiebt.
+    function updateCustomThemeFromEditor() {
+      customTheme = {
+        bg: document.getElementById('ctBg').value,
+        text: document.getElementById('ctText').value,
+        link: document.getElementById('ctLink').value,
+        codeBg: document.getElementById('ctCodeBg').value,
+        border: document.getElementById('ctBorder').value,
+        headerBorder: document.getElementById('ctHeaderBorder').value,
+        font: document.getElementById('ctFont').value,
+        codeDark: document.getElementById('ctCodeDark').value === 'dark'
+      };
+      applyCustomThemeStyle();
+      saveStateToLocalStorage();
+    }
+
+    function resetCustomTheme() {
+      customTheme = { ...DEFAULT_CUSTOM_THEME };
+      applyCustomThemeStyle();
+      openCustomThemeEditor(); // Steuerelemente auf die Grundwerte zurückstellen
+      saveStateToLocalStorage();
     }
 
     // #canvasBgColorInput's onchange -- the canvas-chrome equivalent of changeTheme() above,
@@ -29532,6 +29967,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // applyContentWidth() call, leaving contentWidthMode at its correct 'narrow' default in memory
     // but the body.content-width-narrow class never actually applied.
     applyContentWidth(contentWidthMode);
+    // Erzeugt die .theme-custom-Regel aus der gespeicherten (oder der Grund-)Palette. Muss laufen,
+    // bevor irgendeine Notiz mit diesem Design gezeichnet wird -- und aus demselben Grund wie oben
+    // hier statt in loadStateFromLocalStorage(): beim allerersten Start läuft die gar nicht.
+    applyCustomThemeStyle();
+    updateThemeButtonLabel();
     // Not awaited -- fire-and-forget like the delayed WebDAV startup sync below; switchTab()'s own
     // staleness guard (see its comment) already makes it safe regardless of exactly when this
     // settles relative to the rest of this init sequence.
