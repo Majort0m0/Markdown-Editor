@@ -4323,6 +4323,39 @@ return rgba;});});}).call(this);
        übrigen fünfzehn abhebt. Alles ist eng auf .theme-bunt gemünzt, kann also kein anderes Design
        berühren; die Farben sind so gewählt, dass sie auf dem hellen Papierton durchgehend gut
        lesbar bleiben. */
+    /* Hinweis, solange der verborgene Text bearbeitet wird: Was man gerade schreibt, ist später
+       eingeklappt und damit unsichtbar -- ohne Hinweis sieht der Abschnitt beim Schreiben aus wie
+       gewöhnlicher Fließtext. Die Klasse setzt der Cursor-Beobachter (siehe openDetailsAroundCaret),
+       sie verschwindet also von selbst, sobald der nächste Absatz erreicht ist.
+       Bewusst als outline mit Abstand statt Rahmen und Innenabstand: beides würde beim Erscheinen
+       und Verschwinden den Text verschieben, und ein springender Absatz beim Schreiben wäre
+       schlimmer als gar kein Hinweis. Gestrichelt und dünn, damit es ein Hinweis bleibt und nicht
+       mit der Auswahlmarkierung konkurriert.
+       Die Beschriftung ist ein Pseudoelement, kein echter Knoten -- in einer contenteditable-
+       Vorschau ist das der entscheidende Punkt: sie lässt sich nicht anklicken, nicht hineintippen,
+       taucht in keiner Auswahl auf und ist für die Positionsabbildung schlicht nicht vorhanden. */
+    .markdown-body details.details-editing {
+      outline: 1px dashed var(--preview-link);
+      outline-offset: 10px;
+      border-radius: 3px;
+      position: relative;
+    }
+
+    .markdown-body details.details-editing::after {
+      content: 'Verborgener Text';
+      position: absolute;
+      top: -22px;
+      right: -8px;
+      padding: 0 6px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--preview-link);
+      background-color: var(--preview-bg-solid, var(--preview-bg));
+      pointer-events: none;
+      user-select: none;
+    }
+
     .markdown-body.theme-bunt h1 { color: #d00000; }
     .markdown-body.theme-bunt h2 { color: #6a4c93; border-bottom-color: #8ac926; }
     .markdown-body.theme-bunt h3 { color: #1982c4; }
@@ -6409,6 +6442,17 @@ return rgba;});});}).call(this);
       }
 
       .formula-fill-handle {
+        display: none !important;
+      }
+
+      /* Der Bearbeitungshinweis um einen einklappbaren Abschnitt (siehe .details-editing) ist reine
+         Schreibhilfe. Er hängt am Cursor, kann beim Drucken also durchaus gerade gesetzt sein --
+         gedruckt gehört weder der gestrichelte Rahmen noch die Beschriftung. */
+      .markdown-body details.details-editing {
+        outline: none !important;
+      }
+
+      .markdown-body details.details-editing::after {
         display: none !important;
       }
 
@@ -29521,6 +29565,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const details = el && el.closest ? el.closest('details') : null;
       if (details && details !== zuletztAufgeklapptesDetails && !details.open) details.open = true;
       zuletztAufgeklapptesDetails = details;
+      // Hinweisrahmen nur um den Abschnitt, in dem der Cursor gerade steht (siehe
+      // .details-editing). Immer alle anderen mit abräumen: nach einem Neuaufbau der Vorschau sind
+      // es andere Elemente, und beim Verlassen des Abschnitts gibt es gar keinen mehr, dem man die
+      // Klasse gezielt nehmen könnte.
+      preview.querySelectorAll('details.details-editing').forEach(d => {
+        if (d !== details) d.classList.remove('details-editing');
+      });
+      if (details) details.classList.add('details-editing');
     }
 
     function handleSummaryBeforeInput(e, owner, range) {
