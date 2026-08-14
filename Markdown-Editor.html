@@ -4151,13 +4151,27 @@ return rgba;});});}).call(this);
       font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
     }
 
-    .theme-dracula {
-      --preview-bg: #282a36;
-      --preview-text: #f8f8f2;
-      --preview-link: #8be9fd;
-      --preview-code-bg: #44475a;
-      --preview-border: #6272a4;
-      --preview-header-border: #44475a;
+    /* Ersetzt das frühere Dracula-Design: eine grüne Schultafel, auf der mit weißer Kreide
+       geschrieben wird. Das Grün ist der gedeckte Ton echter Schultafeln, der Text das leicht
+       gebrochene Weiß von Kreide (reines #ffffff wirkt auf dem Grün wie Druckfarbe, nicht wie
+       Kreide). Die übrigen Rollen bekommen kräftige, leuchtende Kreidefarben -- Gelb für Links,
+       Grün und Pink für die Linien --, wie sie auf einer Tafel als Hervorhebung benutzt werden.
+       Bestehende Notizen mit dem alten Namen werden beim Laden umgeschrieben, siehe
+       THEME_CLASS_MIGRATIONS. */
+    /* Der alte Klassenname steht bewusst mit hier: eine Notiz, die noch "theme-dracula" gespeichert
+       hat -- in localStorage, in einer .md-Datei oder auf dem WebDAV-Server -- soll auf keinen Fall
+       unformatiert erscheinen, auch nicht für den Moment, bevor die Migration greift. Die Migration
+       (siehe migrateThemeClass()) schreibt solche Werte beim Einlesen um; dieser Alias ist das Netz
+       darunter, unter anderem für Boxen einer Canvas-Notiz, deren Design als Klassenname direkt aus
+       den Boxdaten kommt. */
+    .theme-dracula,
+    .theme-chalkboard {
+      --preview-bg: #2e4a3d;
+      --preview-text: #f2f4ef;
+      --preview-link: #ffd93d;
+      --preview-code-bg: #243c32;
+      --preview-border: #6bd39a;
+      --preview-header-border: #ff6b9d;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
@@ -4282,14 +4296,66 @@ return rgba;});});}).call(this);
        teal borders, warm-orange header-border, pale-yellow code tint) rather than one dominant
        accent color reused everywhere like the other themes. */
     .theme-bunt {
-      --preview-bg: #ffffff;
+      --preview-bg: #fffdf7;
       --preview-text: #22223b;
       --preview-link: #e63946;
-      --preview-code-bg: #fef9e7;
+      --preview-code-bg: #fff3d6;
       --preview-border: #2a9d8f;
       --preview-header-border: #f4a261;
       font-family: Verdana, "Segoe UI", sans-serif;
     }
+
+    /* Bunt ist das einzige Design mit eigenen Regeln über die sechs Variablen hinaus -- und das ist
+       der Punkt: mit sechs Rollen lässt sich kein Design bauen, das seinem Namen gerecht wird, weil
+       jede Überschriftenebene, jedes Zitat und jede Tabelle dieselbe Farbe bekäme wie überall sonst.
+       Hier bekommt stattdessen jede Ebene ihren eigenen Farbton, damit es sich deutlich von den
+       übrigen fünfzehn abhebt. Alles ist eng auf .theme-bunt gemünzt, kann also kein anderes Design
+       berühren; die Farben sind so gewählt, dass sie auf dem hellen Papierton durchgehend gut
+       lesbar bleiben. */
+    .markdown-body.theme-bunt h1 { color: #d00000; }
+    .markdown-body.theme-bunt h2 { color: #6a4c93; border-bottom-color: #8ac926; }
+    .markdown-body.theme-bunt h3 { color: #1982c4; }
+    .markdown-body.theme-bunt h4 { color: #2a9d8f; }
+    .markdown-body.theme-bunt h5 { color: #ff7d00; }
+    .markdown-body.theme-bunt h6 { color: #c9184a; }
+
+    .markdown-body.theme-bunt blockquote {
+      border-left-color: #8338ec;
+      background-color: #f6f0ff;
+      color: #4a2b7a;
+    }
+
+    .markdown-body.theme-bunt th {
+      background-color: #ffd6e0;
+      color: #8e1b3a;
+    }
+
+    .markdown-body.theme-bunt td {
+      border-color: #ffb3c6;
+    }
+
+    .markdown-body.theme-bunt code {
+      color: #7b2cbf;
+    }
+
+    .markdown-body.theme-bunt li::marker {
+      color: #f77f00;
+    }
+
+    .markdown-body.theme-bunt hr {
+      /* Statt einer Linie ein kleiner Farbverlauf über die ganze Breite -- die auffälligste Stelle,
+         an der sich dieses Design von den anderen unterscheidet. */
+      height: 3px;
+      border: none;
+      background-image: linear-gradient(to right, #e63946, #f4a261, #8ac926, #1982c4, #8338ec);
+    }
+
+    .markdown-body.theme-bunt a {
+      text-decoration-color: #f4a261;
+    }
+
+    .markdown-body.theme-bunt strong { color: #d00000; }
+    .markdown-body.theme-bunt em { color: #1982c4; }
 
     /* Das 16. Design: selbst zusammenstellbar (siehe openCustomThemeEditor()). Die Werte hier sind
        nur der Ausgangspunkt für den Editor und der Rückfall, solange nichts eigenes gespeichert ist
@@ -6976,7 +7042,7 @@ return rgba;});});}).call(this);
         <option value="theme-github-dark">GitHub Dark</option>
         <option value="theme-solarized">Solarized Paper</option>
         <option value="theme-academic">Academic Serif</option>
-        <option value="theme-dracula">Dracula</option>
+        <option value="theme-chalkboard">Kreidetafel</option>
         <option value="theme-gruvbox">Gruvbox Dark</option>
         <option value="theme-sepia">Sepia</option>
         <option value="theme-high-contrast">High Contrast</option>
@@ -7836,7 +7902,7 @@ return rgba;});});}).call(this);
     // later *write* (see saveStateToLocalStorage()) so a session on a shared/public device leaves
     // no trace at all, not just a hidden-at-startup one.
     let kioskMode = false;
-    const DARK_THEMES = new Set(['theme-github-dark', 'theme-dracula', 'theme-gruvbox', 'theme-tokyo-night']);
+    const DARK_THEMES = new Set(['theme-github-dark', 'theme-chalkboard', 'theme-gruvbox', 'theme-tokyo-night']);
     // Studio Pro UI redesign: shown in the burger menu's "Über" block (#aboutVersionText, set from
     // populateAboutVersionText() below). No build step exists to derive this automatically -- bump
     // by hand when a change is significant enough to warrant it. Counting restarts at 2.0 with
@@ -9155,6 +9221,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         lastTemplateId: lastTemplateId,
         welcomeNoteUsed: welcomeNoteUsed,
         customTheme: customTheme,
+        customThemeUpdatedAt: customThemeUpdatedAt,
         teleprompterSpeed: teleprompterSpeed,
         webdavPendingDeletions: webdavPendingDeletions
       };
@@ -9234,7 +9301,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           audioAssetIds: t.audioAssetIds || {},
           fileType: t.fileType || 'markdown',
           csvDelimiter: t.csvDelimiter || null,
-          theme: t.theme || 'theme-github-light',
+          theme: migrateThemeClass(t.theme) || 'theme-github-light',
           // Per-tab pane visibility/split-ratio -- see the matching fields in
           // saveStateToLocalStorage() above. Defaults cover tabs saved before this existed.
           showEditor: t.showEditor !== undefined ? t.showEditor : true,
@@ -9318,6 +9385,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // vor einer späteren Erweiterung gespeicherte Palette vollständig, weil neu hinzugekommene
         // Felder ihren Grundwert behalten.
         customTheme = { ...DEFAULT_CUSTOM_THEME, ...(state.customTheme || {}) };
+        customThemeUpdatedAt = state.customThemeUpdatedAt || 0;
         welcomeNoteUsed = state.welcomeNoteUsed !== undefined
           ? !!state.welcomeNoteUsed
           : (Array.isArray(state.tabs) && state.tabs.length > 0);
@@ -9495,7 +9563,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       t.audioAssetIds = rt.audioAssetIds || {};
       t.fileType = rt.fileType || 'markdown';
       t.csvDelimiter = rt.csvDelimiter || null;
-      t.theme = rt.theme || 'theme-github-light';
+      t.theme = migrateThemeClass(rt.theme) || 'theme-github-light';
       t.showEditor = rt.showEditor !== undefined ? rt.showEditor : true;
       t.showPreview = rt.showPreview !== undefined ? rt.showPreview : true;
       t.splitRatio = rt.splitRatio !== undefined ? rt.splitRatio : 50;
@@ -9546,7 +9614,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         audioAssetIds: remoteTabData.audioAssetIds || {},
         fileType: remoteTabData.fileType || 'markdown',
         csvDelimiter: remoteTabData.csvDelimiter || null,
-        theme: remoteTabData.theme || 'theme-github-light',
+        theme: migrateThemeClass(remoteTabData.theme) || 'theme-github-light',
         showEditor: remoteTabData.showEditor !== undefined ? remoteTabData.showEditor : true,
         showPreview: remoteTabData.showPreview !== undefined ? remoteTabData.showPreview : true,
         splitRatio: remoteTabData.splitRatio !== undefined ? remoteTabData.splitRatio : 50,
@@ -9694,6 +9762,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       await Promise.all(tabs.map(ensureTabAssetsHydrated));
 
       const remoteFetch = await fetchRemoteWebdavState();
+      // Das Custom-Design reist mit, obwohl es keine Notiz ist, sondern eine geräteweite Einstellung
+      // ("ich möchte das custom design über webdav mitsynchronisiert haben"). Zusammengeführt wird
+      // schlicht nach Zeitstempel: die zuletzt bearbeitete Palette gewinnt. Ein Konfliktdialog wie
+      // bei Notizen wäre hier unangemessen -- es gibt nur EINE Palette (so entschieden), sie lässt
+      // sich nicht sinnvoll "beide behalten", und ihr Verlust wiegt nicht wie der eines Textes.
+      // Steht bewusst vor dem Notizabgleich: übernimmt dieses Gerät die entfernte Palette, soll sie
+      // schon gelten, während weiter unten Notizen neu gezeichnet werden.
+      const remoteCustom = remoteFetch.state && remoteFetch.state.customTheme;
+      const remoteCustomAt = (remoteFetch.state && remoteFetch.state.customThemeUpdatedAt) || 0;
+      if (remoteCustom && remoteCustomAt > customThemeUpdatedAt) {
+        customTheme = { ...DEFAULT_CUSTOM_THEME, ...remoteCustom };
+        customThemeUpdatedAt = remoteCustomAt;
+        applyCustomThemeStyle();
+      }
       const remoteTabs = (remoteFetch.state && remoteFetch.state.tabs) || [];
       const remoteById = new Map(remoteTabs.map(rt => [rt.syncId, rt]));
       const localIds = new Set(tabs.map(t => ensureSyncId(t)));
@@ -9810,7 +9892,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         resultTabsById.delete(syncId);
       }
 
-      await putRemoteWebdavState({ version: 1, updatedAt: Date.now(), tabs: Array.from(resultTabsById.values()) }, remoteFetch.rawText);
+      await putRemoteWebdavState({ version: 1, updatedAt: Date.now(), tabs: Array.from(resultTabsById.values()),
+        // Immer die jetzt geltende Palette samt Zeitstempel mitschreiben -- gleich ob sie von hier
+        // stammt oder eben vom Server uebernommen wurde. Im zweiten Fall schreibt dieses Geraet sie
+        // unveraendert zurueck, was den Zeitstempel erhaelt und deshalb kein Hin und Her ausloest.
+        customTheme: customTheme, customThemeUpdatedAt: customThemeUpdatedAt }, remoteFetch.rawText);
       // Only clear the tombstones this exact PUT actually excluded (finalPendingDeletions), not
       // webdavPendingDeletions wholesale — a tab closed while putRemoteWebdavState()'s own network
       // round-trip was in flight (after finalPendingDeletions was captured, above) would otherwise
@@ -13813,6 +13899,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // to tab.theme would be wrong -- e.g. entering Simple Modus applies 'theme-clean' without
     // overwriting what the active tab actually had selected, so it can be restored afterward.
     function applyTheme(themeClass) {
+      // Normalisiert umbenannte Designs an der einen Stelle, durch die jede Anwendung laeuft.
+      themeClass = migrateThemeClass(themeClass);
       currentTheme = themeClass;
       // preview.className is a full overwrite (see below) -- canvas-box-overlay (see
       // updatePreview()'s isEditingCanvasBox branch) is a structural class unrelated to theming
@@ -13846,6 +13934,18 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       applyTheme(themeClass);
     }
 
+    // Umbenannte Designklassen. Eine Notiz merkt sich ihr Design als Klassennamen (tab.theme, bei
+    // Canvas box.theme), und der steht auch in gespeicherten Dateien und in allem, was schon über
+    // WebDAV gelaufen ist -- ein bloßes Umbenennen im Stylesheet würde solche Notizen also
+    // unformatiert zurücklassen. Jede Stelle, die ein gespeichertes Design einliest, schickt es
+    // deshalb durch migrateThemeClass(). Ein unbekannter Name bleibt unverändert und fällt weiter
+    // auf das Standarddesign zurück, wie bisher auch.
+    const THEME_CLASS_MIGRATIONS = { 'theme-dracula': 'theme-chalkboard' };
+
+    function migrateThemeClass(themeClass) {
+      return THEME_CLASS_MIGRATIONS[themeClass] || themeClass;
+    }
+
     // --- DESIGNAUSWAHL (4x4-Raster) UND CUSTOM-DESIGN ---
 
     // Die drei wählbaren Schriftfamilien des Custom-Designs. Bewusst dieselben Stapel, die auch die
@@ -13867,6 +13967,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // jede Notiz (und jede Canvas-Box), die auf "Custom" steht, zeigt sie. Liegt deshalb bei den
     // übrigen Einstellungen in localStorage und reist nicht über WebDAV mit den Dokumenten.
     let customTheme = { ...DEFAULT_CUSTOM_THEME };
+
+    // Wann die Palette zuletzt geaendert wurde -- der Schiedsrichter beim WebDAV-Abgleich (siehe
+    // performWebdavSync). 0 heisst "nie angefasst", verliert also gegen jede echte Aenderung.
+    let customThemeUpdatedAt = 0;
 
     // Schreibt die Palette als echte CSS-Regel in ein eigenes <style> im <head>. Das ist der Kern
     // des Ganzen: dadurch ist Custom für alles Nachgelagerte ein Design wie jedes andere -- die
@@ -14037,12 +14141,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         font: document.getElementById('ctFont').value,
         codeDark: document.getElementById('ctCodeDark').value === 'dark'
       };
+      customThemeUpdatedAt = Date.now();
       applyCustomThemeStyle();
       saveStateToLocalStorage();
     }
 
     function resetCustomTheme() {
       customTheme = { ...DEFAULT_CUSTOM_THEME };
+      customThemeUpdatedAt = Date.now();
       applyCustomThemeStyle();
       openCustomThemeEditor(); // Steuerelemente auf die Grundwerte zurückstellen
       saveStateToLocalStorage();
