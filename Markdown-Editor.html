@@ -16704,7 +16704,23 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const zeilenStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
       let zeilenEnde = text.indexOf('\n', cursorPos);
       if (zeilenEnde === -1) zeilenEnde = text.length;
-      if (text.slice(zeilenStart, zeilenEnde).replace(/\u200B/g, '').trim() !== '') return null;
+      const zeile = text.slice(zeilenStart, zeilenEnde).replace(/\u200B/g, '');
+
+      // Fall 1: der Cursor steht selbst auf einer inhaltslosen Listenmarke, die computeEnterEdit()
+      // nicht erkannt hat. Dessen Ausdrücke verlangen nach dem Zeichen zwingend einen echten
+      // Zwischenraum ("- " mit \s+) -- eine Marke ohne ihn ("-", oder mit einem Nullbreitenzeichen
+      // statt eines Leerzeichens dahinter, das \s nicht abdeckt) fällt dort durch, und dann läuft
+      // der gewöhnliche Absatzweg. Genau das zeigt das Video vom iPhone: die leere Aufzählung
+      // bleibt stehen, darunter erscheint ein Absatz, und die Zeichenzählung steigt um eins statt
+      // zu fallen. Hier wird die Marke deshalb nach Abzug der Nullbreitenzeichen geprüft, und der
+      // Zwischenraum ist ausdrücklich freigestellt.
+      if (LEERE_LISTENMARKE_RE.test(zeile)) {
+        return { newText: text.slice(0, zeilenStart) + text.slice(zeilenEnde), newCursorPos: zeilenStart };
+      }
+
+      // Fall 2: der Cursor steht auf einer leeren Zeile und die Marke unmittelbar darüber -- das
+      // tritt auf, wenn WebKit den Cursor gar nicht erst in den leeren Punkt setzt.
+      if (zeile.trim() !== '') return null;
       if (zeilenStart === 0) return null;
       const vorEnde = zeilenStart - 1;
       const vorStart = text.lastIndexOf('\n', vorEnde - 1) + 1;
