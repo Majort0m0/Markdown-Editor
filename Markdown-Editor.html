@@ -12018,6 +12018,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
 
       if (e.key === 'Escape') {
+        // Gezählt VOR den Schließern darunter: war schon etwas offen (ein Fenster, ein Menü, ein
+        // Popover), dann hat Escape damit sein Ziel, und der Bearbeitungsmodus einer Canvas-Box
+        // bleibt bestehen -- sonst räumte ein einziger Druck beides auf einmal weg. Gezählt statt
+        // aufgezählt, damit ein später hinzukommendes Fenster nicht vergessen wird.
+        const offeneVorher = document.querySelectorAll('.active').length;
         closeShortcutsModal();
         if (document.getElementById('imageInsertModal').classList.contains('active')) closeImageDialog(null);
         if (document.getElementById('clipartModal').classList.contains('active')) closeClipartModal();
@@ -12044,6 +12049,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         if (document.getElementById('pdfImportModal').classList.contains('active')) closePdfImportModal();
         if (cellSelection) { cellSelection = null; clearCellSelectionHighlight(); }
         hideFormulaCellOverlay();
+        // Zuletzt: den Bearbeitungsmodus einer Canvas-Box verlassen. Seit der Quelltext-Knopf auch
+        // bei offener Box nur noch die Ansicht umschaltet (siehe toggleEditor), ist das der einzige
+        // Ausgang, der in jeder Ansicht erreichbar ist -- der stehende Klick auf den Hintergrund
+        // setzt voraus, dass der Canvas überhaupt sichtbar ist.
+        if (canvasEditingBoxId && document.querySelectorAll('.active').length === offeneVorher) {
+          closeCanvasBoxEditor();
+        }
         return;
       }
 
@@ -13072,11 +13084,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     }
 
     function toggleEditor() {
-      // This is now the *only* way to leave box-edit mode (the old "click outside the box"
-      // listener was removed — see its former location for why: it made canvas drag-to-pan
-      // impossible while a box was open). "Nur noch mit dem Quelltext-Button in der Symbolleiste
-      // kann der Quellcode-Modus geändert werden."
-      if (canvasEditingBoxId) { closeCanvasBoxEditor(); return; }
+      // Hier stand bis zuletzt ein sofortiges closeCanvasBoxEditor(), sobald eine Box offen war --
+      // dieser Knopf war damals der einzige Ausgang aus dem Bearbeitungsmodus. Damit ließ sich
+      // aber genau das nicht tun, wofür der Knopf da ist: den Quelltext einer geöffneten Box
+      // ansehen oder im Split neben der Vorschau bearbeiten. Gemeldet als "ich habe das nicht
+      // hinbekommen". Der Knopf schaltet jetzt auch bei offener Box ganz normal die Ansicht um.
+      // Zum Verlassen gibt es zwei andere Wege: ein stehender Klick auf den Canvas-Hintergrund
+      // (siehe onCanvasPointerUp, wird gegen die Klick-oder-Ziehen-Schwelle geprüft) und Escape
+      // (siehe die Escape-Behandlung im keydown-Lauscher). Escape ist dabei der wichtigere von
+      // beiden, denn in der reinen Quelltextansicht ist der Canvas gar nicht sichtbar -- es gäbe
+      // dort also gar keinen Hintergrund zum Anklicken.
       if (isCanvasWithoutOpenBox()) return;
       if (simpleMode) {
         // Simple Modus has no split view -- Quelltext/Vorschau act as a single exclusive
@@ -13162,6 +13179,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (burgerViewSel) burgerViewSel.value = showEditor && showPreview ? 'split' : (showPreview ? 'preview' : 'source');
       updateThemePickerForCanvasMode(canvasNoBox);
       updateTableControlsVisibility();
+      // Ein Ansichtswechsel ändert die Breite des Vorschaubereichs und damit die Lage der Box auf
+      // dem Bildschirm. Overlay und Auswahlschicht sitzen beide an deren aktueller Position und
+      // müssen deshalb neu ausgerichtet werden -- aus demselben Grund, aus dem das Ziehen der
+      // Trennlinie es bereits tut. Ohne das stünde das Overlay nach dem Umschalten auf Split
+      // versetzt über einer Box, die längst woanders liegt.
+      if (canvasEditingBoxId) positionCanvasBoxOverlay();
+      positionCanvasSelectionChrome();
     }
 
     // Single source of truth for whether #formattingToolbar is shown. It has TWO callers that both
