@@ -7081,23 +7081,31 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          dank .block-handle::before (6px Aufschlag ringsum) mit 40×48px klar über der
          Daumenbreite — verkleinert wird nur der sichtbare Kasten, nicht das Ziel. */
       .block-handle {
-        width: 28px;
+        width: 22px;
         height: 36px;
       }
 
       .block-handle svg {
-        width: 14px;
-        height: 22px;
+        width: 12px;
+        height: 20px;
       }
 
-      /* Die Rinne, in der der Anfasser sitzt (28px breit + 10px Abstand zum Text, siehe
-         blockHandleGap()). Ohne sie gibt es links schlicht keinen Platz, in den er ausweichen
-         könnte, und jede Verkleinerung allein würde ihn nur etwas weniger weit über den Text
-         schieben statt gar nicht. Gilt nur für Geräte ohne Mauszeiger — am Desktop reichen die
-         ohnehin vorhandenen 32px. */
-      .preview-pane {
-        padding-left: 42px;
+      /* Die Trefferfläche wird seitlich weiter aufgeweitet als die üblichen 6px, damit der
+         schmalere Kasten unter dem Daumen nicht schwerer zu treffen ist: 22px Kasten + 2x11px
+         ergeben wieder 44px. Sichtbar kleiner, greifbar gleich groß. */
+      .block-handle::before {
+        left: -11px;
+        right: -11px;
       }
+
+      /* Hier stand eine zusätzliche Rinne von 42px, damit der damals 28px breite Anfasser links
+         Platz hatte. Sie machte den Textkörper aber unsymmetrisch -- links 42+20, rechts 16+20 --,
+         gemeldet als "am Smartphone wird der Textkörper der Vorschau nicht mittig angezeigt".
+         Sie ist auch nicht mehr nötig: der ohnehin vorhandene Innenabstand (16px am Vorschaubereich
+         plus 20px an .markdown-body) ergibt bereits 36px bis zum Text, und darin hat der jetzt
+         22px schmale Anfasser samt seiner 10px Abstand (siehe blockHandleGap) mit 4px Rest zum
+         Bildschirmrand Platz -- also praktisch randlos, wie vorgeschlagen. Weil hier nichts mehr
+         hinzukommt, ist der Textkörper links und rechts wieder gleich eingerückt. */
 
       .bubble-toolbar .toolbar-btn,
       .bubble-toolbar .toolbar-select {
@@ -8643,7 +8651,19 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       // Neues gebaut werden.
       // Nicht in Exporten/Präsentation/Zwischenablage (suppressDrawingControls) -- dort wird nichts
       // bearbeitet, es gäbe also keinen Cursor zu verankern, und die Ausgabe bleibt zeichengenau.
-      if (item.task && !item.loose && !suppressDrawingControls && parsedBody.trim() === '') itemBody += '​';
+      // Gilt seit einem zweiten Bericht für JEDEN leeren Listenpunkt, nicht mehr nur für Aufgaben:
+      // "bei einer Liste beendet zweimaliges Enter die Liste nicht, ein leerer Listenpunkt bleibt
+      // stehen" (auf dem Telefon). Nachgemessen entsteht beim ersten Enter ein restlos leeres <li>
+      // -- innerHTML "", keine Kindknoten, kein <br> --, und der Cursor landet auf der
+      // ELEMENTGRENZE LI/0. Chrome kommt damit zurecht, iOS Safari kann in einen völlig leeren
+      // Block keinen Cursor setzen und schiebt ihn zurück in den vorigen Punkt; das zweite Enter
+      // liest dann dessen nicht leere Zeile, setzt die Liste fort statt sie zu beenden, und der
+      // leere Punkt bleibt stehen. Derselbe Platzhalter, den die Aufgabe schon hatte, gibt dem
+      // Cursor auch hier einen zeichenbaren Anker. Er kostet nichts: computeEnterEdit() entfernt
+      // ihn in allen drei Zweigen vor der Leerprüfung, serializeBlockToMarkdown() wirft ihn beim
+      // Zurückschreiben raus, stripLeftoverPlaceholders() räumt ihn weg, sobald echter Text
+      // danebensteht.
+      if (!item.loose && !suppressDrawingControls && parsedBody.trim() === '') itemBody += '​';
 
       const taskClass = item.task ? ' class="task-list-item"' : '';
       return '<li' + taskClass + '>' + itemBody + '</li>\n';
@@ -18019,8 +18039,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // — this has to track that same condition or the handle would sit measurably off from the
     // block's own left edge on a touch device (still positioned as if it were the smaller,
     // mouse-sized 22px handle).
+    // Muss mit der Breite in .block-handle übereinstimmen -- positionBlockHandle() rechnet damit
+    // rückwärts vom linken Rand des Blocks. Seit der Anfasser auch auf Touch nur noch 22px breit
+    // ist (siehe die Regel im (hover: none)-Block), ist der Wert überall derselbe; die Funktion
+    // bleibt als die eine Stelle bestehen, an der er steht.
     function blockHandleWidth() {
-      return noHoverMedia.matches ? 28 : 22;
+      return 22;
     }
 
     // Horizontal breathing room between the handle's own right edge and the block's left edge.
