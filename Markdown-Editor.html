@@ -3172,12 +3172,20 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       border-bottom: 4px solid #e53935;
     }
 
-    /* Rahmen, Griffe und Knöpfe einer ausgewählten Box liegen nicht mehr IN der Box, sondern als
-       eigene Schicht deckungsgleich darüber. Grund: jede Box bekommt über ihren zIndex einen
-       eigenen Stapelkontext, aus dem ein Kindelement per z-index nicht mehr herauskommt -- eine
-       weiter vorn liegende Box verdeckte deshalb die Knöpfe der ausgewählten, die damit
-       unbenutzbar wurden. Seit die Stapelreihenfolge von Hand steuerbar ist (siehe
-       openCanvasZMenu), ist das der Normalfall und nicht mehr die Ausnahme.
+    /* Rahmen, Griffe und Knöpfe einer ausgewählten Box liegen nicht IN der Box, sondern als eigene
+       Schicht deckungsgleich darüber -- und zwar in canvasViewport, eine Ebene über canvasPage.
+       Zwei Gründe, die beide dasselbe Muster haben:
+       1. Jede Box bekommt über ihren zIndex einen eigenen Stapelkontext, aus dem ein Kindelement
+          per z-index nicht herauskommt -- eine weiter vorn liegende Box verdeckte deshalb die
+          Knöpfe der ausgewählten.
+       2. canvasPage trägt die Pan/Zoom-Transformation und bildet damit ebenfalls einen eigenen
+          Stapelkontext. Ein z-index darin reicht nicht über die Bearbeitungs-Vorschau hinaus
+          (#markdownPreview.canvas-box-overlay, z-index 20), die außerhalb liegt. Gemeldet als
+          halbdurchsichtige, teils verdeckte Eckensymbole beim Bearbeiten: bei durchsichtigen
+          Designs legten sich blauer Ring und Schlagschatten des Overlays darüber, bei deckenden
+          verschluckte dessen Fläche die inneren Hälften ganz.
+       Deshalb wird die Schicht in Bildschirmpixeln platziert (siehe
+       positionCanvasSelectionChrome) statt in Millimetern wie die Boxen selbst.
        Die Box selbst bleibt dabei an ihrem Platz im Stapel -- nur die Bedienelemente kommen nach
        vorn. Sonst spränge eine Box beim Auswählen sichtbar nach vorn und man könnte das Ergebnis
        von "eine Ebene nach hinten" gar nicht beurteilen, solange sie ausgewählt ist.
@@ -14907,6 +14915,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!tab || !tab.canvasData) return;
       const { zoom, panX, panY } = tab.canvasData.viewport;
       canvasPage.style.transform = 'translate(' + panX + 'px, ' + panY + 'px) scale(' + zoom + ')';
+      // Die Auswahlschicht liegt außerhalb der transformierten Seite und muss deshalb von Hand
+      // nachgeführt werden -- innerhalb wäre sie einfach mitgewandert.
+      positionCanvasSelectionChrome();
       updateCanvasMinimap();
     }
 
@@ -15155,11 +15166,35 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       canvasPage.classList.toggle('canvas-focused', !canvasSelectedBoxId && !canvasEditingBoxId);
     }
 
+    // Platziert die Auswahlschicht deckungsgleich über ihrer Box -- in Bildschirmpixeln, weil sie
+    // in canvasViewport hängt und nicht in der pan/zoom-transformierten canvasPage (siehe den
+    // Kommentar bei .canvas-selection-chrome für den Grund). Liest die Maße direkt vom gerenderten
+    // Boxelement ab, statt sie aus Millimetern und Zoom neu auszurechnen: damit stimmen sie
+    // zwangsläufig überein, auch während eines Zieh- oder Skaliervorgangs.
+    function positionCanvasSelectionChrome() {
+      const chrome = canvasViewport.querySelector('.canvas-selection-chrome');
+      if (!chrome) return;
+      const boxEl = canvasPage.querySelector('.canvas-box[data-box-id="' + chrome.dataset.boxId + '"]');
+      if (!boxEl) { chrome.remove(); return; }
+      const vr = canvasViewport.getBoundingClientRect();
+      const br = boxEl.getBoundingClientRect();
+      chrome.style.left = (br.left - vr.left) + 'px';
+      chrome.style.top = (br.top - vr.top) + 'px';
+      chrome.style.width = br.width + 'px';
+      chrome.style.height = br.height + 'px';
+      // Der Verschiebegriff braucht 30px über der Box; ist bis zur Blattoberkante weniger Platz,
+      // klappt er nach innen. Seit die Schicht nicht mehr mitskaliert, ist das eine Frage echter
+      // Bildschirmpixel und nicht mehr der Millimeterposition der Box.
+      const move = chrome.querySelector('.canvas-box-move-handle');
+      if (move) move.classList.toggle('inside', (br.top - canvasPage.getBoundingClientRect().top) < 30);
+    }
+
     function renderCanvasBoxes() {
       const tab = getActiveTabReal();
       if (!tab || !tab.canvasData) return;
       updateCanvasFocusRing();
-      canvasPage.querySelectorAll('.canvas-box, .canvas-selection-chrome, .canvas-page-clip-scrim').forEach(el => el.remove());
+      canvasPage.querySelectorAll('.canvas-box, .canvas-page-clip-scrim').forEach(el => el.remove());
+      canvasViewport.querySelectorAll('.canvas-selection-chrome').forEach(el => el.remove());
 
       tab.canvasData.boxes.forEach(box => {
         const el = document.createElement('div');
@@ -15231,10 +15266,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         const el = document.createElement('div');
         el.className = 'canvas-selection-chrome';
         el.dataset.boxId = box.id;
-        el.style.left = box.x + 'mm';
-        el.style.top = box.y + 'mm';
-        el.style.width = box.w + 'mm';
-        el.style.height = box.h + 'mm';
+        // Maße und Lage setzt positionCanvasSelectionChrome() weiter unten in Bildschirmpixeln.
         {
           ['nw', 'ne', 'sw', 'se'].forEach(pos => {
             const h = document.createElement('div');
@@ -15246,14 +15278,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           // used to straddle its borders — see the CSS rule for why those were reported as fiddly.
           const move = document.createElement('button');
           move.type = 'button';
-          // The handle occupies the 30px directly above the box (top: -30px, 26px tall). A box
-          // closer to the page's top edge than that has nowhere to put it, so it flips inside —
-          // compared in millimeters against the box's own y, since that is the unit box positions
-          // are stored in. The comparison is zoom-independent on purpose: the handle lives inside
-          // .canvas-box, which canvasPage's own scale() transform already scales as a whole, so
-          // its 30px and the box's y shrink and grow together.
-          const moveHandleNeedsMm = 30 / CANVAS_PX_PER_MM;
-          move.className = 'canvas-box-move-handle' + (box.y < moveHandleNeedsMm ? ' inside' : '');
+          // Der Griff belegt die 30px direkt über der Box (top: -30px, 26px hoch). Ist bis zur
+          // Blattoberkante weniger Platz, klappt er nach innen. Die Entscheidung fällt in
+          // positionCanvasSelectionChrome(), weil sie seit dem Umzug der Schicht in echten
+          // Bildschirmpixeln zu treffen ist: früher skalierte der Griff mit der Seite mit, ein
+          // Vergleich in Millimetern war damit zoomunabhängig richtig -- jetzt behält er seine
+          // Bildschirmgröße, während die Box mit dem Zoom wächst und schrumpft.
+          move.className = 'canvas-box-move-handle';
           move.title = 'Box verschieben (ziehen)';
           move.innerHTML = CANVAS_MOVE_ICON;
           el.appendChild(move);
@@ -15283,7 +15314,8 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           el.appendChild(del);
         }
 
-        canvasPage.appendChild(el);
+        canvasViewport.appendChild(el);
+        positionCanvasSelectionChrome();
       }
 
       // Overflow (scrollHeight vs. clientHeight) only reads correctly once the box is actually
@@ -15314,7 +15346,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           el.classList.toggle('overflowing', ueberlauf);
           // Der Rahmen der Auswahlschicht liegt über dem der Box und würde den roten Balken sonst
           // verdecken -- deshalb bekommt sie die Markierung mit.
-          const chrome = canvasPage.querySelector('.canvas-selection-chrome[data-box-id="' + el.dataset.boxId + '"]');
+          const chrome = canvasViewport.querySelector('.canvas-selection-chrome[data-box-id="' + el.dataset.boxId + '"]');
           if (chrome) chrome.classList.toggle('overflowing', ueberlauf);
         });
       }, 0);
