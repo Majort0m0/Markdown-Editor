@@ -3171,6 +3171,66 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       border-bottom: 4px solid #e53935;
     }
 
+    /* Rahmen, Griffe und Knöpfe einer ausgewählten Box liegen nicht mehr IN der Box, sondern als
+       eigene Schicht deckungsgleich darüber. Grund: jede Box bekommt über ihren zIndex einen
+       eigenen Stapelkontext, aus dem ein Kindelement per z-index nicht mehr herauskommt -- eine
+       weiter vorn liegende Box verdeckte deshalb die Knöpfe der ausgewählten, die damit
+       unbenutzbar wurden. Seit die Stapelreihenfolge von Hand steuerbar ist (siehe
+       openCanvasZMenu), ist das der Normalfall und nicht mehr die Ausnahme.
+       Die Box selbst bleibt dabei an ihrem Platz im Stapel -- nur die Bedienelemente kommen nach
+       vorn. Sonst spränge eine Box beim Auswählen sichtbar nach vorn und man könnte das Ergebnis
+       von "eine Ebene nach hinten" gar nicht beurteilen, solange sie ausgewählt ist.
+       pointer-events: none auf der Schicht selbst, auto auf ihren Kindern: Klicks in die
+       Boxmitte gehen dadurch weiter an die Box darunter (Auswählen, zweiter Klick zum
+       Bearbeiten), nur Griffe und Knöpfe fangen sie ab. */
+    .canvas-selection-chrome {
+      position: absolute;
+      box-sizing: border-box;
+      border: 2px solid var(--accent);
+      pointer-events: none;
+      z-index: 9000;
+    }
+
+    .canvas-selection-chrome > * {
+      pointer-events: auto;
+    }
+
+    /* Der rote Überlaufbalken gehört zur Box, würde aber vom Rahmen der Schicht überdeckt --
+       deshalb zeichnet ihn die Schicht bei Bedarf selbst mit (Klasse wird in renderCanvasBoxes
+       zusammen mit der der Box gesetzt). */
+    .canvas-selection-chrome.overflowing {
+      border-bottom: 4px solid #e53935;
+    }
+
+    /* Alles außerhalb des Blattes wird abgedunkelt: ein durchsichtiges Feld genau in Blattgröße,
+       dessen riesiger Schattenradius die gesamte Umgebung überzieht. Dadurch verblasst der Teil
+       einer Box, der über den Blattrand hinausragt, sichtbar -- er wird ja auch nicht gedruckt
+       (siehe overflow: hidden im @media print). Bewusst nur abgedunkelt und nicht abgeschnitten:
+       eine versehentlich hinausgeschobene Box muss sichtbar bleiben, sonst kann man sie nicht
+       mehr zurückholen.
+       Liegt über den Boxen, aber unter der Auswahlschicht darüber -- Griffe und Knöpfe einer
+       ausgewählten Box sollen auch dann klar erkennbar bleiben, wenn die Box halb im Abseits
+       liegt. */
+    .canvas-page-clip-scrim {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 8000;
+      /* Derselbe Ton wie die Arbeitsfläche ringsum (siehe .canvas-preview): über sich selbst
+         gelegt ändert er dort nichts, verblasst aber alles, was darüber liegt -- also genau den
+         Teil einer Box, der über den Blattrand hinausragt. */
+      box-shadow: 0 0 0 9999px rgba(107, 114, 128, 0.72);
+    }
+
+    /* Der Fokusrahmen der Seite liegt mit 4px Abstand außerhalb des Blattes und damit im
+       abgedunkelten Bereich -- er wäre kaum noch zu sehen. Statt dafür ein Loch in die Abdunklung
+       zu schneiden (das einen hellen Saum am Blattrand hinterließ), zeichnet ihn die
+       Abdunklungsschicht deckungsgleich noch einmal: sie liegt darüber, ihr Rahmen also auch. */
+    .canvas-page.canvas-focused .canvas-page-clip-scrim {
+      outline: 2px solid var(--accent-soft);
+      outline-offset: 4px;
+    }
+
     /* Während eine Box bearbeitet wird, liegt die echte Vorschau als Overlay genau über ihr (siehe
        #markdownPreview.canvas-box-overlay) und zeigt denselben Inhalt. Die Box darf ihn dann nicht
        zusätzlich selbst zeichnen. Solange jedes Design eine deckende Fläche mitbrachte, fiel das nie
@@ -6654,6 +6714,8 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       .canvas-box-stamp-btn,
       .canvas-box-z-btn,
       .canvas-z-menu,
+      .canvas-selection-chrome,
+      .canvas-page-clip-scrim,
       .canvas-box-delete-btn {
         display: none !important;
       }
@@ -6720,6 +6782,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         width: 205.8mm !important;
         height: 291.06mm !important;
         page: canvas-portrait;
+        /* Das Papier hört am Blattrand auf, also hört auch der Inhalt dort auf. Ohne das ragte
+           eine über den Rand geschobene Box einfach weiter -- gemessen 164px nach rechts und 89px
+           nach unten über das Blatt hinaus, was das Dokument höher machte als die Seite und damit
+           genau den zweiten Bogen erzwang, gegen den die @page-Maße darüber angehen. Am Bildschirm
+           wird dagegen nicht beschnitten, sondern nur abgedunkelt (siehe .canvas-page-clip-scrim),
+           damit man so eine Box noch greifen und zurückholen kann. */
+        overflow: hidden !important;
       }
 
       main.canvas-tab-active .canvas-page.landscape {
@@ -12705,7 +12774,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       suppressDrawingControls = false;
       canvasIdleRenderBox = null;
       canvasTtsStageEl.style.display = 'block';
-      const boxEl = canvasPage.querySelector('[data-box-id="' + boxId + '"]');
+      const boxEl = canvasPage.querySelector('.canvas-box[data-box-id="' + boxId + '"]');
       if (boxEl) ensureCanvasBoxVisible(boxEl);
       positionOverlayOverCanvasBox(canvasTtsStageEl, boxId);
       return true;
@@ -15123,7 +15192,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       const tab = getActiveTabReal();
       if (!tab || !tab.canvasData) return;
       updateCanvasFocusRing();
-      canvasPage.querySelectorAll('.canvas-box').forEach(el => el.remove());
+      canvasPage.querySelectorAll('.canvas-box, .canvas-selection-chrome, .canvas-page-clip-scrim').forEach(el => el.remove());
 
       tab.canvasData.boxes.forEach(box => {
         const el = document.createElement('div');
@@ -15177,7 +15246,29 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         canvasIdleRenderBox = null;
         el.appendChild(content);
 
-        if (box.id === canvasSelectedBoxId) {
+        canvasPage.appendChild(el);
+      });
+
+      // Abdunklung alles außerhalb des Blattes (siehe .canvas-page-clip-scrim). Wird bei jedem
+      // Render neu gesetzt, weil die Schleife oben den Blattinhalt komplett neu aufbaut.
+      const scrim = document.createElement('div');
+      scrim.className = 'canvas-page-clip-scrim';
+      canvasPage.appendChild(scrim);
+
+      // Bedienelemente der ausgewählten Box: eigene Schicht über allen Boxen, deckungsgleich mit
+      // der Box. Siehe .canvas-selection-chrome für den Grund. Sie trägt dieselbe data-box-id wie
+      // die Box, damit die Zeigerhandler von Griff bzw. Knopf aus dieselbe Box finden.
+      const gewaehlt = tab.canvasData.boxes.find(b => b.id === canvasSelectedBoxId);
+      if (gewaehlt) {
+        const box = gewaehlt;
+        const el = document.createElement('div');
+        el.className = 'canvas-selection-chrome';
+        el.dataset.boxId = box.id;
+        el.style.left = box.x + 'mm';
+        el.style.top = box.y + 'mm';
+        el.style.width = box.w + 'mm';
+        el.style.height = box.h + 'mm';
+        {
           ['nw', 'ne', 'sw', 'se'].forEach(pos => {
             const h = document.createElement('div');
             h.className = 'canvas-box-handle ' + pos;
@@ -15226,7 +15317,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         }
 
         canvasPage.appendChild(el);
-      });
+      }
 
       // Overflow (scrollHeight vs. clientHeight) only reads correctly once the box is actually
       // laid out in the document, so this runs as a follow-up frame rather than during the
@@ -15252,7 +15343,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         canvasPage.querySelectorAll('.canvas-box').forEach(el => {
           const content = el.querySelector('.canvas-box-content');
           if (!content) return;
-          el.classList.toggle('overflowing', content.scrollHeight > content.clientHeight + 1);
+          const ueberlauf = content.scrollHeight > content.clientHeight + 1;
+          el.classList.toggle('overflowing', ueberlauf);
+          // Der Rahmen der Auswahlschicht liegt über dem der Box und würde den roten Balken sonst
+          // verdecken -- deshalb bekommt sie die Markierung mit.
+          const chrome = canvasPage.querySelector('.canvas-selection-chrome[data-box-id="' + el.dataset.boxId + '"]');
+          if (chrome) chrome.classList.toggle('overflowing', ueberlauf);
         });
       }, 0);
     }
@@ -15540,7 +15636,11 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
       const handle = e.target.closest('.canvas-box-handle');
       const moveHandle = e.target.closest('.canvas-box-move-handle');
-      const boxEl = e.target.closest('.canvas-box');
+      // Griffe und Knöpfe sitzen seit .canvas-selection-chrome nicht mehr in der Box selbst,
+      // sondern in einer eigenen Schicht darüber -- ein closest('.canvas-box') fände von dort aus
+      // nichts. Beide Träger führen dieselbe data-box-id, und genau die brauchen die Handler
+      // (startCanvasBoxMove/-Resize lesen ausschließlich boxEl.dataset.boxId).
+      const boxEl = e.target.closest('[data-box-id]');
 
       if (handle) { startCanvasBoxResize(e, handle.dataset.handle, boxEl); return; }
       // Checked before the plain boxEl branch below, exactly like the delete button above: the
@@ -15634,7 +15734,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // differs. Returns false (touching nothing) if the box no longer exists, e.g. deleted while
     // being read/edited.
     function positionOverlayOverCanvasBox(overlayEl, boxId) {
-      const boxEl = canvasPage.querySelector('[data-box-id="' + boxId + '"]');
+      const boxEl = canvasPage.querySelector('.canvas-box[data-box-id="' + boxId + '"]');
       if (!boxEl) return false;
       const rect = boxEl.getBoundingClientRect();
       const paneRect = canvasPreview.getBoundingClientRect();
@@ -15768,7 +15868,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // about to change out from under it -- see the mis-positioning note where the forced
       // split-view removal used to sit.
       applyPaneVisibility(); // toggleEditBtn/togglePreviewBtn's active state now reflects a real open box
-      const openedBoxEl = canvasPage.querySelector('[data-box-id="' + boxId + '"]');
+      const openedBoxEl = canvasPage.querySelector('.canvas-box[data-box-id="' + boxId + '"]');
       if (openedBoxEl) {
         ensureCanvasBoxVisible(openedBoxEl);
         positionCanvasBoxOverlay();
@@ -25568,7 +25668,9 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '<style>\n' +
         '  :root {\n' + previewVars + '\n  }\n' +
         '  html, body { margin: 0; background: #6b7280; display: flex; justify-content: center; padding: 24px; box-sizing: border-box; }\n' +
-        '  .canvas-export-page { position: relative; width: ' + data.pageWidth + '; height: ' + data.pageHeight + '; background: ' + (data.pageBackgroundColor || '#ffffff') + '; box-shadow: 0 4px 24px rgba(0,0,0,.3); flex-shrink: 0; }\n' +
+        '  .canvas-export-page { position: relative; width: ' + data.pageWidth + '; height: ' + data.pageHeight + '; background: ' + (data.pageBackgroundColor || '#ffffff') + '; box-shadow: 0 4px 24px rgba(0,0,0,.3); flex-shrink: 0; overflow: hidden; }\n' +
+        // overflow: hidden oben wie in der App und im Druck: was über den Blattrand hinausragt,
+        // ist nicht Teil der Seite (siehe main.canvas-tab-active .canvas-page).
         '  .canvas-export-box { position: absolute; overflow: hidden; border: 1px solid #ccc; background: #fffef2; box-sizing: border-box; }\n' +
         '  .canvas-export-box .markdown-body { width: 100%; height: 100%; overflow: hidden; padding: 8px; box-sizing: border-box; font-size: 13px; line-height: 1.4; color: #1a1a1a; }\n' +
         '  .canvas-export-box .markdown-body :first-child { margin-top: 0; }\n' +
