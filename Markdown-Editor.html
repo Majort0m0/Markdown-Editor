@@ -3184,6 +3184,30 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       visibility: hidden;
     }
 
+    /* Ein Abdruck ist ein einzelnes Bild in Boxgröße und braucht deshalb keinen Innenabstand: mit
+       den sonst üblichen 8px säße er eingerückt in seiner Box, das Bild würde etwas verkleinert und
+       ringsum bliebe ein Streifen Seitenhintergrund stehen -- der Abdruck läge sichtbar versetzt
+       über dem Original statt deckungsgleich. Nebenbei verschwindet damit die rote
+       Überlauf-Markierung, die der Innenabstand fälschlich auslöste. */
+    .canvas-box-content.stamp {
+      padding: 0;
+    }
+
+    /* Der Absatz, in den marked ein alleinstehendes Bild einpackt, bringt seinen Außenabstand mit --
+       gemessen genug, um die rote Überlauf-Markierung auszulösen, obwohl das Bild exakt passt. */
+    .canvas-box-content.stamp > * {
+      margin: 0;
+      height: 100%;
+    }
+
+    .canvas-box-content.stamp img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+      margin: 0;
+    }
+
     .canvas-box-content {
       width: 100%;
       height: 100%;
@@ -3275,6 +3299,38 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       width: 18px;
       height: 18px;
       pointer-events: none;
+    }
+
+    /* Stempel-Knopf, oben links -- die einzige freie Ecke: oben rechts sitzt der Löschknopf, oben
+       mittig der Verschiebegriff, in den Ecken die Griffe zum Skalieren. Gestaltung bewusst
+       identisch zum Löschknopf, damit beide als dasselbe "gehört zur ausgewählten Box"-Paar
+       gelesen werden. */
+    .canvas-box-stamp-btn {
+      position: absolute;
+      top: -14px;
+      left: -14px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 6;
+      padding: 0;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .canvas-box-stamp-btn svg {
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+    }
+
+    .canvas-box-stamp-btn:hover svg {
+      color: var(--accent);
     }
 
     .canvas-box-delete-btn {
@@ -6526,6 +6582,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       #canvasTtsStage,
       .canvas-box-handle,
       .canvas-box-move-handle,
+      .canvas-box-stamp-btn,
       .canvas-box-delete-btn {
         display: none !important;
       }
@@ -14778,6 +14835,119 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return order;
     }
 
+    const CANVAS_STAMP_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M6 20H18M8 17H16C16.5523 17 17 16.5523 17 16V15C17 14.4477 16.5523 14 16 14H14.5L14.9 10.2' +
+      'C15.05 8.9 14.03 7.8 12.72 7.8H11.28C9.97 7.8 8.95 8.9 9.1 10.2L9.5 14H8C7.44772 14 7 14.4477 7 15V16' +
+      'C7 16.5523 7.44772 17 8 17Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+
+    // Doppelte Auflösung: der Abdruck wird später mit dem Blatt vergrößert und gedruckt, ein
+    // 1:1-Abzug sähe dabei sichtbar weich aus.
+    const CANVAS_STAMP_SCALE = 2;
+
+    // Bildet den gerenderten Inhalt einer Box als PNG ab. Ohne zusätzliche Bibliothek: der fertige
+    // HTML-Baum wird in ein SVG-<foreignObject> gelegt, das der Browser selbst zeichnen kann, und
+    // von dort über ein <canvas> als PNG ausgelesen.
+    //
+    // Zwei Dinge müssen dafür im SVG mitreisen, weil es keine Verbindung zum Dokument hat:
+    // die Gestaltungsregeln (die geteilte Typografie plus die sechs Farbvariablen des Box-Designs)
+    // und sämtliche Bilddaten. Letztere sind bereits eingebettet -- Bilder in einer Box stehen als
+    // asset:-Verweis im Text und werden beim Rendern zu data:-URIs aufgelöst (siehe
+    // canvasIdleRenderBox), also enthält der Baum keine einzige externe Adresse. Genau darauf beruht
+    // dieser Weg: ein SVG mit externem Verweis würde beim Zeichnen ins Leere laufen.
+    async function renderCanvasBoxToPngDataUrl(box) {
+      const breitePx = Math.round(box.w * CANVAS_PX_PER_MM);
+      const hoehePx = Math.round(box.h * CANVAS_PX_PER_MM);
+      if (!(breitePx > 0 && hoehePx > 0)) return null;
+
+      const design = box.theme || 'theme-clean';
+      const inhalt = document.createElement('div');
+      inhalt.className = 'canvas-box-content markdown-body ' + design;
+      inhalt.style.cssText = 'width:' + breitePx + 'px;height:' + hoehePx + 'px;overflow:hidden;padding:8px;box-sizing:border-box';
+      inhalt.style.setProperty('--zoom-scale', (box.zoomLevel || 100) / 100);
+      canvasIdleRenderBox = box;
+      suppressDrawingControls = true;
+      inhalt.innerHTML = marked.parse(box.content || '');
+      suppressDrawingControls = false;
+      canvasIdleRenderBox = null;
+
+      // Die Farbvariablen des Designs werden aus dem Design selbst abgelesen statt hier erneut
+      // aufgeschrieben -- dieselbe Sonde wie im Design-Raster (siehe readThemeColors).
+      const sonde = document.createElement('div');
+      sonde.className = 'markdown-body ' + design;
+      sonde.style.cssText = 'position:absolute;left:-9999px;top:0;width:1px;height:1px;visibility:hidden';
+      document.body.appendChild(sonde);
+      const gelesen = getComputedStyle(sonde);
+      const variablen = ['--preview-bg', '--preview-bg-solid', '--preview-text', '--preview-link',
+        '--preview-code-bg', '--preview-border', '--preview-header-border']
+        .map(n => [n, gelesen.getPropertyValue(n).trim()])
+        .filter(([, w]) => w !== '')
+        .map(([n, w]) => n + ':' + w + ';').join('');
+      const schrift = gelesen.fontFamily;
+      sonde.remove();
+
+      const stil = ':root{' + variablen + '}' +
+        '.markdown-body{color:var(--preview-text);font-family:' + schrift + ';line-height:1.7;font-size:16px;' +
+        'background-color:var(--preview-bg-solid, var(--preview-bg));}' +
+        getMarkdownTypographyCss().replace(/\n/g, '');
+
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + breitePx + '" height="' + hoehePx + '">' +
+        '<foreignObject width="100%" height="100%">' +
+        '<div xmlns="http://www.w3.org/1999/xhtml"><style>' + stil + '</style>' +
+        new XMLSerializer().serializeToString(inhalt) + '</div>' +
+        '</foreignObject></svg>';
+
+      const bild = new Image();
+      // Als data:-URI mit UTF-8-sicherer Kodierung -- encodeURIComponent statt btoa, weil der Text
+      // Umlaute enthalten kann und btoa daran scheitert.
+      bild.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      const geladen = await new Promise((fertig) => { bild.onload = () => fertig(true); bild.onerror = () => fertig(false); });
+      if (!geladen) return null;
+
+      const flaeche = document.createElement('canvas');
+      flaeche.width = breitePx * CANVAS_STAMP_SCALE;
+      flaeche.height = hoehePx * CANVAS_STAMP_SCALE;
+      const ctx = flaeche.getContext('2d');
+      ctx.scale(CANVAS_STAMP_SCALE, CANVAS_STAMP_SCALE);
+      ctx.drawImage(bild, 0, 0, breitePx, hoehePx);
+      return flaeche.toDataURL('image/png');
+    }
+
+    // Legt einen Abdruck der Box an: ein Bild von ihr, deckungsgleich an derselben Stelle und in der
+    // Stapelreihenfolge unter allen anderen Boxen. Die ursprüngliche Box bleibt unberührt und
+    // weiter bearbeitbar -- zweimal stempeln ergibt zwei Abdrücke.
+    async function stampCanvasBox(boxId) {
+      const tab = getActiveTabReal();
+      if (!tab || !tab.canvasData) return;
+      const box = tab.canvasData.boxes.find(b => b.id === boxId);
+      if (!box) return;
+
+      const dataUrl = await renderCanvasBoxToPngDataUrl(box);
+      if (!dataUrl) { showToast('Abdruck konnte nicht erzeugt werden'); return; }
+
+      tab.canvasData.boxCounter = (tab.canvasData.boxCounter || 0) + 1;
+      // Unter alle bestehenden Boxen. zIndex darf negativ werden, das ist für die Stapelreihenfolge
+      // unerheblich -- entscheidend ist nur, kleiner als jede vorhandene zu sein.
+      const kleinste = tab.canvasData.boxes.reduce((m, b) => Math.min(m, b.zIndex || 0), 0);
+      const abdruck = makeCanvasBox('box_' + tab.canvasData.boxCounter, box.x, box.y, box.w, box.h, kleinste - 1);
+      // Clean, damit der Abdruck keine eigene Fläche mitbringt: das Bild trägt den Hintergrund des
+      // Ursprungsdesigns bereits in sich, eine zweite darunter würde bei durchsichtigen Rändern
+      // durchscheinen.
+      abdruck.theme = 'theme-clean';
+      // Markiert die Box als Abdruck -- allein dafür, dass ihr Inhalt randlos gezeichnet wird
+      // (siehe .canvas-box-content.stamp). Reist in canvasData mit wie jedes andere Boxfeld.
+      abdruck.isStamp = true;
+      abdruck.assets = { img_1: dataUrl };
+      abdruck.assetCounter = 1;
+      abdruck.content = '![Abdruck](asset:img_1)';
+      tab.canvasData.boxes.push(abdruck);
+
+      renderCanvasBoxes();
+      syncCanvasContentToTab(tab);
+      markActiveTabModified();
+      saveStateToLocalStorage();
+      showToast('Abdruck erzeugt — liegt unter der Box');
+    }
+
     const CANVAS_TRASH_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
       '<path d="M4 7H20M9 7V5C9 4.44772 9.44772 4 10 4H14C14.5523 4 15 4.44772 15 5V7M18 7L17.3 18.3C17.2 19.5 16.2 20 15 20H9C7.8 20 6.8 19.5 6.7 18.3L6 7" ' +
       'stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -14834,7 +15004,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         // it's a single global switch, so code-block syntax colors can't be simultaneously
         // correct for two differently-themed boxes on screen at once -- only the --preview-*
         // colors (scoped per element via this class) are guaranteed independent per box.
-        content.className = 'canvas-box-content markdown-body ' + (box.theme || 'theme-clean');
+        content.className = 'canvas-box-content markdown-body ' + (box.theme || 'theme-clean') + (box.isStamp ? ' stamp' : '');
         // Per-box zoom (see makeCanvasBox()) applies here too, as a local --zoom-scale override
         // on the box's own element -- .markdown-body's font-size already reads this var (see the
         // CSS rule above), and a property set directly on an element beats whatever value it
@@ -14881,6 +15051,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           move.title = 'Box verschieben (ziehen)';
           move.innerHTML = CANVAS_MOVE_ICON;
           el.appendChild(move);
+
+          const stempel = document.createElement('button');
+          stempel.type = 'button';
+          stempel.className = 'canvas-box-stamp-btn';
+          stempel.title = 'Abdruck als Bild erzeugen (liegt unter der Box)';
+          stempel.innerHTML = CANVAS_STAMP_ICON;
+          stempel.onclick = (e) => { e.stopPropagation(); stampCanvasBox(box.id); };
+          el.appendChild(stempel);
 
           const del = document.createElement('button');
           del.type = 'button';
@@ -14931,8 +15109,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       canvasSelectedBoxId = id;
       // Bring-to-front on select, not just on drag-start — "Wenn sich die Box mit einer anderen
       // überlappt, dann ist immer die Box oben, die zuletzt angeklickt wurde."
-      tab.canvasData.zCounter = (tab.canvasData.zCounter || 0) + 1;
-      box.zIndex = tab.canvasData.zCounter;
+      //
+      // Ein Abdruck ist davon ausgenommen: er soll unter den Markdown-Boxen liegen, und ihn beim
+      // ersten Anklicken nach vorn zu holen -- etwa um ihn zu verschieben oder zu löschen -- würde
+      // ihn ausgerechnet über das Original legen und damit genau das aufheben, wofür er gedacht
+      // ist. Auswählen, Verschieben, Skalieren und Löschen funktionieren trotzdem unverändert;
+      // allein die Stapelreihenfolge bleibt, wo sie ist.
+      if (!box.isStamp) {
+        tab.canvasData.zCounter = (tab.canvasData.zCounter || 0) + 1;
+        box.zIndex = tab.canvasData.zCounter;
+      }
       // Deferred, not synchronous — renderCanvasBoxes() always removes and recreates every box
       // <div> from scratch, and doing that synchronously inside this pointerdown-triggered call
       // would detach the exact element the browser's mousedown just landed on before its
@@ -15194,7 +15380,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // — re-rendering (and so replacing) this exact button — before its own click/onclick ever
       // gets a chance to run. Let the button handle its own click untouched, same pattern as the
       // alt-text-button-before-drawing-wrapper check in the preview's own delegated listener.
-      if (e.target.closest('.canvas-box-delete-btn')) return;
+      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-stamp-btn')) return;
 
       if (canvasAddMode) {
         if (e.target !== canvasPage) return; // don't start a create-drag on top of an existing box
@@ -15255,7 +15441,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // same exclusions the plain-click branch above already needs.
     canvasViewport.addEventListener('dblclick', (e) => {
       if (canvasAddMode) return;
-      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-handle, .canvas-box-move-handle')) return;
+      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-stamp-btn, .canvas-box-handle, .canvas-box-move-handle')) return;
       const boxEl = e.target.closest('.canvas-box');
       if (!boxEl) return;
       openCanvasBoxEditor(boxEl.dataset.boxId);
@@ -15690,7 +15876,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // ersten Anschlag fällt auch das weg.
       const realTab = getActiveTabReal();
       if (realTab && realTab.fileType === 'canvas') {
-        if (activeTab) activeTab.content = editor.value; // Inhalt der Box mitführen
+        // Nur wenn wirklich eine Box offen ist -- dann, und nur dann, ist activeTab die Box und
+        // editor.value ihr Text. Ohne offene Box liefert getCurrentTab() die Canvas-Notiz selbst,
+        // deren editor.value bewusst leer ist: die Zuweisung hätte dort die gesamte Szene mit einer
+        // leeren Zeichenkette überschrieben. Aufgefallen beim Stempeln (das diese Funktion ohne
+        // offene Box aufruft): der Abdruck war nach dem Neuladen spurlos verschwunden, weil der
+        // gespeicherte Notizinhalt zu diesem Zeitpunkt schon leer war.
+        if (activeTab && activeTab !== realTab) activeTab.content = editor.value; // Inhalt der Box mitführen
         const tabEl = tabList.querySelector('[data-tab-id="' + realTab.id + '"]');
         if (tabEl && tabEl.classList.contains('synced')) {
           syncCanvasContentToTab(realTab); // setzt content neu und isModified
@@ -25201,7 +25393,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       suppressDrawingControls = true;
       const boxesHtml = computeCanvasReadingOrder(data.boxes).map(box => {
         canvasIdleRenderBox = box;
-        const html = '<div class="canvas-export-box" style="left:' + box.x + 'mm; top:' + box.y + 'mm; width:' + box.w + 'mm; height:' + box.h + 'mm; z-index:' + (box.zIndex || 0) + ';">' +
+        const html = '<div class="canvas-export-box' + (box.isStamp ? ' stamp' : '') + '" style="left:' + box.x + 'mm; top:' + box.y + 'mm; width:' + box.w + 'mm; height:' + box.h + 'mm; z-index:' + (box.zIndex || 0) + ';">' +
           '<div class="markdown-body">' + marked.parse(box.content || '') + '</div></div>';
         canvasIdleRenderBox = null;
         return html;
@@ -25230,6 +25422,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         '  .canvas-export-box { position: absolute; overflow: hidden; border: 1px solid #ccc; background: #fffef2; box-sizing: border-box; }\n' +
         '  .canvas-export-box .markdown-body { width: 100%; height: 100%; overflow: hidden; padding: 8px; box-sizing: border-box; font-size: 13px; line-height: 1.4; color: #1a1a1a; }\n' +
         '  .canvas-export-box .markdown-body :first-child { margin-top: 0; }\n' +
+        // Gleiche Ausnahme wie in der Anzeige (siehe .canvas-box-content.stamp): ein Abdruck ist
+        // ein Bild in Boxgroesse und fuellt seine Box randlos.
+        '  .canvas-export-box.stamp .markdown-body { padding: 0; }\n' +
+        '  .canvas-export-box.stamp img { display: block; width: 100%; height: 100%; object-fit: fill; margin: 0; }\n' +
         getMarkdownTypographyCss() +
         hljsCss + '\n' +
         getTtsButtonExportCss(16, 16) +
