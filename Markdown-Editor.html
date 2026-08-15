@@ -16377,6 +16377,34 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       }
       editor.setSelectionRange(newSrcOffset, newSrcOffset);
       recordHistory();
+
+      // Nachkontrolle einen Takt später. Auf dem iPhone blieb nach dem Beenden einer Liste der
+      // leere Aufzählungspunkt sichtbar stehen und verschwand erst bei der nächsten strukturellen
+      // Änderung -- im Bildschirmvideo gut zu verfolgen: der Punkt überdauert das Enter, überdauert
+      // sogar das Eintippen des nächsten Absatzes, und ist eine Aktion später weg. Genau das
+      // Muster entsteht, wenn der Browser nach unserem preventDefault() doch noch eine eigene
+      // Standardaktion auf die alte Auswahl anwendet: der Quelltext stimmt dann bereits, im DOM
+      // steht aber ein Knoten zu viel. Reines Tippen baut die Vorschau bewusst nicht neu auf
+      // (siehe previewIsAuthoring), deshalb hält sich so eine Geisterzeile beliebig lange.
+      //
+      // Verglichen wird die Zahl der gerenderten Blöcke mit der der Zeichenkarten -- dieselbe
+      // Gleichung, an der auch previewStructureDesynced hängt. Nur bei Abweichung wird neu
+      // aufgebaut, im Normalfall passiert also nichts. setTimeout statt requestAnimationFrame,
+      // damit es auch dann läuft, wenn das Fenster gerade nicht zeichnet.
+      const erwarteteBloecke = textCharMaps.length;
+      setTimeout(() => {
+        if (findWordBlockElements().length === erwarteteBloecke) return;
+        const scrollVorher = previewPane.scrollTop;
+        updatePreview();
+        previewPane.scrollTop = scrollVorher;
+        const nachPos = sourceOffsetToDomPosition(newSrcOffset);
+        if (nachPos) {
+          const r2 = document.createRange();
+          r2.setStart(nachPos.node, nachPos.offset);
+          r2.collapse(true);
+          sel_replaceSelection(r2);
+        }
+      }, 0);
     }
 
     // Merges `owner` (the block a Backspace/Delete-at-boundary landed on) with the nearest
