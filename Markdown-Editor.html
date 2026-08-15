@@ -16769,6 +16769,40 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return { newText: text.slice(0, vorStart) + text.slice(vorEnde), newCursorPos: vorStart };
     }
 
+    // Eine Aufgabenmarke ohne den Zwischenraum dahinter ("- [ ]" statt "- [ ] ") ist nach den
+    // Markdown-Regeln kein Aufgabenpunkt mehr, sondern ein gewöhnlicher Aufzählungspunkt mit dem
+    // Text "[ ]" -- nachgemessen ergibt "- [ ] " eine Checkbox, "- [ ]" dagegen <li>[ ]</li>. Genau
+    // dieser Punkt mit sichtbaren eckigen Klammern steht im gemeldeten Bildschirmfoto, und
+    // computeEnterEdit() erkennt die Zeile dadurch nicht mehr als Aufgabe. Gemeldet: "in der
+    // Vorschau entfernt er das Leerzeichen und damit geht das Entfernen eines Listenpunktes
+    // schief".
+    //
+    // Wo der Zwischenraum verloren geht, ließ sich am Schreibtisch nicht nachstellen -- Tippen,
+    // Löschen und Enter behalten ihn hier alle. Dass die Zeile ohne ihn nichts Sinnvolles bedeuten
+    // kann, steht dagegen fest, und ein Nutzer schreibt sie so auch nicht absichtlich. Sie wird
+    // deshalb repariert, sobald Enter sie anfasst: das macht den Zustand selbstheilend, unabhängig
+    // davon, an welcher Stelle der Zwischenraum abhandenkommt.
+    const AUFGABENMARKE_OHNE_ABSTAND_RE = /^([ \t]*[-*+][ \t]+\[[ xX]\])$/;
+    function repairTaskMarkerSpacing(text, cursorPos) {
+      if (text.indexOf('[') === -1) return null;
+      const zeilen = text.split('\n');
+      let versatz = 0, gelaufen = 0, veraendert = false, neuerCursor = cursorPos;
+      for (let i = 0; i < zeilen.length; i++) {
+        const roh = zeilen[i];
+        if (AUFGABENMARKE_OHNE_ABSTAND_RE.test(roh.replace(/\u200B/g, ''))) {
+          zeilen[i] = roh + ' ';
+          veraendert = true;
+          // Alles hinter der Einfügestelle rückt um ein Zeichen nach hinten; der Cursor auch, wenn
+          // er dahinter steht. Steht er genau am Zeilenende, wandert er mit hinter das Leerzeichen.
+          if (cursorPos >= gelaufen + roh.length) neuerCursor++;
+        }
+        gelaufen += zeilen[i].length + 1;
+        versatz++;
+      }
+      if (!veraendert) return null;
+      return { text: zeilen.join('\n'), cursorPos: neuerCursor };
+    }
+
     function handlePreviewEnter(explicitCursorSrc, softBreak) {
       let cursorSrc = explicitCursorSrc;
       // ownerTag stays null for the deferredCreate-driven call (explicitCursorSrc set, see
@@ -16842,6 +16876,15 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           };
         }
       }
+      // Siehe repairTaskMarkerSpacing(): stellt den fehlenden Zwischenraum hinter einer
+      // Aufgabenmarke wieder her, bevor irgendetwas darunter die Zeile zu deuten versucht.
+      const repariert = repairTaskMarkerSpacing(editor.value, cursorSrc);
+      if (repariert) {
+        editor.value = repariert.text;
+        cursorSrc = repariert.cursorPos;
+        listEdit = softBreak ? null : computeEnterEdit(editor.value, cursorSrc);
+      }
+
       // Siehe emptyListMarkerExitBeforeCursor(): fängt das Beenden einer Liste ab, wenn der Cursor
       // nicht mehr im leeren Punkt steht. Läuft nach beiden Wegen oben, damit ein normal
       // erkannter Ausstieg oder eine Fortsetzung unverändert Vorrang behält.
