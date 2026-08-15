@@ -16746,12 +16746,22 @@ Zentrale Kernaussage oder Zitat für diese Folie.
         return { newText: text.slice(0, zeilenStart) + text.slice(zeilenEnde), newCursorPos: zeilenStart };
       }
 
-      // Fall 2: der Cursor steht auf einer leeren Zeile und die Marke unmittelbar darüber -- das
-      // tritt auf, wenn WebKit den Cursor gar nicht erst in den leeren Punkt setzt.
+      // Fall 2: der Cursor steht auf einer leeren Zeile und darüber -- nur durch weitere Leerzeilen
+      // getrennt -- die Marke. Das tritt auf, wenn WebKit den Cursor gar nicht erst in den leeren
+      // Punkt setzt: jedes weitere Enter hängt dann bloß eine Leerzeile an, statt die Marke zu
+      // entfernen. Genau dieser Zustand steht im gemeldeten Quelltext -- eine leere Aufgabenmarke,
+      // darunter mehrere Leerzeilen und der Cursor ganz unten. Eine Prüfung, die nur die
+      // unmittelbar vorangehende Zeile ansieht, greift ab der zweiten Leerzeile nicht mehr;
+      // deshalb werden reine Leerzeilen übersprungen. Alles andere beendet die Suche sofort, ein
+      // absichtlich leer gelassener Punkt weiter oben kann also nicht mitgerissen werden.
       if (zeile.trim() !== '') return null;
       if (zeilenStart === 0) return null;
-      const vorEnde = zeilenStart - 1;
-      const vorStart = text.lastIndexOf('\n', vorEnde - 1) + 1;
+      let vorEnde = zeilenStart - 1;
+      let vorStart = text.lastIndexOf('\n', vorEnde - 1) + 1;
+      while (text.slice(vorStart, vorEnde).replace(/\u200B/g, '').trim() === '' && vorStart > 0) {
+        vorEnde = vorStart - 1;
+        vorStart = text.lastIndexOf('\n', vorEnde - 1) + 1;
+      }
       if (!LEERE_LISTENMARKE_RE.test(text.slice(vorStart, vorEnde).replace(/\u200B/g, ''))) return null;
       // Gleiche Form wie der Ausstieg in computeEnterEdit(): die Zeile fällt weg, ihr Zeilenumbruch
       // bleibt stehen, der Cursor landet an ihrem Anfang. Die Leerzeilen-Normalisierung weiter
