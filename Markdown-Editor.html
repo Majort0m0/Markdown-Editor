@@ -3362,10 +3362,11 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       pointer-events: none;
     }
 
-    /* Stempel-Knopf, oben links -- die einzige freie Ecke: oben rechts sitzt der Löschknopf, oben
-       mittig der Verschiebegriff, in den Ecken die Griffe zum Skalieren. Gestaltung bewusst
+    /* Duplizieren-Knopf, oben links -- die einzige freie Ecke: oben rechts sitzt der Löschknopf,
+       oben mittig der Verschiebegriff, in den Ecken die Griffe zum Skalieren. Gestaltung bewusst
        identisch zum Löschknopf, damit beide als dasselbe "gehört zur ausgewählten Box"-Paar
-       gelesen werden. */
+       gelesen werden. Das Symbol ist ein Stempel: die Geste heißt weiterhin "stempeln", nur
+       entsteht dabei kein Bild mehr, sondern eine echte Kopie (siehe duplicateCanvasBox). */
     /* Knopf für die Stapelreihenfolge, unten links -- gegenüber dem Stempel oben links, damit die
        beiden nicht verwechselt werden. Gleiche Gestalt wie die übrigen Knöpfe an der Box. */
     .canvas-box-z-btn {
@@ -3435,7 +3436,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       background-color: #f0f3f6;
     }
 
-    .canvas-box-stamp-btn {
+    .canvas-box-duplicate-btn {
       position: absolute;
       top: -14px;
       left: -14px;
@@ -3453,13 +3454,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     }
 
-    .canvas-box-stamp-btn svg {
+    .canvas-box-duplicate-btn svg {
       width: 14px;
       height: 14px;
       color: var(--text-muted);
     }
 
-    .canvas-box-stamp-btn:hover svg {
+    .canvas-box-duplicate-btn:hover svg {
       color: var(--accent);
     }
 
@@ -6712,7 +6713,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       #canvasTtsStage,
       .canvas-box-handle,
       .canvas-box-move-handle,
-      .canvas-box-stamp-btn,
+      .canvas-box-duplicate-btn,
       .canvas-box-z-btn,
       .canvas-z-menu,
       .canvas-selection-chrome,
@@ -15057,7 +15058,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     // Stempelsymbol aus Icons/stamp-svgrepo-com.svg. Das vorherige war selbst gezeichnet und als
     // Stempel kaum zu erkennen. Normalisiert wie jedes Icon hier: width/height entfernt (die Größe
-    // kommt aus .canvas-box-stamp-btn svg) und die Füllfarbe auf currentColor gesetzt, damit das
+    // kommt aus .canvas-box-duplicate-btn svg) und die Füllfarbe auf currentColor gesetzt, damit das
     // Symbol die Textfarbe seines Knopfes erbt und der Hover-Zustand ohne zweite Fassung
     // funktioniert. Die Farbe steckte im Quellfile nicht am Pfad, sondern in einem
     // <style>.linesandangles_een{fill:#111918}</style>-Block -- Klasse und Block fallen deshalb
@@ -15072,150 +15073,58 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       '29,12.801,11.981,11.925,11.581z M26,24H6v-4h20V24z' +
       '"/></svg>';
 
-    // Doppelte Auflösung: der Abdruck wird später mit dem Blatt vergrößert und gedruckt, ein
-    // 1:1-Abzug sähe dabei sichtbar weich aus.
-    const CANVAS_STAMP_SCALE = 2;
-
-    // Bildet den gerenderten Inhalt einer Box als PNG ab. Ohne zusätzliche Bibliothek: der fertige
-    // HTML-Baum wird in ein SVG-<foreignObject> gelegt, das der Browser selbst zeichnen kann, und
-    // von dort über ein <canvas> als PNG ausgelesen.
-    //
-    // Zwei Dinge müssen dafür im SVG mitreisen, weil es keine Verbindung zum Dokument hat:
-    // die Gestaltungsregeln (die geteilte Typografie plus die sechs Farbvariablen des Box-Designs)
-    // und sämtliche Bilddaten. Letztere sind bereits eingebettet -- Bilder in einer Box stehen als
-    // asset:-Verweis im Text und werden beim Rendern zu data:-URIs aufgelöst (siehe
-    // canvasIdleRenderBox), also enthält der Baum keine einzige externe Adresse. Genau darauf beruht
-    // dieser Weg: ein SVG mit externem Verweis würde beim Zeichnen ins Leere laufen.
-    async function renderCanvasBoxToPngDataUrl(box) {
-      const breitePx = Math.round(box.w * CANVAS_PX_PER_MM);
-      const hoehePx = Math.round(box.h * CANVAS_PX_PER_MM);
-      if (!(breitePx > 0 && hoehePx > 0)) return null;
-
-      const design = box.theme || 'theme-clean';
-      // Ein Abdruck wird randlos gezeichnet, genau wie in der Anzeige (siehe
-      // .canvas-box-content.stamp). Ohne das bekam ein Abdruck eines Abdrucks die üblichen
-      // Innenabstände verpasst, der Absatz um das Bild seinen Außenabstand dazu -- das Bild wurde
-      // dadurch bei jedem Stempeln ein Stück kleiner und rutschte nach unten. Bei mehrfachem
-      // Stempeln summiert sich das sichtbar auf.
-      const istAbdruck = !!box.isStamp;
-
-      // Eine leere Sonde mit exakt denselben Klassen wie die spätere Box liefert die tatsächlich
-      // geltenden Werte: Farbvariablen des Designs, Schriftfamilie, Innenabstand und Schriftgröße.
-      // Innenabstand und Schriftgröße standen hier vorher als feste Zahlen (8px, 16px) -- beide
-      // falsch: .markdown-body überschreibt .canvas-box-content und gibt in Wirklichkeit 20px vor,
-      // und die Schriftgröße hängt über calc(1rem * var(--zoom-scale)) an der Boxvergrößerung wie
-      // am App-Zoom. Der Abdruck saß dadurch enger am Rand als das Original. Ablesen statt
-      // abschreiben heißt zugleich: ändert sich eine dieser Regeln später, zieht der Abdruck
-      // von selbst mit.
-      const sonde = document.createElement('div');
-      sonde.className = 'canvas-box-content markdown-body ' + design + (istAbdruck ? ' stamp' : '');
-      sonde.style.cssText = 'position:absolute;left:-9999px;top:0;width:100px;height:100px;visibility:hidden';
-      sonde.style.setProperty('--zoom-scale', (box.zoomLevel || 100) / 100);
-      document.body.appendChild(sonde);
-      const gelesen = getComputedStyle(sonde);
-      const variablen = ['--preview-bg', '--preview-bg-solid', '--preview-text', '--preview-link',
-        '--preview-code-bg', '--preview-border', '--preview-header-border']
-        .map(n => [n, gelesen.getPropertyValue(n).trim()])
-        .filter(([, w]) => w !== '')
-        .map(([n, w]) => n + ':' + w + ';').join('');
-      const schrift = gelesen.fontFamily;
-      const polster = gelesen.padding;
-      const schriftgroesse = gelesen.fontSize;
-      sonde.remove();
-
-      const inhalt = document.createElement('div');
-      inhalt.className = 'canvas-box-content markdown-body ' + design + (istAbdruck ? ' stamp' : '');
-      inhalt.style.cssText = 'width:' + breitePx + 'px;height:' + hoehePx + 'px;overflow:hidden;padding:' +
-        polster + ';box-sizing:border-box';
-      inhalt.style.setProperty('--zoom-scale', (box.zoomLevel || 100) / 100);
-      canvasIdleRenderBox = box;
-      suppressDrawingControls = true;
-      inhalt.innerHTML = marked.parse(box.content || '');
-      suppressDrawingControls = false;
-      canvasIdleRenderBox = null;
-
-      const stil = ':root{' + variablen + '}' +
-        '.markdown-body{color:var(--preview-text);font-family:' + schrift + ';line-height:1.7;font-size:' + schriftgroesse + ';' +
-        'background-color:var(--preview-bg-solid, var(--preview-bg));}' +
-        getMarkdownTypographyCss().replace(/\n/g, '') +
-        // Erstes Element ohne Abstand nach oben -- wortgleich zur Regel im Stylesheet der App.
-        // Ohne sie bekommt eine Überschrift ganz oben ihre 1.4em Außenabstand aus der Typografie
-        // und der gesamte Inhalt des Abdrucks rutscht darum nach unten. Reihenfolge ist egal, es
-        // entscheidet wie in der App die höhere Spezifität (Klasse + Pseudoklasse schlägt
-        // Klasse + Typ).
-        '.canvas-box-content :first-child{margin-top:0;}' +
-        // Wortgleich zu den .canvas-box-content.stamp-Regeln im Stylesheet der App. Sie müssen hier
-        // wiederholt werden, weil das foreignObject sein eigenes, abgeschlossenes Dokument ist und
-        // von den Regeln der Seite nichts sieht -- dasselbe gilt schon für die Typografie darüber.
-        (istAbdruck ? '.canvas-box-content.stamp{padding:0;}' +
-          '.canvas-box-content.stamp > *{margin:0;height:100%;}' +
-          '.canvas-box-content.stamp img{display:block;width:100%;height:100%;object-fit:fill;margin:0;}' : '');
-
-      const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + breitePx + '" height="' + hoehePx + '">' +
-        '<foreignObject width="100%" height="100%">' +
-        '<div xmlns="http://www.w3.org/1999/xhtml"><style>' + stil + '</style>' +
-        new XMLSerializer().serializeToString(inhalt) + '</div>' +
-        '</foreignObject></svg>';
-
-      const bild = new Image();
-      // Als data:-URI mit UTF-8-sicherer Kodierung -- encodeURIComponent statt btoa, weil der Text
-      // Umlaute enthalten kann und btoa daran scheitert.
-      bild.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-      const geladen = await new Promise((fertig) => { bild.onload = () => fertig(true); bild.onerror = () => fertig(false); });
-      if (!geladen) return null;
-
-      const flaeche = document.createElement('canvas');
-      flaeche.width = breitePx * CANVAS_STAMP_SCALE;
-      flaeche.height = hoehePx * CANVAS_STAMP_SCALE;
-      const ctx = flaeche.getContext('2d');
-      ctx.scale(CANVAS_STAMP_SCALE, CANVAS_STAMP_SCALE);
-      ctx.drawImage(bild, 0, 0, breitePx, hoehePx);
-      return flaeche.toDataURL('image/png');
-    }
-
-    // Legt einen Abdruck der Box an: ein Bild von ihr, deckungsgleich an derselben Stelle und in der
-    // Stapelreihenfolge unter allen anderen Boxen. Die ursprüngliche Box bleibt unberührt und
-    // weiter bearbeitbar -- zweimal stempeln ergibt zwei Abdrücke.
-    async function stampCanvasBox(boxId) {
+    // Dupliziert eine Box: eine vollwertige, weiter bearbeitbare Kopie an derselben Stelle, ganz
+    // vorn im Stapel und sofort ausgewählt. Vorher entstand hier ein Bild der Box ("Abdruck") --
+    // das war so beschrieben worden, gemeint war aber von Anfang an ein Duplikat. Der Bildweg ist
+    // damit ersatzlos weg (samt renderCanvasBoxToPngDataUrl, das nur er brauchte); bereits
+    // vorhandene Abdrücke in gespeicherten Notizen bleiben als Bildboxen erhalten und werden
+    // weiterhin randlos gezeichnet -- siehe box.isStamp in renderCanvasBoxes().
+    function duplicateCanvasBox(boxId) {
       const tab = getActiveTabReal();
       if (!tab || !tab.canvasData) return;
       const box = tab.canvasData.boxes.find(b => b.id === boxId);
       if (!box) return;
 
-      const dataUrl = await renderCanvasBoxToPngDataUrl(box);
-      if (!dataUrl) { showToast('Abdruck konnte nicht erzeugt werden'); return; }
+      // Wird genau diese Box gerade bearbeitet, steht ihr aktueller Text im Editor und noch nicht
+      // in box.content -- ohne das dupliziert man den Stand von vor der letzten Eingabe.
+      if (canvasEditingBoxId === boxId) box.content = editor.value;
 
       tab.canvasData.boxCounter = (tab.canvasData.boxCounter || 0) + 1;
-      // Über alle bestehenden Boxen -- ein Stempel drückt auf das, was da ist, er schiebt sich nicht
-      // darunter. Ursprünglich lag der Abdruck ganz hinten, weil es damals keine Möglichkeit gab,
-      // ihn von dort wieder hervorzuholen; seit es die Stapelreihenfolge von Hand gibt (siehe
-      // openCanvasZMenu), ist das nicht mehr nötig und die naheliegendere Richtung gewinnt.
+      // Ganz nach vorn, wie zuvor der Abdruck: die Kopie liegt deckungsgleich über dem Original und
+      // wäre darunter unsichtbar. Einordnen lässt sie sich danach über das Ebenen-Menü.
       const groesste = tab.canvasData.boxes.reduce((m, b) => Math.max(m, b.zIndex || 0), 0);
-      const abdruck = makeCanvasBox('box_' + tab.canvasData.boxCounter, box.x, box.y, box.w, box.h, groesste + 1);
+      const kopie = makeCanvasBox('box_' + tab.canvasData.boxCounter, box.x, box.y, box.w, box.h, groesste + 1);
       tab.canvasData.zCounter = Math.max(tab.canvasData.zCounter || 0, groesste + 1);
-      // Clean, damit der Abdruck keine eigene Fläche mitbringt: das Bild trägt den Hintergrund des
-      // Ursprungsdesigns bereits in sich, eine zweite darunter würde bei durchsichtigen Rändern
-      // durchscheinen.
-      abdruck.theme = 'theme-clean';
-      // Markiert die Box als Abdruck -- allein dafür, dass ihr Inhalt randlos gezeichnet wird
-      // (siehe .canvas-box-content.stamp). Reist in canvasData mit wie jedes andere Boxfeld.
-      abdruck.isStamp = true;
-      abdruck.assets = { img_1: dataUrl };
-      abdruck.assetCounter = 1;
-      abdruck.content = '![Abdruck](asset:img_1)';
-      tab.canvasData.boxes.push(abdruck);
-      // Der Abdruck entsteht deckungsgleich über seiner Vorlage -- ohne dies sähe man im ersten
-      // Moment gar keine Veränderung. Ausgewählt macht der Rahmen der Auswahlschicht sofort
-      // sichtbar, dass etwas Neues da ist, und man kann es direkt wegziehen oder einordnen.
-      // Direkt gesetzt statt über selectCanvasBox(): das rendert verzögert (siehe dort, wegen der
-      // Klickpaarung) und würde hier nur ein zweites Mal rendern.
-      canvasSelectedBoxId = abdruck.id;
+      kopie.content = box.content || '';
+      kopie.theme = box.theme || 'theme-clean';
+      kopie.zoomLevel = box.zoomLevel || 100;
+      kopie.fileType = box.fileType || 'markdown';
+      // Eigene Kopien der Bild-, Zeichnungs- und Tonkarten. Die Nummern darin (img_1, audio_1, ...)
+      // gelten jeweils nur innerhalb einer Box und dürfen deshalb unverändert bleiben -- anders als
+      // beim Einfügen zwischen zwei Notizen, wo sie kollidieren können. Kopiert werden muss
+      // trotzdem: sonst teilten sich Original und Kopie dieselben Objekte, und ein später in der
+      // einen eingefügtes Bild tauchte auch in der anderen auf.
+      kopie.assets = Object.assign({}, box.assets);
+      kopie.assetCounter = box.assetCounter || 0;
+      kopie.drawingAssetIds = Object.assign({}, box.drawingAssetIds);
+      kopie.rawDrawingAssetIds = Object.assign({}, box.rawDrawingAssetIds);
+      kopie.pdfDrawingAssetIds = Object.assign({}, box.pdfDrawingAssetIds);
+      kopie.audioAssetIds = Object.assign({}, box.audioAssetIds);
+      // Dupliziert man einen alten, bildbasierten Abdruck, erbt die Kopie dessen Markierung --
+      // sonst bekäme sie den üblichen Innenabstand und das Bild säße eingerückt statt randlos.
+      if (box.isStamp) kopie.isStamp = true;
+      kopie.history = [kopie.content];
+      kopie.historyIndex = 0;
+      tab.canvasData.boxes.push(kopie);
+      // Ausgewählt, weil die Kopie deckungsgleich über dem Original liegt -- ohne den Rahmen sähe
+      // man im ersten Moment gar keine Veränderung.
+      canvasSelectedBoxId = kopie.id;
 
       renderCanvasBoxes();
       syncCanvasContentToTab(tab);
       markActiveTabModified();
       saveStateToLocalStorage();
-      showToast('Abdruck erzeugt — liegt ganz vorn');
+      showToast('Kopie erstellt — liegt ganz vorn');
     }
 
     const CANVAS_TRASH_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -15359,10 +15268,10 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
           const stempel = document.createElement('button');
           stempel.type = 'button';
-          stempel.className = 'canvas-box-stamp-btn';
-          stempel.title = 'Abdruck als Bild erzeugen (liegt ganz vorn)';
+          stempel.className = 'canvas-box-duplicate-btn';
+          stempel.title = 'Box duplizieren (Kopie liegt ganz vorn)';
           stempel.innerHTML = CANVAS_STAMP_ICON;
-          stempel.onclick = (e) => { e.stopPropagation(); stampCanvasBox(box.id); };
+          stempel.onclick = (e) => { e.stopPropagation(); duplicateCanvasBox(box.id); };
           el.appendChild(stempel);
 
           const del = document.createElement('button');
@@ -15684,7 +15593,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // — re-rendering (and so replacing) this exact button — before its own click/onclick ever
       // gets a chance to run. Let the button handle its own click untouched, same pattern as the
       // alt-text-button-before-drawing-wrapper check in the preview's own delegated listener.
-      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-stamp-btn, .canvas-box-z-btn')) return;
+      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-duplicate-btn, .canvas-box-z-btn')) return;
 
       if (canvasAddMode) {
         if (e.target !== canvasPage) return; // don't start a create-drag on top of an existing box
@@ -15749,7 +15658,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
     // same exclusions the plain-click branch above already needs.
     canvasViewport.addEventListener('dblclick', (e) => {
       if (canvasAddMode) return;
-      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-stamp-btn, .canvas-box-z-btn, .canvas-box-handle, .canvas-box-move-handle')) return;
+      if (e.target.closest('.canvas-box-delete-btn, .canvas-box-duplicate-btn, .canvas-box-z-btn, .canvas-box-handle, .canvas-box-move-handle')) return;
       const boxEl = e.target.closest('.canvas-box');
       if (!boxEl) return;
       openCanvasBoxEditor(boxEl.dataset.boxId);
