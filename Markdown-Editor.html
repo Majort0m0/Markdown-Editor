@@ -15167,6 +15167,12 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       abdruck.assetCounter = 1;
       abdruck.content = '![Abdruck](asset:img_1)';
       tab.canvasData.boxes.push(abdruck);
+      // Der Abdruck entsteht deckungsgleich über seiner Vorlage -- ohne dies sähe man im ersten
+      // Moment gar keine Veränderung. Ausgewählt macht der Rahmen der Auswahlschicht sofort
+      // sichtbar, dass etwas Neues da ist, und man kann es direkt wegziehen oder einordnen.
+      // Direkt gesetzt statt über selectCanvasBox(): das rendert verzögert (siehe dort, wegen der
+      // Klickpaarung) und würde hier nur ein zweites Mal rendern.
+      canvasSelectedBoxId = abdruck.id;
 
       renderCanvasBoxes();
       syncCanvasContentToTab(tab);
