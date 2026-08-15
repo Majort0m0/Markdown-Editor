@@ -6184,6 +6184,13 @@ return rgba;});});}).call(this);
        (sizing, padding, font-scale) is overridden here — same-specificity rules win by source
        order, and this block comes after the base .markdown-body rule. */
     .presentation-slide {
+      /* Eine Folie braucht immer eine deckende Fläche -- sie liegt über der App, nicht auf einer
+         Seite. Beim Clean-Design ist --preview-bg durchsichtig (siehe dort), und eine Canvas-Box mit
+         diesem Design ergab dadurch eine Folie, durch die der Editor hindurchschien. Der
+         Ausweichwert liefert die Farbe, die Clean sonst hätte. Wirkt zugleich für das Overlay
+         ringsum: renderPresentationSlide() liest genau diesen berechneten Wert ab und legt ihn
+         hinter die Folie. */
+      background-color: var(--preview-bg-solid, var(--preview-bg));
       width: 100%;
       height: 100%;
       max-width: 1200px;
@@ -11519,6 +11526,20 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey, alt: e.altKey, code: e.code };
     }
 
+    // Zeichen, die eine Satzzeichen-Taste je nach Layout erzeugen kann -- Grundlage der
+    // layoutunabhängigen Übereinstimmung in comboMatchesEvent(). Jeweils beide Belegungen der Taste
+    // (ungeschaltet und mit Umschalt), damit z. B. sowohl "=" als auch "+" das Vergrößern auslösen.
+    // Bewusst nur die drei Tasten, deren Position zwischen US- und deutschem Layout wirklich
+    // verschoben ist. Punkt und Komma sitzen dort gleich und standen anfangs mit in dieser Tabelle
+    // -- gemessen kostete sie das ihre Umschalt-Prüfung: Zitat (Strg+Umschalt+Punkt) ließ sich
+    // danach schon mit Strg+Punkt auslösen. Ein Eintrag hier ist also nichts Harmloses, sondern
+    // lockert die Prüfung; er gehört nur dorthin, wo die Position tatsächlich nicht trägt.
+    const SHORTCUT_CODE_CHARACTERS = {
+      Equal: ['=', '+'],
+      Minus: ['-', '_'],
+      Slash: ['/', '?']
+    };
+
     function comboMatchesEvent(combo, e, actionId) {
       if (!combo) return false;
       if (!!combo.ctrl !== !!(e.ctrlKey || e.metaKey)) return false;
@@ -11527,7 +11548,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // agree either -- both physical keys mean the same zoom action regardless of Shift state,
       // so Shift is deliberately ignored for just these two rather than storing two near-duplicate
       // combos in the registry for what's really one action each.
-      const shiftAgnostic = combo.code === 'Equal' || combo.code === 'Minus';
+      //
+      // Auch bei einer Übereinstimmung über das erzeugte Zeichen (siehe unten) spielt die
+      // Umschalttaste keine Rolle: auf einer deutschen Tastatur entsteht "/" erst mit Umschalt+7,
+      // und das Kürzel für die Tastenkürzel-Hilfe verlangt kein Umschalt -- ohne diese Ausnahme
+      // wäre es dort nicht auslösbar, obwohl das Hilfefenster genau dieses Zeichen anzeigt.
+      const zeichen = SHORTCUT_CODE_CHARACTERS[combo.code];
+      const zeichenTrifft = !!zeichen && zeichen.includes(e.key);
+      const shiftAgnostic = combo.code === 'Equal' || combo.code === 'Minus' || zeichenTrifft;
       if (!shiftAgnostic && !!combo.shift !== !!e.shiftKey) return false;
       // Undo/Redo specifically match via e.key (layout-aware: the character a keypress actually
       // produces) rather than e.code (always the US-QWERTY reference physical position,
@@ -11547,7 +11575,17 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if ((actionId === 'undo' || actionId === 'redo') && (combo.code === 'KeyZ' || combo.code === 'KeyY')) {
         return e.key.toLowerCase() === combo.code.slice(-1).toLowerCase();
       }
-      return e.code === combo.code;
+      if (e.code === combo.code) return true;
+      // Dieselbe Layout-Frage wie bei Undo/Redo oben, nur für die Satzzeichen -- und dort trifft sie
+      // sogar häufiger zu, weil deren Position zwischen US- und deutscher Tastatur durchweg
+      // verschoben ist. Auf einer deutschen Tastatur liegt an der Stelle des US-"=" ein "´", an der
+      // des US-"-" ein "ß", und "-" selbst sitzt dort, wo US das "/" hat. Rein über die Position
+      // gemessen hieß das: Vergrößern war gar nicht erreichbar (die Taste "+" gibt es an dieser
+      // Position nicht), Verkleinern lag auf "ß", und die Tastenkürzel-Hilfe auf "-" statt "/".
+      // Angezeigt wurde im Hilfefenster jeweils das Zeichen -- also wird jetzt zusätzlich das
+      // Zeichen anerkannt, das die Taste tatsächlich erzeugt. Das gilt für jedes Layout, nicht nur
+      // für das deutsche, und lässt die Übereinstimmung über die Position unberührt.
+      return zeichenTrifft;
     }
 
     // Whether the currently focused element is a *different* text-editing control than the main
@@ -13364,7 +13402,16 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       // which doesn't cascade back up to its own parent — so the overlay needs its background
       // set explicitly, or it stays transparent and the editor/preview bleed through in the
       // letterboxing outside the slide's max-width on wide screens.
-      presentationOverlay.style.backgroundColor = getComputedStyle(presentationSlideEl).backgroundColor;
+      //
+      // Bug fix: hier stand die BERECHNETE Hintergrundfarbe der Folie. .markdown-body überblendet
+      // Farbwechsel aber weich (transition: all .2s, für den Designwechsel gedacht), und unmittelbar
+      // nach dem Klassenwechsel gibt die Abfrage deshalb noch den ALTEN Wert zurück -- das Overlay
+      // hinkte gemessen immer genau eine Folie hinterher, bei wechselnden Box-Designs also dauerhaft
+      // die falsche Farbe hinter der Folie. Die Variablen selbst werden nicht überblendet und
+      // liefern den neuen Wert sofort.
+      const folienStil = getComputedStyle(presentationSlideEl);
+      presentationOverlay.style.backgroundColor =
+        (folienStil.getPropertyValue('--preview-bg-solid').trim() || folienStil.getPropertyValue('--preview-bg').trim());
       canvasIdleRenderBox = presentationSlideBoxes[presentationIndex] || null;
       suppressDrawingControls = true;
       presentationSlideEl.innerHTML = marked.parse(slideMarkdown);
@@ -15628,6 +15675,30 @@ Zentrale Kernaussage oder Zitat für diese Folie.
 
     function markActiveTabModified() {
       const activeTab = getCurrentTab();
+      // Beim Bearbeiten einer Canvas-Box ist activeTab die BOX, nicht die Notiz -- und eine Box
+      // trägt fileType 'markdown', weshalb die Canvas-Ausnahme weiter unten hier nie greift.
+      // Markiert wurde dadurch die Box, die in der Tableiste gar nicht vorkommt: gemeldet als
+      // "die WebDAV Tab Accent Anzeige für veränderte Notizen greift bei canvas Notizen nicht".
+      //
+      // Der grüne Akzent hängt an isTabSynced(), das den aktuellen Stand der Notiz mit dem zuletzt
+      // synchronisierten vergleicht -- dafür muss die Szene neu serialisiert sein, was sonst erst
+      // beim Schließen der Box geschieht. Genau einmal ist das nötig: solange die Tableiste noch
+      // "synchronisiert" anzeigt. Die Abfrage dafür ist ein reiner Klassencheck am fertigen
+      // Element, kein erneutes Serialisieren -- pro Tastendruck also nichts Teures, und nach dem
+      // ersten Anschlag fällt auch das weg.
+      const realTab = getActiveTabReal();
+      if (realTab && realTab.fileType === 'canvas') {
+        if (activeTab) activeTab.content = editor.value; // Inhalt der Box mitführen
+        const tabEl = tabList.querySelector('[data-tab-id="' + realTab.id + '"]');
+        if (tabEl && tabEl.classList.contains('synced')) {
+          syncCanvasContentToTab(realTab); // setzt content neu und isModified
+          renderTabs();
+        } else if (!realTab.isModified) {
+          realTab.isModified = true;
+          renderTabs();
+        }
+        return;
+      }
       if (activeTab) {
         // While editing a canvas box, editor.value is that one box's markdown, not the tab's own
         // content (a JSON scene) — see openCanvasBoxEditor()/syncCanvasContentToTab(). Nothing
