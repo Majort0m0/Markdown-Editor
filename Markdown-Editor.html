@@ -15047,10 +15047,22 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       saveStateToLocalStorage();
     }
 
-    const CANVAS_STAMP_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
-      '<path d="M6 20H18M8 17H16C16.5523 17 17 16.5523 17 16V15C17 14.4477 16.5523 14 16 14H14.5L14.9 10.2' +
-      'C15.05 8.9 14.03 7.8 12.72 7.8H11.28C9.97 7.8 8.95 8.9 9.1 10.2L9.5 14H8C7.44772 14 7 14.4477 7 15V16' +
-      'C7 16.5523 7.44772 17 8 17Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+    // Stempelsymbol aus Icons/stamp-svgrepo-com.svg. Das vorherige war selbst gezeichnet und als
+    // Stempel kaum zu erkennen. Normalisiert wie jedes Icon hier: width/height entfernt (die Größe
+    // kommt aus .canvas-box-stamp-btn svg) und die Füllfarbe auf currentColor gesetzt, damit das
+    // Symbol die Textfarbe seines Knopfes erbt und der Hover-Zustand ohne zweite Fassung
+    // funktioniert. Die Farbe steckte im Quellfile nicht am Pfad, sondern in einem
+    // <style>.linesandangles_een{fill:#111918}</style>-Block -- Klasse und Block fallen deshalb
+    // beim Einbetten ersatzlos weg. Anders als die übrigen Symbole hier arbeitet dieses mit einer
+    // Füllfläche statt mit Strichen, daher kein stroke/fill="none".
+    const CANVAS_STAMP_ICON = '<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">' +
+      '<path fill="currentColor" d="' +
+      'M20,18v-4c0-0.147,0.187-0.271,0.906-0.601C22.063,12.871,24,11.985,24,9c0-3.955-3.271-5-5-5  h-6c' +
+      '-1.729,0-5,1.045-5,5c0,2.985,1.937,3.871,3.094,4.399C11.813,13.729,12,13.853,12,14v4H4v8h2v2h20v' +
+      '-2h2v-8H20z M11.925,11.581  C10.85,11.089,10,10.701,10,9c0-2.823,2.503-2.994,3-3h5.995C19.497,6.' +
+      '006,22,6.177,22,9c0,1.701-0.85,2.089-1.925,2.581  C19.199,11.981,18,12.529,18,14v4h-4v-4C14,12.5' +
+      '29,12.801,11.981,11.925,11.581z M26,24H6v-4h20V24z' +
+      '"/></svg>';
 
     // Doppelte Auflösung: der Abdruck wird später mit dem Blatt vergrößert und gedruckt, ein
     // 1:1-Abzug sähe dabei sichtbar weich aus.
@@ -15137,10 +15149,13 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       if (!dataUrl) { showToast('Abdruck konnte nicht erzeugt werden'); return; }
 
       tab.canvasData.boxCounter = (tab.canvasData.boxCounter || 0) + 1;
-      // Unter alle bestehenden Boxen. zIndex darf negativ werden, das ist für die Stapelreihenfolge
-      // unerheblich -- entscheidend ist nur, kleiner als jede vorhandene zu sein.
-      const kleinste = tab.canvasData.boxes.reduce((m, b) => Math.min(m, b.zIndex || 0), 0);
-      const abdruck = makeCanvasBox('box_' + tab.canvasData.boxCounter, box.x, box.y, box.w, box.h, kleinste - 1);
+      // Über alle bestehenden Boxen -- ein Stempel drückt auf das, was da ist, er schiebt sich nicht
+      // darunter. Ursprünglich lag der Abdruck ganz hinten, weil es damals keine Möglichkeit gab,
+      // ihn von dort wieder hervorzuholen; seit es die Stapelreihenfolge von Hand gibt (siehe
+      // openCanvasZMenu), ist das nicht mehr nötig und die naheliegendere Richtung gewinnt.
+      const groesste = tab.canvasData.boxes.reduce((m, b) => Math.max(m, b.zIndex || 0), 0);
+      const abdruck = makeCanvasBox('box_' + tab.canvasData.boxCounter, box.x, box.y, box.w, box.h, groesste + 1);
+      tab.canvasData.zCounter = Math.max(tab.canvasData.zCounter || 0, groesste + 1);
       // Clean, damit der Abdruck keine eigene Fläche mitbringt: das Bild trägt den Hintergrund des
       // Ursprungsdesigns bereits in sich, eine zweite darunter würde bei durchsichtigen Rändern
       // durchscheinen.
@@ -15157,7 +15172,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       syncCanvasContentToTab(tab);
       markActiveTabModified();
       saveStateToLocalStorage();
-      showToast('Abdruck erzeugt — liegt unter der Box');
+      showToast('Abdruck erzeugt — liegt ganz vorn');
     }
 
     const CANVAS_TRASH_ICON = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
@@ -15302,7 +15317,7 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           const stempel = document.createElement('button');
           stempel.type = 'button';
           stempel.className = 'canvas-box-stamp-btn';
-          stempel.title = 'Abdruck als Bild erzeugen (liegt unter der Box)';
+          stempel.title = 'Abdruck als Bild erzeugen (liegt ganz vorn)';
           stempel.innerHTML = CANVAS_STAMP_ICON;
           stempel.onclick = (e) => { e.stopPropagation(); stampCanvasBox(box.id); };
           el.appendChild(stempel);
