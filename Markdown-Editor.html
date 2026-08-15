@@ -16683,6 +16683,38 @@ Zentrale Kernaussage oder Zitat für diese Folie.
       return true;
     }
 
+    // Beim Beenden einer Liste soll die leere Listenmarke verschwinden. computeEnterEdit() schaut
+    // dafür auf die Zeile, in der der Cursor steht -- was voraussetzt, dass er wirklich IM leeren
+    // Punkt sitzt. Auf dem iPhone tut er das nicht (gemeldet für Safari als WebApp und für Brave,
+    // beide auf WebKit): ein leerer Listenpunkt bietet dort keine gültige Cursorposition, der
+    // Cursor rutscht dahinter, und das folgende Enter erzeugte darum bloß einen Absatz -- die
+    // leere Marke blieb sichtbar stehen. Im Bildschirmfoto gut zu sehen: die Liste endet mit einem
+    // leeren Aufzählungspunkt, darunter steht der neue Absatz. Ein Nullbreiten-Platzhalter im
+    // leeren Punkt (der vorherige Anlauf) reicht nicht, weil WebKit auch den beim Setzen des
+    // Cursors überspringt.
+    //
+    // Diese Prüfung fragt deshalb nicht den Cursor, sondern den Quelltext, und ist damit
+    // unabhängig davon, wo genau der Browser den Cursor abgelegt hat: steht er auf einer leeren
+    // Zeile und ist die Zeile unmittelbar davor eine Listenmarke ohne jeden Inhalt, dann ist
+    // dieses Enter das Beenden der Liste. Bewusst nur die UNMITTELBAR vorangehende Zeile und nicht
+    // die nächste nicht-leere irgendwo darüber -- sonst risse ein Enter weiter unten einen
+    // absichtlich leer gelassenen Listenpunkt mit.
+    const LEERE_LISTENMARKE_RE = /^(?:\s*)(?:[-*+][ \t]+\[[ xX]\]|[-*+]|\d+\.)[ \t]*$/;
+    function emptyListMarkerExitBeforeCursor(text, cursorPos) {
+      const zeilenStart = text.lastIndexOf('\n', cursorPos - 1) + 1;
+      let zeilenEnde = text.indexOf('\n', cursorPos);
+      if (zeilenEnde === -1) zeilenEnde = text.length;
+      if (text.slice(zeilenStart, zeilenEnde).replace(/\u200B/g, '').trim() !== '') return null;
+      if (zeilenStart === 0) return null;
+      const vorEnde = zeilenStart - 1;
+      const vorStart = text.lastIndexOf('\n', vorEnde - 1) + 1;
+      if (!LEERE_LISTENMARKE_RE.test(text.slice(vorStart, vorEnde).replace(/\u200B/g, ''))) return null;
+      // Gleiche Form wie der Ausstieg in computeEnterEdit(): die Zeile fällt weg, ihr Zeilenumbruch
+      // bleibt stehen, der Cursor landet an ihrem Anfang. Die Leerzeilen-Normalisierung weiter
+      // unten baut daraus denselben neuen Absatz wie auf jedem anderen Weg.
+      return { newText: text.slice(0, vorStart) + text.slice(vorEnde), newCursorPos: vorStart };
+    }
+
     function handlePreviewEnter(explicitCursorSrc, softBreak) {
       let cursorSrc = explicitCursorSrc;
       // ownerTag stays null for the deferredCreate-driven call (explicitCursorSrc set, see
@@ -16756,6 +16788,14 @@ Zentrale Kernaussage oder Zitat für diese Folie.
           };
         }
       }
+      // Siehe emptyListMarkerExitBeforeCursor(): fängt das Beenden einer Liste ab, wenn der Cursor
+      // nicht mehr im leeren Punkt steht. Läuft nach beiden Wegen oben, damit ein normal
+      // erkannter Ausstieg oder eine Fortsetzung unverändert Vorrang behält.
+      if (!listEdit && !softBreak) {
+        const ausstieg = emptyListMarkerExitBeforeCursor(editor.value, cursorSrc);
+        if (ausstieg) listEdit = ausstieg;
+      }
+
       let newCursorPos;
       if (listEdit) {
         editor.value = listEdit.newText;
