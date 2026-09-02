@@ -1,2 +1,6 @@
 .claude/
 .DS_Store
+
+# Liedblätter und Referenzmaterial bleiben lokal -- fremde Songtexte gehören nicht in ein
+# öffentliches Repository.
+chordpro/
