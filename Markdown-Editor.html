@@ -17398,6 +17398,16 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           continue;
         }
 
+        // Ein roher <iframe>-Block, wie ihn der Knopf "Web-Einbettung" einfügt. In einer Notiz
+        // reicht er von selbst durch, weil marked rohes HTML durchlässt -- ein Liedblatt geht nicht
+        // durch marked, deshalb hier ausdrücklich. Nur dieses eine Element und nur als GANZE Zeile:
+        // beliebiges HTML durchzulassen wäre eine viel größere Angriffsfläche als nötig, und
+        // gebraucht wird genau der Fall, den der Knopf erzeugt.
+        if (/^\s*<iframe\b[^>]*>\s*<\/iframe>\s*$/i.test(zeile)) {
+          bloecke.push({ typ: 'rohesHtml', html: zeile.trim() });
+          continue;
+        }
+
         if (chordProIstReineAkkordzeile(zeile)) {
           bloecke.push({ typ: 'akkordzeile', segmente: chordProSegmente(zeile, zeilenStart) });
           continue;
@@ -17990,6 +18000,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             // Innerhalb einer Tabulatur ist jedes Zeichen Teil des Rasters -- dort wird nichts
             // eingebettet, die Zeile geht zeichengetreu durch.
             tabZeilen.push('![' + b.alt + '](' + b.href + ')');
+          } else if (b.typ === 'rohesHtml') {
+            tabZeilen.push(b.html);
           }
           continue;
         }
@@ -18008,6 +18020,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           case 'quelle': html += '<div class="cp-quelle">' + chordProVerlinke(escapeHtmlText(b.text)) + '</div>'; break;
           case 'seitenumbruch': html += '<div class="cp-seitenumbruch"></div>'; break;
           case 'medium': html += chordProMediumHtml(b.href, b.alt); break;
+          case 'rohesHtml': html += '<span class="cp-medium">' + b.html + '</span>'; break;
           case 'akkordzeile': html += chordProAkkordzeileHtml(b.segmente); break;
           case 'zeile': html += chordProZeileHtml(b.segmente); break;
         }
@@ -27430,10 +27443,22 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             replacement = '\n```javascript\n' + selection + '\n```\n';
             newCursorPos = start + '\n```javascript\n'.length + selection.length;
             break;
-          case 'link':
+          case 'link': {
+            // In einem Liedblatt bedeuten eckige Klammern etwas anderes: '[Text]()' ist dort eine
+            // Akkordmarke namens "Text" und dahinter zwei Klammern als Liedtext -- gemeldet als
+            // "der Link-Knopf erzeugt nur die Klammern". ChordPro kennt keine Linksyntax, verlinkt
+            // aber jede nackte Adresse im Text von selbst (siehe chordProVerlinke). Also wird hier
+            // genau das eingefügt: die Adresse, nicht die Klammern.
+            const imLiedblatt = (getCurrentTab() || {}).fileType === 'chordpro';
+            if (imLiedblatt) {
+              replacement = selection || 'https://';
+              newCursorPos = start + replacement.length;
+              break;
+            }
             replacement = '[' + selection + ']()';
             newCursorPos = selection ? start + replacement.length - 1 : start + 1;
             break;
+          }
           case 'video':
             replacement = '![Video]()';
             newCursorPos = start + replacement.length - 1;
