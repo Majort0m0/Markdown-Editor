@@ -9934,6 +9934,30 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       return getFrameEmbedHtml(href, altText);
     }
 
+
+    // Ein von Hand eingefügter <iframe>-Block -- etwa der Einbettungscode, den YouTube unter
+    // "Teilen -> Einbetten" anbietet. Zeigt er auf einen Dienst, den die App selbst einbetten kann,
+    // wird er NICHT unverändert durchgereicht, sondern wie eine ![](…)-Referenz behandelt.
+    //
+    // Der Grund ist gemessen, nicht vermutet: derselbe Code, den YouTube ausgibt, zeigt in einem
+    // über file:// geöffneten Dokument "Fehler 153" -- YouTube lehnt die Wiedergabe ab, wenn die
+    // einbettende Seite keinen brauchbaren Ursprung hat, und genau den hat eine Datei von der
+    // Platte nicht. Im selben Dokument spielte eine über ![](…) erzeugte Einbettung einwandfrei,
+    // weil die über buildVideoEmbedWrapper läuft und dort die Klickkarte bekommt (siehe
+    // html.is-file-protocol). Ein roher Rahmen ging an dieser ganzen Vorsorge vorbei.
+    //
+    // Nebenbei sorgt derselbe Weg dafür, dass die Adresse auf youtube-nocookie.com zeigt und die
+    // Größe sich dem Fenster anpasst, statt bei den 560x315 aus dem Einbettungscode zu bleiben.
+    function veredelRohenIframe(html) {
+      const m = /<iframe[^>]*\ssrc\s*=\s*["']([^"']+)["']/i.exec(html || '');
+      if (!m) return null;
+      const titel = (/\stitle\s*=\s*["']([^"']*)["']/i.exec(html) || [])[1] || '';
+      // Dieselbe Rückrechnung wie im Einbetten-Dialog: aus der /embed/-Adresse wird die normale,
+      // aus der getVideoEmbedHtml dann seine eigene Einbettung baut.
+      const adresse = embedAdresseAusEingabe(m[1]);
+      return getVideoEmbedHtml(adresse, titel || 'Video');
+    }
+
     const hljsRenderer = new marked.Renderer();
     hljsRenderer.code = function({ text, lang }) {
       const language = lang && hljs.getLanguage(lang) ? lang : null;
@@ -10035,6 +10059,17 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       if (!style || !style.borderColor) return '';
       return 'border:' + (style.borderWidth || 2) + 'px solid ' + style.borderColor + ';border-radius:' + (style.borderRadius || 0) + 'px';
     }
+
+    // Rohes HTML aus einer Notiz. marked reicht es unverändert durch; nur wenn der ganze Block
+    // ein einzelner <iframe> auf einen bekannten Dienst ist, wird er über dieselbe Einbettung
+    // geleitet wie eine ![](…)-Referenz -- siehe veredelRohenIframe für den Grund.
+    hljsRenderer.html = function({ text }) {
+      if (/^\s*<iframe\b[^>]*>\s*<\/iframe>\s*$/i.test(text)) {
+        const veredelt = veredelRohenIframe(text);
+        if (veredelt) return veredelt;
+      }
+      return text;
+    };
 
     hljsRenderer.image = function({ href, title, text }) {
       const videoEmbed = getVideoEmbedHtml(href, text);
@@ -18020,7 +18055,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           case 'quelle': html += '<div class="cp-quelle">' + chordProVerlinke(escapeHtmlText(b.text)) + '</div>'; break;
           case 'seitenumbruch': html += '<div class="cp-seitenumbruch"></div>'; break;
           case 'medium': html += chordProMediumHtml(b.href, b.alt); break;
-          case 'rohesHtml': html += '<span class="cp-medium">' + b.html + '</span>'; break;
+          case 'rohesHtml': {
+            const veredelt = veredelRohenIframe(b.html);
+            html += veredelt || ('<span class="cp-medium">' + b.html + '</span>');
+            break;
+          }
           case 'akkordzeile': html += chordProAkkordzeileHtml(b.segmente); break;
           case 'zeile': html += chordProZeileHtml(b.segmente); break;
         }
