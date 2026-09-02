@@ -2878,6 +2878,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     .songbook-zeile { display: flex; align-items: stretch; gap: 6px; }
 
+    /* Ausdrücklich nötig: das display:flex darüber ist eine Autorenregel und schlägt die
+       [hidden]-Regel des Browsers, egal wie spezifisch die ist. Ohne diese Zeile blieben beim
+       Filtern ausgeblendete Zeilen sichtbar -- aufgefallen daran, dass die erste Trefferzeile
+       plötzlich 5400 Pixel weit unten lag. */
+    .songbook-zeile[hidden] { display: none; }
+    .songbook-leer[hidden] { display: none; }
+
     /* Der Titel ist ein Knopf über die ganze Breite: die Trefferfläche soll die ganze Zeile sein,
        nicht nur der Text -- auf einem Tablet trifft man sonst zu leicht daneben. */
     .songbook-titel {
@@ -16121,6 +16128,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     let songbookSortierung = 'titel';
     let songbookSuche = '';
     let songbookLaedt = false;
+    // Dateiname -> Zeilenelement. Damit bleiben die Zeilen über Filtervorgänge hinweg dieselben
+    // Knoten; siehe die Begründung in renderSongbook.
+    let songbookZeilen = new Map();
 
     function songbookMetadaten(name, text) {
       const lies = (d) => {
@@ -16168,6 +16178,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (i % 10 === 0 || i === passende.length - 1) songbookFortschritt(i + 1, passende.length);
       }
       songbookEintraege = eintraege;
+      songbookZeilen = new Map();
+      const listeEl = document.getElementById('songbookListe');
+      if (listeEl) delete listeEl.dataset.kennung;
       songbookLaedt = false;
       songbookFortschritt(0, 0);
       saveStateToLocalStorage();
@@ -16254,7 +16267,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Den Inhalt eines Liedes beschaffen. Erst aus dieser Sitzung, sonst aus dem gemerkten Ordner.
     async function songbookInhalt(dateiname) {
       const ausSitzung = songbookDateien.get(dateiname);
-      if (ausSitzung) return await leseTextDatei(ausSitzung);
+      // Auch dieser Weg braucht die Absicherung: schlägt das Lesen fehl (die Datei wurde
+      // verschoben oder verändert, seit das Dateiobjekt entstand), flöge der Fehler sonst
+      // ungefangen aus dieser async-Funktion heraus -- ohne Meldung, ohne Hinweis, es passierte
+      // schlicht nichts.
+      if (ausSitzung) {
+        try { return await leseTextDatei(ausSitzung); } catch (err) { /* unten weiterversuchen */ }
+      }
       if (songbookVerzeichnis) {
         try {
           const griff = await songbookVerzeichnis.getFileHandle(dateiname);
@@ -16373,8 +16392,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       document.getElementById('songbookOverlay').classList.remove('active');
     }
 
-    function songbookSuchen(wert) { songbookSuche = wert; renderSongbook(); }
-    function songbookSortieren(wert) { songbookSortierung = wert; renderSongbook(); }
+    // Nach oben rollen, sobald sich die Trefferliste ändert. War die Liste vorher weit unten und
+    // wird kürzer, klemmt der Browser die Rollposition -- der Inhalt rutscht dann unter dem Zeiger
+    // weg, und der nächste Klick trifft dorthin, wo eine Zeile eben noch WAR. Das sieht aus, als
+    // täte das Anklicken nichts.
+    function songbookNachObenRollen() {
+      const liste = document.getElementById('songbookListe');
+      if (liste) liste.scrollTop = 0;
+    }
+
+    function songbookSuchen(wert) { songbookSuche = wert; renderSongbook(); songbookNachObenRollen(); }
+    function songbookSortieren(wert) { songbookSortierung = wert; renderSongbook(); songbookNachObenRollen(); }
 
     function songbookGefiltert() {
       const q = songbookSuche.trim().toLowerCase();
@@ -16406,37 +16434,66 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             : 'Noch kein Ordner gewählt');
 
       // --- Liedliste
+      //
+      // Die Zeilen werden EINMAL gebaut und beim Filtern nur ein- und ausgeblendet bzw. umsortiert
+      // (append verschiebt einen vorhandenen Knoten, es erzeugt keinen neuen). Vorher baute jeder
+      // Tastendruck im Suchfeld alle Zeilen neu -- gemessen: ein Filtervorgang machte aus jeder
+      // Zeile eine andere, die alte war danach nicht mehr im Baum.
+      //
+      // Das ist die Ursache des gemeldeten "das Öffnen klappt nach Filtervorgängen oft nicht":
+      // fällt ein solcher Neuaufbau zwischen das Drücken und das Loslassen der Maustaste -- und
+      // beim Tippen-und-gleich-Klicken tut er das leicht --, dann ist das angeklickte Element
+      // verschwunden. Der Browser feuert das Klickereignis dann auf dem nächsten noch vorhandenen
+      // gemeinsamen Vorfahren, und der trägt keinen Behandler. Kein Fehler, keine Rückmeldung,
+      // nichts passiert. Mit erhaltenen Knoten kann das nicht mehr auftreten.
       const liste = document.getElementById('songbookListe');
-      liste.innerHTML = '';
-      const treffer = songbookGefiltert();
-      const zaehler = document.getElementById('songbookTreffer');
-      zaehler.textContent = songbookEintraege.length
-        ? treffer.length + ' von ' + songbookEintraege.length
-        : '';
-      if (!treffer.length) {
-        const leer = document.createElement('div');
-        leer.className = 'songbook-leer';
-        leer.textContent = songbookEintraege.length ? 'Nichts gefunden.' : 'Wähle einen Ordner mit ChordPro-Dateien.';
-        liste.appendChild(leer);
+      const kennung = songbookEintraege.map((e) => e.datei).join('\u0000');
+      if (liste.dataset.kennung !== kennung) {
+        liste.dataset.kennung = kennung;
+        liste.innerHTML = '';
+        songbookZeilen = new Map();
+        for (const e of songbookEintraege) {
+          const zeile = document.createElement('div');
+          zeile.className = 'songbook-zeile';
+          const text = document.createElement('button');
+          text.className = 'songbook-titel';
+          text.onclick = () => songbookOeffnen(e.datei);
+          text.title = e.datei + ' -- im Editor öffnen';
+          const t = document.createElement('span'); t.className = 'sb-t'; t.textContent = e.titel;
+          const i = document.createElement('span'); i.className = 'sb-i'; i.textContent = e.interpret;
+          const k = document.createElement('span'); k.className = 'sb-k'; k.textContent = e.tonart;
+          text.append(t, i, k);
+          const plus = document.createElement('button');
+          plus.className = 'songbook-plus';
+          plus.textContent = '+';
+          plus.title = 'Zur ausgewählten Setliste hinzufügen';
+          plus.onclick = () => songbookZurSetlist(e.datei);
+          zeile.append(text, plus);
+          liste.appendChild(zeile);
+          songbookZeilen.set(e.datei, zeile);
+        }
       }
+
+      const treffer = songbookGefiltert();
+      const sichtbar = new Set(treffer.map((e) => e.datei));
+      for (const [datei, zeile] of songbookZeilen) zeile.hidden = !sichtbar.has(datei);
+      // In der Reihenfolge der Treffer ans Ende hängen -- das verschiebt die vorhandenen Knoten,
+      // ohne sie zu ersetzen.
       for (const e of treffer) {
-        const zeile = document.createElement('div');
-        zeile.className = 'songbook-zeile';
-        const text = document.createElement('button');
-        text.className = 'songbook-titel';
-        text.onclick = () => songbookOeffnen(e.datei);
-        text.title = e.datei + ' -- im Editor öffnen';
-        const t = document.createElement('span'); t.className = 'sb-t'; t.textContent = e.titel;
-        const i = document.createElement('span'); i.className = 'sb-i'; i.textContent = e.interpret;
-        const k = document.createElement('span'); k.className = 'sb-k'; k.textContent = e.tonart;
-        text.append(t, i, k);
-        const plus = document.createElement('button');
-        plus.className = 'songbook-plus';
-        plus.textContent = '+';
-        plus.title = 'Zur ausgewählten Setliste hinzufügen';
-        plus.onclick = () => songbookZurSetlist(e.datei);
-        zeile.append(text, plus);
-        liste.appendChild(zeile);
+        const zeile = songbookZeilen.get(e.datei);
+        if (zeile) liste.appendChild(zeile);
+      }
+
+      const zaehler = document.getElementById('songbookTreffer');
+      zaehler.textContent = songbookEintraege.length ? treffer.length + ' von ' + songbookEintraege.length : '';
+
+      let leer = liste.querySelector(':scope > .songbook-leer');
+      if (!treffer.length) {
+        if (!leer) { leer = document.createElement('div'); leer.className = 'songbook-leer'; liste.appendChild(leer); }
+        leer.hidden = false;
+        leer.textContent = songbookEintraege.length ? 'Nichts gefunden.' : 'Wähle einen Ordner mit ChordPro-Dateien.';
+      } else if (leer) {
+        leer.hidden = true;
       }
 
       // --- Setlisten
