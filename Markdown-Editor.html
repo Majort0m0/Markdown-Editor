@@ -6198,6 +6198,48 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     html.is-file-protocol .video-embed-live { display: none; }
     html.is-file-protocol .video-embed-fallback { display: flex; }
 
+    /* Rahmen-Einbettungen (Spotify, SoundCloud, Seiten) haben kein Vorschaubild. Ihre Karte ist
+       deshalb keine Posterfläche, sondern eine schmale Linkkarte -- und die feste Höhe des
+       Rahmens fällt weg, sonst stünde sie in einem 352 Pixel hohen leeren Kasten. Das !important
+       ist nötig, weil die Höhe direkt am Element steht (siehe buildFrameEmbedWrapper). */
+    html.is-file-protocol .video-embed-wrapper.embed-frame {
+      height: auto !important;
+      aspect-ratio: auto;
+    }
+
+    .embed-frame-karte {
+      justify-content: flex-start;
+      gap: 10px;
+      padding: 12px 14px;
+      background-color: var(--preview-code-bg);
+      border: 1px solid var(--preview-border);
+      border-radius: 8px;
+      color: var(--preview-text);
+    }
+
+    .embed-frame-karte::before {
+      content: '↗';
+      flex-shrink: 0;
+      font-size: 1rem;
+      opacity: .55;
+    }
+
+    .embed-frame-karte-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .embed-frame-karte-dienst { font-size: .9em; font-weight: 600; color: var(--preview-link); }
+
+    .embed-frame-karte-adresse {
+      font-size: .78em;
+      opacity: .6;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     /* Positioning context for every rendered image's hover-revealed overlay button(s) — not
        just drawings, see hljsRenderer.image(). .drawing is an additional modifier only a
        Zeichnung/PDF-page image gets (click-to-edit only makes sense there, not for a plain
@@ -9753,20 +9795,27 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       return /^https:\/\//i.test(String(url || '').trim());
     }
 
-    function buildFrameEmbedWrapper(rawHref, quelle, alt, hoehe, sandkasten) {
+    function buildFrameEmbedWrapper(rawHref, quelle, alt, hoehe, sandkasten, dienst, karteZiel) {
       const rawHrefAttr = (rawHref || '').replace(/"/g, '&quot;');
       const stil = hoehe ? ' style="aspect-ratio: auto; height: ' + hoehe + 'px;"' : '';
       const sandAttr = sandkasten
         ? ' sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-presentation"'
         : '';
+      // Die Karte für file:// zeigt hier NICHT das Videoposter der Filmdienste. Ein Spotify-Player
+      // hat kein Vorschaubild, und die schwarze Posterfläche stand dann 352 Pixel hoch leer da --
+      // genau so gemeldet. Stattdessen eine schmale Linkkarte mit Dienstnamen und Adresse; die
+      // feste Höhe fällt dabei weg, denn es gibt nichts, wofür Platz freizuhalten wäre.
+      const ziel = karteZiel || quelle;
+      const adresse = ziel.replace(/^https?:\/\//, '').replace(/[?#].*$/, '');
       return '<span class="video-embed-wrapper embed-frame" contenteditable="false" data-md-href="' + rawHrefAttr +
         '" data-md-alt="' + alt + '"' + stil + '>' +
         '<iframe class="video-embed-live" src="' + quelle + '" title="' + alt + '" loading="lazy"' + sandAttr +
         ' allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>' +
-        '<a class="video-embed-fallback" href="' + quelle + '" target="_blank" rel="noopener noreferrer" title="' + alt + '">' +
-        '<span class="video-embed-play">▶</span>' +
-        '<span class="video-embed-label">Im Browser öffnen</span>' +
-        '</a></span>';
+        '<a class="video-embed-fallback embed-frame-karte" href="' + ziel + '" target="_blank" rel="noopener noreferrer" title="' + alt + '">' +
+        '<span class="embed-frame-karte-text">' +
+        '<span class="embed-frame-karte-dienst">' + escapeHtmlText(dienst || 'Im Browser öffnen') + '</span>' +
+        '<span class="embed-frame-karte-adresse">' + escapeHtmlText(adresse) + '</span>' +
+        '</span></a></span>';
     }
 
     // Wird von getVideoEmbedHtml gerufen, nachdem YouTube, Vimeo und Videodateien geprüft sind.
@@ -9779,20 +9828,20 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         const art = m[1].toLowerCase();
         return buildFrameEmbedWrapper(href,
           'https://open.spotify.com/embed/' + art + '/' + m[2],
-          alt, SPOTIFY_HOEHEN[art] || 352, false);
+          alt, SPOTIFY_HOEHEN[art] || 352, false, 'Auf Spotify öffnen', href);
       }
 
       if (SOUNDCLOUD_URL_RE.test(href)) {
         return buildFrameEmbedWrapper(href,
           'https://w.soundcloud.com/player/?url=' + encodeURIComponent(href) + '&color=%233d7dd8&visual=false',
-          alt, 166, false);
+          alt, 166, false, 'Auf SoundCloud öffnen', href);
       }
 
       // Beliebige Seite -- nur mit ausdrücklicher Marke, und dann eingesperrt.
       const geteilt = splitHrefAndMdFrame(href);
       if (geteilt.rahmen && embedUrlErlaubt(geteilt.href)) {
         const hoehe = Math.max(80, Math.min(1200, parseInt(geteilt.rahmen.h, 10) || 400));
-        return buildFrameEmbedWrapper(href, geteilt.href, alt, hoehe, true);
+        return buildFrameEmbedWrapper(href, geteilt.href, alt, hoehe, true, 'Im Browser öffnen', geteilt.href);
       }
       return null;
     }
@@ -9952,9 +10001,11 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       const m = /<iframe[^>]*\ssrc\s*=\s*["']([^"']+)["']/i.exec(html || '');
       if (!m) return null;
       const titel = (/\stitle\s*=\s*["']([^"']*)["']/i.exec(html) || [])[1] || '';
-      // Dieselbe Rückrechnung wie im Einbetten-Dialog: aus der /embed/-Adresse wird die normale,
-      // aus der getVideoEmbedHtml dann seine eigene Einbettung baut.
-      const adresse = embedAdresseAusEingabe(m[1]);
+      // Den GANZEN Block weiterreichen, nicht nur den src-Wert: embedAdresseAusEingabe holt sich
+      // die Adresse selbst und erkennt am umgebenden <iframe>, dass sie aus einem Einbettungscode
+      // stammt -- nur dann wirft sie dessen Abspielparameter weg. Mit dem nackten src fehlte ihr
+      // dieses Merkmal, und das '?utm_source=generator' blieb im Linkziel stehen.
+      const adresse = embedAdresseAusEingabe(html);
       return getVideoEmbedHtml(adresse, titel || 'Video');
     }
 
@@ -17737,6 +17788,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // dritten Bund, steht im Quelltext [Bb] und gegriffen wird ein G. Ein Griffbild zum klingenden
     // Namen wäre genau das Gegenteil dessen, wozu man es aufschlägt.
     function chordProGriffleiste(content) {
+      content = chordProOhneMedien(content);
       // Zwei Namen je Akkord: der ANGEZEIGTE (mit Kapodaster-Versatz, dazu gehört das Griffbild)
       // und der KLINGENDE aus der Quelle (den spielt ein Klick ab).
       const gesehen = [];
@@ -17791,6 +17843,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Alle klingenden Akkorde des Blattes, mit ihrer Häufigkeit -- ein Akkord, der zwanzigmal
     // vorkommt, wiegt bei der Bewertung schwerer als einer, der einmal auftaucht.
     function chordProAkkordGewichte(content) {
+      content = chordProOhneMedien(content);
       const zaehler = new Map();
       const re = /\[([^\]\n]*)\]/g;
       let m;
@@ -18148,7 +18201,32 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // 'B' oder 'Bb'. Die berüchtigte Doppeldeutigkeit von 'B' (englisch H, deutsch Bb) ist damit
     // auflösbar: in einer deutsch notierten Datei bedeutet ein blankes 'B' den Halbton 10, in
     // jeder anderen den Halbton 11.
+    // Eine Zeile, die eine Medienreferenz oder ein roher <iframe>-Block ist -- also KEIN Liedtext.
+    // Sie muss von jeder Akkord-Auswertung ausgenommen werden: alle durchsuchen den Rohtext nach
+    // eckigen Klammern, und die Beschriftung einer Medienzeile steht nun einmal in eckigen
+    // Klammern. Beim Testen kam so die "Tonart: Ein Lied" zustande -- und schwerer: das
+    // Transponieren machte aus '![Am Fluss](…)' ein '![Bm Fluss](…)', schrieb also die
+    // Beschriftung des Nutzers still um.
+    //
+    // Dieselben beiden Muster wie in parseChordPro; sie dort ein zweites Mal hinzuschreiben wäre
+    // eine Quelle künftiger Abweichung, deshalb stehen sie hier als Konstanten.
+    const CHORDPRO_MEDIEN_RE = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)\s*$/;
+    const CHORDPRO_ROHIFRAME_RE = /^\s*<iframe\b[^>]*>\s*<\/iframe>\s*$/i;
+
+    function chordProIstMedienzeile(zeile) {
+      return CHORDPRO_MEDIEN_RE.test(zeile) || CHORDPRO_ROHIFRAME_RE.test(zeile);
+    }
+
+    // Der Text ohne die Medienzeilen -- sie bleiben als leere Zeilen stehen, damit sich an der
+    // Zeilenzahl nichts ändert.
+    function chordProOhneMedien(text) {
+      const zeilen = String(text || '').split('\n');
+      if (!zeilen.some(chordProIstMedienzeile)) return text;
+      return zeilen.map((z) => (chordProIstMedienzeile(z) ? '' : z)).join('\n');
+    }
+
     function chordProNotationDeutsch(text) {
+      text = chordProOhneMedien(text);
       // Über die Markenklassifizierung statt über einen eigenen regulären Ausdruck: der erste
       // Versuch ('/\[\s*H[b#]?(?![A-Za-z])/') erkannte '[H]', aber nicht '[Hm]' oder '[H7]' --
       // die Nachschau verbot jeden folgenden Buchstaben und damit ausgerechnet den Akkordzusatz.
@@ -18255,13 +18333,16 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // leere Marken. Ein angehängter Rhythmuspunkt ([Dsus4..]) wird abgetrennt, der Rest
     // transponiert und der Anhang wieder angesetzt; das erledigt chordProMarkeArt().
     function chordProQuelltextWandeln(text, wandleAkkord) {
-      return text.replace(/\[([^\]\n]*)\]/g, (ganz, inhalt) => {
+      // Zeilenweise statt über den ganzen Text: eine Medienzeile darf nicht angefasst werden,
+      // sonst wanderte ihre Beschriftung beim Transponieren mit (siehe chordProIstMedienzeile).
+      return text.split('\n').map((zeile) => chordProIstMedienzeile(zeile) ? zeile
+        : zeile.replace(/\[([^\]\n]*)\]/g, (ganz, inhalt) => {
         const art = chordProMarkeArt(inhalt);
         if (art.art !== 'akkord') return ganz;
         const vorn = inhalt.match(/^\s*/)[0];
         const hinten = inhalt.slice(vorn.length + art.name.length + art.anhang.length);
         return '[' + vorn + chordProAkkordWandeln(art.name, wandleAkkord) + art.anhang + hinten + ']';
-      });
+        })).join('\n');
     }
 
     // Setzt eine Direktive auf einen Wert -- ersetzt eine vorhandene, sonst wird sie hinter der
@@ -18352,6 +18433,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // einmal '{key: S}'), wird der erste echte Akkord genommen -- eine Näherung, aber eine, die
     // für die Vorzeichenwahl allemal besser ist als gar nichts.
     function chordProTonart(text) {
+      text = chordProOhneMedien(text);
       const ausKey = chordProDirektiveLesen(text, 'key');
       if (ausKey && chordProNoteLesen(ausKey)) return ausKey;
       const m = /\[([^\]\n]*)\]/g;
@@ -18366,6 +18448,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Überwiegen im Dokument b-Vorzeichen oder Kreuze? Rückfall für die Vorzeichenwahl, wenn keine
     // Tonart bekannt ist.
     function chordProBevorzugtB(text) {
+      text = chordProOhneMedien(text);
       const bs = (text.match(/\[[A-Ha-h]b/g) || []).length;
       const kreuze = (text.match(/\[[A-Ha-h]#/g) || []).length;
       return bs > kreuze;
@@ -19500,6 +19583,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // gesetztem Kapodaster zeigt die Vorschau Griffnamen, im Quelltext stehen klingende Akkorde --
     // ein Knopf, der den Griffnamen einfügte, verstimmte das Lied still um den Kapodasterbetrag.
     function chordProBenutzteAkkorde(text) {
+      text = chordProOhneMedien(text);
       const zaehler = new Map();
       const re = /\[([^\]\n]*)\]/g;
       let m;
@@ -31843,6 +31927,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '  .video-embed-label { position: absolute; z-index: 1; bottom: 10px; left: 12px; font-size: .8rem; padding: 3px 8px; border-radius: 4px; background-color: rgba(0,0,0,.6); }\n' +
         '  html.is-file-protocol .video-embed-live { display: none; }\n' +
         '  html.is-file-protocol .video-embed-fallback { display: flex; }\n' +
+        '  html.is-file-protocol .video-embed-wrapper.embed-frame { height: auto !important; aspect-ratio: auto; }\n' +
+        '  .embed-frame-karte { justify-content: flex-start; gap: 10px; padding: 12px 14px; background-color: var(--preview-code-bg); border: 1px solid var(--preview-border); border-radius: 8px; color: var(--preview-text); }\n' +
+        '  .embed-frame-karte::before { content: "\\2197"; flex-shrink: 0; font-size: 1rem; opacity: .55; }\n' +
+        '  .embed-frame-karte-text { display: flex; flex-direction: column; min-width: 0; }\n' +
+        '  .embed-frame-karte-dienst { font-size: .9em; font-weight: 600; color: var(--preview-link); }\n' +
+        '  .embed-frame-karte-adresse { font-size: .78em; opacity: .6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n' +
         '  .markdown-body blockquote { padding: 0 1em; opacity: .85; border-left: .25em solid var(--preview-border); }\n' +
         '  .markdown-body code { padding: .2em .4em; font-size: 85%; background-color: var(--preview-code-bg); border-radius: 4px; font-family: "SFMono-Regular", Consolas, monospace; }\n' +
         '  .markdown-body pre { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: var(--preview-code-bg); border-radius: 6px; }\n' +
