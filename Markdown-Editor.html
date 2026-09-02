@@ -6046,6 +6046,9 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       background-color: var(--preview-code-bg); border-radius: 6px; padding: .7em .9em; margin: .4em 0;
     }
 
+    .markdown-body .cp-medium { display: block; margin: .6em 0; }
+    .markdown-body .cp-medium img { max-width: 100%; height: auto; border-radius: 6px; }
+
     .markdown-body .cp-seitenumbruch {
       height: 0; margin: .9em 0; border-top: 1px dashed var(--preview-border);
     }
@@ -17381,6 +17384,20 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           continue;
         }
 
+        // Eine Zeile, die NUR aus einer Medienreferenz besteht -- ein eingebettetes Video, ein
+        // Spotify-Player, ein Bild. ChordPro kennt dafür nichts Eigenes, deshalb wird hier die
+        // Markdown-Schreibweise übernommen: dieselbe, mit der es in einer gewöhnlichen Notiz auch
+        // geht, und dieselbe, die der Einbetten-Dialog erzeugt.
+        //
+        // Die Prüfung muss VOR der Akkordzerlegung stehen. Sonst läse chordProSegmente das
+        // '[Beschriftung]' als Akkordmarke, und '!' samt Adresse in Klammern stünde als Liedtext
+        // da -- genau so ist es gemeldet worden.
+        const medium = /^\s*!\[([^\]]*)\]\(([^)\s]+)(?:\s+["'][^"']*["'])?\)\s*$/.exec(zeile);
+        if (medium) {
+          bloecke.push({ typ: 'medium', alt: medium[1], href: medium[2] });
+          continue;
+        }
+
         if (chordProIstReineAkkordzeile(zeile)) {
           bloecke.push({ typ: 'akkordzeile', segmente: chordProSegmente(zeile, zeilenStart) });
           continue;
@@ -17879,6 +17896,24 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       feld.appendChild(fuss);
     }
 
+    // Eine Medienzeile eines Liedblatts. Erst die Einbettungen (YouTube, Vimeo, Spotify,
+    // SoundCloud, markierte Seiten, Videodateien) -- die bringen ihre eigene Hülle samt
+    // Rückfallkarte für file:// mit. Bleibt nichts übrig, ist es ein Bild.
+    function chordProMediumHtml(href, altText) {
+      const einbettung = getVideoEmbedHtml(href, altText);
+      if (einbettung) return einbettung;
+      // asset:-Verweise auflösen wie im Markdown-Renderer; in einem Liedblatt entstehen sie beim
+      // Einfügen eines Bildes aus der Zwischenablage.
+      let ziel = href;
+      if (href && href.indexOf('asset:') === 0) {
+        const tab = getCurrentTab();
+        ziel = (tab && tab.assets && tab.assets[href.slice('asset:'.length)]) || '';
+      }
+      if (!ziel) return '';
+      return '<span class="cp-medium"><img src="' + ziel.replace(/"/g, '&quot;') +
+             '" alt="' + escapeHtmlText(altText || '') + '" loading="lazy"></span>';
+    }
+
     function renderChordProPreview(content) {
       const { meta, bloecke } = parseChordPro(content);
       if (!bloecke.length) return '<div class="empty-state"><h3>Leeres Liedblatt</h3></div>';
@@ -17951,6 +17986,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           } else if (b.typ === 'leer') tabZeilen.push('');
           else if (b.typ === 'zeile' || b.typ === 'akkordzeile') {
             tabZeilen.push(b.segmente.map((s) => (s.marke ? '[' + s.roh + ']' : '') + s.text).join(''));
+          } else if (b.typ === 'medium') {
+            // Innerhalb einer Tabulatur ist jedes Zeichen Teil des Rasters -- dort wird nichts
+            // eingebettet, die Zeile geht zeichengetreu durch.
+            tabZeilen.push('![' + b.alt + '](' + b.href + ')');
           }
           continue;
         }
@@ -17968,6 +18007,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             break;
           case 'quelle': html += '<div class="cp-quelle">' + chordProVerlinke(escapeHtmlText(b.text)) + '</div>'; break;
           case 'seitenumbruch': html += '<div class="cp-seitenumbruch"></div>'; break;
+          case 'medium': html += chordProMediumHtml(b.href, b.alt); break;
           case 'akkordzeile': html += chordProAkkordzeileHtml(b.segmente); break;
           case 'zeile': html += chordProZeileHtml(b.segmente); break;
         }
@@ -31798,6 +31838,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '  .markdown-body .cp-comment-box { background: none; border: 1px solid var(--preview-border); }\n' +
         '  .markdown-body .cp-quelle { font-size: .78em; opacity: .5; }\n' +
         '  .markdown-body .cp-tab { white-space: pre; overflow-x: auto; font-size: .8em; line-height: 1.35; background-color: var(--preview-code-bg); border-radius: 6px; padding: .7em .9em; margin: .4em 0; }\n' +
+        '  .markdown-body .cp-medium { display: block; margin: .6em 0; }\n' +
+        '  .markdown-body .cp-medium img { max-width: 100%; height: auto; border-radius: 6px; }\n' +
         '  .markdown-body .cp-seitenumbruch { height: 0; margin: .9em 0; border-top: 1px dashed var(--preview-border); }\n' +
         // Dieselben Druckregeln wie in der App -- ein Liedblatt soll aus der exportierten Datei
         // genauso auf Papier kommen wie aus dem Editor. Ob zweispaltig, wird beim Export
