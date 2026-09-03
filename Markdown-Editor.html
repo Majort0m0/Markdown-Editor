@@ -6063,6 +6063,25 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     .markdown-body .cp-chorus::before, .markdown-body .cp-chorus::after { border-top: 4px solid var(--preview-border); }
     .markdown-body .cp-verse::before,  .markdown-body .cp-verse::after  { border-top: 3px dotted var(--preview-border); }
+
+    /* Strophennummer: sie tritt an die Stelle des OBEREN Klammerstrichs, statt neben ihm zu
+       stehen. Zwischen Rand und Text liegen nur 1,1em, und der Strich belegt davon 0,8em -- eine
+       Zahl daneben überlagerte ihn. Nach links außerhalb des Abschnitts auszuweichen schied
+       ebenfalls aus: im zweispaltigen Druck ist dort kein Platz. Die Klammer bleibt als linker
+       Rand und unterer Strich erkennbar, und die Zahl markiert genau ihren Anfang.
+       Ausgegeben über content: attr(...), damit sie nicht in textContent landet -- siehe die
+       Begründung am erzeugenden Zweig in renderChordProPreview. */
+    .markdown-body .cp-verse[data-strophe]::before {
+      content: attr(data-strophe);
+      border-top: none;
+      width: auto;
+      top: -.15em;
+      font-size: .62em;
+      line-height: 1;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      opacity: .5;
+    }
     .markdown-body .cp-bridge::before, .markdown-body .cp-bridge::after { border-top: 3px dashed var(--preview-border); }
     /* Hervorhebung und Taktraster tragen einen Kasten statt eines Seitenbalkens -- dort wäre ein
        Klammerarm ein zweiter Rahmen über dem ersten. */
@@ -6071,9 +6090,20 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     /* Refrain: durchgezogener, kräftigerer Balken, fett und deutlicher eingerückt -- er soll
        sich beim Blättern auf einen Blick vom Strophentext abheben. Strophe und Bridge bekommen
        daneben je eine eigene Linienart, damit sich die drei ohne Beschriftung unterscheiden. */
+    /* Refrain: Klammer, Fettschrift und zusätzlich eine sehr zurückgenommene Tönung in der
+       Akzentfarbe. Bewusst über color-mix gegen 'transparent' statt eines festen Farbwerts -- so
+       ist die Tönung in jedem der sechzehn Designs dieselbe Spur der jeweiligen Akzentfarbe und
+       liegt in den dunklen Designs auf dunklem, in den hellen auf hellem Grund richtig. Als
+       Akzent dient --preview-link; eine eigene Akzentvariable gibt es nicht, und es ist dieselbe
+       Farbe, die auch die Akkorde tragen.
+       Der kleine rechte und senkrechte Innenabstand samt abgerundeter rechter Ecken lässt die
+       Fläche als Block wirken statt als bis an den Rand laufendes Band; die Klammerstriche
+       (::before/::after) sitzen weiterhin an dessen Ober- und Unterkante. */
     .markdown-body .cp-chorus {
-      padding-left: 1.5em;
+      padding: .25em .6em .25em 1.5em;
       border-left: 4px solid var(--preview-border);
+      border-radius: 0 5px 5px 0;
+      background-color: color-mix(in srgb, var(--preview-link) 7%, transparent);
       font-weight: 600;
     }
     /* Strophe, Bridge und Taktraster hatten keine eigene Regel: parseChordPro erzeugt zwar
@@ -18327,6 +18357,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
 
       const ansichtKlasse = chordProAnsicht === 'alles' ? '' : ' cp-ansicht-' + chordProAnsicht;
+      let strophenNr = 0;
       let html = '<div class="cp-song' + ansichtKlasse + '">';
 
       const titel = meta.title || '';
@@ -18386,7 +18417,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         switch (b.typ) {
           case 'abschnittStart':
             if (b.art === 'tab') { tabZeilen = []; break; }
-            html += '<div class="cp-abschnitt cp-' + b.art + '">';
+            // Strophennummer. Sie steht als data-Attribut am Abschnitt und wird von der CSS-Regel
+            // .cp-verse[data-strophe]::before ausgegeben -- also als erzeugter Inhalt, der nicht in
+            // textContent auftaucht. Das ist der Grund für diesen Umweg statt eines echten
+            // <span>: die Vorlesefunktion liest den Textinhalt eines Abschnitts und spräche eine
+            // echte Ziffer als Teil der ersten Zeile mit ("eins Amazing grace ...").
+            html += '<div class="cp-abschnitt cp-' + b.art + '"' +
+                    (b.art === 'verse' ? ' data-strophe="' + (++strophenNr) + '"' : '') + '>';
             if (b.titel) html += '<div class="cp-abschnitt-titel">' + escapeHtmlText(b.titel) + '</div>';
             break;
           case 'abschnittEnde': html += '</div>'; break;
@@ -32290,9 +32327,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '  .markdown-body .cp-abschnitt::after { bottom: 0; }\n' +
         '  .markdown-body .cp-chorus::before, .markdown-body .cp-chorus::after { border-top: 4px solid var(--preview-border); }\n' +
         '  .markdown-body .cp-verse::before, .markdown-body .cp-verse::after { border-top: 3px dotted var(--preview-border); }\n' +
+        '  .markdown-body .cp-verse[data-strophe]::before { content: attr(data-strophe); border-top: none; width: auto; top: -.15em; font-size: .62em; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; opacity: .5; }\n' +
         '  .markdown-body .cp-bridge::before, .markdown-body .cp-bridge::after { border-top: 3px dashed var(--preview-border); }\n' +
         '  .markdown-body .cp-highlight::before, .markdown-body .cp-highlight::after, .markdown-body .cp-grid::before, .markdown-body .cp-grid::after { content: none; }\n' +
-        '  .markdown-body .cp-chorus { padding-left: 1.5em; border-left: 4px solid var(--preview-border); font-weight: 600; }\n' +
+        '  .markdown-body .cp-chorus { padding: .25em .6em .25em 1.5em; border-left: 4px solid var(--preview-border); border-radius: 0 5px 5px 0; background-color: color-mix(in srgb, var(--preview-link) 7%, transparent); font-weight: 600; }\n' +
         '  .markdown-body .cp-verse { padding-left: 1.1em; border-left: 3px dotted var(--preview-border); }\n' +
         '  .markdown-body .cp-bridge { padding-left: 1.1em; border-left: 3px dashed var(--preview-border); }\n' +
         '  .markdown-body .cp-grid { padding: .2em .6em; border-radius: 4px; background-color: var(--preview-code-bg); }\n' +
