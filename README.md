@@ -22,10 +22,10 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 
 ### Dokumente & Dateiformate
 - **Mehrere Tabs** — beliebig viele Dokumente gleichzeitig offen, mit Autospeicherung im Browser (Text/Metadaten in LocalStorage, größere Anhänge wie Bilder/PDFs in IndexedDB für deutlich mehr Speicherplatz); ein Prozentbalken in der Fußleiste zeigt den belegten Speicherplatz sowie die Größe aller aktuell geöffneten Notizen zusammen an
-- **Markdown, CSV, JSON, HTML und TXT** in derselben App: CSV und JSON werden als Tabelle bzw. hübsch formatiert mit Syntax-Hervorhebung angezeigt; HTML-Dateien bekommen eine echte Syntax-Hervorhebung im Editor **und** eine echte gerenderte Web-Vorschau (in einer abgeschotteten Sandbox, damit fremder HTML/JS-Code nichts im Editor selbst anrichten kann); TXT-Dateien werden unverändert als reiner Text angezeigt
+- **Markdown, CSV, JSON, HTML, TXT und ChordPro** in derselben App: CSV und JSON werden als Tabelle bzw. hübsch formatiert mit Syntax-Hervorhebung angezeigt; HTML-Dateien bekommen eine echte Syntax-Hervorhebung im Editor **und** eine echte gerenderte Web-Vorschau (in einer abgeschotteten Sandbox, damit fremder HTML/JS-Code nichts im Editor selbst anrichten kann); TXT-Dateien werden unverändert als reiner Text angezeigt; ChordPro-Liedblätter (`.pro`, `.chopro`, `.cho`, `.chordpro`, `.crd`) mit Akkorden über den Silben (siehe eigener Abschnitt unten)
 - **Tabs umbenennen & Format wechseln** — Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit Format-Dropdown (Markdown/TXT/CSV/JSON/HTML), um ein Dokument gezielt in ein anderes Format zu konvertieren (bei Canvas-Dokumenten nur der Name, ohne Format-Wechsel, da eine Canvas-Fläche kein Text-basiertes Format ist)
 - **Tab-Reihenfolge per Drag & Drop** ändern — einen Tab in der Tableiste an die gewünschte Stelle ziehen
-- **14 Dokumentvorlagen** über „Neu" im Burger-Menü ☰ — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan und eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt)
+- **18 Dokumentvorlagen** über „Neu" im Burger-Menü ☰ — u. a. Meeting-Notizen, README, Projektplan, Checkliste, Tagebuch, Rezept, Lebenslauf, Blogartikel, Brief, Präsentation, Fortbildungsplanung, Stundenplan, eine HTML-„Hello World“-Vorlage (mit CSS- und JS-Abschnitt), zwei Canvas-Flächen (Hoch- und Querformat) sowie ein leeres Liedblatt und „Greensleeves" als Schaustück aller ChordPro-Funktionen
 - **Dateiname aus Überschrift** — ein unbenanntes Dokument übernimmt automatisch die erste Überschrift als Dateiname
 - **Speichern** fragt immer nach einem Speicherort (funktioniert also immer wie „Speichern unter") — mit nativem Ordnerauswahl-Dialog, der standardmäßig im zuletzt für diese Notiz verwendeten Ordner öffnet, sofern der Browser das unterstützt; sonst ein Download mit Hinweis darauf
 
@@ -64,6 +64,17 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 - Eigener **Vorlesemodus**, der alle Boxen der Reihe nach (in Leserichtung) vorliest, sowie ein eigenständiger HTML-Export mit identischem Layout und funktionierendem Vorlesen-Button
 - **Präsentationsmodus, Drucken/PDF und Zwischenablage-Kopie** funktionieren auch im Canvas: jede Box wird zu einer eigenen Folie (inkl. eigener Folientrennlinien innerhalb einer Box), der Druck passt sich automatisch auf ein DIN-A4-Blatt an, und die Kopierfunktion reiht alle Boxen in Leserichtung aneinander
 
+### Liedblätter (ChordPro)
+- **Akkorde über den Silben** — `.pro`/`.chopro`/`.cho`/`.chordpro`/`.crd` werden als Liedblatt gerendert, jeder Akkord in einem eigenen Kästchen über der richtigen Silbe; Abschnitte (Refrain, Strophe, Bridge) bekommen unterscheidbare Seitenklammern, Strophen werden nummeriert, der Refrain ist dezent hinterlegt
+- **Transponieren und Kapodaster** — Transponieren schreibt das Blatt wirklich um, der Capo ändert nur die angezeigten Griffe; dazu ein **Tonartvorschlag**, der ausrechnet, bei welcher Kapodasterlage das Lied am leichtesten greifbar wird, und eine **Tonartschätzung** aus den Akkorden für Blätter ohne `{key}`
+- **Griffbilder** — für jeden vorkommenden Akkord, aus einer geprüften Tabelle oder berechnet; Klick auf den Namen spielt den Akkord (synthetisiert, ohne Klangdateien), Klick auf das Bild öffnet einen **Editor für eigene Griffbilder**, die als Standard-`{define}` im Liedblatt gespeichert werden und damit auf jedem Gerät erscheinen
+- **Drei Ansichten** — alles, nur Text oder nur Akkorde; dazu zweispaltiger Druck für Papier
+- **Metronom** mit acht Stilen, Taktarten bis 12/8, Tempo-Antippen und wachem Bildschirm — als schwebendes Feld auch im Vollbild und im Teleprompter erreichbar
+- **Stimmgerät** — nach Gehör oder chromatisch übers Mikrofon, mit zwölf Stimmungen für Gitarre, Bass und Ukulele
+- **Import fremder Akkordblätter** — Text mit Akkorden über den Zeilen wird zu ChordPro; Überschriften werden zu Abschnitten, Tabulaturen bleiben erhalten, Tonart/Tempo/Capo werden erkannt oder lassen sich vorgeben
+- **Songbook mit Setlisten** — ein Ordner voller Liedblätter wird zum durchsuchbaren Index; Setlisten lassen sich zusammenstellen und im **Vortragsmodus** ohne Umweg über den Index durchspielen
+- **Fußschalter über MIDI** — Belegung wird gelernt statt vorgegeben: Teleprompter starten, Tempo, Blättern und nächstes/vorheriges Lied der Setliste
+
 ### Vorschau & Darstellung
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau
 - **Inhaltsverzeichnis** — schwebender Button über der Vorschau, Klick auf eine Überschrift springt direkt dorthin
@@ -89,7 +100,7 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 - **Responsiv** — Bedienleisten werden auf schmalen Bildschirmen (z. B. iPhone) horizontal scrollbar, Editor/Vorschau stapeln sich übereinander
 - **Installierbar** — App-Icon und Web-Manifest, auf iOS über „Zum Home-Bildschirm“ startbar wie eine echte App
 - **Tastenkürzel-Hilfe** über das Burger-Menü ☰ — zeigt alle Kombinationen und erlaubt, sie direkt dort anzupassen
-- **URL-Parameter für Direktlinks** — `?view=source`/`?view=preview`/`?view=split` legt die Startansicht unabhängig von zuvor gespeicherten Einstellungen fest; `?url=<Adresse-einer-.md-Datei>` öffnet automatisch ein Dokument von einer beliebigen (CORS-freigegebenen) Web-Adresse, ohne beim erneuten Öffnen desselben Links doppelt zu importieren; `?localstorage=false` startet die App bewusst ohne die gespeicherten Notizen zu laden (z. B. für Vorführungen) — zusammen mit `?url=` wird dann ausschließlich die dort angegebene Notiz geöffnet; `?view=kiosk` geht noch weiter und speichert während der ganzen Sitzung nichts im Browser (echter Kiosk-/Vorführ-Link, ohne Spuren). Alle Parameter lassen sich mit `?simple=true`/`?simple=false` kombinieren, um den Simple Modus gezielt an- oder auszuschalten. Details in der [Anleitung](./Anleitung.md#18-direktlinks-mit-url-parametern)
+- **URL-Parameter für Direktlinks** — `?view=source`/`?view=preview`/`?view=split` legt die Startansicht unabhängig von zuvor gespeicherten Einstellungen fest; `?url=<Adresse-einer-.md-Datei>` öffnet automatisch ein Dokument von einer beliebigen (CORS-freigegebenen) Web-Adresse, ohne beim erneuten Öffnen desselben Links doppelt zu importieren; `?localstorage=false` startet die App bewusst ohne die gespeicherten Notizen zu laden (z. B. für Vorführungen) — zusammen mit `?url=` wird dann ausschließlich die dort angegebene Notiz geöffnet; `?view=kiosk` geht noch weiter und speichert während der ganzen Sitzung nichts im Browser (echter Kiosk-/Vorführ-Link, ohne Spuren). Alle Parameter lassen sich mit `?simple=true`/`?simple=false` kombinieren, um den Simple Modus gezielt an- oder auszuschalten. Details in der [Anleitung](./Anleitung.md#20-direktlinks-mit-url-parametern)
 
 ## 🚀 Verwenden
 
