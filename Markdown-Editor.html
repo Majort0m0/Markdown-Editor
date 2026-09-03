@@ -3190,13 +3190,41 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       border-bottom: 1px solid var(--border-color);
     }
 
-    .midi-name { flex: 1; font-size: 0.9rem; }
+    /* Breiter als die üblichen 440px: jede Zeile trägt jetzt ZWEI Belegungen (MIDI und Taste)
+       mit je Wert, Lern- und Löschknopf. In der schmalen Standardkarte wurde die zweite Spalte
+       schlicht abgeschnitten. */
+    /* Zwei Klassen im Selektor, nicht eine: .modal-card steht weiter unten in dieser Datei und
+       gewänne bei gleicher Spezifität mit seinen 440px -- die zweite Spalte blieb abgeschnitten. */
+    .modal-card.fussschalter-karte { max-width: 620px; }
+
+    .midi-name { flex: 1; font-size: 0.9rem; min-width: 9em; }
 
     .midi-wert {
-      min-width: 8em;
+      min-width: 6.5em;
+      text-align: right;
       font-size: 0.82rem;
       color: var(--text-muted);
       font-variant-numeric: tabular-nums;
+    }
+
+    /* Trennstrich zwischen den beiden Belegungsspalten -- ohne ihn steht eine Reihe aus sechs
+       gleich aussehenden Feldern nebeneinander, und man sieht nicht, was zusammengehört.
+       Eigene Klasse statt :nth-of-type: das zählt nach ELEMENTTYP, und da zwischen den beiden
+       Werten Knöpfe stehen, traf ':nth-of-type(2)' den ersten Wert statt des zweiten -- der Strich
+       saß vor der MIDI-Spalte. */
+    .midi-wert-taste {
+      border-left: 1px solid var(--border-color);
+      padding-left: 10px;
+      margin-left: 4px;
+    }
+
+    /* Zwei Belegungen je Aktion (MIDI und Taste) machen die Zeile lang. Auf schmalen Geräten
+       darf sie deshalb umbrechen, statt den Dialog waagerecht zu sprengen; der Aktionsname
+       nimmt dann die ganze erste Zeile ein. */
+    @media (max-width: 560px) {
+      .midi-zeile { flex-wrap: wrap; }
+      .midi-name { flex: 1 0 100%; font-weight: 600; }
+      .midi-wert { min-width: 5em; }
     }
 
     .midi-meldung {
@@ -8708,7 +8736,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          weiter unten direkt vor "Drucken" -- er wirkt nur dort (siehe seinen Kommentar). -->
     <button class="slash-menu-item" onclick="openImportModal()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3v11m0 0l-3.5-3.5M12 14l3.5-3.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v2a3 3 0 003 3h10a3 3 0 003-3v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Akkordblatt importieren</button>
     <button class="slash-menu-item" onclick="openSongbook()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5.5A1.5 1.5 0 015.5 4H18a2 2 0 012 2v12a2 2 0 01-2 2H5.5A1.5 1.5 0 014 18.5v-13z" stroke="currentColor" stroke-width="1.6"/><path d="M8 4v16" stroke="currentColor" stroke-width="1.6"/><path d="M12 9h5M12 13h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Songbook</button>
-    <button class="slash-menu-item" onclick="openMidiModal()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3a9 9 0 100 18h2a2 2 0 002-2v-1a2 2 0 012-2h1a2 2 0 002-2v-2a9 9 0 00-9-9z" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="10" r="1.2" fill="currentColor"/><circle cx="8" cy="15" r="1.2" fill="currentColor"/></svg>Fußschalter (MIDI)</button>
+    <button class="slash-menu-item" onclick="openMidiModal()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3a9 9 0 100 18h2a2 2 0 002-2v-1a2 2 0 012-2h1a2 2 0 002-2v-2a9 9 0 00-9-9z" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="10" r="1.2" fill="currentColor"/><circle cx="12" cy="8" r="1.2" fill="currentColor"/><circle cx="16" cy="10" r="1.2" fill="currentColor"/><circle cx="8" cy="15" r="1.2" fill="currentColor"/></svg>Fußschalter</button>
 
     <div class="burger-menu-divider"></div>
 
@@ -9080,15 +9108,21 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
   <!-- Fußschalter-Zuordnung. Gewöhnliches Modal nach dem geteilten Muster: ✕, Klick auf den
        Hintergrund, Escape. -->
   <div class="modal-overlay" id="midiModal" onclick="if (event.target === this) closeMidiModal()">
-    <div class="modal-card">
+    <div class="modal-card fussschalter-karte">
       <div class="modal-header">
-        <h2>Fußschalter (MIDI)</h2>
+        <h2>Fußschalter</h2>
         <button class="modal-close" onclick="closeMidiModal()">✕</button>
       </div>
       <p class="midi-hinweis">
-        Die Belegung wird gelernt statt fest vorgegeben: „Lernen" antippen, dann das gewünschte
-        Pedal treten. So funktioniert es mit jedem Controller und überlebt eine Umbelegung am Gerät.
-        Die Aktionen wirken im Teleprompter; ist er aus, startet ihn „Start / Stopp".
+        Die Belegung wird gelernt statt fest vorgegeben: „MIDI" oder „Taste" antippen, dann das
+        gewünschte Pedal treten. So funktioniert es mit jedem Controller und überlebt eine
+        Umbelegung am Gerät. Jede Aktion darf beides haben.
+      </p>
+      <p class="midi-hinweis">
+        <strong>Taste statt MIDI:</strong> auf iPhone und iPad kennt kein Browser MIDI. Die meisten
+        Fußschalter lassen sich am Gerät auf <em>Tastatur</em> umstellen und melden sich dann als
+        Bluetooth-Tastatur — das funktioniert überall, auch über eine Web-Adresse. Eine Taste ohne
+        Zusatztaste löst nur aus, solange nicht gerade in einem Textfeld geschrieben wird.
       </p>
       <div class="midi-geraete" id="midiGeraete"></div>
       <div id="midiListe"></div>
@@ -11590,6 +11624,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         chordProAnsicht: chordProAnsicht,
         chordProZweispaltig: chordProZweispaltig,
         midiZuordnung: midiZuordnung,
+        fussschalterTasten: fussschalterTasten,
         songbookEintraege: songbookEintraege,
         songbookOrdnerName: songbookOrdnerName,
         songbookSetlists: songbookSetlists,
@@ -11748,6 +11783,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (CHORDPRO_ANSICHTEN.some((a) => a.id === state.chordProAnsicht)) chordProAnsicht = state.chordProAnsicht;
         if (typeof state.chordProZweispaltig === 'boolean') chordProZweispaltig = state.chordProZweispaltig;
         if (state.midiZuordnung && typeof state.midiZuordnung === 'object') midiZuordnung = state.midiZuordnung;
+        if (state.fussschalterTasten && typeof state.fussschalterTasten === 'object') fussschalterTasten = state.fussschalterTasten;
         if (Array.isArray(state.songbookEintraege)) songbookEintraege = state.songbookEintraege;
         if (typeof state.songbookOrdnerName === 'string') songbookOrdnerName = state.songbookOrdnerName;
         if (Array.isArray(state.songbookSetlists)) songbookSetlists = state.songbookSetlists;
@@ -14123,6 +14159,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     document.addEventListener('keydown', (e) => {
+      // Ganz vorn: eine als Fußschalter gelernte Taste hat Vorrang vor allem anderen. Sie wurde
+      // ausdrücklich dafür belegt, und im Teleprompter oder in der Präsentation träfe sie sonst
+      // auf die dortige Pfeiltastensteuerung.
+      if (fussschalterTasteBehandeln(e)) return;
       if (presentationActive) {
         if (e.key === 'Escape') { exitPresentation(); return; }
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
@@ -17114,6 +17154,88 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     let midiLernAktion = null;
     let midiLetzteMeldung = '';
 
+    // Zweiter Weg zum selben Ziel: eine TASTE je Aktion. Web MIDI gibt es in WebKit nicht, also auf
+    // iPhone und iPad in keinem Browser -- dort helfen auch https und eine erteilte Erlaubnis
+    // nichts. Die meisten Fußschalter (auch der M-Vave Chocolate) lassen sich am Gerät auf
+    // Tastatur umstellen und melden sich dann als Bluetooth-Tastatur; deren Anschläge kommen als
+    // ganz gewöhnliche keydown-Ereignisse an, überall und ohne Erlaubnis. Gelernt wird wie bei
+    // MIDI: Aktion wählen, Pedal treten.
+    let fussschalterTasten = {};   // aktionId -> { code, ctrl, alt, shift }
+    let tastenLernAktion = null;
+
+    function tastenLernenStarten(id) {
+      tastenLernAktion = id;
+      midiLernAktion = null;
+      updateMidiModal();
+    }
+
+    function tastenBelegungLoeschen(id) {
+      delete fussschalterTasten[id];
+      saveStateToLocalStorage();
+      updateMidiModal();
+    }
+
+    // Nimmt die gedrückte Taste als Belegung an. Reine Zusatztasten zählen nicht -- sonst wäre die
+    // Belegung schon mit dem Festhalten von Umschalt fertig.
+    function tastenLernenAufnehmen(e) {
+      if (SHORTCUT_MODIFIER_CODES.has(e.code)) return false;
+      const belegung = comboFromEvent(e);
+      // Eine schon anderweitig vergebene Taste wird umgehängt, nicht doppelt belegt -- dieselbe
+      // Regel wie beim MIDI-Lernen darüber.
+      for (const id of Object.keys(fussschalterTasten)) {
+        const b = fussschalterTasten[id];
+        if (b && b.code === belegung.code && !!b.ctrl === !!belegung.ctrl &&
+            !!b.alt === !!belegung.alt && !!b.shift === !!belegung.shift) delete fussschalterTasten[id];
+      }
+      fussschalterTasten[tastenLernAktion] = belegung;
+      tastenLernAktion = null;
+      saveStateToLocalStorage();
+      updateMidiModal();
+      return true;
+    }
+
+    function tastenBelegungFinden(e) {
+      if (SHORTCUT_MODIFIER_CODES.has(e.code)) return null;
+      for (const id of Object.keys(fussschalterTasten)) {
+        const b = fussschalterTasten[id];
+        if (!b || b.code !== e.code) continue;
+        if (!!b.ctrl !== (e.ctrlKey || e.metaKey)) continue;
+        if (!!b.alt !== e.altKey) continue;
+        if (!!b.shift !== e.shiftKey) continue;
+        return id;
+      }
+      return null;
+    }
+
+    function schreibtGeradeText() {
+      const el = document.activeElement;
+      if (!el) return false;
+      return el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable;
+    }
+
+    // Aus dem gemeinsamen keydown-Zuhörer heraus, ganz vorn. Gibt true zurück, wenn der Anschlag
+    // verbraucht wurde.
+    function fussschalterTasteBehandeln(e) {
+      if (tastenLernAktion) {
+        if (!tastenLernenAufnehmen(e)) return false;
+        e.preventDefault();
+        return true;
+      }
+      // Während der Dialog offen ist, wird eingestellt und nicht ausgelöst.
+      const dialog = document.getElementById('midiModal');
+      if (dialog && dialog.classList.contains('active')) return false;
+      const id = tastenBelegungFinden(e);
+      if (!id) return false;
+      // Eine Taste OHNE Zusatztaste erzeugt beim Schreiben Text. Sie löst deshalb nur aus, wenn
+      // gerade kein Textfeld den Fokus hat -- im Teleprompter und beim bloßen Lesen also immer.
+      // Mit Zusatztaste entsteht ohnehin kein Text, dort gilt sie überall.
+      const b = fussschalterTasten[id];
+      if (!b.ctrl && !b.alt && schreibtGeradeText()) return false;
+      e.preventDefault();
+      midiAktionAusfuehren(id);
+      return true;
+    }
+
     function midiSchluessel(art, nummer) { return art + ':' + nummer; }
 
     // Eine eingehende Nachricht auf "Pedal gedrückt" prüfen. Losgelassen wird ausdrücklich NICHT
@@ -17190,11 +17312,19 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     async function midiVerbinden() {
-      // Web MIDI gibt es nur im sicheren Kontext -- über file:// geöffnet fehlt navigator.requestMIDIAccess
-      // ganz. Dieselbe Lage wie bei Mikrofon und Kamera, deshalb dieselbe Behandlung: eine
-      // Erklärung statt eines Absturzes.
+      // Zwei ganz verschiedene Gründe, warum requestMIDIAccess fehlen kann, und sie brauchen
+      // verschiedene Auskünfte:
+      //   -- Auf iPhone und iPad gibt es Web MIDI überhaupt nicht. Dort benutzt JEDER Browser
+      //      dieselbe Grundlage, die es nicht kennt; https und eine erteilte Erlaubnis ändern
+      //      daran nichts. Wer das nicht weiß, sucht den Fehler an der falschen Stelle.
+      //   -- Aus einer Datei geöffnet (file://) fehlt es, weil das kein sicherer Kontext ist.
+      // In beiden Fällen führt die Tastenbelegung ans Ziel, deshalb steht sie in der Auskunft.
       if (!navigator.requestMIDIAccess) {
-        midiLetzteMeldung = 'Dieser Browser stellt kein MIDI bereit. Über https oder localhost geöffnet klappt es meist.';
+        midiLetzteMeldung = IST_IOS
+          ? 'iPhone und iPad kennen kein MIDI im Browser -- das gilt dort für jeden Browser. Nutze die Spalte „Taste": die meisten Fußschalter lassen sich am Gerät auf Tastatur umstellen.'
+          : (window.isSecureContext
+              ? 'Dieser Browser stellt kein MIDI bereit (Safari kann es nicht). Die Spalte „Taste" funktioniert überall.'
+              : 'MIDI gibt es nur über https oder localhost -- direkt aus einer Datei geöffnet fehlt es. Die Spalte „Taste" funktioniert auch dort.');
         updateMidiModal();
         return;
       }
@@ -17264,6 +17394,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         const name = document.createElement('span');
         name.className = 'midi-name';
         name.textContent = a.name;
+
+        // Spalte MIDI
         const z = midiZuordnung[a.id];
         const wert = document.createElement('span');
         wert.className = 'midi-wert';
@@ -17272,15 +17404,34 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           : '–';
         const lern = document.createElement('button');
         lern.className = 'cp-metronom-knopf' + (midiLernAktion === a.id ? ' active' : '');
-        lern.textContent = midiLernAktion === a.id ? 'Tritt das Pedal …' : 'Lernen';
+        lern.textContent = midiLernAktion === a.id ? 'Pedal treten …' : 'MIDI';
+        lern.title = 'MIDI lernen: antippen, dann das Pedal treten';
         lern.onclick = () => midiLernenStarten(a.id);
         const weg = document.createElement('button');
         weg.className = 'cp-metronom-knopf';
         weg.textContent = '✕';
-        weg.title = 'Zuordnung entfernen';
+        weg.title = 'MIDI-Zuordnung entfernen';
         weg.disabled = !z;
         weg.onclick = () => midiZuordnungLoeschen(a.id);
-        zeile.append(name, wert, lern, weg);
+
+        // Spalte Taste
+        const t = fussschalterTasten[a.id];
+        const tasteWert = document.createElement('span');
+        tasteWert.className = 'midi-wert midi-wert-taste';
+        tasteWert.textContent = t ? formatComboParts(t).join('+') : '–';
+        const tasteLern = document.createElement('button');
+        tasteLern.className = 'cp-metronom-knopf' + (tastenLernAktion === a.id ? ' active' : '');
+        tasteLern.textContent = tastenLernAktion === a.id ? 'Taste drücken …' : 'Taste';
+        tasteLern.title = 'Taste lernen: antippen, dann das Pedal treten (im Tastatur-Modus)';
+        tasteLern.onclick = () => tastenLernenStarten(a.id);
+        const tasteWeg = document.createElement('button');
+        tasteWeg.className = 'cp-metronom-knopf';
+        tasteWeg.textContent = '✕';
+        tasteWeg.title = 'Tastenbelegung entfernen';
+        tasteWeg.disabled = !t;
+        tasteWeg.onclick = () => tastenBelegungLoeschen(a.id);
+
+        zeile.append(name, wert, lern, weg, tasteWert, tasteLern, tasteWeg);
         feld.appendChild(zeile);
       }
     }

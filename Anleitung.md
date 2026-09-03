@@ -443,13 +443,22 @@ Burger-Menü ☰ → **Songbook**. Du wählst einen Ordner mit Liedblättern, da
 
 In Chromium-Browsern merkt sich die App den Ordner und findet ihn nach einem Neuladen wieder; sonst muss er einmal pro Sitzung neu gewählt werden. Fragt der Browser dabei erneut nach Erlaubnis, ist das normal.
 
-### Fußschalter (MIDI)
+### Fußschalter
 
-Burger-Menü ☰ → **Fußschalter (MIDI)**. Gedacht für einen kabellosen MIDI-Fußschalter am Notenständer. Die Belegung wird **gelernt**, nicht vorgegeben: Aktion auswählen, Pedal treten, fertig. Das funktioniert mit jedem Controller, unabhängig davon, ob er Noten, Controller- oder Programmwechsel sendet.
+Burger-Menü ☰ → **Fußschalter**. Gedacht für einen kabellosen Fußschalter am Notenständer. Die Belegung wird **gelernt**, nicht vorgegeben: Aktion auswählen, Pedal treten, fertig.
+
+Es gibt **zwei Wege**, und jede Aktion darf beide haben:
+
+- **MIDI** — funktioniert mit jedem Controller, unabhängig davon, ob er Noten, Controller- oder Programmwechsel sendet.
+- **Taste** — der Fußschalter wird am Gerät auf *Tastatur* umgestellt (beim M-Vave Chocolate und den meisten anderen möglich) und meldet sich dann als Bluetooth-Tastatur. Seine Anschläge kommen als ganz gewöhnliche Tastendrücke an.
 
 Belegbar sind: Start/Stopp des Teleprompters, schneller, langsamer, Seite vor, Seite zurück, Teleprompter beenden, **nächstes und vorheriges Lied** der Setliste sowie **Metronom Start/Stopp**. Die letzten drei funktionieren auch ohne laufenden Teleprompter — das Metronomfeld klappt beim Start von selbst auf. Da das Metronom zu einem Liedblatt gehört, sagt ein kurzer Hinweis Bescheid, wenn gerade eine gewöhnliche Notiz offen ist.
 
-Web MIDI gibt es nur über `https` oder `localhost`, nicht über `file://`.
+**Wann welcher Weg?** MIDI im Browser gibt es nur über `https` oder `localhost` — direkt aus einer Datei geöffnet fehlt es. Vor allem aber: **auf iPhone und iPad kennt es kein Browser.** Dort benutzen alle Browser dieselbe Grundlage, und die kann kein Web-MIDI; daran ändert auch eine Web-Adresse nichts. Genau dafür gibt es die Tastenbelegung — sie braucht keine Erlaubnis und funktioniert überall, auch auf dem iPad und auch über eine https-Adresse.
+
+Der Dialog sagt jeweils, woran es liegt, wenn MIDI nicht verfügbar ist.
+
+Eine Taste **ohne Zusatztaste** (also z. B. einfach `F9`) löst nur aus, solange nicht gerade in einem Textfeld geschrieben wird — sonst tippte das Pedal mitten in den Liedtext. Beim Lesen, im Vollbild und im Teleprompter ist das immer der Fall. Mit `Strg`, `Alt` oder `Cmd` entsteht ohnehin kein Text, dort gilt sie überall.
 
 ### Drucken und Exportieren
 

@@ -2,9 +2,20 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=Markdown-Editor.html">
   <link rel="canonical" href="Markdown-Editor.html">
   <title>Markdown Studio</title>
+  <!--
+    Weiterleitung mit Skript statt per <meta http-equiv="refresh">. Der Meta-Weg verwarf alles
+    hinter dem Fragezeichen, sodass unter der kurzen Adresse .../Markdown-Editor/ KEIN einziger
+    URL-Parameter ankam -- ?view=, ?url=, ?simple= und ?localstorage= waren dort wirkungslos, ohne
+    dass man es sah. location.search und location.hash werden jetzt mitgereicht.
+    location.replace statt einer Zuweisung, damit der Zurück-Knopf nicht auf dieser Zwischenseite
+    landet. Das <noscript> darunter bleibt als Rückfall für abgeschaltetes JavaScript.
+  -->
+  <script>
+    location.replace('Markdown-Editor.html' + location.search + location.hash);
+  </script>
+  <noscript><meta http-equiv="refresh" content="0; url=Markdown-Editor.html"></noscript>
 </head>
 <body>
   <p>Weiterleitung zu <a href="Markdown-Editor.html">Markdown Studio</a>...</p>
