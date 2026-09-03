@@ -17094,8 +17094,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Die Kanalnummer wird absichtlich ignoriert: sie ist an diesen Geräten frei einstellbar und
     // trägt für die Zuordnung nichts bei -- gemerkt werden nur Art (Note/Controller/Programm) und
     // Nummer.
+    // Die Kennungen sind gespeicherte Belegungen und dürfen sich nicht ändern -- die Namen sind
+    // nur Beschriftung. 'start' hieß einmal bloß "Start / Stopp"; seit es auch ein Metronom zum
+    // Starten gibt, muss dabeistehen, was gemeint ist.
     const MIDI_AKTIONEN = [
-      { id: 'start',     name: 'Start / Stopp' },
+      { id: 'start',     name: 'Teleprompter Start / Stopp' },
       { id: 'schneller', name: 'Schneller' },
       { id: 'langsamer', name: 'Langsamer' },
       { id: 'vor',       name: 'Seite vor' },
@@ -17103,6 +17106,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       { id: 'beenden',   name: 'Teleprompter beenden' },
       { id: 'lied-vor',     name: 'Nächstes Lied (Setliste)' },
       { id: 'lied-zurueck', name: 'Vorheriges Lied (Setliste)' },
+      { id: 'metronom',     name: 'Metronom Start / Stopp' },
     ];
 
     let midiZugang = null;
@@ -17151,11 +17155,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     function midiAktionAusfuehren(id) {
-      // Die beiden Setlisten-Schritte gelten IMMER, nicht nur im Teleprompter: zum nächsten Lied
-      // muss man auch dann kommen, wenn man das Blatt einfach nur liest. Deshalb stehen sie vor
-      // der Teleprompter-Abfrage darunter.
+      // Setlisten-Schritte und Metronom gelten IMMER, nicht nur im Teleprompter: zum nächsten Lied
+      // muss man auch dann kommen, wenn man das Blatt einfach nur liest, und das Metronom wird
+      // gerade beim Üben ohne mitlaufenden Text gebraucht. Deshalb stehen sie vor der
+      // Teleprompter-Abfrage darunter.
       if (id === 'lied-vor')     { vortragBlaettern(1);  return; }
       if (id === 'lied-zurueck') { vortragBlaettern(-1); return; }
+      if (id === 'metronom')     { chordProMetronomPerFussschalter(); return; }
       // Außerhalb des Teleprompters tut nur "Start" etwas -- es startet ihn. Alles andere ohne
       // laufenden Teleprompter wäre wirkungslos und würde nur verwirren.
       if (!teleprompterActive) {
@@ -20151,6 +20157,25 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     function chordProMetronomUmschalten() {
       if (metronomLaeuft) chordProMetronomStop(); else chordProMetronomStart();
+    }
+
+    // Vom Fußschalter aus. Anders als der Knopf im Feld muss dieser Weg auch dann etwas tun, wenn
+    // das Metronomfeld gar nicht offen ist -- sonst liefe es unsichtbar los, und das nächste
+    // Öffnen und Schließen des Feldes stoppte es wieder (siehe chordProMetronomPanelUmschalten).
+    // Deshalb: läuft es, wird gestoppt; läuft es nicht, wird das Feld bei Bedarf geöffnet und
+    // dann gestartet.
+    function chordProMetronomPerFussschalter() {
+      if (metronomLaeuft) { chordProMetronomStop(); return; }
+      // Das Metronom hängt an einem Liedblatt: updateChordproMetronomPanel() schließt das Feld und
+      // stoppt es, sobald eine andere Notiz aktiv ist. Ohne diesen Hinweis täte ein Tritt auf einer
+      // gewöhnlichen Notiz stillschweigend nichts -- und man träte weiter.
+      if (!chordProAktiverLiedTab()) {
+        showToast('Das Metronom gehört zu einem Liedblatt. Auf einer gewöhnlichen Notiz gibt es keines.');
+        return;
+      }
+      const panel = document.getElementById('chordproMetronom');
+      if (panel && !panel.classList.contains('active')) chordProMetronomPanelUmschalten();
+      chordProMetronomStart();
     }
 
     // Tempo ändern. Der Wert wandert als {tempo}-Direktive in die Datei -- dieselbe Entscheidung

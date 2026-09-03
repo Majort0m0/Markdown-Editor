@@ -447,7 +447,7 @@ In Chromium-Browsern merkt sich die App den Ordner und findet ihn nach einem Neu
 
 Burger-Menü ☰ → **Fußschalter (MIDI)**. Gedacht für einen kabellosen MIDI-Fußschalter am Notenständer. Die Belegung wird **gelernt**, nicht vorgegeben: Aktion auswählen, Pedal treten, fertig. Das funktioniert mit jedem Controller, unabhängig davon, ob er Noten, Controller- oder Programmwechsel sendet.
 
-Belegbar sind: Start/Stopp des Teleprompters, schneller, langsamer, Seite vor, Seite zurück, Teleprompter beenden sowie **nächstes und vorheriges Lied** der Setliste. Die letzten beiden funktionieren auch ohne laufenden Teleprompter.
+Belegbar sind: Start/Stopp des Teleprompters, schneller, langsamer, Seite vor, Seite zurück, Teleprompter beenden, **nächstes und vorheriges Lied** der Setliste sowie **Metronom Start/Stopp**. Die letzten drei funktionieren auch ohne laufenden Teleprompter — das Metronomfeld klappt beim Start von selbst auf. Da das Metronom zu einem Liedblatt gehört, sagt ein kurzer Hinweis Bescheid, wenn gerade eine gewöhnliche Notiz offen ist.
 
 Web MIDI gibt es nur über `https` oder `localhost`, nicht über `file://`.
 
