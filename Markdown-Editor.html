@@ -2995,6 +2995,25 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     }
 
     .embed-hoehe { width: 6.5em; }
+    .import-klein { flex: 0 0 6em; }
+
+    /* Ein Eintrag im Burger-Menü, der ein Kästchen trägt statt eine Aktion auszulösen. Sieht aus
+       wie die übrigen Einträge, damit die Liste ruhig bleibt. */
+    .burger-schalter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .burger-schalter input { margin: 0; accent-color: var(--accent); }
+    .import-schalter {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
 
     .embed-vorschau {
       margin: 8px 0 0;
@@ -5036,6 +5055,14 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        aber fest hell. Es wird ausschließlich color gesetzt -- Schriftschnitt oder -breite zu
        ändern würde Cursor und Farbschicht auseinanderlaufen lassen. */
     .editor-highlight-overlay .cp-src-akkord { color: #b35309; }
+
+    /* Akkord ohne hinterlegtes Griffbild -- Wellenlinie wie bei einem Rechtschreibfehler, denn
+       genau das ist es meistens. Die Farbe kommt aus dem Alarmton der App, nicht aus der
+       Vorschau-Palette: dieses Fenster folgt bewusst nicht dem Vorschau-Design. */
+    .editor-highlight-overlay .cp-src-akkord-unbekannt {
+      text-decoration: underline wavy #c2410c;
+      text-underline-offset: 3px;
+    }
     .editor-highlight-overlay .cp-src-direktive { color: #005cc5; }
     .editor-highlight-overlay .cp-src-kommentar { color: #6a737d; }
 
@@ -8509,6 +8536,14 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     <div class="burger-menu-divider"></div>
 
     <button id="exportHtmlBtn" class="slash-menu-item" onclick="exportAsHtml()"><svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"><style type="text/css">.st0{fill:currentColor;}</style><g><path class="st0" d="M378.413,0H208.297h-13.182L185.8,9.314L57.02,138.102l-9.314,9.314v13.176v265.514c0,47.36,38.528,85.895,85.896,85.895h244.811c47.353,0,85.881-38.535,85.881-85.895V85.896C464.294,38.528,425.766,0,378.413,0z M432.497,426.105c0,29.877-24.214,54.091-54.084,54.091H133.602c-29.884,0-54.098-24.214-54.098-54.091V160.591h83.716c24.885,0,45.077-20.178,45.077-45.07V31.804h170.116c29.87,0,54.084,24.214,54.084,54.092V426.105z"/><path class="st0" d="M163.164,253.19c-5.097,0-8.867,3.652-8.867,9.482v23.453c0,0.489-0.251,0.734-0.726,0.734h-26.993c-0.475,0-0.726-0.245-0.726-0.734v-23.453c0-5.831-3.771-9.482-8.868-9.482c-5.222,0-8.993,3.652-8.993,9.482v65.144c0,5.83,3.645,9.475,8.868,9.475c5.111,0,8.993-3.645,8.993-9.475v-24.305c0-0.489,0.251-0.734,0.726-0.734h26.993c0.475,0,0.726,0.244,0.726,0.734v24.305c0,5.83,3.77,9.475,8.867,9.475c5.223,0,8.993-3.645,8.993-9.475v-65.144C172.157,256.841,168.387,253.19,163.164,253.19z"/><path class="st0" d="M235.249,253.923h-47.284c-5.46,0-8.993,3.282-8.993,8.023c0,4.615,3.533,7.897,8.993,7.897h13.978c0.488,0,0.726,0.244,0.726,0.726v57.247c0,5.711,3.771,9.475,8.882,9.475c5.223,0,8.993-3.764,8.993-9.475v-57.247c0-0.482,0.237-0.726,0.726-0.726h13.978c5.46,0,8.993-3.282,8.993-7.897C244.242,257.204,240.709,253.923,235.249,253.923z"/><path class="st0" d="M318.253,253.19c-5.348,0-8.267,2.919-10.934,9.238l-17.26,39.862h-0.489l-17.623-39.862c-2.794-6.319-5.712-9.238-11.06-9.238c-5.948,0-9.845,4.134-9.845,10.697v64.781c0,5.467,3.408,8.623,8.268,8.623c4.622,0,8.029-3.156,8.029-8.623v-39.868h0.6l12.89,29.653c2.541,5.837,4.608,7.541,8.742,7.541c4.133,0,6.2-1.704,8.756-7.541l12.764-29.653h0.601v39.868c0,5.467,3.281,8.623,8.141,8.623c4.874,0,8.156-3.156,8.156-8.623v-64.781C327.987,257.323,324.216,253.19,318.253,253.19z"/><path class="st0" d="M389.36,320.645h-29.408c-0.489,0-0.726-0.244-0.726-0.734v-57.24c0-5.712-3.77-9.482-8.867-9.482c-5.237,0-8.993,3.77-8.993,9.482v64.899c0,5.349,3.518,8.993,8.993,8.993h39.002c5.475,0,8.994-3.282,8.994-8.022C398.354,323.926,394.835,320.645,389.36,320.645z"/></g></svg><span>Als HTML exportieren</span></button>
+    <!-- Direkt vor "Drucken", weil die zwei Spalten NUR dort und im Export wirken. Als Knopf in
+         der Liedblatt-Leiste war er unbrauchbar: er bewirkte nichts Sichtbares, und ausgelöst
+         wird das Drucken an ganz anderer Stelle. Nur bei einem Liedblatt sichtbar -- für eine
+         gewöhnliche Notiz gibt es keine Spaltenregel. -->
+    <label class="slash-menu-item burger-schalter" id="burgerSpaltenFeld">
+      <input type="checkbox" id="burgerSpalten" onchange="chordProSpaltenUmschalten()">
+      Zweispaltig drucken
+    </label>
     <button id="printBtn" class="slash-menu-item" onclick="window.print()"><svg version="1.1" id="_x32_" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"><style type="text/css">.st0{fill:currentColor;}</style><g><path class="st0" d="M378.413,0H208.297h-13.182L185.8,9.314L57.02,138.102l-9.314,9.314v13.176v265.514c0,47.36,38.528,85.895,85.896,85.895h244.811c47.353,0,85.881-38.535,85.881-85.895V85.896C464.294,38.528,425.766,0,378.413,0z M432.497,426.105c0,29.877-24.214,54.091-54.084,54.091H133.602c-29.884,0-54.098-24.214-54.098-54.091V160.591h83.716c24.885,0,45.077-20.178,45.077-45.07V31.804h170.116c29.87,0,54.084,24.214,54.084,54.092V426.105z"/><path class="st0" d="M171.947,252.785h-28.529c-5.432,0-8.686,3.533-8.686,8.825v73.754c0,6.388,4.204,10.599,10.041,10.599c5.711,0,9.914-4.21,9.914-10.599v-22.406c0-0.545,0.279-0.817,0.824-0.817h16.436c20.095,0,32.188-12.226,32.188-29.612C204.136,264.871,192.182,252.785,171.947,252.785z M170.719,294.888h-15.208c-0.545,0-0.824-0.272-0.824-0.81v-23.23c0-0.545,0.279-0.816,0.824-0.816h15.208c8.42,0,13.447,5.027,13.447,12.498C184.167,290,179.139,294.888,170.719,294.888z"/><path class="st0" d="M250.191,252.785h-21.868c-5.432,0-8.686,3.533-8.686,8.825v74.843c0,5.3,3.253,8.693,8.686,8.693h21.868c19.69,0,31.923-6.249,36.81-21.324c1.76-5.3,2.723-11.681,2.723-24.857c0-13.175-0.964-19.557-2.723-24.856C282.113,259.034,269.881,252.785,250.191,252.785z M267.856,316.896c-2.318,7.331-8.965,10.459-18.21,10.459h-9.23c-0.545,0-0.824-0.272-0.824-0.816v-55.146c0-0.545,0.279-0.817,0.824-0.817h9.23c9.245,0,15.892,3.128,18.21,10.46c0.95,3.128,1.62,8.56,1.62,17.93C269.476,308.336,268.805,313.768,267.856,316.896z"/><path class="st0" d="M361.167,252.785h-44.812c-5.432,0-8.7,3.533-8.7,8.825v73.754c0,6.388,4.218,10.599,10.055,10.599c5.697,0,9.914-4.21,9.914-10.599v-26.351c0-0.538,0.265-0.81,0.81-0.81h26.086c5.837,0,9.23-3.532,9.23-8.56c0-5.028-3.393-8.553-9.23-8.553h-26.086c-0.545,0-0.81-0.272-0.81-0.817v-19.425c0-0.545,0.265-0.816,0.81-0.816h32.733c5.572,0,9.245-3.666,9.245-8.553C370.411,256.45,366.738,252.785,361.167,252.785z"/></g></svg><span>Drucken / PDF</span></button>
     <button id="emailExportBtn" class="slash-menu-item" onclick="exportAsEmail()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6L12 13L2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Per E-Mail versenden</span></button>
 
@@ -8712,9 +8747,6 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     <!-- Als Symbol das Griffbild eines C-Dur-Akkords (x32010) -- es zeigt unmittelbar, was der
          Knopf einblendet, und ist damit selbsterklärender als ein abstraktes Zeichen. -->
     <button class="toolbar-btn" id="cpGriffeBtn" onclick="chordProGriffeUmschalten()" title="Griffbilder der vorkommenden Akkorde ein-/ausblenden"><svg viewBox="0 0 18 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 5h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M2 9h14M2 13h14M2 17h14" stroke="currentColor" stroke-width="0.9"/><path d="M2 5v12M5.6 5v12M9.2 5v12M12.8 5v12M16 5v12" stroke="currentColor" stroke-width="0.9"/><circle cx="5.6" cy="15" r="1.7" fill="currentColor"/><circle cx="9.2" cy="11" r="1.7" fill="currentColor"/><circle cx="16" cy="7" r="1.7" fill="currentColor"/><path d="M1 1.4l2 2M3 1.4l-2 2" stroke="currentColor" stroke-width="0.9" stroke-linecap="round"/><circle cx="12.8" cy="2.4" r="1.2" fill="none" stroke="currentColor" stroke-width="0.9"/></svg></button>
-    <!-- Symbol: eine Seite mit zwei Textspalten. Wirkt nur beim Drucken, deshalb sagt der Tooltip
-         das ausdrücklich -- ein Knopf ohne sichtbare Wirkung wirkt sonst kaputt. -->
-    <button class="toolbar-btn" id="cpSpaltenBtn" onclick="chordProSpaltenUmschalten()" title="Zweispaltig drucken (wirkt nur im Ausdruck und im PDF)"><svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2.5" y="2.5" width="15" height="15" rx="1.6" stroke="currentColor" stroke-width="1.3"/><path d="M10 5v10" stroke="currentColor" stroke-width="1.1"/><path d="M4.6 7h3.2M4.6 9.5h3.2M4.6 12h3.2M12.2 7h3.2M12.2 9.5h3.2M12.2 12h3.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg></button>
     <button class="toolbar-btn" id="cpMetronomBtn" onclick="chordProMetronomPanelUmschalten()" title="Metronom ein-/ausblenden"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"> <g> <path fill="currentColor" d="M55.542,281.347v118.61c0,32.571,24.824,61.89,64.435,82.394V333.454 C91.426,319.871,69.096,301.997,55.542,281.347z"/> <path fill="currentColor" d="M144.445,493.174c28.181,10.588,61.444,17.252,97.294,18.657V361.06c-35.679-1.318-68.73-7.542-97.294-17.582 V493.174z"/> <path fill="currentColor" d="M266.201,512c37.407-1.047,72.109-7.842,101.354-18.819V343.479c-29.649,10.42-64.12,16.732-101.354,17.721 V512z"/> <path fill="currentColor" d="M392.024,333.454v148.882c39.611-20.489,64.435-49.808,64.435-82.379v-118.61 C442.912,301.997,420.578,319.871,392.024,333.454z"/> <path fill="currentColor" d="M256.542,251.618c-7.667,8.794-6.744,22.129,2.043,29.788c8.787,7.674,22.133,6.751,29.792-2.036 c7.66-8.802,6.744-22.136-2.043-29.803C277.54,241.908,264.202,242.83,256.542,251.618z"/> <path fill="currentColor" d="M318.378,195.666l-29.368,41.46l9.289,8.091l37.048-34.767c10.838-10.156,21.151-20.855,30.909-32.043 l78.641-90.244c4.671-5.36,4.107-13.474-1.245-18.145l-0.952-0.835c-5.352-4.664-13.473-4.1-18.145,1.246l-78.64,90.243 C336.153,171.875,326.967,183.547,318.378,195.666z"/> <path fill="currentColor" d="M211.197,221.009c-10.731-4.554-23.136,0.454-27.691,11.189c-4.554,10.734,0.458,23.139,11.189,27.693 c10.732,4.555,23.128-0.454,27.69-11.188C226.94,237.968,221.935,225.579,211.197,221.009z"/> <path fill="currentColor" d="M278.649,134.31c-2.212,5.214-4.57,10.384-6.986,15.539c19.903,0.937,39.322,3.617,57.453,7.872 c1.889-2.256,3.782-4.504,5.708-6.715l14.967-17.179c-20.166-5.99-42.361-10.09-65.874-11.928L278.649,134.31z"/> <path fill="currentColor" d="M456.458,232.974c0-29.122-19.844-55.652-52.363-75.598l-18.468,21.191c0.531,0.278,1.08,0.557,1.6,0.85 c28.02,15.677,44.093,35.207,44.093,53.557c0,18.365-16.073,37.887-44.093,53.572c-34.017,19.024-81.844,29.95-131.231,29.95 c-49.376,0-97.207-10.926-131.22-29.95c-28.024-15.685-44.1-35.207-44.1-53.572c0-18.35,16.076-37.88,44.1-53.557 c23.706-13.268,54.132-22.583,87.109-27.013c3.211-10.098,6.777-20.152,10.695-30.03c-94.794,8.912-167.038,55.022-167.038,110.6 c0,61.956,89.749,112.181,200.455,112.181C366.717,345.156,456.458,294.93,456.458,232.974z"/> <path fill="currentColor" d="M221.218,213.16l24.447-44.536c7.15-13.034,13.638-26.391,19.438-40.069L311.871,18.38 c2.779-6.547-0.271-14.089-6.81-16.864l-1.164-0.49c-6.539-2.775-14.088,0.278-16.86,6.81l-46.769,110.176 c-5.808,13.678-10.918,27.627-15.327,41.811l-15.059,48.526L221.218,213.16z"/> </g> </svg></button>
     <button class="toolbar-btn" id="cpStimmgeraetBtn" onclick="chordProStimmgeraetUmschalten()" title="Stimmgerät ein-/ausblenden"><svg fill="currentColor" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 512 512" xml:space="preserve"> <g> <g> <path d="M502.277,132.8c-11.235-11.235-29.841-11.561-41.077-0.326L307.269,286.406c-23.093,23.093-60.19,23.573-83.286,0.479 c-23.095-23.094-22.614-60.191,0.479-83.286L378.394,49.668c11.235-11.235,10.908-29.842-0.326-41.077 C366.833-2.644,348.227-2.97,336.991,8.265L183.06,162.197c-35.52,35.52-43.913,92.038-20.3,137.552 c1.446,2.787,0.843,6.115-1.378,8.334l-96.513,96.513c10.195,3.607,19.26,8.931,26.998,16.669 c6.847,6.847,12.188,15.122,15.485,23.654l95.111-95.111c2.271-2.271,5.692-2.839,8.502-1.288 c45.127,24.943,100.42,16.575,137.707-20.711l153.932-153.932C513.838,162.642,513.511,144.035,502.277,132.8z"/> </g> </g> <g> <g> <path d="M74.888,438.244c-16.85-16.85-44.268-16.85-61.118,0s-16.85,44.268,0,61.118s44.268,16.85,61.118,0 S91.738,455.094,74.888,438.244z"/> </g> </g> </svg></button>
 
@@ -8806,6 +8838,17 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         <input type="text" id="importTitel" class="songbook-suche" placeholder="Titel (sonst aus der ersten Zeile)" oninput="updateImportVorschau()">
         <input type="text" id="importInterpret" class="songbook-suche" placeholder="Interpret" oninput="updateImportVorschau()">
         <button class="cp-metronom-knopf" onclick="document.getElementById('importDateiInput').click()">Datei …</button>
+      </div>
+      <!-- Tonart, Kapodaster und Tempo. Vorbelegt aus der Vorlage, wenn sie dort stehen ("Capo 3rd",
+           "Key: Am", "120 bpm"); leer lassen heißt "nicht setzen". -->
+      <div class="import-felder">
+        <input type="text" id="importKey" class="songbook-suche import-klein" placeholder="Tonart" oninput="updateImportVorschau()">
+        <input type="text" id="importCapo" class="songbook-suche import-klein" placeholder="Capo" oninput="updateImportVorschau()">
+        <input type="text" id="importTempo" class="songbook-suche import-klein" placeholder="Tempo" oninput="updateImportVorschau()">
+        <label class="import-schalter" id="importGriffeFeld">
+          <input type="checkbox" id="importGriffe" checked onchange="updateImportVorschau()">
+          Akkorde sind Griffe mit Kapodaster
+        </label>
       </div>
       <div class="import-spalten">
         <textarea id="importQuelle" class="import-quelle" spellcheck="false" placeholder="Akkordblatt hier einfügen …" oninput="updateImportVorschau()"></textarea>
@@ -14014,6 +14057,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         closeBurgerMenu();
         return;
       }
+      updateBurgerSpalten();
       const btn = document.getElementById('burgerMenuBtn');
       const rect = btn.getBoundingClientRect();
       // Bug fix: confirmed directly -- the button sits at the far right edge of the header in
@@ -15940,22 +15984,62 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const marken = [];
       const re = /\S+/g;
       let m;
-      while ((m = re.exec(akkordzeile)) !== null) marken.push({ spalte: m.index, name: m[0] });
+      while ((m = re.exec(akkordzeile)) !== null) marken.push({ spalte: m.index, name: m[0].replace(/[[\]]/g, '') });
+
+      // Akkorde, die HINTER dem Zeilenende stehen, müssen von denen davor getrennt behandelt
+      // werden. Vorher liefen beide durch dieselbe Rückwärtsschleife, und dabei ging jedes Mal
+      // dasselbe schief: der letzte Akkord wurde angehängt, wodurch die Zeile länger wurde, der
+      // vorletzte galt daraufhin ebenfalls als "hinter dem Ende" und wurde dahinter gehängt --
+      // und ein noch früherer wurde an seiner Spalte MITTEN in das bereits Angehängte
+      // eingeschoben. Am Beispiel des Nutzers kam dabei '[G/[Am7]B]' heraus; in einer einzigen
+      // Datei traf es sechs Zeilen.
+      const laenge = textzeile.replace(/\s+$/, '').length;
+      const innen = marken.filter((x) => x.spalte < laenge);
+      const hinten = marken.filter((x) => x.spalte >= laenge);
+
       let ergebnis = textzeile;
-      for (let i = marken.length - 1; i >= 0; i--) {
-        const { spalte, name } = marken[i];
-        const marke = '[' + name.replace(/[[\]]/g, '') + ']';
-        if (spalte >= ergebnis.length) ergebnis = ergebnis.replace(/\s+$/, '') + ' ' + marke;
-        else ergebnis = ergebnis.slice(0, spalte) + marke + ergebnis.slice(spalte);
+      // Von hinten nach vorn, damit eine Einfügung die Spalten der davorliegenden nicht verschiebt.
+      for (let i = innen.length - 1; i >= 0; i--) {
+        ergebnis = ergebnis.slice(0, innen[i].spalte) + '[' + innen[i].name + ']' + ergebnis.slice(innen[i].spalte);
+      }
+      // Der Rest in seiner ursprünglichen Reihenfolge ans Ende. Weiter rechts als das Zeilenende
+      // lässt sich in ChordPro nicht ausdrücken -- die Reihenfolge bleibt aber erhalten, und
+      // genau die trägt hier die Bedeutung.
+      if (hinten.length) {
+        ergebnis = ergebnis.replace(/\s+$/, '');
+        for (const x of hinten) ergebnis += ' [' + x.name + ']';
       }
       return ergebnis;
     }
 
-    function chordProAusAkkordblatt(text, titelVorgabe, interpretVorgabe) {
+    // Angaben, die in solchen Vorlagen über dem Lied stehen: 'Capo 3rd', 'Key: Am', '120 bpm'.
+    // Sie sind kein Liedtext und gehören in die Direktiven -- sonst stehen sie als Zeile mitten
+    // im Blatt und die Werkzeuge (Metronom, Kapodaster, Tonartvorschlag) wissen nichts von ihnen.
+    const IMPORT_CAPO_RE  = /^\s*(?:capo|kapodaster)\s*:?\s*(?:am\s+)?(\d{1,2})(?:\s*(?:st|nd|rd|th|\.))?\s*(?:bund|fret)?\s*$/i;
+    const IMPORT_KEY_RE   = /^\s*(?:key|tonart)\s*:?\s*([A-H][#b]?(?:m|min|maj)?)\s*$/i;
+    const IMPORT_TEMPO_RE = /^\s*(?:tempo|bpm)\s*:?\s*(\d{2,3})\s*$|^\s*(\d{2,3})\s*bpm\s*$/i;
+
+    function chordProImportKopfdaten(zeilen, bis) {
+      const gefunden = { capo: '', key: '', tempo: '' };
+      const verbraucht = new Set();
+      for (let i = 0; i < Math.min(zeilen.length, bis); i++) {
+        const z = zeilen[i];
+        let m;
+        if (!gefunden.capo && (m = IMPORT_CAPO_RE.exec(z))) { gefunden.capo = m[1]; verbraucht.add(i); continue; }
+        if (!gefunden.key && (m = IMPORT_KEY_RE.exec(z))) { gefunden.key = m[1]; verbraucht.add(i); continue; }
+        if (!gefunden.tempo && (m = IMPORT_TEMPO_RE.exec(z))) { gefunden.tempo = m[1] || m[2]; verbraucht.add(i); continue; }
+      }
+      return { gefunden, verbraucht };
+    }
+
+    function chordProAusAkkordblatt(text, titelVorgabe, interpretVorgabe, extra) {
       const zeilen = String(text).replace(/\r\n?/g, '\n').split('\n').map((z) => z.replace(/\t/g, '    ').replace(/\s+$/, ''));
       const kopf = [];
       let titel = (titelVorgabe || '').trim();
       let interpret = (interpretVorgabe || '').trim();
+      const zusatz = extra || {};
+      // Nur im Kopfbereich suchen: eine Liedzeile, die zufällig 'Tempo 120' heißt, ist Liedtext.
+      const kopfDaten = chordProImportKopfdaten(zeilen, 12);
 
       // Kopfzeilen erraten, solange sie nicht vorgegeben sind: die erste nicht-leere Zeile, die
       // keine Akkordzeile ist, ist der Titel; eine folgende Zeile mit "by"/"von" der Interpret.
@@ -15964,6 +16048,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!titel && start < zeilen.length && !chordProImportIstAkkordzeile(zeilen[start])
           && !chordProImportUeberschrift(zeilen[start]) && zeilen[start].trim().length <= 60) {
         titel = zeilen[start].trim();
+        // 'Tom Waits - Tom Traubert's Blues': diese Quellen schreiben Interpret und Titel in eine
+        // Zeile. Nur bei einem Bindestrich MIT Leerzeichen ringsum trennen -- 'Sixty-Four' oder
+        // 'Rock-n-Roll' sollen ganz bleiben.
+        const geteilt = /^(.{2,40}?)\s+[-–—]\s+(.+)$/.exec(titel);
+        if (geteilt && !interpret) { interpret = geteilt[1].trim(); titel = geteilt[2].trim(); }
         start++;
         const zweite = (zeilen[start] || '').trim();
         const m = /^(?:by|von)\s+(.+)$/i.exec(zweite);
@@ -15973,6 +16062,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
       if (titel) kopf.push('{title: ' + titel + '}');
       if (interpret) kopf.push('{artist: ' + interpret + '}');
+      // Vorgabe aus dem Dialog schlägt das Erkannte; leer heißt "nicht setzen".
+      const key = (zusatz.key !== undefined ? zusatz.key : kopfDaten.gefunden.key).trim();
+      const capo = (zusatz.capo !== undefined ? zusatz.capo : kopfDaten.gefunden.capo).trim();
+      const tempo = (zusatz.tempo !== undefined ? zusatz.tempo : kopfDaten.gefunden.tempo).trim();
+      if (key) kopf.push('{key: ' + key + '}');
+      if (capo) kopf.push('{capo: ' + capo + '}');
+      if (tempo) kopf.push('{tempo: ' + tempo + '}');
 
       const aus = [];
       let offenerAbschnitt = null;
@@ -15990,6 +16086,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       };
 
       for (let i = start; i < zeilen.length; i++) {
+        if (kopfDaten.verbraucht.has(i)) continue;   // steht jetzt als Direktive im Kopf
         const z = zeilen[i];
 
         if (chordProImportIstTabzeile(z)) {
@@ -16029,7 +16126,41 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (imTab) aus.push('{end_of_tab}');
       abschnittSchliessen();
 
-      // Mehr als eine Leerzeile am Stück zusammenziehen und am Ende genau eine lassen.
+      // Kapodaster: In solchen Vorlagen stehen die GRIFFE -- das, was man mit aufgesetztem
+      // Kapodaster greift. Dieser Editor führt im Quelltext dagegen die KLINGENDEN Akkorde und
+      // rechnet die Griffe daraus zurück (siehe chordProAnzeigeVersatz). Würde man die Griffe
+      // unverändert übernehmen und {capo: 3} dazuschreiben, zöge die Anzeige sie ein zweites Mal
+      // um drei Halbtöne nach unten -- genau das ist gemeldet worden ("wenn ich es nachher
+      // einstelle, verändern sich Akkorde und Tonart"). Deshalb werden sie beim Import um den
+      // Kapodasterbetrag ANGEHOBEN; angezeigt werden dann wieder genau die Akkorde der Vorlage.
+      let rumpf = gestrafftText(aus);
+      const capoZahl = parseInt(capo, 10);
+      if (capoZahl > 0 && zusatz.griffe !== false) {
+        // Vorzeichen nach der ZIELtonart wählen, nicht stur Kreuze: aus G/B wird sonst A#/D statt
+        // des üblichen Bb/D. Die Zieltonart ergibt sich aus der Tonart der Vorlage (angegeben oder
+        // am ersten Akkord abgelesen) plus dem Kapodasterbetrag -- dieselbe Überlegung wie beim
+        // Transponieren, siehe chordProVorzeichenArt.
+        const ausgang = key || chordProTonart(rumpf);
+        const n0 = ausgang ? chordProNoteLesen(ausgang) : null;
+        let art = '#';
+        if (n0) {
+          const rest = ausgang.slice(n0.laenge);
+          const ziel = ((n0.halbton + capoZahl) % 12 + 12) % 12;
+          const istMoll = /^m(?!aj)/i.test(rest);
+          art = chordProVorzeichenArt(istMoll ? CHORDPRO_MOLL_TONART[ziel] : CHORDPRO_DUR_TONART[ziel], false);
+        }
+        rumpf = chordProQuelltextWandeln(rumpf, (teil) => {
+          const n = chordProNoteLesen(teil);
+          if (!n) return teil;
+          return chordProNoteSchreiben(n.halbton + capoZahl, art, false) + teil.slice(n.laenge);
+        });
+      }
+      return kopf.concat(kopf.length ? [''] : [], rumpf.split('\n')).join('\n') + '\n';
+    }
+
+    // Mehr als eine Leerzeile am Stück zusammenziehen und am Ende genau eine lassen.
+    function gestrafftText(aus) {
+
       const gestrafft = [];
       for (const z of aus) {
         if (!z.trim() && !gestrafft.length) continue;
@@ -16037,7 +16168,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         gestrafft.push(z);
       }
       while (gestrafft.length && !gestrafft[gestrafft.length - 1].trim()) gestrafft.pop();
-      return kopf.concat(kopf.length ? [''] : [], gestrafft).join('\n') + '\n';
+      return gestrafft.join('\n');
     }
 
     // --- Bedienung ------------------------------------------------------------------------------
@@ -16053,6 +16184,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       document.getElementById('importModal').classList.remove('active');
     }
 
+    // Die Zusatzangaben des Dialogs. Ein leeres Feld heißt "nimm, was in der Vorlage steht" --
+    // deshalb bleibt der Eintrag dann ganz weg statt als Leerstring.
+    function importZusatz() {
+      const wert = (id) => document.getElementById(id).value.trim();
+      const z = { griffe: document.getElementById('importGriffe').checked };
+      if (wert('importKey')) z.key = wert('importKey');
+      if (wert('importCapo')) z.capo = wert('importCapo');
+      if (wert('importTempo')) z.tempo = wert('importTempo');
+      return z;
+    }
+
     function updateImportVorschau() {
       const quelle = document.getElementById('importQuelle').value;
       const titel = document.getElementById('importTitel').value;
@@ -16064,12 +16206,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         document.getElementById('importOeffnenBtn').disabled = true;
         return;
       }
-      const aus = chordProAusAkkordblatt(quelle, titel, interpret);
+      const aus = chordProAusAkkordblatt(quelle, titel, interpret, importZusatz());
       ziel.innerHTML = renderChordProSourceHighlight(aus);
       const marken = (aus.match(/\[[^\]\n]*\]/g) || []).length;
       const abschnitte = (aus.match(/\{start_of_/g) || []).length;
+      const capo = chordProDirektiveLesen(aus, 'capo');
       document.getElementById('importZahlen').textContent =
-        marken + ' Akkorde · ' + abschnitte + ' Abschnitte';
+        marken + ' Akkorde · ' + abschnitte + ' Abschnitte' + (capo ? ' · Capo ' + capo : '');
+      // Der Griffe-Schalter macht nur bei gesetztem Kapodaster einen Unterschied.
+      document.getElementById('importGriffeFeld').style.opacity = capo ? '1' : '.4';
       document.getElementById('importOeffnenBtn').disabled = false;
     }
 
@@ -16090,15 +16235,16 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!quelle.trim()) return;
       const aus = chordProAusAkkordblatt(quelle,
         document.getElementById('importTitel').value,
-        document.getElementById('importInterpret').value);
+        document.getElementById('importInterpret').value, importZusatz());
       const titel = chordProDirektiveLesen(aus, 'title') || 'Import';
       // Endung .pro, damit die neue Notiz sofort als Liedblatt erkannt wird.
       const name = titel.replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 60) + '.pro';
       createNewTab(name, aus);
       closeImportModal();
       document.getElementById('importQuelle').value = '';
-      document.getElementById('importTitel').value = '';
-      document.getElementById('importInterpret').value = '';
+      for (const id of ['importTitel','importInterpret','importKey','importCapo','importTempo'])
+        document.getElementById(id).value = '';
+      document.getElementById('importGriffe').checked = true;
     }
 
     // --- Songbook: Verzeichnis, Index und Setlisten ---------------------------------------------
@@ -17736,6 +17882,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       'Bmaj7': [-1,2,4,3,4,2], 'Bdim': [-1,2,3,4,3,-1], 'Bsus4': [-1,2,4,4,5,2],
       'H': [-1,2,4,4,4,2], 'Hm': [-1,2,4,4,3,2], 'H7': [-1,2,1,2,0,2], 'Hm7': [-1,2,0,2,0,2],
       'Faug': [1,0,3,2,2,1], 'Gm6': [3,-1,2,3,3,-1], 'Bm6': [-1,2,0,1,0,2],
+      // Em11 stammt aus der Vorlage des Nutzers, die den Griff selbst angibt ('020203').
+      // Bei den 11er-Akkorden bleibt die None weg -- das ist die übliche Griffweise und mit
+      // sechs Saiten und vier Fingern ohnehin die einzige spielbare.
+      'Em11': [0,2,0,2,0,3], 'Am11': [-1,0,0,0,1,0], 'Dm11': [-1,-1,0,0,1,1],
+      'Cadd9': [-1,3,2,0,3,3], 'Gadd9': [3,0,0,2,0,3], 'Dadd9': [-1,5,4,2,3,0],
+      'Asus2': [-1,0,2,2,0,0], 'Esus2': [0,2,4,4,0,0],
       'G#m7': [4,6,4,4,4,4], 'D#dim': [-1,-1,1,2,4,2], 'Ebdim': [-1,-1,1,2,4,2],
       'E7sus4': [0,2,0,2,0,0], 'A7sus4': [-1,0,2,0,3,0], 'D7sus4': [-1,-1,0,2,1,3],
       'G7sus4': [3,3,0,0,1,1], 'C7sus4': [-1,3,3,3,1,1],
@@ -17776,13 +17928,20 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     let chordProZweispaltig = false;
 
     function chordProSpaltenUmschalten() {
-      chordProZweispaltig = !chordProZweispaltig;
+      const kasten = document.getElementById('burgerSpalten');
+      chordProZweispaltig = kasten ? kasten.checked : !chordProZweispaltig;
       document.body.classList.toggle('cp-zweispaltig', chordProZweispaltig);
       saveStateToLocalStorage();
-      updateChordproControlsVisibility();
-      showToast(chordProZweispaltig
-        ? 'Liedblätter werden zweispaltig gedruckt.'
-        : 'Liedblätter werden einspaltig gedruckt.');
+    }
+
+    // Sichtbarkeit und Stand des Eintrags im Burger-Menü. Wird beim Öffnen des Menüs gesetzt,
+    // nicht bei jedem Rendern -- die Angabe ändert sich nur durch den Nutzer selbst.
+    function updateBurgerSpalten() {
+      const feld = document.getElementById('burgerSpaltenFeld');
+      if (!feld) return;
+      feld.style.display = chordProAktiverLiedTab() ? '' : 'none';
+      const kasten = document.getElementById('burgerSpalten');
+      if (kasten) kasten.checked = chordProZweispaltig;
     }
 
     function chordProGriffSvg(name, griff, quelle) {
@@ -17862,10 +18021,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         const griff = chordProGriffFinden(g.angezeigt);
         if (griff) teile.push(chordProGriffSvg(g.angezeigt, griff, g.quelle));
       }
-      if (!teile.length) return '';
-      const ohne = gesehen.length - teile.length;
+      // Die fehlenden beim NAMEN nennen statt nur zu zählen: meist sind es Schreibfehler
+      // ('Cmajor7', 'Bbmin'), und nur mit dem Namen weiß man, wo zu korrigieren ist. Dieselben
+      // Akkorde werden im Quelltext hervorgehoben (siehe renderChordProSourceHighlight).
+      const fehlend = gesehen.filter((g) => !chordProGriffFinden(g.angezeigt)).map((g) => g.angezeigt);
+      if (!teile.length && !fehlend.length) return '';
       return '<div class="cp-griffleiste">' + teile.join('') +
-        (ohne ? '<span class="cp-griff-rest">' + ohne + ' ohne Griffbild</span>' : '') + '</div>';
+        (fehlend.length ? '<span class="cp-griff-rest" title="Für diese Akkorde ist kein Griffbild hinterlegt. Häufig steckt ein Schreibfehler dahinter -- im Quelltext sind sie markiert.">ohne Griffbild: ' +
+          escapeHtmlText(fehlend.join(', ')) + '</span>' : '') + '</div>';
     }
 
     function chordProGriffeUmschalten() {
@@ -20296,10 +20459,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       document.getElementById('cpCapo').textContent = String(capo);
       const griffKnopf = document.getElementById('cpGriffeBtn');
       if (griffKnopf) griffKnopf.classList.toggle('active', chordProGriffeZeigen);
-      const spaltenKnopf = document.getElementById('cpSpaltenBtn');
-      if (spaltenKnopf) spaltenKnopf.classList.toggle('active', chordProZweispaltig);
       // Die Klasse hängt am body, nicht am Tab: sie muss auch dann stimmen, wenn der Zustand aus
-      // dem Speicher kam und noch niemand den Knopf gedrückt hat.
+      // dem Speicher kam und noch niemand etwas umgestellt hat.
       document.body.classList.toggle('cp-zweispaltig', chordProZweispaltig);
       const knopf = document.getElementById('cpNotationBtn');
       knopf.textContent = deutsch ? 'H' : 'B';
@@ -20309,11 +20470,21 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     function renderChordProSourceHighlight(content) {
+      // Für die Griffbild-Prüfung muss dieselbe Schreibweise gelten wie in der Vorschau: bei
+      // gesetztem Kapodaster steht im Quelltext der klingende Akkord, das Griffbild gehört aber
+      // zum gegriffenen. Ohne diese Umrechnung wäre bei jedem Kapodaster-Lied fast alles markiert.
+      const versatz = chordProAnzeigeVersatz;
       return escapeHtmlText(content).replace(
         /^(\s*#.*)$|(\{[^}\n]*\})|(\[[^\]\n]*\])/gm,
         (treffer, kommentar, direktive, akkord) => {
           if (kommentar !== undefined) return '<span class="cp-src-kommentar">' + kommentar + '</span>';
           if (direktive !== undefined) return '<span class="cp-src-direktive">' + direktive + '</span>';
+          // Ein Akkord ohne hinterlegtes Griffbild bekommt eine eigene Markierung -- meist steckt
+          // ein Schreibfehler dahinter, und im Quelltext ist die Stelle, an der man ihn behebt.
+          const marke = chordProMarkeArt(akkord.replace(/^\[|\]$/g, '').replace(/&amp;/g, '&'));
+          if (marke.art === 'akkord' && marke.name && !chordProGriffFinden(chordProAnzeigeName(marke.name))) {
+            return '<span class="cp-src-akkord cp-src-akkord-unbekannt" title="Kein Griffbild hinterlegt -- Schreibweise prüfen">' + akkord + '</span>';
+          }
           return '<span class="cp-src-akkord">' + akkord + '</span>';
         }
       );
