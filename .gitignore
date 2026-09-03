@@ -1,6 +1,21 @@
 .claude/
 .DS_Store
 
-# Liedblätter und Referenzmaterial bleiben lokal -- fremde Songtexte gehören nicht in ein
+# Auf GitHub liegt nur, was zum Ausführen der App nötig ist: Markdown-Editor.html,
+# README, Anleitung und die Weiterleitung index.html für GitHub Pages.
+# Alles andere ist Arbeitsmaterial und bleibt lokal.
+
+# Liedblätter und Referenzmaterial -- fremde Songtexte gehören nicht in ein
 # öffentliches Repository.
 chordpro/
+
+# Quellen der eingebetteten Bausteine. Sie werden beim Bearbeiten in die eine
+# HTML-Datei hineinkopiert und zur Laufzeit nicht gelesen.
+Icons/
+excalidraw.html
+
+# Arbeitsnotizen und interne Dokumentation
+CLAUDE.md
+docs/
+Neugestaltung Markdown Studio.md
+Sprachfunktion.txt

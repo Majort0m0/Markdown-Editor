@@ -7,7 +7,6 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 **🔗 Direkt ausprobieren:** [majort0m0.github.io/Markdown-Editor](https://majort0m0.github.io/Markdown-Editor/)
 **📖 Ausführliche Anleitung:** [Anleitung.md](./Anleitung.md) — Schritt-für-Schritt-Beschreibungen aller Funktionen (auch in der App selbst über das Burger-Menü ☰ verlinkt)
 
-![Screenshot des Markdown Studio Editors mit mehreren Tabs, Formatierungsleiste und Live-Vorschau](./docs/screenshot.png)
 
 ## ✨ Funktionen
 
@@ -100,7 +99,7 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 
 ## 🛠️ Entwicklung
 
-Die komplette App (HTML, CSS, JavaScript) liegt in `Markdown-Editor.html`. Es gibt keinen Build-Schritt, keine Abhängigkeiten zum Installieren — nach jeder Änderung einfach die Datei im Browser neu laden. Details zur internen Architektur stehen in [`CLAUDE.md`](./CLAUDE.md).
+Die komplette App (HTML, CSS, JavaScript) liegt in `Markdown-Editor.html`. Es gibt keinen Build-Schritt, keine Abhängigkeiten zum Installieren — nach jeder Änderung einfach die Datei im Browser neu laden.
 
 ## 📄 Lizenz
 

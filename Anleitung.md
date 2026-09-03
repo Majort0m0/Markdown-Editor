@@ -1,6 +1,6 @@
 # Markdown Studio Pro – Ausführliche Anleitung
 
-Diese Anleitung beschreibt alle Funktionen von Markdown Studio Pro Schritt für Schritt. Für einen schnellen Funktionsüberblick siehe die [README](./README.md); für technische Details zur Umsetzung siehe [`CLAUDE.md`](./CLAUDE.md).
+Diese Anleitung beschreibt alle Funktionen von Markdown Studio Pro Schritt für Schritt. Für einen schnellen Funktionsüberblick siehe die [README](./README.md).
 
 Markdown Studio Pro läuft komplett im Browser, ohne Installation und ohne Server — alle Dokumente werden lokal auf deinem Gerät gespeichert (bzw. optional über WebDAV mit anderen Geräten synchronisiert, siehe [Abschnitt 15](#15-webdav-synchronisierung-zwischen-mehreren-geräten)).
 
