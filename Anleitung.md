@@ -452,7 +452,9 @@ Es gibt **zwei Wege**, und jede Aktion darf beide haben:
 - **MIDI** — funktioniert mit jedem Controller, unabhängig davon, ob er Noten, Controller- oder Programmwechsel sendet.
 - **Taste** — der Fußschalter wird am Gerät auf *Tastatur* umgestellt (beim M-Vave Chocolate und den meisten anderen möglich) und meldet sich dann als Bluetooth-Tastatur. Seine Anschläge kommen als ganz gewöhnliche Tastendrücke an.
 
-Belegbar sind: Start/Stopp des Teleprompters, schneller, langsamer, Seite vor, Seite zurück, Teleprompter beenden, **nächstes und vorheriges Lied** der Setliste sowie **Metronom Start/Stopp**. Die letzten drei funktionieren auch ohne laufenden Teleprompter — das Metronomfeld klappt beim Start von selbst auf. Da das Metronom zu einem Liedblatt gehört, sagt ein kurzer Hinweis Bescheid, wenn gerade eine gewöhnliche Notiz offen ist.
+Belegbar sind: Start/Stopp des Teleprompters, schneller, langsamer, Seite vor, Seite zurück, Teleprompter beenden, **nächstes und vorheriges Lied** der Setliste sowie **Metronom Start/Stopp**.
+
+Beim Blättern bleibt jeweils die **letzte Zeile der vorherigen Seite** oben stehen (beim Zurückblättern die erste unten). Diese eine Zeile Überlappung ist der Anschluss, an dem man sich wiederfindet — sie richtet sich an den tatsächlichen Zeilen aus und stimmt deshalb bei jedem Zoom und auch dann, wenn Akkorde über den Silben stehen. Die letzten drei funktionieren auch ohne laufenden Teleprompter — das Metronomfeld klappt beim Start von selbst auf. Da das Metronom zu einem Liedblatt gehört, sagt ein kurzer Hinweis Bescheid, wenn gerade eine gewöhnliche Notiz offen ist.
 
 **Wann welcher Weg?** MIDI im Browser gibt es nur über `https` oder `localhost` — direkt aus einer Datei geöffnet fehlt es. Vor allem aber: **auf iPhone und iPad kennt es kein Browser.** Dort benutzen alle Browser dieselbe Grundlage, und die kann kein Web-MIDI; daran ändert auch eine Web-Adresse nichts. Genau dafür gibt es die Tastenbelegung — sie braucht keine Erlaubnis und funktioniert überall, auch auf dem iPad und auch über eine https-Adresse.
 
@@ -471,10 +473,7 @@ Ohne verbundene Tastatur bleibt der Fußschalter wirkungslos, auch wenn er richt
 
 Am Rechner (Windows, macOS, Linux) gilt das nicht: dort reicht der Fußschalter allein, wahlweise über MIDI oder als Tastatur.
 
-**Zwei Hilfen im Dialog**, falls es trotzdem hakt:
-
-- Der Schalter **„Tastenempfang für iPhone und iPad"** hält im Hintergrund ein unsichtbares Eingabefeld im Fokus, damit die Anschläge sicher in der Seite landen, ohne dass die Bildschirmtastatur aufgeht. Er ersetzt die verbundene Tastatur **nicht** — er hilft nur gegen Fokusprobleme. Standardmäßig aus.
-- Die Zeile **„Zuletzt gedrückte Taste"** sagt, ob vom Pedal überhaupt etwas ankommt. Bleibt sie beim Treten leer, sendet der Fußschalter keine gewöhnliche Taste (manche Modelle schicken Mediensteuerbefehle wie Play/Pause, die eine Webseite nicht sieht) — oder es fehlt die verbundene Tastatur.
+**Zur Fehlersuche** steht unten im Dialog die Zeile **„Zuletzt gedrückte Taste"**. Sie sagt, ob vom Pedal überhaupt etwas ankommt. Bleibt sie beim Treten leer, sendet der Fußschalter keine gewöhnliche Taste (manche Modelle schicken Mediensteuerbefehle wie Play/Pause, die eine Webseite nicht sieht) — oder es fehlt die verbundene Tastatur.
 
 ### Drucken und Exportieren
 

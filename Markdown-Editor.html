@@ -3193,45 +3193,6 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     /* Breiter als die üblichen 440px: jede Zeile trägt jetzt ZWEI Belegungen (MIDI und Taste)
        mit je Wert, Lern- und Löschknopf. In der schmalen Standardkarte wurde die zweite Spalte
        schlicht abgeschnitten. */
-    /* Unsichtbar, aber vorhanden: ein Element mit display:none oder visibility:hidden ist nicht
-       fokussierbar und finge gar nichts. position:fixed am unteren Rand, damit das Fokussieren die
-       Seite nicht scrollt; pointer-events:none, damit es keine Berührung abfängt. */
-    .midi-schalter {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 10px 0 4px;
-      font-size: 0.9rem;
-      cursor: pointer;
-    }
-
-    .midi-hinweis-klein { font-size: 0.8rem; margin-top: 0; }
-
-    /* Der am iPad entscheidende Hinweis. Abgesetzt, weil er der Unterschied zwischen "geht" und
-       "geht nicht" ist und in einer Reihe gleich aussehender Absätze überlesen würde. */
-    .midi-hinweis-ipad {
-      border-left: 3px solid var(--accent, var(--border-color));
-      padding-left: 10px;
-      background-color: var(--bg-hover, transparent);
-      border-radius: 0 4px 4px 0;
-      padding-top: 6px;
-      padding-bottom: 6px;
-    }
-
-    .pedal-faenger {
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      border: 0;
-      opacity: 0;
-      background: transparent;
-      pointer-events: none;
-      z-index: -1;
-    }
-
     /* Zwei Klassen im Selektor, nicht eine: .modal-card steht weiter unten in dieser Datei und
        gewänne bei gleicher Spezifität mit seinen 440px -- die zweite Spalte blieb abgeschnitten. */
     .modal-card.fussschalter-karte { max-width: 620px; }
@@ -9146,13 +9107,6 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
   <!-- Fußschalter-Zuordnung. Gewöhnliches Modal nach dem geteilten Muster: ✕, Klick auf den
        Hintergrund, Escape. -->
-  <!-- Fängt die Anschläge eines als Tastatur betriebenen Fußschalters auf, siehe
-       pedalFaengerAktualisieren(). Kein display:none -- was nicht dargestellt wird, kann keinen
-       Fokus bekommen. inputmode="none" hält die Bildschirmtastatur zu. -->
-  <input type="text" id="pedalFaenger" class="pedal-faenger" inputmode="none"
-         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-         aria-hidden="true" tabindex="-1" oninput="this.value = ''">
-
   <div class="modal-overlay" id="midiModal" onclick="if (event.target === this) closeMidiModal()">
     <div class="modal-card fussschalter-karte">
       <div class="modal-header">
@@ -9179,16 +9133,6 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         Rechner reicht der Fußschalter allein.
       </p>
       <div class="midi-geraete" id="midiGeraete"></div>
-      <label class="midi-schalter">
-        <input type="checkbox" id="pedalFangenFeld" onchange="pedalFaengerSetzen(this.checked)">
-        <span>Tastenempfang für iPhone und iPad</span>
-      </label>
-      <p class="midi-hinweis midi-hinweis-klein">
-        Hält im Hintergrund ein unsichtbares Eingabefeld im Fokus, damit die Anschläge des
-        Fußschalters in der Seite ankommen — ohne dass die Bildschirmtastatur aufgeht. Hilft gegen
-        Fokusprobleme, <strong>ersetzt aber die verbundene Tastatur nicht</strong> (siehe oben).
-        Beim Schreiben wird der Fokus nicht weggenommen.
-      </p>
       <div id="midiListe"></div>
       <div class="midi-meldung" id="midiMeldung"></div>
       <div class="midi-meldung" id="tastenMeldung"></div>
@@ -11690,7 +11634,6 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         chordProZweispaltig: chordProZweispaltig,
         midiZuordnung: midiZuordnung,
         fussschalterTasten: fussschalterTasten,
-        pedalFangenAktiv: pedalFangenAktiv,
         songbookEintraege: songbookEintraege,
         songbookOrdnerName: songbookOrdnerName,
         songbookSetlists: songbookSetlists,
@@ -11850,7 +11793,6 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (typeof state.chordProZweispaltig === 'boolean') chordProZweispaltig = state.chordProZweispaltig;
         if (state.midiZuordnung && typeof state.midiZuordnung === 'object') midiZuordnung = state.midiZuordnung;
         if (state.fussschalterTasten && typeof state.fussschalterTasten === 'object') fussschalterTasten = state.fussschalterTasten;
-        if (typeof state.pedalFangenAktiv === 'boolean') pedalFangenAktiv = state.pedalFangenAktiv;
         if (Array.isArray(state.songbookEintraege)) songbookEintraege = state.songbookEintraege;
         if (typeof state.songbookOrdnerName === 'string') songbookOrdnerName = state.songbookOrdnerName;
         if (Array.isArray(state.songbookSetlists)) songbookSetlists = state.songbookSetlists;
@@ -17231,55 +17173,6 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     let tastenLernAktion = null;
     let tastenLetzteMeldung = '';  // Diagnose: was kam zuletzt überhaupt an?
 
-    // --- Tastenempfang für iPhone und iPad -----------------------------------------------------
-    //
-    // Gemeldet: der Fußschalter im Tastatur-Modus wirkt am iPad nur, solange zusätzlich eine
-    // richtige Tastatur (Magic Keyboard) angeschlossen ist. iOS an dieser Stelle etwas
-    // vorzutäuschen ist von einer Webseite aus nicht möglich -- ob eine Tastatur verbunden ist,
-    // weiß nur das Betriebssystem, und kein Web-API rührt daran.
-    //
-    // Beeinflussbar ist die andere Seite: ob die Anschläge in der Seite ANKOMMEN. iOS liefert sie
-    // zuverlässig an ein Element, das den Fokus hat; ohne Fokus gehen sie oft an das System statt
-    // an die Seite. Deshalb ein unsichtbares Eingabefeld, das den Fokus hält und die Anschläge
-    // auffängt. inputmode="none" verhindert dabei, dass die Bildschirmtastatur aufgeht -- ein
-    // gewöhnliches Eingabefeld wäre sonst genau das Gegenteil von dem, was man auf der Bühne will.
-    //
-    // Bewusst zuschaltbar und nicht immer an: das Feld hält den Fokus, und das ist eine spürbare
-    // Nebenwirkung, die niemand bekommen soll, der den Fußschalter gar nicht benutzt.
-    let pedalFangenAktiv = false;
-
-    function pedalFaengerSetzen(an) {
-      pedalFangenAktiv = !!an;
-      saveStateToLocalStorage();
-      pedalFaengerAktualisieren();
-      updateMidiModal();
-    }
-
-    function pedalFaengerAktualisieren() {
-      const feld = document.getElementById('pedalFaenger');
-      if (!feld) return;
-      if (!pedalFangenAktiv) {
-        if (document.activeElement === feld) feld.blur();
-        return;
-      }
-      // Nicht, solange ein Dialog offen ist: dort will man Felder anklicken und mit Tabulator
-      // wandern, und der Empfänger risse den Fokus nach jedem Klick wieder an sich.
-      if (document.querySelector('.modal-overlay.active')) return;
-      // Niemals den Fokus aus etwas herausziehen, worin gerade geschrieben wird -- sonst landete
-      // der nächste Buchstabe im Nirgendwo statt im Text.
-      const aktiv = document.activeElement;
-      if (aktiv && aktiv !== feld && aktiv !== document.body &&
-          (aktiv.tagName === 'TEXTAREA' || aktiv.tagName === 'INPUT' ||
-           aktiv.tagName === 'SELECT' || aktiv.isContentEditable)) return;
-      if (aktiv !== feld) feld.focus({ preventScroll: true });
-    }
-
-    // Den Fokus zurückholen, wo er verlorengeht: nach jedem Antippen, beim Zurückkommen aus einer
-    // anderen App und immer, wenn ein Element ihn abgibt. setTimeout(0), damit erst feststeht,
-    // wohin der Fokus überhaupt gewandert ist.
-    document.addEventListener('focusout', () => { if (pedalFangenAktiv) setTimeout(pedalFaengerAktualisieren, 0); });
-    document.addEventListener('pointerup', () => { if (pedalFangenAktiv) setTimeout(pedalFaengerAktualisieren, 0); });
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) pedalFaengerAktualisieren(); });
 
     function tastenLernenStarten(id) {
       tastenLernAktion = id;
@@ -17329,9 +17222,6 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     function schreibtGeradeText() {
       const el = document.activeElement;
       if (!el) return false;
-      // Der Pedal-Empfänger ist zwar ein <input>, aber niemand schreibt darin -- er ist genau
-      // dafür da, Anschläge entgegenzunehmen. Er darf die Belegung also nicht blockieren.
-      if (el.id === 'pedalFaenger') return false;
       return el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable;
     }
 
@@ -17430,12 +17320,47 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
     }
 
-    // Eine Seite weiter oder zurück. Mit etwas Überlappung, damit die Zeile, bei der man gerade
-    // war, oben noch zu sehen ist -- sonst verliert man beim Blättern die Stelle.
+    // Zeilen, an denen sich das Blättern ausrichtet. Bei einem Liedblatt ist eine .cp-zeile die
+    // Einheit, die man als "Zeile" sieht (Akkorde und Silben zusammen); in einer gewöhnlichen
+    // Notiz sind es die Textblöcke.
+    function teleprompterZeilenElemente() {
+      return preview.querySelectorAll(
+        '.cp-zeile, .cp-abschnitt-titel, .cp-kommentar, .cp-tab, .cp-griffleiste,' +
+        ' p, li, h1, h2, h3, h4, h5, h6, pre, blockquote, tr');
+    }
+
+    // Eine Seite weiter oder zurück, mit genau EINER Zeile Überlappung: die letzte Zeile der alten
+    // Seite steht danach oben (bzw. beim Zurückblättern unten). Vorher war die Überlappung ein
+    // fester Wert von 80 Pixeln -- der ist mal weniger als eine Zeile (großer Zoom, Liedblatt mit
+    // Akkorden) und mal mehr als zwei (kleiner Zoom), sodass die Anschlusszeile entweder fehlte
+    // oder mehrere Zeilen doppelt kamen. Gemessen wird deshalb an den Zeilen selbst.
     function teleprompterSeite(richtung) {
       const hoehe = previewPane.clientHeight;
-      const schritt = Math.max(80, hoehe - 80);
-      const ziel = Math.max(0, Math.min(previewPane.scrollHeight - hoehe, previewPane.scrollTop + richtung * schritt));
+      const oben = previewPane.scrollTop;
+      const bezug = previewPane.getBoundingClientRect().top;
+      const zeilen = [];
+      for (const el of teleprompterZeilenElemente()) {
+        const r = el.getBoundingClientRect();
+        if (r.height <= 0) continue;                       // Ausgeblendetes zählt nicht mit
+        zeilen.push({ oben: r.top - bezug + oben, unten: r.bottom - bezug + oben });
+      }
+      // Rückfall auf das alte Verhalten, wenn sich keine Zeilen finden lassen (leere Notiz, oder
+      // ein einziger Block, der höher ist als das Fenster).
+      let ziel = oben + richtung * Math.max(80, hoehe - 80);
+      if (zeilen.length) {
+        if (richtung > 0) {
+          // Die unterste Zeile, die gerade noch vollständig zu sehen ist, wandert nach oben.
+          let letzte = null;
+          for (const z of zeilen) if (z.oben >= oben && z.unten <= oben + hoehe) letzte = z;
+          if (letzte && letzte.oben > oben) ziel = letzte.oben;
+        } else {
+          // Rückwärts spiegelbildlich: die oberste noch ganz sichtbare Zeile landet unten.
+          let erste = null;
+          for (const z of zeilen) if (z.oben >= oben && z.unten <= oben + hoehe) { erste = z; break; }
+          if (erste && erste.unten < oben + hoehe) ziel = erste.unten - hoehe;
+        }
+      }
+      ziel = Math.max(0, Math.min(previewPane.scrollHeight - hoehe, ziel));
       previewPane.scrollTop = ziel;
       teleprompterScrollPos = ziel;
       teleprompterLastFrame = 0;
@@ -17517,8 +17442,6 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
       const meldung = document.getElementById('midiMeldung');
       if (meldung) meldung.textContent = midiLetzteMeldung ? 'Zuletzt empfangen: ' + midiLetzteMeldung : '';
-      const schalter = document.getElementById('pedalFangenFeld');
-      if (schalter) schalter.checked = pedalFangenAktiv;
       // Diese Zeile ist die eigentliche Fehlersuche: kommt vom Pedal überhaupt eine Taste an?
       // Bleibt sie beim Treten leer, sendet es keine gewöhnliche Taste -- dann hilft auch der
       // Empfänger nichts, und es ist am Gerät selbst umzustellen.
@@ -39647,7 +39570,6 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // (idempotent) on the loadStateFromLocalStorage()-success path, which already called it once
     // internally with the exact same (now-current) operatingMode value.
     dateiauswahlFuerIosOeffnen();
-    pedalFaengerAktualisieren();
     applyOperatingMode(operatingMode);
     // Same reasoning/bug class as the applyOperatingMode() call right above -- a genuine first-ever
     // visit takes the createNewTab() fallback, which never runs loadStateFromLocalStorage()'s own
