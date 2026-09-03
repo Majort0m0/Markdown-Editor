@@ -15996,10 +15996,40 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // bekannten Akkordarten geprüft und nicht bloß auf "sieht irgendwie akkordig aus".
     const CHORDPRO_IMPORT_ZUSATZ = /^(?:maj|min|m|M|dim|aug|sus|add|°|ø|\+|-)?\d*(?:sus\d?|add\d+|maj\d+|no\d)?[\d+\-#b()]*$/;
 
+    // Nachgestellter Klammerzusatz. Im Bestand kommen genau zwei Sorten vor: ein Alternativakkord
+    // ([A(F#m)], [C(E)], [Gm7(C)]) und eine kurze Spielanweisung ([F(open)]). Beides ist erlaubt,
+    // alles andere ausdrücklich nicht -- diese Prüfung entscheidet, ob eine Zeile als Akkordzeile
+    // über den Text geschoben oder als Liedtext übernommen wird, und ein großzügiges "Klammern
+    // sind egal" ließe eine Textzeile wie 'Am (leise)' als Akkordzeile durchgehen.
+    const CHORDPRO_IMPORT_ANMERKUNG = /^(?:open|barre|bar|opt|optional|arp|arpeggio|let\s*ring|ring|hold|muted|mute|palm|riff|fill|solo|\d+x|x\d+)$/i;
+
+    function chordProImportKlammerErlaubt(inhalt) {
+      const t = String(inhalt).trim();
+      if (!t) return false;
+      if (CHORDPRO_IMPORT_ANMERKUNG.test(t)) return true;
+      return chordProImportIstAkkord(t);   // Alternativakkord, dieselbe strenge Prüfung
+    }
+
     function chordProImportIstAkkord(wort) {
-      const t = String(wort).replace(/^[(\[]+|[)\]:,.]+$/g, '').trim();
+      // Die runden Klammern werden hier NICHT mit abgeschnitten: sie tragen Bedeutung (siehe die
+      // beiden Fälle gleich darunter), und die frühere Fassung entfernte die schließende Klammer
+      // schon in dieser Zeile -- 'F(open)' kam als 'F(open' an und fiel danach durch jede Prüfung.
+      let t = String(wort).trim().replace(/^\[+/, '').replace(/[\]:,.]+$/, '').trim();
       if (!t) return false;
       if (t === '|' || t === '%' || /^[|/\\-]+$/.test(t)) return true;   // Takt- und Wiederholungszeichen
+      // Vollständig eingeklammert ([(Am)]) -- der Inhalt entscheidet.
+      const ganz = /^\(([^()]*)\)$/.exec(t);
+      if (ganz) return chordProImportIstAkkord(ganz[1]);
+      const klammer = /^(.*?)\(([^()]*)\)$/.exec(t);
+      if (klammer) {
+        if (!chordProImportKlammerErlaubt(klammer[2])) return false;
+        t = klammer[1].trim();
+        if (!t) return false;
+      }
+      // Unpaarige Klammerreste ('(Am', 'Am)') fallen erst jetzt weg, damit die beiden Fälle oben
+      // sie noch sehen konnten.
+      t = t.replace(/^\(+/, '').replace(/\)+$/, '').trim();
+      if (!t) return false;
       const m = /^([A-H][#b]?)(.*)$/.exec(t);
       if (!m) return false;
       let rest = m[2];
@@ -17926,7 +17956,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       });
     }
 
-    // Grifftabelle für die Gitarre in Standardstimmung. Sechs Zahlen, tiefe E-Saite zuerst:
+    // Grifftabelle für die Gitarre in Standardstimmung.
+    //
+    // C#7 und Eb7 standen hier als [-1,4,3,4,2,4] bzw. [-1,6,5,6,4,6] -- harmonisch richtig, aber
+    // mit fünf nötigen Fingern nicht greifbar (beide dasselbe Muster, offenbar aus derselben
+    // Quelle). Gefunden hat das die verschärfte Fingerzählung in chordProFormBewerten; ersetzt
+    // durch die A-Form-Barrégriffe mit denselben Tönen und drei Fingern. Sechs Zahlen, tiefe E-Saite zuerst:
     // -1 = nicht angeschlagen, 0 = leer, sonst der Bund. Von Hand eingetragen, weil gerechnete
     // Griffe zwar richtig klingen, aber oft unspielbar liegen -- und jeder Eintrag wird gegen die
     // Akkordtöne geprüft (siehe die Selbstprüfung weiter unten), damit sich kein falscher
@@ -17935,13 +17970,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       'C': [-1,3,2,0,1,0], 'C7': [-1,3,2,3,1,0], 'Cmaj7': [-1,3,2,0,0,0], 'C6': [-1,3,2,2,1,0],
       'Csus4': [-1,3,3,0,1,1], 'Csus2': [-1,3,0,0,1,3], 'Cm': [-1,3,5,5,4,3], 'Cm7': [-1,3,5,3,4,3],
       'Cdim': [-1,3,4,5,4,-1], 'Caug': [-1,3,2,1,1,0], 'C9': [-1,3,2,3,3,3],
-      'C#': [-1,4,3,1,2,1], 'C#m': [-1,4,6,6,5,4], 'C#7': [-1,4,3,4,2,4], 'C#m7': [-1,4,6,4,5,4],
+      'C#': [-1,4,3,1,2,1], 'C#m': [-1,4,6,6,5,4], 'C#7': [-1,4,6,4,6,4], 'C#m7': [-1,4,6,4,5,4],
       'Db': [-1,4,3,1,2,1], 'Dbm': [-1,4,6,6,5,4],
       'D': [-1,-1,0,2,3,2], 'D7': [-1,-1,0,2,1,2], 'Dmaj7': [-1,-1,0,2,2,2], 'Dm': [-1,-1,0,2,3,1],
       'Dm7': [-1,-1,0,2,1,1], 'Dsus4': [-1,-1,0,2,3,3], 'Dsus2': [-1,-1,0,2,3,0], 'D6': [-1,-1,0,2,0,2],
       'Ddim': [-1,-1,0,1,3,1], 'Daug': [-1,-1,0,3,3,2], 'D9': [-1,5,4,5,5,5],
       'D#': [-1,6,5,3,4,3], 'D#m': [-1,6,8,8,7,6], 'Eb': [-1,6,5,3,4,3], 'Ebm': [-1,6,8,8,7,6],
-      'Eb7': [-1,6,5,6,4,6], 'Ebmaj7': [-1,6,5,3,3,3],
+      'Eb7': [-1,6,8,6,8,6], 'Ebmaj7': [-1,6,5,3,3,3],
       'E': [0,2,2,1,0,0], 'E7': [0,2,0,1,0,0], 'Em': [0,2,2,0,0,0], 'Em7': [0,2,0,0,0,0],
       'Emaj7': [0,2,1,1,0,0], 'Esus4': [0,2,2,2,0,0], 'E6': [0,2,2,1,2,0], 'Edim': [0,1,2,0,-1,-1],
       'Eaug': [0,3,2,1,1,0], 'Em6': [0,2,2,0,2,0], 'E9': [0,2,0,1,0,2],
@@ -17984,16 +18019,286 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Griff zu einem Akkordnamen. Vor dem Nachschlagen werden die Schreibweisen vereinheitlicht,
     // die im Bestand nebeneinander vorkommen: '+' meint aug, '0' meint dim, 'M7' meint maj7.
     // Ohne das fände ein [G+] (18 Vorkommen) den vorhandenen Gaug-Griff nicht.
+    //
+    // Klammerzusätze und Fußnotenzeichen fallen vorher weg -- '(open)' ist eine Spielanweisung,
+    // '(F#m)' ein Alternativvorschlag, '*' ein Verweis; keines davon gehört zur Akkordart. Genau
+    // dieselbe Bereinigung macht chordProIntervalle() für den Klang schon länger, die Griffsuche
+    // aber nicht: [F(open)] und [Gm7(C)] standen deshalb als "ohne Griffbild" da, obwohl F und
+    // Gm7 beide in der Tabelle stehen.
+    function chordProGriffOhneZusatz(name) {
+      return String(name).replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
+    }
+
     function chordProGriffFinden(name) {
       if (!name) return null;
       const direkt = CHORDPRO_GRIFFE[name];
       if (direkt) return direkt;
-      const vereinheitlicht = name
+      const sauber = chordProGriffOhneZusatz(name);
+      if (sauber !== name && CHORDPRO_GRIFFE[sauber]) return CHORDPRO_GRIFFE[sauber];
+      const vereinheitlicht = sauber
         .replace(/\+$/, 'aug')
         .replace(/0$/, 'dim')
         .replace(/^([A-H][#b]?)M7/, '$1maj7')
         .replace(/^([A-H][#b]?)min/, '$1m');
       return CHORDPRO_GRIFFE[vereinheitlicht] || null;
+    }
+
+
+    // --- Berechnete Griffbilder -----------------------------------------------------------------
+    //
+    // Die Tabelle oben bleibt maßgeblich: sie ist von Hand eingetragen, weil gerechnete Griffe zwar
+    // richtig klingen, aber oft unspielbar liegen. Für alles, was NICHT darin steht, wird hier ein
+    // Griff berechnet -- vorher stand dort schlicht "ohne Griffbild".
+    //
+    // Zwei Stufen, in dieser Reihenfolge:
+    //   1. Eine bekannte Form derselben Akkordart verschieben. Das ist der Weg, den ein Gitarrist
+    //      selbst geht: den Am7-Griff zwei Bünde hoch ergibt Bm7. Weil die Quelle aus der geprüften
+    //      Tabelle stammt und Verschieben die Intervalle unangetastet lässt, ist das Ergebnis
+    //      harmonisch so richtig wie die Vorlage und sieht aus wie ein üblicher Griff.
+    //   2. Findet sich keine passende Form (Akkordarten ohne jeden Tabelleneintrag, etwa maj9),
+    //      wird das Griffbrett vollständig durchsucht.
+    //
+    // Was NICHT berechnet wird, ist der wichtige Teil: die Akkordart muss GENAU einer bekannten
+    // Kennung entsprechen. 'Cmajor7' ergibt deshalb keinen Griff -- ein Präfixvergleich fände dort
+    // 'm' und lieferte c-Moll, also einen falschen Griff für einen Tippfehler. So bleibt die
+    // Anzeige "ohne Griffbild" das, wozu sie gedacht war: ein Hinweis auf eine Schreibweise, die
+    // nachzusehen ist. Am Bestand gemessen schrumpft diese Liste dadurch von 49 auf 21 Einträge,
+    // und die verbliebenen sind genau die Ausreißer ('D..', 'F7-2', 'Beschriftung', 'Bb[F#').
+    const CHORDPRO_GRIFF_ZWISCHENSPEICHER = new Map();
+    let chordProGriffFormen = null;
+
+    // Akkordart NUR bei genauer Übereinstimmung -- siehe oben, und anders als chordProIntervalle(),
+    // das für den Klang bewusst großzügig ist und im Zweifel Dur zurückgibt.
+    function chordProAkkordartExakt(zusatz) {
+      const t = String(zusatz).replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
+      for (const [kennung, intervalle] of CHORDPRO_AKKORDARTEN) {
+        if (t === kennung) return intervalle;
+      }
+      return null;
+    }
+
+    function chordProGriffZerlegen(name) {
+      const sauber = chordProGriffOhneZusatz(name)
+        .replace(/\+$/, 'aug')
+        .replace(/0$/, 'dim')
+        .replace(/^([A-H][#b]?)M7/, '$1maj7')
+        .replace(/^([A-H][#b]?)min/, '$1m');
+      const teile = sauber.split('/');
+      if (teile.length > 2) return null;
+      const n = chordProNoteLesen(teile[0]);
+      if (!n) return null;
+      const intervalle = chordProAkkordartExakt(teile[0].slice(n.laenge));
+      if (!intervalle) return null;
+      let bass = null;
+      if (teile.length > 1) {
+        const b = chordProNoteLesen(teile[1]);
+        if (!b) return null;
+        // Steht hinter dem Schrägstrich ein ganzer Akkord ([F/Dm7]), zählt nur dessen Grundton --
+        // dieselbe Lesart, die chordProAkkordToene() für den Klang schon benutzt.
+        const zusatz = teile[1].slice(b.laenge);
+        if (zusatz !== '' && chordProAkkordartExakt(zusatz) === null) return null;
+        bass = ((b.halbton % 12) + 12) % 12;
+      }
+      return { grund: ((n.halbton % 12) + 12) % 12, intervalle, bass };
+    }
+
+    // Spielbarkeit eines Griffs. Gibt null zurück, wenn er nicht zu greifen ist.
+    function chordProFormBewerten(form) {
+      const klingend = [];
+      for (let i = 0; i < 6; i++) if (form[i] >= 0) klingend.push(i);
+      if (klingend.length < 4) return null;
+      const gegriffen = klingend.filter((i) => form[i] > 0);
+      const offene = klingend.filter((i) => form[i] === 0).length;
+      let luecken = 0;
+      for (let i = klingend[0]; i <= klingend[klingend.length - 1]; i++) if (form[i] < 0) luecken++;
+      if (!gegriffen.length) return { finger: 0, tiefster: 0, spanne: 0, barre: false, klingend, offene, luecken };
+      const tiefster = Math.min(...gegriffen.map((i) => form[i]));
+      const spanne = Math.max(...gegriffen.map((i) => form[i])) - tiefster;
+      if (spanne > 3) return null;
+
+      // Finger zählen. Ein Finger deckt eine Gruppe von Saiten im SELBEN Bund ab, solange zwischen
+      // ihnen keine Saite TIEFER gegriffen wird -- höher gegriffene dazwischen sind erlaubt, denn
+      // die liegen über dem quer liegenden Finger. Genau das ist ein Barré: beim F (1,3,3,2,1,1)
+      // deckt ein Finger die Saiten 1, 5 und 6 im ersten Bund ab, obwohl dazwischen im zweiten und
+      // dritten Bund gegriffen wird.
+      //
+      // Eine frühere Fassung zählte nur den tiefsten Bund als möglichen Barré und verbot drei
+      // Finger im selben Bund. Beides war falsch: der übliche Esus4 (0,2,2,2,0,0) und der A-Griff
+      // greifen drei nebeneinanderliegende Saiten im selben Bund, und der C9 (x,3,2,3,3,3) barriert
+      // mit dem Ringfinger im DRITTEN Bund über einem im zweiten gegriffenen Ton. Die eigene
+      // Selbstprüfung hat beide als "nicht greifbar" gemeldet -- die Regel war das Problem, nicht
+      // der Griff.
+      const buende = [...new Set(gegriffen.map((i) => form[i]))].sort((a, b) => a - b);
+      let finger = 0, barre = false;
+      for (const bund of buende) {
+        const saiten = gegriffen.filter((i) => form[i] === bund).sort((a, b) => a - b);
+        let gruppen = 1;
+        for (let k = 1; k < saiten.length; k++) {
+          let trennt = false;
+          for (let i = saiten[k - 1] + 1; i < saiten[k]; i++) if (form[i] >= 0 && form[i] < bund) trennt = true;
+          if (trennt) gruppen++;
+        }
+        if (saiten.length > gruppen) barre = true;
+        finger += gruppen;
+      }
+      if (finger > 4) return null;
+      return { finger, tiefster, spanne, barre, klingend, offene, luecken };
+    }
+
+    // Kleiner ist besser: tiefe Lage, leere Saiten, viele klingende Saiten und wenige Finger.
+    function chordProFormGuete(b) {
+      return b.tiefster * 2.2 + b.finger * 1.2 + b.spanne * 0.6
+           - b.klingend.length * 2 - b.offene * 1.2 + (b.barre ? -0.8 : 0) + b.luecken * 3.5;
+    }
+
+    function chordProGriffVerschieben(form, n) {
+      const out = form.map((f) => (f < 0 ? -1 : f + n));
+      if (out.some((f) => f > 12)) return null;
+      if (out.some((f) => f < 0 && f !== -1)) return null;
+      return out;
+    }
+
+    // Tabellengriffe nach Intervallsatz gebündelt -- nach dem Satz und nicht nach der Kennung,
+    // damit '7sus' und '7sus4' (oder 'aug' und '+') dieselben Vorlagen benutzen.
+    function chordProGriffFormenIndex() {
+      if (chordProGriffFormen) return chordProGriffFormen;
+      chordProGriffFormen = {};
+      for (const name of Object.keys(CHORDPRO_GRIFFE)) {
+        const z = chordProGriffZerlegen(name);
+        if (!z || z.bass !== null) continue;
+        const schluessel = z.intervalle.join(',');
+        (chordProGriffFormen[schluessel] = chordProGriffFormen[schluessel] || []).push({ grund: z.grund, form: CHORDPRO_GRIFFE[name] });
+      }
+      return chordProGriffFormen;
+    }
+
+    function chordProGriffPasst(form, bassKlasse) {
+      const b = chordProFormBewerten(form);
+      if (!b) return null;
+      const tiefste = b.klingend[0];
+      if ((CHORDPRO_STANDARD_STIMMUNG[tiefste] + form[tiefste]) % 12 !== bassKlasse) return null;
+      return b;
+    }
+
+    function chordProGriffAusForm(intervalle, grund, bassKlasse) {
+      const quellen = chordProGriffFormenIndex()[intervalle.join(',')];
+      if (!quellen) return null;
+      let bester = null, besteGuete = Infinity;
+      for (const q of quellen) {
+        for (const oktave of [0, -12]) {
+          const n = ((((grund - q.grund) % 12) + 12) % 12) + oktave;
+          const form = chordProGriffVerschieben(q.form, n);
+          if (!form) continue;
+          const b = chordProGriffPasst(form, bassKlasse);
+          if (!b) continue;
+          const g = chordProFormGuete(b);
+          if (g < besteGuete) { besteGuete = g; bester = form; }
+        }
+      }
+      return bester;
+    }
+
+    function chordProGriffAusSuche(intervalle, grund, bassKlasse) {
+      const klassen = new Set(intervalle.map((i) => (grund + i) % 12));
+      klassen.add(bassKlasse);
+      // Pflichttöne: die Quinte darf ab vier Tönen entfallen, von den Optionstönen (9/11/13) muss
+      // nur der höchste da sein, und bei einem 11er entfallen Terz und Septime -- so greift man
+      // diese Akkorde auf sechs Saiten tatsächlich.
+      const optionen = intervalle.filter((i) => i >= 12);
+      const hoechste = optionen.length ? Math.max(...optionen) : null;
+      const pflicht = new Set();
+      for (const i of intervalle) {
+        if (i >= 12) { if (i === hoechste) pflicht.add((grund + i) % 12); continue; }
+        if (i === 7 && intervalle.length >= 4) continue;
+        if ((i === 4 || i === 10) && hoechste === 17) continue;
+        pflicht.add((grund + i) % 12);
+      }
+      let bester = null, besteGuete = Infinity;
+      const wahl = new Array(6);
+      for (let lage = 0; lage <= 9; lage++) {
+        const kandidaten = CHORDPRO_STANDARD_STIMMUNG.map((offen) => {
+          const buende = new Set([0, lage, lage + 1, lage + 2, lage + 3]);
+          const out = [-1];
+          for (const f of buende) { if (f < 0 || f > 12) continue; if (klassen.has((offen + f) % 12)) out.push(f); }
+          return out;
+        });
+        (function rekursiv(saite) {
+          if (saite === 6) {
+            const b = chordProGriffPasst(wahl, bassKlasse);
+            if (!b) return;
+            const da = new Set(b.klingend.map((i) => (CHORDPRO_STANDARD_STIMMUNG[i] + wahl[i]) % 12));
+            for (const p of pflicht) if (!da.has(p)) return;
+            const g = chordProFormGuete(b);
+            if (g < besteGuete) { besteGuete = g; bester = wahl.slice(); }
+            return;
+          }
+          for (const f of kandidaten[saite]) { wahl[saite] = f; rekursiv(saite + 1); }
+        })(0);
+      }
+      return bester;
+    }
+
+    function chordProGriffBerechnen(name) {
+      if (CHORDPRO_GRIFF_ZWISCHENSPEICHER.has(name)) return CHORDPRO_GRIFF_ZWISCHENSPEICHER.get(name);
+      let form = null;
+      const z = chordProGriffZerlegen(name);
+      if (z) {
+        const bassKlasse = z.bass !== null ? z.bass : z.grund;
+        if (z.bass === null) form = chordProGriffAusForm(z.intervalle, z.grund, bassKlasse);
+        if (!form) form = chordProGriffAusSuche(z.intervalle, z.grund, bassKlasse);
+      }
+      CHORDPRO_GRIFF_ZWISCHENSPEICHER.set(name, form);
+      return form;
+    }
+
+    // Selbstprüfung für die Konsole. Prüft JEDEN Griff -- die von Hand eingetragenen wie die
+    // berechneten -- gegen die Töne, die der Akkord haben muss: kein akkordfremder Ton, richtige
+    // Bassnote, Grundton vorhanden, mindestens vier klingende Saiten, höchstens vier Finger,
+    // Spanne höchstens drei Bünde. Ohne diese Prüfung könnte sich in der Tabelle ein falscher
+    // Fingersatz und im Generator ein falscher Akkord einschleichen, ohne dass es jemandem
+    // auffiele -- genau so wurden hier schon ein Dadd9 ohne Terz und ein m6 ohne Quinte gefunden.
+    function selfTestChordProGriffe(zusaetzlich) {
+      const namen = new Set(Object.keys(CHORDPRO_GRIFFE));
+      for (const grundton of ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']) {
+        for (const [kennung] of CHORDPRO_AKKORDARTEN) { namen.add(grundton + kennung); namen.add(grundton + kennung + '/G'); }
+      }
+      for (const n of (zusaetzlich || [])) namen.add(n);
+      const beanstandet = [];
+      let geprueft = 0, ohne = 0;
+      for (const name of namen) {
+        const treffer = chordProGriffFuerAnzeige(name);
+        if (!treffer) { ohne++; continue; }
+        geprueft++;
+        const z = chordProGriffZerlegen(name);
+        const probleme = [];
+        if (!z) probleme.push('Name nicht zerlegbar, aber Griff vorhanden');
+        else {
+          const soll = new Set(z.intervalle.map((i) => (z.grund + i) % 12));
+          if (z.bass !== null) soll.add(z.bass);
+          const form = treffer.form;
+          const klingend = [];
+          for (let i = 0; i < 6; i++) if (form[i] >= 0) klingend.push(i);
+          const toene = klingend.map((i) => (CHORDPRO_STANDARD_STIMMUNG[i] + form[i]) % 12);
+          const fremd = [...new Set(toene.filter((t) => !soll.has(t)))];
+          if (fremd.length) probleme.push('akkordfremde Töne: ' + fremd.join(','));
+          if (!toene.includes(z.grund)) probleme.push('Grundton fehlt');
+          if (toene[0] !== (z.bass !== null ? z.bass : z.grund)) probleme.push('falsche Bassnote');
+          const b = chordProFormBewerten(form);
+          if (!b) probleme.push('nach eigener Regel nicht greifbar');
+        }
+        if (probleme.length) beanstandet.push(name + ' [' + treffer.form.join(',') + '] -> ' + probleme.join('; '));
+      }
+      if (beanstandet.length) console.warn('selfTestChordProGriffe: ' + beanstandet.length + ' von ' + geprueft + ' beanstandet.', beanstandet.slice(0, 20));
+      else console.log('selfTestChordProGriffe: alle ' + geprueft + ' Griffe in Ordnung (' + ohne + ' Namen ohne Griff).');
+      return { geprueft, ohne, beanstandet };
+    }
+
+    // Der Zugang für die Anzeige: erst die geprüfte Tabelle, dann der berechnete Griff.
+    function chordProGriffFuerAnzeige(name) {
+      const tabelle = chordProGriffFinden(name);
+      if (tabelle) return { form: tabelle, berechnet: false };
+      const berechnet = chordProGriffBerechnen(name);
+      return berechnet ? { form: berechnet, berechnet: true } : null;
     }
 
 
@@ -18026,7 +18331,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (kasten) kasten.checked = chordProZweispaltig;
     }
 
-    function chordProGriffSvg(name, griff, quelle) {
+    function chordProGriffSvg(name, griff, quelle, berechnet) {
       const B = 5;                         // dargestellte Bünde
       const breite = 46, hoehe = 58;
       const links = 5, oben = 14;
@@ -18073,8 +18378,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // Akkordfeld im Text -- also auch über die Tastatur erreichbar sein. Gespielt wird wie dort
       // der KLINGENDE Akkord aus der Quelle, nicht der gegriffene Name; bei gesetztem Kapodaster
       // nennt der Tooltip beides.
-      const beschrift = (name === quelle) ? name + ' anhören' : name + ' greifen — klingt ' + quelle;
-      return '<button type="button" class="cp-griff" title="' + escapeHtmlText(beschrift) +
+      let beschrift = (name === quelle) ? name + ' anhören' : name + ' greifen — klingt ' + quelle;
+      // Berechnete Griffe werden im Tooltip als solche genannt. Sie sind harmonisch geprüft und
+      // spielbar, aber eben nicht von Hand ausgesucht wie die aus der Tabelle -- wer den Griff
+      // ungewohnt findet, soll den Grund erfahren, ohne dass die Leiste selbst unruhig wird.
+      if (berechnet) beschrift += ' (berechneter Griff)';
+      return '<button type="button" class="cp-griff' + (berechnet ? ' cp-griff-berechnet' : '') +
+             '" title="' + escapeHtmlText(beschrift) +
              '" onclick="chordProAkkordSpielen(' + JSON.stringify(quelle).replace(/"/g, '&quot;') + ', this)">' + t +
              '<span class="cp-griff-name">' + escapeHtmlText(name) + '</span></button>';
     }
@@ -18099,14 +18409,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (!gesehen.some((g) => g.angezeigt === angezeigt)) gesehen.push({ angezeigt, quelle: marke.name });
       }
       const teile = [];
+      const fehlend = [];
       for (const g of gesehen) {
-        const griff = chordProGriffFinden(g.angezeigt);
-        if (griff) teile.push(chordProGriffSvg(g.angezeigt, griff, g.quelle));
+        const griff = chordProGriffFuerAnzeige(g.angezeigt);
+        if (griff) teile.push(chordProGriffSvg(g.angezeigt, griff.form, g.quelle, griff.berechnet));
+        else fehlend.push(g.angezeigt);
       }
       // Die fehlenden beim NAMEN nennen statt nur zu zählen: meist sind es Schreibfehler
       // ('Cmajor7', 'Bbmin'), und nur mit dem Namen weiß man, wo zu korrigieren ist. Dieselben
       // Akkorde werden im Quelltext hervorgehoben (siehe renderChordProSourceHighlight).
-      const fehlend = gesehen.filter((g) => !chordProGriffFinden(g.angezeigt)).map((g) => g.angezeigt);
       if (!teile.length && !fehlend.length) return '';
       return '<div class="cp-griffleiste">' + teile.join('') +
         (fehlend.length ? '<span class="cp-griff-rest" title="Für diese Akkorde ist kein Griffbild hinterlegt. Häufig steckt ein Schreibfehler dahinter -- im Quelltext sind sie markiert.">ohne Griffbild: ' +
@@ -18150,9 +18461,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // was oberhalb des fünften Bundes anfängt, ist mit einem Kapodaster ohnehin unbequem.
     const CHORDPRO_KAPO_MAX = 7;
 
+    // Auch berechnete Griffe zählen mit: der Vorschlag soll die ganze Grifflage eines Liedes
+    // bewerten und nicht nur den Ausschnitt, der zufällig in der Tabelle steht.
     function chordProGriffAufwand(name) {
-      const griff = chordProGriffFinden(name);
-      if (!griff) return 'unbekannt';
+      const treffer = chordProGriffFuerAnzeige(name);
+      if (!treffer) return 'unbekannt';
+      const griff = treffer.form;
       const buende = griff.filter((f) => f > 0);
       const hoechster = buende.length ? Math.max(...buende) : 0;
       if (hoechster > 5) return 'hoch';
@@ -20598,7 +20912,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           // Ein Akkord ohne hinterlegtes Griffbild bekommt eine eigene Markierung -- meist steckt
           // ein Schreibfehler dahinter, und im Quelltext ist die Stelle, an der man ihn behebt.
           const marke = chordProMarkeArt(akkord.replace(/^\[|\]$/g, '').replace(/&amp;/g, '&'));
-          if (marke.art === 'akkord' && marke.name && !chordProGriffFinden(chordProAnzeigeName(marke.name))) {
+          if (marke.art === 'akkord' && marke.name && !chordProGriffFuerAnzeige(chordProAnzeigeName(marke.name))) {
             return '<span class="cp-src-akkord cp-src-akkord-unbekannt" title="Kein Griffbild hinterlegt -- Schreibweise prüfen">' + akkord + '</span>';
           }
           return '<span class="cp-src-akkord">' + akkord + '</span>';
