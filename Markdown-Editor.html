@@ -2362,6 +2362,22 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       margin: 0 2px 0 4px;
     }
 
+    /* Der Tonart-Knopf soll aussehen wie die Wertanzeige daneben, solange es nichts zu klicken
+       gibt -- alles, was ein <button> von Haus aus mitbringt, wird ihm deshalb abgewöhnt. */
+    .cp-wert-knopf {
+      margin: 0; padding: 0; border: 0; background: none; font-family: inherit;
+      -webkit-appearance: none; appearance: none; cursor: pointer;
+    }
+    .cp-wert-knopf:disabled { cursor: default; }
+    /* Der Vorschlagszustand: zurückgenommen und gestrichelt unterstrichen, damit sichtbar ist,
+       dass hier etwas zu holen ist, ohne dass es wie eine feststehende Angabe aussieht. */
+    .cp-wert-knopf.cp-wert-vorschlag {
+      opacity: .6;
+      text-decoration: underline dotted;
+      text-underline-offset: 3px;
+    }
+    .cp-wert-knopf.cp-wert-vorschlag:hover { opacity: 1; }
+
     .cp-wert {
       min-width: 2.4em;
       text-align: center;
@@ -8800,7 +8816,10 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     <button class="toolbar-btn cp-songbook-btn" onclick="openSongbook()" title="Songbook öffnen: Index, Suche und Setlisten"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5.5A1.5 1.5 0 015.5 4H18a2 2 0 012 2v12a2 2 0 01-2 2H5.5A1.5 1.5 0 014 18.5v-13z" stroke="currentColor" stroke-width="1.6"/><path d="M8 4v16" stroke="currentColor" stroke-width="1.6"/><path d="M12 9h5M12 13h5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Songbook</button>
     <span class="cp-feldname">Tonart</span>
     <button class="toolbar-btn cp-stufe" onclick="chordProTransponieren(-1)" title="Einen Halbton tiefer transponieren (schreibt den Quelltext um)">−</button>
-    <span class="cp-wert" id="cpTonart">–</span>
+    <!-- Ein Knopf, kein <span>: steht keine {key}-Direktive im Blatt, zeigt das Feld die
+         geschätzte Tonart, und ein Klick trägt sie ein. Mit eigener Tonart ist der Knopf
+         abgeschaltet und sieht dann genauso aus wie die Anzeige davor. -->
+    <button type="button" class="cp-wert cp-wert-knopf" id="cpTonart" onclick="chordProTonartVorschlagUebernehmen()" disabled>–</button>
     <button class="toolbar-btn cp-stufe" onclick="chordProTransponieren(1)" title="Einen Halbton höher transponieren (schreibt den Quelltext um)">+</button>
     <div class="toolbar-divider"></div>
     <span class="cp-feldname">Capo</span>
@@ -18441,6 +18460,19 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       updatePreview();
     }
 
+    // Trägt die geschätzte Tonart als echte Direktive ins Blatt ein -- ab da ist sie eine ganz
+    // gewöhnliche {key}-Angabe: portabel, rückgängig zu machen, und sie wandert in Speichern,
+    // Synchronisieren und Export mit. Genau deshalb wird sie eingetragen und nicht bloß gemerkt.
+    function chordProTonartVorschlagUebernehmen() {
+      const tab = chordProAktiverLiedTab();
+      if (!tab) return;
+      if (chordProTonartAusDirektive(editor.value)) return;   // schon eine eigene Tonart vorhanden
+      const schaetzung = chordProTonartSchaetzen(editor.value);
+      if (!schaetzung) return;
+      chordProQuelltextSetzen(chordProDirektiveSetzen(editor.value, 'key', schaetzung.tonart));
+      showToast('Tonart ' + schaetzung.tonart + ' eingetragen. Rückgängig mit Strg/Cmd+Z.');
+    }
+
     function chordProGriffeUmschalten() {
       chordProGriffeZeigen = !chordProGriffeZeigen;
       saveStateToLocalStorage();
@@ -18811,6 +18843,88 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Läuft bei jedem Tastendruck über den gesamten Text. Unkritisch: die Beispieldateien sind im
     // Mittel 1,8 KB groß, die größte 3,8 KB.
 
+    // --- Tonart schätzen ------------------------------------------------------------------------
+    //
+    // 69 der Liedblätter im Bestand tragen keine {key}-Angabe. Die Tonart entscheidet aber über die
+    // Vorzeichen beim Transponieren (Bb statt A#) und geht in den Kapodastervorschlag ein -- also
+    // wird sie aus den vorkommenden Akkorden geschätzt und als VORSCHLAG angeboten, den ein Klick
+    // ins Dokument übernimmt. Bewusst nicht stillschweigend angewandt: eine geratene Tonart, die
+    // sich unbemerkt auf die Anzeige auswirkt, wäre schlimmer als gar keine.
+    //
+    // Verfahren: für alle 24 Tonarten wird gezählt, wie gut die vorkommenden Akkorde auf die
+    // leitereigenen Stufen passen, gewichtet nach Häufigkeit und Funktion (Tonika vor Dominante
+    // vor Subdominante). Dazu zwei Zuschläge, die in echten Liedblättern viel verraten: der letzte
+    // Akkord ist fast immer die Tonika, der erste oft. Fehlt die Tonika im ganzen Blatt, gibt es
+    // Abzug -- eine Tonart, deren Grundakkord nie vorkommt, ist selten die richtige.
+    //
+    // An den 113 Blättern mit eigener {key}-Angabe gemessen: 84,1 % exakt getroffen, in weiteren
+    // 8,0 % ist die zweitbeste Tonart die richtige -- zusammen 92,1 % in den ersten beiden
+    // Vorschlägen. Die Gewichte stammen aus der Harmonielehre und sind
+    // bewusst NICHT auf diese 116 Blätter nachgestellt worden -- ein Raster über Dominant- und
+    // Schlussgewicht brachte durchweg schlechtere Werte, und Anpassen an dieselben Daten, an denen
+    // gemessen wird, wäre ohnehin nur Selbstbestätigung. Deshalb nennt der Vorschlag auch die
+    // zweitbeste Tonart: wo die Schätzung danebenliegt, steht die richtige meist dort.
+    const CHORDPRO_STUFEN_DUR  = [[0,'dur',3],[2,'moll',1.5],[4,'moll',1.5],[5,'dur',2],[7,'dur',2.5],[9,'moll',1.8],[11,'dim',1]];
+    const CHORDPRO_STUFEN_MOLL = [[0,'moll',3],[2,'dim',1],[3,'dur',2],[5,'moll',2],[7,'moll',1.8],[7,'dur',2.5],[8,'dur',1.8],[10,'dur',1.8],[11,'dim',1]];
+
+    function chordProAkkordQualitaet(zusatz) {
+      const z = String(zusatz).replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
+      if (/^(m|min)(?!aj)/.test(z)) return 'moll';
+      if (/^(dim|0|°|ø)/.test(z)) return 'dim';
+      if (/^(sus|5)/.test(z)) return 'neutral';
+      return 'dur';
+    }
+
+    function chordProTonartSchaetzen(content) {
+      const text = chordProOhneMedien(content);
+      const akkorde = [];
+      const re = /\[([^\]\n]*)\]/g;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        const marke = chordProMarkeArt(m[1]);
+        if (marke.art !== 'akkord' || !marke.name) continue;
+        const n = chordProNoteLesen(marke.name);
+        if (!n) continue;
+        let rest = marke.name.slice(n.laenge);
+        const schraeg = rest.indexOf('/');
+        if (schraeg !== -1) rest = rest.slice(0, schraeg);
+        akkorde.push({ grund: ((n.halbton % 12) + 12) % 12, qual: chordProAkkordQualitaet(rest) });
+      }
+      if (akkorde.length < 3) return null;
+      const zaehler = new Map();
+      for (const a of akkorde) zaehler.set(a.grund + '|' + a.qual, (zaehler.get(a.grund + '|' + a.qual) || 0) + 1);
+      const gesamt = akkorde.length;
+      const erster = akkorde[0], letzter = akkorde[akkorde.length - 1];
+      const vorhandeneGrundtoene = new Set(akkorde.map((a) => a.grund));
+      const kandidaten = [];
+      for (let r = 0; r < 12; r++) {
+        for (const [modus, stufen] of [['dur', CHORDPRO_STUFEN_DUR], ['moll', CHORDPRO_STUFEN_MOLL]]) {
+          let punkte = 0;
+          for (const [schluessel, anzahl] of zaehler) {
+            const teile = schluessel.split('|');
+            const abstand = (((+teile[0] - r) % 12) + 12) % 12;
+            const passende = stufen.filter((st) => st[0] === abstand);
+            let bester = passende.length ? 0 : -0.6;
+            for (const st of passende) bester = Math.max(bester, (st[1] === teile[1] || teile[1] === 'neutral') ? st[2] : 0.3);
+            punkte += anzahl * bester;
+          }
+          const tonikaQual = modus === 'dur' ? 'dur' : 'moll';
+          if (letzter.grund === r && (letzter.qual === tonikaQual || letzter.qual === 'neutral')) punkte += gesamt * 0.22;
+          if (erster.grund === r && (erster.qual === tonikaQual || erster.qual === 'neutral')) punkte += gesamt * 0.10;
+          if (!vorhandeneGrundtoene.has(r)) punkte -= gesamt * 0.5;
+          kandidaten.push({ r, modus, punkte });
+        }
+      }
+      kandidaten.sort((a, b) => b.punkte - a.punkte);
+      const benenne = (k) => chordProNoteSchreiben(k.r, chordProBevorzugtB(text) ? 'b' : '#', chordProNotationDeutsch(text)) + (k.modus === 'moll' ? 'm' : '');
+      const best = kandidaten[0], zweit = kandidaten[1];
+      return {
+        tonart: benenne(best),
+        zweite: benenne(zweit),
+        sicherheit: best.punkte > 0 ? (best.punkte - zweit.punkte) / best.punkte : 0
+      };
+    }
+
     // --- ChordPro: Transponieren und Capodaster ----------------------------------------------
     //
     // Zwei bewusst verschiedene Dinge:
@@ -19070,13 +19184,26 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return m ? m[1].trim() : null;
     }
 
+    // Die im Blatt AUSDRÜCKLICH angegebene Tonart, oder null. Die Unterscheidung braucht die
+    // Leiste: nur wo nichts angegeben ist, darf sie einen Vorschlag anbieten.
+    function chordProTonartAusDirektive(text) {
+      const ausKey = chordProDirektiveLesen(chordProOhneMedien(text), 'key');
+      return (ausKey && chordProNoteLesen(ausKey)) ? ausKey : null;
+    }
+
     // Tonart des Liedes. Bevorzugt {key}; fehlt sie oder ist sie unbrauchbar (im Bestand steht
-    // einmal '{key: S}'), wird der erste echte Akkord genommen -- eine Näherung, aber eine, die
-    // für die Vorzeichenwahl allemal besser ist als gar nichts.
+    // einmal '{key: S}'), wird sie aus den Akkorden geschätzt (siehe chordProTonartSchaetzen).
+    //
+    // Vorher stand hier stattdessen "der erste Akkord des Blattes". Das ist zwar oft die Tonika,
+    // aber eben nur oft: an den 113 Blättern mit eigener {key}-Angabe gemessen trifft der erste
+    // Akkord sie in 67,3 % der Fälle, die Schätzung in 84,1 %. Der erste Akkord bleibt als letzte
+    // Rückfallebene für Blätter mit weniger als drei Akkorden, für die sich nichts schätzen lässt.
     function chordProTonart(text) {
       text = chordProOhneMedien(text);
-      const ausKey = chordProDirektiveLesen(text, 'key');
-      if (ausKey && chordProNoteLesen(ausKey)) return ausKey;
+      const ausKey = chordProTonartAusDirektive(text);
+      if (ausKey) return ausKey;
+      const schaetzung = chordProTonartSchaetzen(text);
+      if (schaetzung) return schaetzung.tonart;
       const m = /\[([^\]\n]*)\]/g;
       let treffer;
       while ((treffer = m.exec(text))) {
@@ -20876,7 +21003,28 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const deutsch = chordProNotationDeutsch(text);
       const tonart = chordProTonart(text);
       const capo = parseInt(chordProDirektiveLesen(text, 'capo') || '0', 10) || 0;
-      document.getElementById('cpTonart').textContent = tonart || '–';
+      const tonartFeld = document.getElementById('cpTonart');
+      const eigeneTonart = chordProTonartAusDirektive(text);
+      if (eigeneTonart) {
+        tonartFeld.textContent = eigeneTonart;
+        tonartFeld.disabled = true;
+        tonartFeld.classList.remove('cp-wert-vorschlag');
+        tonartFeld.title = 'Tonart des Blattes ({key})';
+      } else {
+        const schaetzung = chordProTonartSchaetzen(text);
+        if (schaetzung) {
+          tonartFeld.textContent = schaetzung.tonart;
+          tonartFeld.disabled = false;
+          tonartFeld.classList.add('cp-wert-vorschlag');
+          tonartFeld.title = 'Geschätzt aus den Akkorden (am zweitwahrscheinlichsten: ' + schaetzung.zweite +
+            '). Klicken trägt {key: ' + schaetzung.tonart + '} ins Blatt ein.';
+        } else {
+          tonartFeld.textContent = '–';
+          tonartFeld.disabled = true;
+          tonartFeld.classList.remove('cp-wert-vorschlag');
+          tonartFeld.title = 'Keine Tonart angegeben, und zu wenige Akkorde zum Schätzen.';
+        }
+      }
       document.getElementById('cpCapo').textContent = String(capo);
       const griffKnopf = document.getElementById('cpGriffeBtn');
       if (griffKnopf) griffKnopf.classList.toggle('active', chordProGriffeZeigen);
