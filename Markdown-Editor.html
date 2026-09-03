@@ -2391,6 +2391,14 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       font-family: inherit;
     }
 
+    /* Der Ansichts-Knopf trägt ein Wort statt eines Zeichens. Die feste Mindestbreite ist die des
+       längsten der drei Wörter ("Akkorde") -- ohne sie änderte die halbe Leiste beim Durchschalten
+       ihre Breite und die Knöpfe rechts daneben sprängen. */
+    .toolbar-btn.cp-ansicht-btn {
+      min-width: 76px;
+      font-size: 0.82rem;
+    }
+
     /* Quelltextwerkzeuge in der Liedblatt-Leiste. Zwei Zustände: NICHT SICHTBAR (kein
        Quelltextfenster offen -- display:none) und SICHTBAR ABER GESPERRT (Quelltext offen, aber
        die Schreibmarke steht nicht darin). Der zweite Zustand ist bewusst kein display:none: die
@@ -5910,7 +5918,9 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     /* min-height hält die Akkordzeile auf konstanter Höhe, auch wo kein Akkord steht -- sonst
        springt die Textgrundlinie bei jeder Zeile ohne Anfangsakkord nach oben. */
     .markdown-body .cp-ak {
-      display: block; min-height: 1.35em; line-height: 1.35;
+      /* +2px für die Randstärke des Akkordkastens oben und unten: ohne sie stünde eine Zeile
+         ohne Akkord zwei Pixel enger als eine mit, und der Zeilenabstand wirkte unruhig. */
+      display: block; min-height: calc(1.35em + 2px); line-height: 1.35;
       font-size: .8em; font-weight: 700; white-space: pre;
       color: var(--preview-link);
     }
@@ -5925,6 +5935,22 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     }
     .markdown-body button.cp-ak:disabled { cursor: default; }
     .markdown-body button.cp-ak-akkord:hover { text-decoration: underline; }
+
+    /* Kasten um jeden Akkord: hellgraue Fläche, etwas dunklerer Rand, runde Ecken -- damit sich
+       zwei dicht benachbarte Akkorde nicht mehr optisch zu einem Wort verbinden.
+       Er ist ein eigenes Element INNERHALB der Akkordzelle, nicht die Zelle selbst: die Zelle ist
+       ein Block und damit so breit wie die Silbe darunter ('streets'), ein Hintergrund auf ihr
+       wäre also ein Balken über dem Wort statt eines Kastens um den Akkord.
+       Zweiter Grund: das Leerzeichen aus .cp-ak::after bleibt so AUSSERHALB des Kastens und hält
+       zwei benachbarte Kästen auseinander, statt den rechten Rand nach innen zu schieben.
+       Farben aus den Themenvariablen, damit der Kasten in den dunklen Designs mitgeht. */
+    .markdown-body .cp-ak-kasten {
+      display: inline-block;
+      padding: 0 .3em;
+      border: 1px solid var(--preview-border);
+      border-radius: 4px;
+      background-color: var(--preview-code-bg);
+    }
     .markdown-body button.cp-ak:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; border-radius: 2px; }
 
     /* Rückmeldung, solange der Akkord klingt. Ohne sie wirkt ein Klick auf einem stummgeschalteten
@@ -5932,11 +5958,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        Der Selektor nennt ausdrücklich button UND beide Klassen: die Regel '.markdown-body
        button.cp-ak { background: none }' darüber ist spezifischer als '.markdown-body
        .cp-ak-klingt' und gewann sonst -- die Klasse hing am Element, ohne dass sich etwas zeigte
-       (im Browser nachgemessen: Hintergrund blieb transparent). */
-    .markdown-body button.cp-ak.cp-ak-klingt {
+       (im Browser nachgemessen: Hintergrund blieb transparent). Eingefärbt wird der Kasten und
+       nicht der Knopf: der Knopf ist so breit wie die Silbe darunter, seine Fläche wäre ein
+       Balken über dem Wort. */
+    .markdown-body button.cp-ak.cp-ak-klingt .cp-ak-kasten {
       background-color: var(--preview-link);
+      border-color: var(--preview-link);
       color: var(--preview-bg);
-      border-radius: 3px;
     }
     .markdown-body .cp-tx { display: block; white-space: pre; min-height: 1.25em; }
 
@@ -5949,6 +5977,18 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     /* Reine Akkordzeile: die Leerzeichenketten zwischen den Marken sind hier die einzige
        Positionsangabe und müssen erhalten bleiben. */
     .markdown-body .cp-nur-akkorde { white-space: pre; overflow-x: auto; }
+
+    /* Die drei Ansichten aus der Liedblatt-Leiste. Die Klasse hängt am .cp-song und wandert damit
+       von selbst in den Druck, den HTML-Export und den Präsentationsmodus mit.
+       "Nur Text" blendet auch die Griffbilder aus -- es wäre widersprüchlich, die Akkorde
+       wegzunehmen und ihre Griffbilder stehen zu lassen. Die Griffbilder allein schaltet
+       weiterhin ihr eigener Knopf.
+       "Nur Akkorde" entfernt zusätzlich alle Zeilen ohne Akkord, sonst blieben die reinen
+       Textzeilen als leere Lücken stehen. */
+    .markdown-body .cp-song.cp-ansicht-text .cp-ak,
+    .markdown-body .cp-song.cp-ansicht-text .cp-griffleiste { display: none; }
+    .markdown-body .cp-song.cp-ansicht-akkorde .cp-tx { display: none; }
+    .markdown-body .cp-song.cp-ansicht-akkorde .cp-zeile:not(.cp-zeile-mit-akkord) { display: none; }
 
     .markdown-body .cp-luecke { height: .75em; }
 
@@ -8741,6 +8781,9 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          direkt neben den Capo-Knöpfen und sagt damit, worum es geht, ohne Beschriftung. -->
     <button class="toolbar-btn" id="cpTonartVorschlagBtn" onclick="chordProTonartFeldUmschalten(this)" title="Tonartvorschlag: bei welchem Kapodaster wird es am leichtesten greifbar?"><svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 3v14M8 3v14M12 3v14M16 3v14" stroke="currentColor" stroke-width="1"/><path d="M2.5 6.5h15M2.5 14h15" stroke="currentColor" stroke-width="1"/><rect x="1.5" y="9" width="17" height="2.6" rx="1.3" fill="currentColor"/></svg></button>
     <div class="toolbar-divider"></div>
+    <span class="cp-feldname">Ansicht</span>
+    <button class="toolbar-btn cp-stufe cp-ansicht-btn" id="cpAnsichtBtn" onclick="chordProAnsichtWeiter()" title="Akkorde und Text. Klicken blendet die Akkorde aus.">Alles</button>
+    <div class="toolbar-divider"></div>
     <span class="cp-feldname">Notation</span>
     <button class="toolbar-btn cp-stufe" id="cpNotationBtn" onclick="chordProNotationUmschalten()" title="Schreibweise umschalten">B</button>
     <div class="toolbar-divider"></div>
@@ -11360,6 +11403,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         metronomKlang: metronomKlang,
         stimmgeraetVoreinstellung: stimmgeraetVoreinstellung,
         chordProGriffeZeigen: chordProGriffeZeigen,
+        chordProAnsicht: chordProAnsicht,
         chordProZweispaltig: chordProZweispaltig,
         midiZuordnung: midiZuordnung,
         songbookEintraege: songbookEintraege,
@@ -11515,6 +11559,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (typeof state.metronomKlang === 'string') metronomKlang = state.metronomKlang;
         if (typeof state.stimmgeraetVoreinstellung === 'string') stimmgeraetVoreinstellung = state.stimmgeraetVoreinstellung;
         if (typeof state.chordProGriffeZeigen === 'boolean') chordProGriffeZeigen = state.chordProGriffeZeigen;
+        if (CHORDPRO_ANSICHTEN.some((a) => a.id === state.chordProAnsicht)) chordProAnsicht = state.chordProAnsicht;
         if (typeof state.chordProZweispaltig === 'boolean') chordProZweispaltig = state.chordProZweispaltig;
         if (state.midiZuordnung && typeof state.midiZuordnung === 'object') midiZuordnung = state.midiZuordnung;
         if (Array.isArray(state.songbookEintraege)) songbookEintraege = state.songbookEintraege;
@@ -17797,22 +17842,27 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return '<button type="button" class="' + klasse + '"' + pos +
              ' data-cp-akkord="' + escapeHtmlAttrText(seg.marke.name) + '"' +
              ' title="' + escapeHtmlAttrText(beschrift) + '">' +
-             beschriftung + '</button>';
+             '<span class="cp-ak-kasten">' + beschriftung + '</span></button>';
     }
 
     function chordProZeileHtml(segmente) {
       const einheiten = chordProWorteinheiten(chordProZellen(segmente));
-      let html = '<div class="cp-zeile">';
+      // Ob in dieser Zeile überhaupt ein Akkord steht, entscheidet in der Ansicht "nur Akkorde"
+      // darüber, ob sie stehen bleibt -- ohne diese Unterscheidung bestünde das Blatt dort zur
+      // Hälfte aus leeren Zeilen, nämlich allen reinen Textzeilen.
+      let hatAkkord = false;
+      let inneres = '';
       for (const e of einheiten) {
-        html += '<span class="' + (e.raum ? 'cp-raum' : 'cp-wort') + '">';
+        inneres += '<span class="' + (e.raum ? 'cp-raum' : 'cp-wort') + '">';
         for (const z of e.zellen) {
-          html += '<span class="cp-seg">' +
+          if (z.hatMarke && z.seg && z.seg.marke && z.seg.marke.art === 'akkord') hatAkkord = true;
+          inneres += '<span class="cp-seg">' +
                   (z.hatMarke ? chordProAkkordZelle(z.seg) : '<span class="cp-ak" aria-hidden="true"></span>') +
                   '<span class="cp-tx">' + chordProVerlinke(escapeHtmlText(z.text)) + '</span></span>';
         }
-        html += '</span>';
+        inneres += '</span>';
       }
-      return html + '</div>';
+      return '<div class="cp-zeile' + (hatAkkord ? ' cp-zeile-mit-akkord' : '') + '">' + inneres + '</div>';
     }
 
     // Reine Akkordzeilen bekommen einen eigenen Weg: dort ist die Länge der Leerzeichenketten
@@ -17820,7 +17870,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // z. B. '[A]        [E/G#]                  [F#m]' über der Textzeile darunter). Deshalb hier
     // white-space:pre statt Wortgruppierung -- und kein Umbruch an Wortgrenzen, den es nicht gibt.
     function chordProAkkordzeileHtml(segmente) {
-      let html = '<div class="cp-zeile cp-nur-akkorde">';
+      const hatAkkord = segmente.some((seg) => seg && seg.marke && seg.marke.art === 'akkord');
+      let html = '<div class="cp-zeile cp-nur-akkorde' + (hatAkkord ? ' cp-zeile-mit-akkord' : '') + '">';
       for (const seg of segmente) {
         html += '<span class="cp-seg">' + chordProAkkordZelle(seg) +
                 '<span class="cp-tx">' + escapeHtmlText(seg.text) + '</span></span>';
@@ -17923,6 +17974,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Saiten. Liegt der Griff oberhalb des ersten Bundes, steht die Bundnummer daneben und der
     // Sattel entfällt.
     let chordProGriffeZeigen = false;
+    let chordProAnsicht = 'alles';   // 'alles' | 'text' | 'akkorde', siehe CHORDPRO_ANSICHTEN
     // Zweispaltiger Druck. Eine Geräteeinstellung, keine Eigenschaft des Liedes -- sie hängt am
     // Papierformat und am Geschmack, nicht am Stück.
     let chordProZweispaltig = false;
@@ -18029,6 +18081,23 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return '<div class="cp-griffleiste">' + teile.join('') +
         (fehlend.length ? '<span class="cp-griff-rest" title="Für diese Akkorde ist kein Griffbild hinterlegt. Häufig steckt ein Schreibfehler dahinter -- im Quelltext sind sie markiert.">ohne Griffbild: ' +
           escapeHtmlText(fehlend.join(', ')) + '</span>' : '') + '</div>';
+    }
+
+    // Drei Ansichten für das Liedblatt. Bewusst ein durchschaltender Knopf und keine Auswahlliste:
+    // die Leiste zeigt damit ohne Aufklappen, was gerade gilt, und der title nennt jeweils, was der
+    // nächste Klick tut. Die Reihenfolge ist die des Gebrauchs -- vom vollständigen Blatt über das
+    // reine Textblatt zum reinen Akkordblatt.
+    const CHORDPRO_ANSICHTEN = [
+      { id: 'alles',   text: 'Alles',   titel: 'Akkorde und Text. Klicken blendet die Akkorde aus.' },
+      { id: 'text',    text: 'Text',    titel: 'Nur der Liedtext, ohne Akkorde und Griffbilder. Klicken blendet stattdessen den Text aus.' },
+      { id: 'akkorde', text: 'Akkorde', titel: 'Nur die Akkorde, ohne Liedtext. Klicken zeigt wieder alles.' }
+    ];
+
+    function chordProAnsichtWeiter() {
+      const i = CHORDPRO_ANSICHTEN.findIndex((a) => a.id === chordProAnsicht);
+      chordProAnsicht = CHORDPRO_ANSICHTEN[(i + 1) % CHORDPRO_ANSICHTEN.length].id;
+      saveStateToLocalStorage();
+      updatePreview();
     }
 
     function chordProGriffeUmschalten() {
@@ -18257,7 +18326,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         chordProAnzeigeVorzeichen = chordProVorzeichenArt(meta.key || null, chordProBevorzugtB(content));
       }
 
-      let html = '<div class="cp-song">';
+      const ansichtKlasse = chordProAnsicht === 'alles' ? '' : ' cp-ansicht-' + chordProAnsicht;
+      let html = '<div class="cp-song' + ansichtKlasse + '">';
 
       const titel = meta.title || '';
       const unter = meta.subtitle || '';
@@ -20459,6 +20529,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       document.getElementById('cpCapo').textContent = String(capo);
       const griffKnopf = document.getElementById('cpGriffeBtn');
       if (griffKnopf) griffKnopf.classList.toggle('active', chordProGriffeZeigen);
+      const ansichtKnopf = document.getElementById('cpAnsichtBtn');
+      if (ansichtKnopf) {
+        const a = CHORDPRO_ANSICHTEN.find((x) => x.id === chordProAnsicht) || CHORDPRO_ANSICHTEN[0];
+        ansichtKnopf.textContent = a.text;
+        ansichtKnopf.title = a.titel;
+        // 'active' nur, solange etwas ausgeblendet ist -- so sieht man am Knopf, dass das Blatt
+        // gerade unvollständig gezeigt wird, auch ohne die Beschriftung zu lesen.
+        ansichtKnopf.classList.toggle('active', chordProAnsicht !== 'alles');
+      }
       // Die Klasse hängt am body, nicht am Tab: sie muss auch dann stimmen, wenn der Zustand aus
       // dem Speicher kam und noch niemand etwas umgestellt hat.
       document.body.classList.toggle('cp-zweispaltig', chordProZweispaltig);
@@ -32188,13 +32267,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '  .markdown-body .cp-zeile { line-height: 1.25; margin: 0; }\n' +
         '  .markdown-body .cp-wort { display: inline-block; white-space: nowrap; vertical-align: bottom; }\n' +
         '  .markdown-body .cp-raum, .markdown-body .cp-seg { display: inline-block; vertical-align: bottom; }\n' +
-        '  .markdown-body .cp-ak { display: block; min-height: 1.35em; line-height: 1.35; font-size: .8em; font-weight: 700; white-space: pre; color: var(--preview-link); }\n' +
+        '  .markdown-body .cp-ak { display: block; min-height: calc(1.35em + 2px); line-height: 1.35; font-size: .8em; font-weight: 700; white-space: pre; color: var(--preview-link); }\n' +
+        '  .markdown-body .cp-ak-kasten { display: inline-block; padding: 0 .3em; border: 1px solid var(--preview-border); border-radius: 4px; background-color: var(--preview-code-bg); }\n' +
         '  .markdown-body .cp-ak::after { content: "\\00a0"; }\n' +
         '  .markdown-body button.cp-ak { margin: 0; padding: 0; border: 0; background: none; font-family: inherit; text-align: left; cursor: pointer; -webkit-appearance: none; appearance: none; }\n' +
         '  .markdown-body button.cp-ak:disabled { cursor: default; }\n' +
         '  .markdown-body .cp-tx { display: block; white-space: pre; min-height: 1.25em; }\n' +
         '  .markdown-body .cp-ak-takt, .markdown-body .cp-ak-schlag, .markdown-body .cp-ak-stille { color: var(--preview-text); opacity: .45; font-weight: 400; }\n' +
         '  .markdown-body .cp-nur-akkorde { white-space: pre; overflow-x: auto; }\n' +
+        '  .markdown-body .cp-song.cp-ansicht-text .cp-ak, .markdown-body .cp-song.cp-ansicht-text .cp-griffleiste { display: none; }\n' +
+        '  .markdown-body .cp-song.cp-ansicht-akkorde .cp-tx { display: none; }\n' +
+        '  .markdown-body .cp-song.cp-ansicht-akkorde .cp-zeile:not(.cp-zeile-mit-akkord) { display: none; }\n' +
         '  .markdown-body .cp-luecke { height: .75em; }\n' +
         '  .markdown-body .cp-griffleiste { display: flex; flex-wrap: wrap; gap: .6em; align-items: flex-start; margin: .2em 0 1em; padding-bottom: .8em; border-bottom: 1px solid var(--preview-border); }\n' +
         '  .markdown-body .cp-griff { display: inline-flex; flex-direction: column; align-items: center; color: var(--preview-text); border: none; background: none; font-family: inherit; padding: 3px 4px 1px; }\n' +
