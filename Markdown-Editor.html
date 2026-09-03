@@ -2579,6 +2579,37 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        bleibt es im Vollbild und im Teleprompter automatisch an derselben Stelle, ohne dass für
        jeden dieser Zustände eine eigene Regel nötig wäre. Es wächst nach links, weil es rechts
        verankert ist, und legt sich zusammengeklappt genau auf den Platz des alten Knopfes. */
+    /* Vortragsleiste, siehe den Kommentar am Markup. Oben links, damit sie dem Metronom oben
+       rechts nicht ins Gehege kommt. */
+    .vortrag-leiste {
+      display: none;
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      z-index: 10000;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 26px;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+      max-width: min(46vw, 420px);
+    }
+    .vortrag-leiste.active { display: flex; }
+    .vortrag-titel {
+      font-size: 0.85rem; font-weight: 600; color: var(--text-main);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .vortrag-zaehler {
+      font-size: 0.78rem; opacity: .6; font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    /* Auf schmalen Geräten reicht der Platz neben dem Metronom nicht für beide -- dann rückt die
+       Leiste unter die Kopfzeile und der Titel darf kürzer werden. */
+    @media (max-width: 640px) {
+      .vortrag-leiste { max-width: calc(100vw - 32px); }
+    }
+
     .chordpro-metronom {
       display: none;
       position: absolute;
@@ -9196,6 +9227,18 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          das Metronom genau dann gebraucht, wenn die feste Leiste weg ist, nämlich im Teleprompter
          und im Vollbild. Dieselbe Bauart wie .teleprompter-controls (position:fixed, hoher
          z-index), aber unten LINKS, weil unten mittig bereits die Teleprompter-Bedienung liegt. -->
+    <!-- Vortragsleiste. Gleiche Bauart wie das Metronom daneben (position:absolute in
+         #mainContainer, hoher z-index), aber oben LINKS: rechts sitzen bereits Metronom,
+         Inhaltsverzeichnis und der Vollbild-Ausstieg, und beide dürfen gleichzeitig sichtbar
+         sein. Damit bleibt sie auch im Vollbild und im Teleprompter erreichbar -- genau dort,
+         wo die Kopfzeile weg ist und man trotzdem zum nächsten Lied muss. -->
+    <div class="vortrag-leiste" id="vortragLeiste">
+      <button class="cp-metronom-knopf" id="vortragZurueck" onclick="vortragBlaettern(-1)" title="Vorheriges Lied">‹</button>
+      <span class="vortrag-titel" id="vortragTitel"></span>
+      <span class="vortrag-zaehler" id="vortragZaehler"></span>
+      <button class="cp-metronom-knopf" id="vortragVor" onclick="vortragBlaettern(1)" title="Nächstes Lied">›</button>
+      <button class="cp-metronom-knopf" onclick="vortragBeenden()" title="Vortragsmodus beenden">✕</button>
+    </div>
     <div class="chordpro-metronom" id="chordproMetronom">
       <button class="cp-metronom-start" id="cpMetronomStart" onclick="chordProMetronomUmschalten()" title="Metronom starten">▶</button>
       <span class="cp-metronom-puls" id="cpMetronomPuls" aria-hidden="true"></span>
@@ -11458,6 +11501,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         songbookEintraege: songbookEintraege,
         songbookOrdnerName: songbookOrdnerName,
         songbookSetlists: songbookSetlists,
+        vortragSetlist: vortragSetlist,
+        vortragIndex: vortragIndex,
         metronomLautstaerke: metronomLautstaerke,
         webdavPendingDeletions: webdavPendingDeletions
       };
@@ -11614,6 +11659,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (Array.isArray(state.songbookEintraege)) songbookEintraege = state.songbookEintraege;
         if (typeof state.songbookOrdnerName === 'string') songbookOrdnerName = state.songbookOrdnerName;
         if (Array.isArray(state.songbookSetlists)) songbookSetlists = state.songbookSetlists;
+        if (typeof state.vortragSetlist === 'string') vortragSetlist = state.vortragSetlist;
+        if (typeof state.vortragIndex === 'number') vortragIndex = state.vortragIndex;
         if (typeof state.metronomLautstaerke === 'number') metronomLautstaerke = state.metronomLautstaerke;
         // Falls back to the OLD simpleMode boolean (pre-dating operatingMode) when no
         // operatingMode key exists yet, so a session that had Simple Modus on before this upgrade
@@ -15151,6 +15198,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       updateThemePickerForCanvasMode(canvasNoBox);
       updateTableControlsVisibility();
       updateChordproControlsVisibility();
+      updateVortragLeiste();
       // Ein Ansichtswechsel ändert die Breite des Vorschaubereichs und damit die Lage der Box auf
       // dem Bildschirm. Overlay und Auswahlschicht sitzen beide an deren aktueller Position und
       // müssen deshalb neu ausgerichtet werden -- aus demselben Grund, aus dem das Ziehen der
@@ -16583,6 +16631,99 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         : auf + ' von ' + liste.dateien.length + ' Liedern geöffnet -- der Rest war nicht erreichbar.');
     }
 
+    // --- Vortragsmodus --------------------------------------------------------------------------
+    //
+    // Eine Setliste durchspielen, ohne zwischen den Liedern in den Index zurückzumüssen: eine
+    // schmale Leiste nennt Titel und Position, zwei Pfeile blättern, und dieselben zwei Schritte
+    // liegen auf dem Fußschalter (siehe MIDI_AKTIONEN). Genau dafür ist der Modus da -- die Hände
+    // sind am Instrument.
+    //
+    // Die Leiste sitzt wie das Metronom position:absolute in #mainContainer und nicht in der
+    // Kopfzeile: so bleibt sie im Vollbild und im Teleprompter an derselben Stelle sichtbar, ohne
+    // dass es für jeden dieser Zustände eine eigene Regel bräuchte -- und genau dort wird sie
+    // gebraucht.
+    //
+    // Ein Lied wird als gewöhnliche Notiz geöffnet. Ist es schon offen, wird dorthin gewechselt
+    // statt es ein zweites Mal zu öffnen: sonst wüchse beim Hin- und Herblättern die Notizleiste
+    // mit jedem Schritt, und eine unterwegs gemachte Notiz im Lied ginge verloren.
+    let vortragSetlist = null;
+    let vortragIndex = 0;
+
+    function vortragListe() {
+      return vortragSetlist ? songbookSetlists.find((s) => s.id === vortragSetlist) || null : null;
+    }
+
+    async function vortragStarten(id) {
+      const liste = songbookSetlists.find((s) => s.id === id);
+      if (!liste || !liste.dateien.length) return;
+      vortragSetlist = id;
+      vortragIndex = 0;
+      closeSongbook();
+      saveStateToLocalStorage();
+      await vortragZuIndex(0);
+    }
+
+    function vortragBeenden() {
+      vortragSetlist = null;
+      vortragIndex = 0;
+      saveStateToLocalStorage();
+      updateVortragLeiste();
+    }
+
+    async function vortragZuIndex(i) {
+      const liste = vortragListe();
+      if (!liste || !liste.dateien.length) return;
+      vortragIndex = Math.max(0, Math.min(liste.dateien.length - 1, i));
+      const datei = liste.dateien[vortragIndex];
+      const offen = tabs.find((t) => t.name === datei);
+      if (offen) {
+        switchTab(offen.id);
+      } else {
+        const text = await songbookInhalt(datei);
+        if (text === null) {
+          showToast('„' + datei + '" ist gerade nicht erreichbar. Bitte den Ordner erneut wählen.');
+          updateVortragLeiste();
+          return;
+        }
+        createNewTab(datei, text);
+      }
+      saveStateToLocalStorage();
+      updateVortragLeiste();
+    }
+
+    function vortragBlaettern(richtung) {
+      const liste = vortragListe();
+      if (!liste) return;
+      const ziel = vortragIndex + richtung;
+      if (ziel < 0 || ziel >= liste.dateien.length) return;   // an den Enden still stehenbleiben
+      vortragZuIndex(ziel);
+    }
+
+    function updateVortragLeiste() {
+      const leiste = document.getElementById('vortragLeiste');
+      if (!leiste) return;
+      const liste = vortragListe();
+      if (!liste || !liste.dateien.length) {
+        leiste.classList.remove('active');
+        return;
+      }
+      // Wechselt der Nutzer die Notiz von Hand, folgt die Zählung -- sonst zeigte die Leiste eine
+      // Position an, die mit dem sichtbaren Lied nichts mehr zu tun hat.
+      const aktiv = getCurrentTab();
+      if (aktiv) {
+        const gefunden = liste.dateien.indexOf(aktiv.name);
+        if (gefunden !== -1) vortragIndex = gefunden;
+      }
+      const datei = liste.dateien[vortragIndex];
+      const eintrag = songbookEintraege.find((x) => x.datei === datei);
+      leiste.classList.add('active');
+      document.getElementById('vortragTitel').textContent = eintrag ? eintrag.titel : datei;
+      document.getElementById('vortragZaehler').textContent = (vortragIndex + 1) + '/' + liste.dateien.length;
+      document.getElementById('vortragZurueck').disabled = vortragIndex <= 0;
+      document.getElementById('vortragVor').disabled = vortragIndex >= liste.dateien.length - 1;
+      leiste.title = 'Vortrag: ' + liste.name;
+    }
+
     // --- Setlisten ------------------------------------------------------------------------------
     //
     // Eine Setliste ist eine benannte Reihenfolge von DATEINAMEN, nicht von Inhalten. Damit bleibt
@@ -16791,12 +16932,18 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         auf.title = 'Alle Lieder dieser Setliste als Notizen öffnen';
         auf.disabled = !sl.dateien.length;
         auf.onclick = () => songbookSetlistOeffnen(sl.id);
+        const vortrag = document.createElement('button');
+        vortrag.className = 'cp-metronom-knopf';
+        vortrag.textContent = '▶';
+        vortrag.title = 'Vortragsmodus: von Lied zu Lied blättern, ohne in den Index zurückzugehen';
+        vortrag.disabled = !sl.dateien.length;
+        vortrag.onclick = () => vortragStarten(sl.id);
         const weg = document.createElement('button');
         weg.className = 'cp-metronom-knopf';
         weg.textContent = '✕';
         weg.title = 'Setliste löschen';
         weg.onclick = () => songbookSetlistLoeschen(sl.id);
-        kopf.append(name, auf, weg);
+        kopf.append(name, vortrag, auf, weg);
         kasten.appendChild(kopf);
 
         if (sl.id === songbookAktiveSetlist) {
@@ -16851,6 +16998,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       { id: 'vor',       name: 'Seite vor' },
       { id: 'zurueck',   name: 'Seite zurück' },
       { id: 'beenden',   name: 'Teleprompter beenden' },
+      { id: 'lied-vor',     name: 'Nächstes Lied (Setliste)' },
+      { id: 'lied-zurueck', name: 'Vorheriges Lied (Setliste)' },
     ];
 
     let midiZugang = null;
@@ -16899,6 +17048,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     function midiAktionAusfuehren(id) {
+      // Die beiden Setlisten-Schritte gelten IMMER, nicht nur im Teleprompter: zum nächsten Lied
+      // muss man auch dann kommen, wenn man das Blatt einfach nur liest. Deshalb stehen sie vor
+      // der Teleprompter-Abfrage darunter.
+      if (id === 'lied-vor')     { vortragBlaettern(1);  return; }
+      if (id === 'lied-zurueck') { vortragBlaettern(-1); return; }
       // Außerhalb des Teleprompters tut nur "Start" etwas -- es startet ihn. Alles andere ohne
       // laufenden Teleprompter wäre wirkungslos und würde nur verwirren.
       if (!teleprompterActive) {
@@ -21257,6 +21411,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!isEditingCanvasBox) updateTabNameFromFirstHeading(); // a box's heading isn't the tab's
       updateTableControlsVisibility();
       updateChordproControlsVisibility();
+      updateVortragLeiste();
       // Must run after attachMarkdownTableCellPositions() above — it locates the formula's target
       // cell in the fresh DOM via the same data-start attribute that call just (re)assigned.
       updateFormulaEditState();
