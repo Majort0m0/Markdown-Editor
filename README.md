@@ -73,7 +73,7 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 - **Stimmgerät** — nach Gehör oder chromatisch übers Mikrofon, mit zwölf Stimmungen für Gitarre, Bass und Ukulele
 - **Import fremder Akkordblätter** — Text mit Akkorden über den Zeilen wird zu ChordPro; Überschriften werden zu Abschnitten, Tabulaturen bleiben erhalten, Tonart/Tempo/Capo werden erkannt oder lassen sich vorgeben
 - **Songbook mit Setlisten** — ein Ordner voller Liedblätter wird zum durchsuchbaren Index; Setlisten lassen sich zusammenstellen und im **Vortragsmodus** ohne Umweg über den Index durchspielen
-- **Fußschalter über MIDI oder Tastatur** — Belegung wird gelernt statt vorgegeben: Teleprompter starten, Tempo, Blättern, nächstes/vorheriges Lied der Setliste und Metronom Start/Stopp. Da iPhone und iPad kein Web-MIDI kennen, lässt sich alternativ eine **Taste** je Aktion lernen — die meisten Fußschalter lassen sich am Gerät auf Tastatur umstellen und funktionieren dann überall, auch über eine https-Adresse
+- **Fußschalter über MIDI oder Tastatur** — Belegung wird gelernt statt vorgegeben: Teleprompter starten, Tempo, Blättern, nächstes/vorheriges Lied der Setliste und Metronom Start/Stopp. Da iPhone und iPad kein Web-MIDI kennen, lässt sich alternativ eine **Taste** je Aktion lernen — die meisten Fußschalter lassen sich am Gerät auf Tastatur umstellen und funktionieren dann überall, auch über eine https-Adresse. Für iPad und iPhone gibt es zusätzlich einen Schalter, der die Anschläge zuverlässig in die Seite lenkt, sowie eine Anzeige, ob vom Pedal überhaupt eine Taste ankommt
 
 ### Vorschau & Darstellung
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau

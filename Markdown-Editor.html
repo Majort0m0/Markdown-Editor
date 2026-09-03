@@ -3193,6 +3193,34 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     /* Breiter als die üblichen 440px: jede Zeile trägt jetzt ZWEI Belegungen (MIDI und Taste)
        mit je Wert, Lern- und Löschknopf. In der schmalen Standardkarte wurde die zweite Spalte
        schlicht abgeschnitten. */
+    /* Unsichtbar, aber vorhanden: ein Element mit display:none oder visibility:hidden ist nicht
+       fokussierbar und finge gar nichts. position:fixed am unteren Rand, damit das Fokussieren die
+       Seite nicht scrollt; pointer-events:none, damit es keine Berührung abfängt. */
+    .midi-schalter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 10px 0 4px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .midi-hinweis-klein { font-size: 0.8rem; margin-top: 0; }
+
+    .pedal-faenger {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      border: 0;
+      opacity: 0;
+      background: transparent;
+      pointer-events: none;
+      z-index: -1;
+    }
+
     /* Zwei Klassen im Selektor, nicht eine: .modal-card steht weiter unten in dieser Datei und
        gewänne bei gleicher Spezifität mit seinen 440px -- die zweite Spalte blieb abgeschnitten. */
     .modal-card.fussschalter-karte { max-width: 620px; }
@@ -9107,6 +9135,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
   <!-- Fußschalter-Zuordnung. Gewöhnliches Modal nach dem geteilten Muster: ✕, Klick auf den
        Hintergrund, Escape. -->
+  <!-- Fängt die Anschläge eines als Tastatur betriebenen Fußschalters auf, siehe
+       pedalFaengerAktualisieren(). Kein display:none -- was nicht dargestellt wird, kann keinen
+       Fokus bekommen. inputmode="none" hält die Bildschirmtastatur zu. -->
+  <input type="text" id="pedalFaenger" class="pedal-faenger" inputmode="none"
+         autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+         aria-hidden="true" tabindex="-1" oninput="this.value = ''">
+
   <div class="modal-overlay" id="midiModal" onclick="if (event.target === this) closeMidiModal()">
     <div class="modal-card fussschalter-karte">
       <div class="modal-header">
@@ -9125,8 +9160,19 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         Zusatztaste löst nur aus, solange nicht gerade in einem Textfeld geschrieben wird.
       </p>
       <div class="midi-geraete" id="midiGeraete"></div>
+      <label class="midi-schalter">
+        <input type="checkbox" id="pedalFangenFeld" onchange="pedalFaengerSetzen(this.checked)">
+        <span>Tastenempfang für iPhone und iPad</span>
+      </label>
+      <p class="midi-hinweis midi-hinweis-klein">
+        Hält im Hintergrund ein unsichtbares Eingabefeld im Fokus, damit die Anschläge des
+        Fußschalters in der Seite ankommen — ohne dass die Bildschirmtastatur aufgeht. Am iPad
+        wirkt ein solcher Schalter sonst oft nur, solange zusätzlich eine richtige Tastatur
+        angeschlossen ist. Beim Schreiben wird der Fokus nicht weggenommen.
+      </p>
       <div id="midiListe"></div>
       <div class="midi-meldung" id="midiMeldung"></div>
+      <div class="midi-meldung" id="tastenMeldung"></div>
     </div>
   </div>
 
@@ -11625,6 +11671,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         chordProZweispaltig: chordProZweispaltig,
         midiZuordnung: midiZuordnung,
         fussschalterTasten: fussschalterTasten,
+        pedalFangenAktiv: pedalFangenAktiv,
         songbookEintraege: songbookEintraege,
         songbookOrdnerName: songbookOrdnerName,
         songbookSetlists: songbookSetlists,
@@ -11784,6 +11831,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (typeof state.chordProZweispaltig === 'boolean') chordProZweispaltig = state.chordProZweispaltig;
         if (state.midiZuordnung && typeof state.midiZuordnung === 'object') midiZuordnung = state.midiZuordnung;
         if (state.fussschalterTasten && typeof state.fussschalterTasten === 'object') fussschalterTasten = state.fussschalterTasten;
+        if (typeof state.pedalFangenAktiv === 'boolean') pedalFangenAktiv = state.pedalFangenAktiv;
         if (Array.isArray(state.songbookEintraege)) songbookEintraege = state.songbookEintraege;
         if (typeof state.songbookOrdnerName === 'string') songbookOrdnerName = state.songbookOrdnerName;
         if (Array.isArray(state.songbookSetlists)) songbookSetlists = state.songbookSetlists;
@@ -17162,6 +17210,57 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // MIDI: Aktion wählen, Pedal treten.
     let fussschalterTasten = {};   // aktionId -> { code, ctrl, alt, shift }
     let tastenLernAktion = null;
+    let tastenLetzteMeldung = '';  // Diagnose: was kam zuletzt überhaupt an?
+
+    // --- Tastenempfang für iPhone und iPad -----------------------------------------------------
+    //
+    // Gemeldet: der Fußschalter im Tastatur-Modus wirkt am iPad nur, solange zusätzlich eine
+    // richtige Tastatur (Magic Keyboard) angeschlossen ist. iOS an dieser Stelle etwas
+    // vorzutäuschen ist von einer Webseite aus nicht möglich -- ob eine Tastatur verbunden ist,
+    // weiß nur das Betriebssystem, und kein Web-API rührt daran.
+    //
+    // Beeinflussbar ist die andere Seite: ob die Anschläge in der Seite ANKOMMEN. iOS liefert sie
+    // zuverlässig an ein Element, das den Fokus hat; ohne Fokus gehen sie oft an das System statt
+    // an die Seite. Deshalb ein unsichtbares Eingabefeld, das den Fokus hält und die Anschläge
+    // auffängt. inputmode="none" verhindert dabei, dass die Bildschirmtastatur aufgeht -- ein
+    // gewöhnliches Eingabefeld wäre sonst genau das Gegenteil von dem, was man auf der Bühne will.
+    //
+    // Bewusst zuschaltbar und nicht immer an: das Feld hält den Fokus, und das ist eine spürbare
+    // Nebenwirkung, die niemand bekommen soll, der den Fußschalter gar nicht benutzt.
+    let pedalFangenAktiv = false;
+
+    function pedalFaengerSetzen(an) {
+      pedalFangenAktiv = !!an;
+      saveStateToLocalStorage();
+      pedalFaengerAktualisieren();
+      updateMidiModal();
+    }
+
+    function pedalFaengerAktualisieren() {
+      const feld = document.getElementById('pedalFaenger');
+      if (!feld) return;
+      if (!pedalFangenAktiv) {
+        if (document.activeElement === feld) feld.blur();
+        return;
+      }
+      // Nicht, solange ein Dialog offen ist: dort will man Felder anklicken und mit Tabulator
+      // wandern, und der Empfänger risse den Fokus nach jedem Klick wieder an sich.
+      if (document.querySelector('.modal-overlay.active')) return;
+      // Niemals den Fokus aus etwas herausziehen, worin gerade geschrieben wird -- sonst landete
+      // der nächste Buchstabe im Nirgendwo statt im Text.
+      const aktiv = document.activeElement;
+      if (aktiv && aktiv !== feld && aktiv !== document.body &&
+          (aktiv.tagName === 'TEXTAREA' || aktiv.tagName === 'INPUT' ||
+           aktiv.tagName === 'SELECT' || aktiv.isContentEditable)) return;
+      if (aktiv !== feld) feld.focus({ preventScroll: true });
+    }
+
+    // Den Fokus zurückholen, wo er verlorengeht: nach jedem Antippen, beim Zurückkommen aus einer
+    // anderen App und immer, wenn ein Element ihn abgibt. setTimeout(0), damit erst feststeht,
+    // wohin der Fokus überhaupt gewandert ist.
+    document.addEventListener('focusout', () => { if (pedalFangenAktiv) setTimeout(pedalFaengerAktualisieren, 0); });
+    document.addEventListener('pointerup', () => { if (pedalFangenAktiv) setTimeout(pedalFaengerAktualisieren, 0); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) pedalFaengerAktualisieren(); });
 
     function tastenLernenStarten(id) {
       tastenLernAktion = id;
@@ -17179,6 +17278,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Belegung schon mit dem Festhalten von Umschalt fertig.
     function tastenLernenAufnehmen(e) {
       if (SHORTCUT_MODIFIER_CODES.has(e.code)) return false;
+      tastenLetzteMeldung = formatComboParts(comboFromEvent(e)).join('+');
       const belegung = comboFromEvent(e);
       // Eine schon anderweitig vergebene Taste wird umgehängt, nicht doppelt belegt -- dieselbe
       // Regel wie beim MIDI-Lernen darüber.
@@ -17210,6 +17310,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     function schreibtGeradeText() {
       const el = document.activeElement;
       if (!el) return false;
+      // Der Pedal-Empfänger ist zwar ein <input>, aber niemand schreibt darin -- er ist genau
+      // dafür da, Anschläge entgegenzunehmen. Er darf die Belegung also nicht blockieren.
+      if (el.id === 'pedalFaenger') return false;
       return el.tagName === 'TEXTAREA' || el.tagName === 'INPUT' || el.isContentEditable;
     }
 
@@ -17224,6 +17327,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // Während der Dialog offen ist, wird eingestellt und nicht ausgelöst.
       const dialog = document.getElementById('midiModal');
       if (dialog && dialog.classList.contains('active')) return false;
+      // Auch ohne Treffer festhalten, was ankam: bei einem Fußschalter, der gar keine
+      // gewöhnliche Taste sendet (manche schicken Mediensteuerbefehle), bleibt diese Zeile leer --
+      // und genau das ist die Auskunft, die man dann braucht.
+      if (!SHORTCUT_MODIFIER_CODES.has(e.code)) {
+        tastenLetzteMeldung = formatComboParts(comboFromEvent(e)).join('+');
+        const anzeige = document.getElementById('midiModal');
+        if (anzeige && anzeige.classList.contains('active')) updateMidiModal();
+      }
       const id = tastenBelegungFinden(e);
       if (!id) return false;
       // Eine Taste OHNE Zusatztaste erzeugt beim Schreiben Text. Sie löst deshalb nur aus, wenn
@@ -17387,6 +17498,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
       const meldung = document.getElementById('midiMeldung');
       if (meldung) meldung.textContent = midiLetzteMeldung ? 'Zuletzt empfangen: ' + midiLetzteMeldung : '';
+      const schalter = document.getElementById('pedalFangenFeld');
+      if (schalter) schalter.checked = pedalFangenAktiv;
+      // Diese Zeile ist die eigentliche Fehlersuche: kommt vom Pedal überhaupt eine Taste an?
+      // Bleibt sie beim Treten leer, sendet es keine gewöhnliche Taste -- dann hilft auch der
+      // Empfänger nichts, und es ist am Gerät selbst umzustellen.
+      const tastenZeile = document.getElementById('tastenMeldung');
+      if (tastenZeile) tastenZeile.textContent = tastenLetzteMeldung
+        ? 'Zuletzt gedrückte Taste: ' + tastenLetzteMeldung
+        : 'Noch keine Taste empfangen. Tritt das Pedal einmal — erscheint hier nichts, sendet es keine gewöhnliche Taste.';
       feld.innerHTML = '';
       for (const a of MIDI_AKTIONEN) {
         const zeile = document.createElement('div');
@@ -39508,6 +39628,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // (idempotent) on the loadStateFromLocalStorage()-success path, which already called it once
     // internally with the exact same (now-current) operatingMode value.
     dateiauswahlFuerIosOeffnen();
+    pedalFaengerAktualisieren();
     applyOperatingMode(operatingMode);
     // Same reasoning/bug class as the applyOperatingMode() call right above -- a genuine first-ever
     // visit takes the createNewTab() fallback, which never runs loadStateFromLocalStorage()'s own
