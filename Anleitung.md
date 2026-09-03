@@ -460,11 +460,21 @@ Der Dialog sagt jeweils, woran es liegt, wenn MIDI nicht verfügbar ist.
 
 Eine Taste **ohne Zusatztaste** (also z. B. einfach `F9`) löst nur aus, solange nicht gerade in einem Textfeld geschrieben wird — sonst tippte das Pedal mitten in den Liedtext. Beim Lesen, im Vollbild und im Teleprompter ist das immer der Fall. Mit `Strg`, `Alt` oder `Cmd` entsteht ohnehin kein Text, dort gilt sie überall.
 
-**Tastenempfang für iPhone und iPad.** Am iPad wirkt ein als Tastatur betriebener Fußschalter oft nur, solange zusätzlich eine richtige Tastatur (z. B. das Magic Keyboard) angeschlossen ist. Der Grund liegt in iOS: ohne erkannte Tastatur landen die Anschläge häufig beim System statt in der Webseite. **Vortäuschen lässt sich das nicht** — ob eine Tastatur verbunden ist, weiß nur das Betriebssystem, und keine Webseite kommt daran heran.
+### Fußschalter am iPad — was tatsächlich nötig ist
 
-Beeinflussen lässt sich die andere Seite: ob die Anschläge in der Seite *ankommen*. Der Schalter **„Tastenempfang für iPhone und iPad"** im Dialog hält dafür im Hintergrund ein unsichtbares Eingabefeld im Fokus, das die Anschläge auffängt — ohne dass die Bildschirmtastatur aufgeht. Beim Schreiben wird der Fokus nicht weggenommen, und ausgeschaltet ist der Schalter standardmäßig.
+Ausprobiert mit dem **M-Vave Chocolate**; das Ergebnis gilt vermutlich für vergleichbare Geräte. Am iPad funktioniert der Fußschalter **nur**, wenn beide Bedingungen zugleich erfüllt sind:
 
-**Wenn auch das nicht hilft:** die Zeile *„Zuletzt gedrückte Taste"* unten im Dialog sagt, ob vom Pedal überhaupt etwas ankommt. Bleibt sie beim Treten leer, sendet der Fußschalter keine gewöhnliche Taste (manche Modelle schicken Mediensteuerbefehle wie Play/Pause, die eine Webseite nicht sieht). Dann hilft nur, ihn am Gerät selbst auf normale Tasten umzustellen.
+1. Der Fußschalter steht am Gerät auf dem **Tasten-Profil** (nicht MIDI). MIDI im Browser gibt es auf iPhone und iPad überhaupt nicht.
+2. Es ist **gleichzeitig eine Tastatur verbunden** — Magic Keyboard oder irgendeine andere Bluetooth-Tastatur.
+
+Ohne verbundene Tastatur bleibt der Fußschalter wirkungslos, auch wenn er richtig gekoppelt ist und im Tasten-Profil steht. Der Grund liegt in iOS: erst mit einer erkannten Tastatur leitet das System die Anschläge an die Webseite weiter. **Von der Seite aus lässt sich daran nichts ändern** — ob eine Tastatur verbunden ist, weiß nur das Betriebssystem, und keine Webseite kommt daran heran. Eine zweite, dauerhaft gekoppelte Bluetooth-Tastatur im Notenständer-Aufbau genügt; sie muss nicht benutzt werden.
+
+Am Rechner (Windows, macOS, Linux) gilt das nicht: dort reicht der Fußschalter allein, wahlweise über MIDI oder als Tastatur.
+
+**Zwei Hilfen im Dialog**, falls es trotzdem hakt:
+
+- Der Schalter **„Tastenempfang für iPhone und iPad"** hält im Hintergrund ein unsichtbares Eingabefeld im Fokus, damit die Anschläge sicher in der Seite landen, ohne dass die Bildschirmtastatur aufgeht. Er ersetzt die verbundene Tastatur **nicht** — er hilft nur gegen Fokusprobleme. Standardmäßig aus.
+- Die Zeile **„Zuletzt gedrückte Taste"** sagt, ob vom Pedal überhaupt etwas ankommt. Bleibt sie beim Treten leer, sendet der Fußschalter keine gewöhnliche Taste (manche Modelle schicken Mediensteuerbefehle wie Play/Pause, die eine Webseite nicht sieht) — oder es fehlt die verbundene Tastatur.
 
 ### Drucken und Exportieren
 
