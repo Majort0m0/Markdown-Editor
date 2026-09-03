@@ -2364,11 +2364,46 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     /* Der Tonart-Knopf soll aussehen wie die Wertanzeige daneben, solange es nichts zu klicken
        gibt -- alles, was ein <button> von Haus aus mitbringt, wird ihm deshalb abgewöhnt. */
+    /* Griffeditor. Das Raster ist das Griffbrett von oben: sechs Spalten (Saiten), fünf Reihen
+       (Bünde). Bewusst echte Knöpfe je Zelle statt eines gezeichneten Rasters mit Trefferrechnung
+       -- so ist jede Zelle auch mit der Tastatur erreichbar und auf dem Telefon groß genug. */
+    .griff-ed-karte { max-width: 460px; }
+    .griff-ed-bereich { display: flex; gap: 20px; align-items: flex-start; margin: 6px 0 14px; }
+    .griff-ed-raster { display: flex; flex-direction: column; gap: 2px; }
+    .griff-ed-reihe { display: flex; gap: 2px; }
+    .griff-ed-kopf {
+      width: 30px; height: 22px; line-height: 1; font-size: 0.85rem;
+      border: 0; background: none; cursor: pointer; color: var(--text-main);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .griff-ed-zelle {
+      width: 30px; height: 30px; border: 1px solid var(--border-color);
+      background-color: var(--bg-surface); cursor: pointer; border-radius: 3px; padding: 0;
+    }
+    .griff-ed-zelle:hover { background-color: var(--bg-hover, #eceff2); }
+    .griff-ed-zelle.gesetzt { background-color: var(--text-main); border-color: var(--text-main); }
+    /* Der Sattel: nur wenn der erste Bund dargestellt wird, sonst steht die Lage daneben. */
+    .griff-ed-sattel .griff-ed-zelle { border-top: 3px solid var(--text-main); }
+    .griff-ed-seite { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .griff-ed-lage { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; }
+    /* Die Vorschau ist Anschauung, kein Bedienelement -- ohne diese Zeile öffnete ein Klick
+       darauf den Editor ein zweites Mal. */
+    .griff-ed-vorschau { background: none; padding: 0; pointer-events: none; }
+    .griff-ed-fuss { display: flex; justify-content: flex-end; gap: 8px; align-items: center; }
+
+    /* inline-flex mit zentrierter Ausrichtung, nicht bloß text-align: mit appearance:none
+       verliert ein <button> die eigene Mittenausrichtung seines Inhalts, und die Tonart stand
+       dann linksbündig zwischen den Minus- und Plus-Knöpfen statt mittig wie zuvor als <span>. */
     .cp-wert-knopf {
+      display: inline-flex; align-items: center; justify-content: center;
       margin: 0; padding: 0; border: 0; background: none; font-family: inherit;
       -webkit-appearance: none; appearance: none; cursor: pointer;
     }
-    .cp-wert-knopf:disabled { cursor: default; }
+    /* opacity ausdrücklich zurücksetzen: die allgemeine Regel für abgeschaltete Knöpfe blendet
+       sie auf 0.35 ab, und die angegebene Tonart stand dadurch blass da, wo vorher ein normal
+       gesetzter <span> stand. Abgeschaltet heißt hier nur "es gibt nichts zu klicken", nicht
+       "nicht verfügbar". */
+    .cp-wert-knopf:disabled { cursor: default; opacity: 1; }
     /* Der Vorschlagszustand: zurückgenommen und gestrichelt unterstrichen, damit sichtbar ist,
        dass hier etwas zu holen ist, ohne dass es wie eine feststehende Angabe aussieht. */
     .cp-wert-knopf.cp-wert-vorschlag {
@@ -6074,11 +6109,29 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     .markdown-body .cp-griff-bild { width: 46px; height: 58px; overflow: visible; }
 
+    /* Bild und Name sind eigene Knöpfe: das Bild öffnet den Griffeditor, der Name spielt den
+       Akkord. Beiden wird abgewöhnt, was ein <button> von Haus aus mitbringt, damit die Leiste
+       aussieht wie vorher. */
+    .markdown-body .cp-griff-bild-flaeche,
+    .markdown-body button.cp-griff-name {
+      display: block; margin: 0; padding: 0; border: 0; background: none;
+      font-family: inherit; cursor: pointer; -webkit-appearance: none; appearance: none;
+    }
+    .markdown-body .cp-griff-bild-flaeche:hover .cp-griff-bild { opacity: .75; }
+
     .markdown-body .cp-griff-name {
       font-size: .78em;
       font-weight: 600;
       color: var(--preview-link);
       margin-top: .1em;
+    }
+
+    /* Ein selbst gesetztes Griffbild ist als solches erkennbar -- sonst wüsste man nach dem
+       Neuöffnen nicht mehr, welcher Griff aus dem Blatt kommt und welcher aus der Tabelle. */
+    .markdown-body .cp-griff-eigen .cp-griff-name::after {
+      content: '•';
+      margin-left: .25em;
+      opacity: .55;
     }
 
     .markdown-body .cp-griff-rest {
@@ -8946,6 +8999,38 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
   <!-- Import eines gewöhnlichen Akkordblatts. Zweispaltig: links das Eingefügte, rechts die
        Umwandlung, die bei jedem Tastendruck mitläuft -- so sieht man sofort, ob die Akkorde an
        den richtigen Silben landen, statt es erst nach dem Öffnen zu bemerken. -->
+  <!-- Griffeditor. Geöffnet vom Klick auf ein Griffbild in der Griffleiste; gespeichert wird als
+       {define} im Blatt, damit der Griff auf jedem Gerät erscheint. -->
+  <div class="modal-overlay" id="griffEditorModal" onclick="if (event.target === this) chordProGriffEditorSchliessen()">
+    <div class="modal-card griff-ed-karte">
+      <div class="modal-header">
+        <h2 id="griffEditorTitel">Griffbild</h2>
+        <button class="modal-close" onclick="chordProGriffEditorSchliessen()">✕</button>
+      </div>
+      <p class="midi-hinweis">
+        In eine Zelle tippen setzt oder löscht einen Punkt. Die Reihe über dem Sattel schaltet die
+        Saite zwischen leer (○) und gedämpft (✕). Gespeichert wird das Griffbild im Liedblatt
+        selbst, es erscheint also auch auf anderen Geräten.
+      </p>
+      <div class="griff-ed-bereich">
+        <div class="griff-ed-raster" id="griffEditorRaster"></div>
+        <div class="griff-ed-seite">
+          <div class="griff-ed-lage">
+            <button class="cp-metronom-knopf" onclick="griffEditorLageAendern(-1)" title="Eine Lage tiefer">−</button>
+            <span id="griffEditorLage">1. Bund</span>
+            <button class="cp-metronom-knopf" onclick="griffEditorLageAendern(1)" title="Eine Lage höher">+</button>
+          </div>
+          <div class="griff-ed-vorschau markdown-body" id="griffEditorVorschau"></div>
+        </div>
+      </div>
+      <div class="griff-ed-fuss">
+        <button class="cp-metronom-knopf" id="griffEditorZuruecksetzen" onclick="chordProGriffEditorZuruecksetzen()"
+                title="Eigenes Griffbild entfernen und wieder das voreingestellte zeigen">Zurücksetzen</button>
+        <button class="toolbar-btn cp-songbook-btn" onclick="chordProGriffEditorSpeichern()">Speichern</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="importModal" onclick="if (event.target === this) closeImportModal()">
     <div class="modal-card import-karte">
       <div class="modal-header">
@@ -14037,6 +14122,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         closeShortcutsModal();
         chordProQuellfelderSchliessen();
         if (document.getElementById('midiModal').classList.contains('active')) closeMidiModal();
+        if (document.getElementById('griffEditorModal').classList.contains('active')) chordProGriffEditorSchliessen();
         if (document.getElementById('importModal').classList.contains('active')) closeImportModal();
         if (document.getElementById('embedModal').classList.contains('active')) closeEmbedModal();
         if (document.getElementById('songbookOverlay').classList.contains('active')) closeSongbook();
@@ -16596,7 +16682,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         try {
           const griff = await songbookVerzeichnis.getFileHandle(dateiname);
           return await leseTextDatei(await griff.getFile());
-        } catch (err) { return null; }
+        } catch (err) {
+          // KEIN 'return null' mehr an dieser Stelle. Nach einem Neustart ist der gemerkte Ordner
+          // zwar noch da, die Leseerlaubnis dafür aber oft nicht mehr ('prompt') -- getFileHandle
+          // wirft dann NotAllowedError, und mit dem alten sofortigen Abbruch meldete die Setliste
+          // "0 von 3 geöffnet, die anderen waren nicht erreichbar", obwohl der Ordner vorhanden
+          // und nur die Erlaubnis erneut zu erteilen war. Deshalb fällt es jetzt auf den Weg
+          // darunter durch, der genau das tut.
+        }
       }
       if (await songbookOrdnerWiederOeffnen()) {
         const f = songbookDateien.get(dateiname);
@@ -16608,27 +16701,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     async function songbookOeffnen(dateiname) {
       const text = await songbookInhalt(dateiname);
       if (text === null) {
-        showToast('Die Datei ist gerade nicht erreichbar. Bitte den Ordner erneut wählen.');
+        showToast('„' + dateiname + '" ist nicht erreichbar. Der Ordner muss im Songbook erneut gewählt werden.');
         return;
       }
       createNewTab(dateiname, text);
       closeSongbook();
-    }
-
-    async function songbookSetlistOeffnen(id) {
-      const liste = songbookSetlists.find((s) => s.id === id);
-      if (!liste || !liste.dateien.length) return;
-      let auf = 0;
-      for (const datei of liste.dateien) {
-        const text = await songbookInhalt(datei);
-        if (text === null) continue;
-        createNewTab(datei, text);
-        auf++;
-      }
-      closeSongbook();
-      showToast(auf === liste.dateien.length
-        ? auf + ' Lieder geöffnet'
-        : auf + ' von ' + liste.dateien.length + ' Liedern geöffnet -- der Rest war nicht erreichbar.');
     }
 
     // --- Vortragsmodus --------------------------------------------------------------------------
@@ -16926,16 +17003,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         name.textContent = sl.name + ' (' + sl.dateien.length + ')';
         name.title = 'Auswählen -- neue Einträge landen dann hier';
         name.onclick = () => songbookSetlistWaehlen(sl.id);
-        const auf = document.createElement('button');
-        auf.className = 'cp-metronom-knopf';
-        auf.textContent = 'Öffnen';
-        auf.title = 'Alle Lieder dieser Setliste als Notizen öffnen';
-        auf.disabled = !sl.dateien.length;
-        auf.onclick = () => songbookSetlistOeffnen(sl.id);
+        // Ein "Öffnen", das alle Lieder der Setliste gleichzeitig als Notizen aufschlägt, gab es
+        // hier einmal. Es ist ersatzlos weg: es tat etwas anderes als der Startknopf daneben, ohne
+        // dass der Unterschied irgendwo stand, und eine Setliste ist eine Reihenfolge zum
+        // Durchspielen -- dafür ist der Vortragsmodus da. Ein einzelnes Lied öffnet weiterhin ein
+        // Klick auf seinen Titel in der aufgeklappten Liste, ohne Vortragsmodus.
         const vortrag = document.createElement('button');
         vortrag.className = 'cp-metronom-knopf';
         vortrag.textContent = '▶';
-        vortrag.title = 'Vortragsmodus: von Lied zu Lied blättern, ohne in den Index zurückzugehen';
+        vortrag.title = 'Setliste starten: von Lied zu Lied blättern, ohne in den Index zurückzugehen';
         vortrag.disabled = !sl.dateien.length;
         vortrag.onclick = () => vortragStarten(sl.id);
         const weg = document.createElement('button');
@@ -16943,7 +17019,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         weg.textContent = '✕';
         weg.title = 'Setliste löschen';
         weg.onclick = () => songbookSetlistLoeschen(sl.id);
-        kopf.append(name, vortrag, auf, weg);
+        kopf.append(name, vortrag, weg);
         kasten.appendChild(kopf);
 
         if (sl.id === songbookAktiveSetlist) {
@@ -18084,18 +18160,21 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // darüber, ob sie stehen bleibt -- ohne diese Unterscheidung bestünde das Blatt dort zur
       // Hälfte aus leeren Zeilen, nämlich allen reinen Textzeilen.
       let hatAkkord = false;
+      let hatText = false;
       let inneres = '';
       for (const e of einheiten) {
         inneres += '<span class="' + (e.raum ? 'cp-raum' : 'cp-wort') + '">';
         for (const z of e.zellen) {
           if (z.hatMarke && z.seg && z.seg.marke && z.seg.marke.art === 'akkord') hatAkkord = true;
+          if (z.text && z.text.trim()) hatText = true;
           inneres += '<span class="cp-seg">' +
                   (z.hatMarke ? chordProAkkordZelle(z.seg) : '<span class="cp-ak" aria-hidden="true"></span>') +
                   '<span class="cp-tx">' + chordProVerlinke(escapeHtmlText(z.text)) + '</span></span>';
         }
         inneres += '</span>';
       }
-      return '<div class="cp-zeile' + (hatAkkord ? ' cp-zeile-mit-akkord' : '') + '">' + inneres + '</div>';
+      return '<div class="cp-zeile' + (hatAkkord ? ' cp-zeile-mit-akkord' : '') +
+             (hatText ? ' cp-zeile-mit-text' : '') + '">' + inneres + '</div>';
     }
 
     // Reine Akkordzeilen bekommen einen eigenen Weg: dort ist die Länge der Leerzeichenketten
@@ -18216,6 +18295,110 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return CHORDPRO_GRIFFE[vereinheitlicht] || null;
     }
 
+
+    // --- Griffeditor ----------------------------------------------------------------------------
+    //
+    // Ein Klick auf ein Griffbild öffnet ihn. Das Raster ist das Griffbrett von oben: sechs Saiten
+    // senkrecht, fünf Bünde waagerecht. Ein Klick in eine Zelle setzt oder löscht den Punkt, die
+    // Reihe darüber schaltet zwischen leerer und gedämpfter Saite. Die Lage (der oberste
+    // dargestellte Bund) wird mit -/+ verschoben, damit auch Griffe jenseits des fünften Bundes
+    // eingetragen werden können.
+    //
+    // Gespeichert wird als {define} im Blatt (siehe dort), nicht in den Geräteeinstellungen -- ein
+    // eigener Griff gehört zum Lied.
+    const GRIFFEDITOR_BUENDE = 5;
+    let griffEditorName = null;
+    let griffEditorForm = null;      // 6 Werte, -1 = gedämpft, 0 = leer, sonst absoluter Bund
+    let griffEditorBasis = 1;        // oberster dargestellter Bund
+
+    function chordProGriffEditorOeffnen(name) {
+      const tab = chordProAktiverLiedTab();
+      if (!tab) return;
+      griffEditorName = name;
+      const vorhanden = chordProGriffFuerAnzeige(name);
+      griffEditorForm = vorhanden ? vorhanden.form.slice() : [-1, -1, -1, -1, -1, -1];
+      // Vom Sattel aus zeigen, solange der Griff in die fünf dargestellten Bünde passt -- so
+      // sieht ein gewöhnlicher Griff aus wie im Liedblatt. Erst darüber wandert die Lage mit.
+      const gegriffen = griffEditorForm.filter((f) => f > 0);
+      const hoechster = gegriffen.length ? Math.max(...gegriffen) : 0;
+      griffEditorBasis = hoechster > GRIFFEDITOR_BUENDE ? Math.min(...gegriffen) : 1;
+      document.getElementById('griffEditorModal').classList.add('active');
+      renderGriffEditor();
+    }
+
+    function chordProGriffEditorSchliessen() {
+      document.getElementById('griffEditorModal').classList.remove('active');
+      griffEditorName = null;
+    }
+
+    function griffEditorSaiteSchalten(saite) {
+      // Reihenfolge wie über dem Griffbild abgebildet: leer -> gedämpft -> leer.
+      griffEditorForm[saite] = griffEditorForm[saite] === 0 ? -1 : 0;
+      renderGriffEditor();
+    }
+
+    function griffEditorPunktSchalten(saite, reihe) {
+      const bund = griffEditorBasis + reihe;
+      griffEditorForm[saite] = griffEditorForm[saite] === bund ? 0 : bund;
+      renderGriffEditor();
+    }
+
+    function griffEditorLageAendern(schritt) {
+      griffEditorBasis = Math.max(1, Math.min(12, griffEditorBasis + schritt));
+      renderGriffEditor();
+    }
+
+    function renderGriffEditor() {
+      const raster = document.getElementById('griffEditorRaster');
+      if (!raster || !griffEditorName) return;
+      document.getElementById('griffEditorTitel').textContent = 'Griffbild für ' + griffEditorName;
+      document.getElementById('griffEditorLage').textContent = griffEditorBasis + '. Bund';
+      let h = '';
+      // Kopfreihe: leer / gedämpft
+      h += '<div class="griff-ed-reihe">';
+      for (let s = 0; s < 6; s++) {
+        const zeichen = griffEditorForm[s] === 0 ? '○' : (griffEditorForm[s] < 0 ? '✕' : '');
+        h += '<button type="button" class="griff-ed-kopf" onclick="griffEditorSaiteSchalten(' + s + ')" ' +
+             'title="Saite ' + (6 - s) + ': leer oder gedämpft">' + zeichen + '</button>';
+      }
+      h += '</div>';
+      for (let r = 0; r < GRIFFEDITOR_BUENDE; r++) {
+        h += '<div class="griff-ed-reihe' + (r === 0 && griffEditorBasis === 1 ? ' griff-ed-sattel' : '') + '">';
+        for (let s = 0; s < 6; s++) {
+          const gesetzt = griffEditorForm[s] === griffEditorBasis + r;
+          h += '<button type="button" class="griff-ed-zelle' + (gesetzt ? ' gesetzt' : '') +
+               '" onclick="griffEditorPunktSchalten(' + s + ',' + r + ')" ' +
+               'title="Saite ' + (6 - s) + ', ' + (griffEditorBasis + r) + '. Bund"></button>';
+        }
+        h += '</div>';
+      }
+      raster.innerHTML = h;
+      // Vorschau in derselben Darstellung wie im Liedblatt
+      // Die Vorschau zeigt die FORM, nicht die Herkunft -- deshalb ohne die Eigen-Markierung, die
+      // sonst schon vor dem Speichern behauptete, es sei ein eigenes Griffbild.
+      document.getElementById('griffEditorVorschau').innerHTML =
+        chordProGriffSvg(griffEditorName, griffEditorForm, griffEditorName, false, false);
+      const eigen = !!chordProEigeneGriffe[griffEditorName];
+      document.getElementById('griffEditorZuruecksetzen').disabled = !eigen;
+    }
+
+    function chordProGriffEditorSpeichern() {
+      if (!griffEditorName || !chordProAktiverLiedTab()) return;
+      if (!griffEditorForm.some((f) => f >= 0)) {
+        showToast('Es ist keine Saite gesetzt -- mindestens eine leere oder gegriffene Saite braucht es.');
+        return;
+      }
+      chordProQuelltextSetzen(chordProDefinitionSetzen(editor.value, griffEditorName, griffEditorForm));
+      chordProGriffEditorSchliessen();
+      showToast('Griffbild für ' + griffEditorName + ' im Blatt gespeichert.');
+    }
+
+    function chordProGriffEditorZuruecksetzen() {
+      if (!griffEditorName || !chordProAktiverLiedTab()) return;
+      chordProQuelltextSetzen(chordProDefinitionSetzen(editor.value, griffEditorName, null));
+      chordProGriffEditorSchliessen();
+      showToast('Eigenes Griffbild für ' + griffEditorName + ' entfernt.');
+    }
 
     // --- Berechnete Griffbilder -----------------------------------------------------------------
     //
@@ -18466,8 +18649,83 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return { geprueft, ohne, beanstandet };
     }
 
-    // Der Zugang für die Anzeige: erst die geprüfte Tabelle, dann der berechnete Griff.
+    // --- Eigene Griffbilder im Blatt ({define}) --------------------------------------------------
+    //
+    // Ein selbst gesetztes Griffbild gehört zum LIED, nicht zum Gerät: wer eine eigene Lage für
+    // einen Akkord festlegt, will sie auch auf dem Telefon und auf dem Rechner der Bandkollegin
+    // sehen. Gespeichert wird es deshalb im Quelltext, und zwar in der Schreibweise, die der
+    // ChordPro-Standard dafür vorsieht:
+    //
+    //   {define: Am base-fret 1 frets x 0 2 2 1 0}
+    //
+    // Das ist kein Eigenbau, sondern die Direktive, die auch andere ChordPro-Programme lesen --
+    // ein Blatt aus dieser App bleibt damit anderswo brauchbar, und ein anderswo gesetztes
+    // Griffbild wird hier angezeigt. Geschrieben wird immer mit 'base-fret 1' und absoluten
+    // Bundzahlen; das ist eindeutig. Beim LESEN wird ein größerer base-fret berücksichtigt, denn
+    // fremde Dateien nutzen ihn (die Bundzahlen sind dann relativ dazu, 0 bleibt leere Saite).
+    const CHORDPRO_DEFINE_RE = /^[ \t]*\{[ \t]*(?:define|chord)[ \t]*:([^}]*)\}[ \t]*$/gim;
+    let chordProEigeneGriffe = {};
+
+    function chordProDefinitionenLesen(text) {
+      const griffe = {};
+      CHORDPRO_DEFINE_RE.lastIndex = 0;
+      let m;
+      while ((m = CHORDPRO_DEFINE_RE.exec(text)) !== null) {
+        const roh = m[1].trim();
+        const nameM = /^([^\s]+)/.exec(roh);
+        if (!nameM) continue;
+        const basisM = /base-fret\s+(\d{1,2})/i.exec(roh);
+        const buendeM = /frets\s+((?:\s*(?:[0-9]{1,2}|[xXnN]))+)/i.exec(roh);
+        if (!buendeM) continue;
+        const basis = basisM ? parseInt(basisM[1], 10) : 1;
+        const werte = buendeM[1].trim().split(/\s+/).map((w) => {
+          if (/^[xXnN]$/.test(w)) return -1;
+          const f = parseInt(w, 10);
+          if (!isFinite(f)) return -1;
+          return f === 0 ? 0 : f + (basis - 1);
+        });
+        if (werte.length !== 6) continue;
+        griffe[nameM[1]] = werte;
+      }
+      return griffe;
+    }
+
+    // Wird vor jedem Rendern gesetzt -- dasselbe Muster wie chordProAnzeigeVersatz: der Aufbau
+    // läuft synchron in einem Zug, es gibt also nie zwei Blätter gleichzeitig.
+    function chordProEigeneGriffeSetzen(text) {
+      chordProEigeneGriffe = chordProDefinitionenLesen(text);
+    }
+
+    // Schreibt oder ersetzt eine {define}-Zeile. form === null entfernt sie wieder.
+    function chordProDefinitionSetzen(text, name, form) {
+      const zeilen = text.split('\n');
+      const passt = (z) => {
+        const m = /^[ \t]*\{[ \t]*(?:define|chord)[ \t]*:\s*([^\s}]+)/i.exec(z);
+        return m && m[1] === name;
+      };
+      const neu = form
+        ? '{define: ' + name + ' base-fret 1 frets ' + form.map((f) => (f < 0 ? 'x' : String(f))).join(' ') + '}'
+        : null;
+      const vorhanden = zeilen.findIndex(passt);
+      if (vorhanden !== -1) {
+        if (neu) zeilen[vorhanden] = neu; else zeilen.splice(vorhanden, 1);
+        return zeilen.join('\n');
+      }
+      if (!neu) return text;
+      // Neu: hinter den Kopfdaten einsortieren, also hinter den führenden Direktiven und
+      // Kommentarzeilen -- dort steht sie im Quelltext beisammen mit dem Rest der Angaben.
+      let einfuegen = 0;
+      while (einfuegen < zeilen.length &&
+             (zeilen[einfuegen].trim() === '' || /^\s*[#{]/.test(zeilen[einfuegen]))) einfuegen++;
+      zeilen.splice(einfuegen, 0, neu);
+      return zeilen.join('\n');
+    }
+
+    // Der Zugang für die Anzeige: erst das eigene Griffbild aus dem Blatt, dann die geprüfte
+    // Tabelle, dann der berechnete Griff.
     function chordProGriffFuerAnzeige(name) {
+      const eigen = chordProEigeneGriffe[name];
+      if (eigen) return { form: eigen, berechnet: false, eigen: true };
       const tabelle = chordProGriffFinden(name);
       if (tabelle) return { form: tabelle, berechnet: false };
       const berechnet = chordProGriffBerechnen(name);
@@ -18504,7 +18762,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (kasten) kasten.checked = chordProZweispaltig;
     }
 
-    function chordProGriffSvg(name, griff, quelle, berechnet) {
+    function chordProGriffSvg(name, griff, quelle, berechnet, eigen) {
       const B = 5;                         // dargestellte Bünde
       const breite = 46, hoehe = 58;
       const links = 5, oben = 14;
@@ -18556,10 +18814,23 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // spielbar, aber eben nicht von Hand ausgesucht wie die aus der Tabelle -- wer den Griff
       // ungewohnt findet, soll den Grund erfahren, ohne dass die Leiste selbst unruhig wird.
       if (berechnet) beschrift += ' (berechneter Griff)';
-      return '<button type="button" class="cp-griff' + (berechnet ? ' cp-griff-berechnet' : '') +
-             '" title="' + escapeHtmlText(beschrift) +
-             '" onclick="chordProAkkordSpielen(' + JSON.stringify(quelle).replace(/"/g, '&quot;') + ', this)">' + t +
-             '<span class="cp-griff-name">' + escapeHtmlText(name) + '</span></button>';
+      if (eigen) beschrift += ' (eigenes Griffbild)';
+
+      // Zwei getrennte Ziele statt eines Knopfes: das BILD öffnet den Griffeditor, der NAME spielt
+      // den Akkord. Vorher tat beides dasselbe, und für ein eigenes Griffbild gab es gar keinen
+      // Weg. Die Trennung folgt dem, was man sieht -- auf ein Bild tippt, wer das Bild meint.
+      const spielName = JSON.stringify(quelle).replace(/"/g, '&quot;');
+      const bild = suppressDrawingControls
+        ? '<span class="cp-griff-bild-flaeche">' + t + '</span>'
+        : '<button type="button" class="cp-griff-bild-flaeche" title="' +
+          escapeHtmlText('Eigenes Griffbild für ' + name + ' festlegen') +
+          '" onclick="chordProGriffEditorOeffnen(' + JSON.stringify(name).replace(/"/g, '&quot;') + ')">' + t + '</button>';
+      const nameTeil = suppressDrawingControls
+        ? '<span class="cp-griff-name">' + escapeHtmlText(name) + '</span>'
+        : '<button type="button" class="cp-griff-name" title="' + escapeHtmlText(beschrift) +
+          '" onclick="chordProAkkordSpielen(' + spielName + ', this.parentElement)">' + escapeHtmlText(name) + '</button>';
+      return '<span class="cp-griff' + (berechnet ? ' cp-griff-berechnet' : '') +
+             (eigen ? ' cp-griff-eigen' : '') + '">' + bild + nameTeil + '</span>';
     }
 
     // Die Griffleiste für ein Liedblatt: jeder vorkommende Akkord einmal, in der Reihenfolge des
@@ -18585,7 +18856,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const fehlend = [];
       for (const g of gesehen) {
         const griff = chordProGriffFuerAnzeige(g.angezeigt);
-        if (griff) teile.push(chordProGriffSvg(g.angezeigt, griff.form, g.quelle, griff.berechnet));
+        if (griff) teile.push(chordProGriffSvg(g.angezeigt, griff.form, g.quelle, griff.berechnet, griff.eigen));
         else fehlend.push(g.angezeigt);
       }
       // Die fehlenden beim NAMEN nennen statt nur zu zählen: meist sind es Schreibfehler
@@ -18856,7 +19127,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         chordProAnzeigeVorzeichen = chordProVorzeichenArt(meta.key || null, chordProBevorzugtB(content));
       }
 
+      chordProEigeneGriffeSetzen(content);
       const ansichtKlasse = chordProAnsicht === 'alles' ? '' : ' cp-ansicht-' + chordProAnsicht;
+      const nurTextAnsicht = chordProAnsicht === 'text';
+      let letzteWarLuecke = true;    // am Anfang: eine führende Leerzeile ist schon zu viel
+      // Ein Abschnitt, aus dem in der Textansicht nichts übrigbleibt (ein reiner Instrumentalteil),
+      // stünde sonst als leere Klammer im Blatt -- genau die Lücke, um die es geht. Deshalb wird
+      // seine Anfangsstelle gemerkt und beim Schließen bei Bedarf wieder abgeschnitten.
+      const abschnittStapel = [];
       let strophenNr = 0;
       let html = '<div class="cp-song' + ansichtKlasse + '">';
 
@@ -18922,12 +19200,30 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             // textContent auftaucht. Das ist der Grund für diesen Umweg statt eines echten
             // <span>: die Vorlesefunktion liest den Textinhalt eines Abschnitts und spräche eine
             // echte Ziffer als Teil der ersten Zeile mit ("eins Amazing grace ...").
+            abschnittStapel.push({ stelle: html.length, luecke: letzteWarLuecke, inhalt: false, nummer: strophenNr });
             html += '<div class="cp-abschnitt cp-' + b.art + '"' +
                     (b.art === 'verse' ? ' data-strophe="' + (++strophenNr) + '"' : '') + '>';
             if (b.titel) html += '<div class="cp-abschnitt-titel">' + escapeHtmlText(b.titel) + '</div>';
             break;
-          case 'abschnittEnde': html += '</div>'; break;
-          case 'leer': html += '<div class="cp-luecke"></div>'; break;
+          case 'abschnittEnde': {
+            const offen = abschnittStapel.pop();
+            if (nurTextAnsicht && offen && !offen.inhalt) {
+              html = html.slice(0, offen.stelle);
+              letzteWarLuecke = offen.luecke;
+              strophenNr = offen.nummer;   // eine weggelassene Strophe darf keine Nummer verbrauchen
+            } else {
+              html += '</div>';
+            }
+            break;
+          }
+          case 'leer':
+            // In der Textansicht höchstens EINE Leerzeile am Stück. Ein Instrumentalteil besteht
+            // dort nur aus weggelassenen Akkordzeilen, und die Leerzeilen zwischen ihnen blieben
+            // sonst alle stehen -- gemeldet als große Lücken mitten im Liedtext.
+            if (nurTextAnsicht && letzteWarLuecke) break;
+            html += '<div class="cp-luecke"></div>';
+            letzteWarLuecke = true;
+            break;
           case 'kommentar':
             html += '<div class="cp-kommentar cp-' + b.stil.replace(/_/g, '-') + '">' +
                     chordProVerlinke(escapeHtmlText(b.text)) + '</div>';
@@ -18940,8 +19236,32 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             html += veredelt || ('<span class="cp-medium">' + b.html + '</span>');
             break;
           }
-          case 'akkordzeile': html += chordProAkkordzeileHtml(b.segmente); break;
-          case 'zeile': html += chordProZeileHtml(b.segmente); break;
+          case 'akkordzeile':
+            // Eine reine Akkordzeile hat keinen Liedtext; in der Textansicht bliebe nur eine leere
+            // Zeile übrig. Sie zählt deshalb auch nicht als Inhalt, der eine Lücke beendet.
+            if (nurTextAnsicht) break;
+            html += chordProAkkordzeileHtml(b.segmente);
+            letzteWarLuecke = false;
+            break;
+          case 'zeile': {
+            const zeileHtml = chordProZeileHtml(b.segmente);
+            if (nurTextAnsicht && zeileHtml.indexOf('cp-zeile-mit-text') === -1) break;
+            html += zeileHtml;
+            letzteWarLuecke = false;
+            break;
+          }
+        }
+        // Was als sichtbarer Inhalt zählt: alles außer Leerzeilen und den Abschnittsmarken selbst.
+        // Eine Leerzeile hält einen Abschnitt nicht am Leben -- sonst bliebe ein Instrumentalteil
+        // wegen seiner eigenen Zwischenzeilen stehen.
+        if (b.typ !== 'leer' && b.typ !== 'abschnittStart' && b.typ !== 'abschnittEnde') {
+          letzteWarLuecke = false;
+          if (nurTextAnsicht && !(b.typ === 'akkordzeile') && abschnittStapel.length) {
+            const zeileLeer = b.typ === 'zeile' && chordProZeileHtml(b.segmente).indexOf('cp-zeile-mit-text') === -1;
+            if (!zeileLeer) abschnittStapel[abschnittStapel.length - 1].inhalt = true;
+          } else if (!nurTextAnsicht && abschnittStapel.length) {
+            abschnittStapel[abschnittStapel.length - 1].inhalt = true;
+          }
         }
       }
       if (tabZeilen) html += '<pre class="cp-tab">' + escapeHtmlText(tabZeilen.join('\n')) + '</pre>';
@@ -32937,6 +33257,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '  .markdown-body .cp-griff { display: inline-flex; flex-direction: column; align-items: center; color: var(--preview-text); border: none; background: none; font-family: inherit; padding: 3px 4px 1px; }\n' +
         '  .markdown-body .cp-griff-bild { width: 46px; height: 58px; overflow: visible; }\n' +
         '  .markdown-body .cp-griff-name { font-size: .78em; font-weight: 600; color: var(--preview-link); margin-top: .1em; }\n' +
+        '  .markdown-body .cp-griff-bild-flaeche, .markdown-body button.cp-griff-name { display: block; margin: 0; padding: 0; border: 0; background: none; font-family: inherit; -webkit-appearance: none; appearance: none; }\n' +
+        '  .markdown-body .cp-griff-eigen .cp-griff-name::after { content: \'•\'; margin-left: .25em; opacity: .55; }\n' +
         '  .markdown-body .cp-griff-rest { align-self: center; font-size: .72em; opacity: .55; }\n' +
         '  .markdown-body .cp-abschnitt { margin: .2em 0; position: relative; }\n' +
         '  .markdown-body .cp-abschnitt::before, .markdown-body .cp-abschnitt::after { content: \'\'; position: absolute; left: 0; width: .8em; pointer-events: none; }\n' +
