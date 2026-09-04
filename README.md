@@ -78,7 +78,7 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 - **Fußschalter über MIDI oder Tastatur** — Belegung wird gelernt statt vorgegeben: Teleprompter starten, Tempo, Blättern, nächstes/vorheriges Lied der Setliste und Metronom Start/Stopp. Da iPhone und iPad kein Web-MIDI kennen, lässt sich alternativ eine **Taste** je Aktion lernen — die meisten Fußschalter lassen sich am Gerät auf Tastatur umstellen und funktionieren dann überall, auch über eine https-Adresse. Beim Blättern bleibt eine Zeile Überlappung stehen, damit man den Anschluss wiederfindet. Am iPad ist zu beachten: der Fußschalter wirkt dort nur im Tasten-Profil **und** nur, solange gleichzeitig eine Tastatur verbunden ist (Magic Keyboard oder eine beliebige Bluetooth-Tastatur) — am Rechner reicht der Fußschalter allein. Eine Anzeige im Dialog verrät, ob vom Pedal überhaupt eine Taste ankommt
 
 ### Zwei Notizen nebeneinander
-- **Nebenspalte** — eine zweite Notiz zum Lesen neben der aktuellen, an Stelle des Quelltextfensters; wahlweise als Vorschau oder als Quelltext, Seiten tauschbar, Breite am vorhandenen Trenner verstellbar. Schreibgeschützt: geschrieben wird in der Hauptspalte
+- **Nebenspalte** — eine zweite Notiz zum Lesen neben der aktuellen, an Stelle des Quelltextfensters; wahlweise als Vorschau oder als Quelltext, Seiten tauschbar, Breite am vorhandenen Trenner verstellbar, eigene Vergrößerung unabhängig von der Hauptspalte. Schreibgeschützt: geschrieben wird in der Hauptspalte
 
 ### Vorschau & Darstellung
 - **Live-Vorschau** mit synchronisiertem Scrollen zwischen Quelltext und Vorschau

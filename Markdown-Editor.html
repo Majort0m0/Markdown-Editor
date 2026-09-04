@@ -5204,7 +5204,17 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        Innenabstand und keinen Bildlauf -- der Rahmen bringt seinen eigenen mit. */
     .nebenspalte > .nebenspalte-inhalt.nebenspalte-tafel {
       padding: 0;
-      overflow: hidden;
+      /* Bis zur Vergrößerung passt die Tafel immer genau in die Spalte; darüber hinaus muss man
+         sie verschieben können, deshalb auto statt hidden. Der Rahmen gleicht seinen Überhang
+         mit einem negativen Rand aus (siehe nebenspalteRahmenSkalieren), sonst gäbe es schon in
+         der verkleinerten Darstellung einen Bildlauf über leeren Raum. */
+      overflow: auto;
+    }
+
+    /* Eigene Vergrößerung der Nebenspalte: multipliziert auf die Vergrößerung der App, damit
+       100% genau das ist, was ohne eigene Einstellung zu sehen wäre. */
+    .nebenspalte > .nebenspalte-inhalt.markdown-body {
+      font-size: calc(1rem * var(--zoom-scale, 1) * var(--nebenspalte-zoom, 1));
     }
 
     .nebenspalte-rahmen {
@@ -5218,10 +5228,33 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     /* Eine HTML-Notiz bringt ihr eigenes Layout mit und richtet sich nach der Breite, die sie
        bekommt -- anders als die in Millimetern gesetzte Tafel braucht sie keine Verkleinerung. */
+    /* Vergrößert wird sie trotzdem: der Kasten wird um denselben Faktor kleiner gesetzt, wie er
+       vergrößert dargestellt wird -- sichtbar bleibt damit genau die Spaltenbreite, und die Seite
+       darin bricht auf die neue, engere Breite um, statt seitlich wegzulaufen. Breite, Höhe und
+       Maßstab setzt nebenspalteRahmenSkalieren(); hier steht nur der Ausgangswert für den
+       Augenblick zwischen Einhängen und erstem Aufruf. */
     .nebenspalte-rahmen.nebenspalte-rahmen-voll {
       width: 100%;
       height: 100%;
       transform: none;
+    }
+
+    /* Der Knopf ist an dieser Stelle ein Flex-Kasten (gemessen: display:flex), und darin steht
+       ein einzelnes Zeichen ohne weitere Angabe links am Rand statt in der Mitte -- text-align
+       greift dort nicht. Deshalb wird die Mitte ausdrücklich gesetzt, in beiden Richtungen. */
+    .nebenspalte-zoom-knopf {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 26px;
+      padding: 3px 0;
+      font-size: 1rem;
+      line-height: 1.05;
+    }
+
+    .nebenspalte-zoom-knopf:disabled {
+      opacity: .4;
+      cursor: default;
     }
 
     .nebenspalte-hinweis {
@@ -5234,7 +5267,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       white-space: pre-wrap;
       word-break: break-word;
       font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: calc(0.95rem * var(--zoom-faktor, 1));
+      font-size: calc(0.95rem * var(--zoom-scale, 1) * var(--nebenspalte-zoom, 1));
       line-height: 1.6;
       margin: 0;
       color: var(--text-main);
@@ -9513,6 +9546,8 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       <div class="nebenspalte-kopf">
         <select id="nebenspalteAuswahl" onchange="nebenspalteNotizWaehlen(this.value)" title="Welche Notiz hier steht"></select>
         <button class="cp-metronom-knopf" id="nebenspalteInhaltBtn" onclick="nebenspalteInhaltUmschalten()" title="Zwischen Vorschau und Quelltext umschalten">Vorschau</button>
+        <button class="cp-metronom-knopf nebenspalte-zoom-knopf" id="nebenspalteZoomAusBtn" onclick="nebenspalteZoomAendern(-1)" title="Kleiner">−</button>
+        <button class="cp-metronom-knopf nebenspalte-zoom-knopf" id="nebenspalteZoomEinBtn" onclick="nebenspalteZoomAendern(1)" title="Größer">+</button>
         <button class="cp-metronom-knopf" onclick="nebenspalteSeiteTauschen()" title="Seiten tauschen">⇄</button>
         <button class="cp-metronom-knopf" onclick="nebenspalteSchliessen()" title="Nebenspalte schließen">✕</button>
       </div>
@@ -11825,6 +11860,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         nebenspalteModus: nebenspalteModus,
         nebenspalteTabId: nebenspalteTabId,
         nebenspalteRechts: nebenspalteRechts,
+        nebenspalteZoom: nebenspalteZoom,
         wysiwygEnabled: wysiwygEnabled,
         lastTemplateId: lastTemplateId,
         welcomeNoteUsed: welcomeNoteUsed,
@@ -12016,6 +12052,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (typeof state.nebenspalteModus === 'string') nebenspalteModus = state.nebenspalteModus;
         if (typeof state.nebenspalteTabId === 'string') nebenspalteTabId = state.nebenspalteTabId;
         if (typeof state.nebenspalteRechts === 'boolean') nebenspalteRechts = state.nebenspalteRechts;
+        if (typeof state.nebenspalteZoom === 'number') nebenspalteZoom = state.nebenspalteZoom;
         // wysiwygEnabled is a const true now (see its own declaration) -- no longer read back
         // from persisted state, so a `false` saved by a much older session before the toggle was
         // removed can never silently reintroduce the classic, non-WYSIWYG behavior with no UI
@@ -15554,6 +15591,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     let nebenspalteModus = 'aus';      // 'aus' | 'vorschau' | 'quelltext'
     let nebenspalteTabId = null;
     let nebenspalteRechts = false;     // Seiten getauscht?
+    let nebenspalteZoom = 100;         // eigene Vergrößerung, unabhängig von der der App
     let nebenspalteZuletzt = null;     // zuletzt Gerendertes -- gegen doppelte Arbeit je Tastendruck
 
     function nebenspalteAktiv() { return nebenspalteModus !== 'aus'; }
@@ -15587,7 +15625,37 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     // Der Trenner und die Fenstergröße ändern die Spaltenbreite -- die Verkleinerung muss folgen.
-    window.addEventListener('resize', nebenspalteTafelSkalieren);
+    window.addEventListener('resize', nebenspalteRahmenSkalieren);
+
+    // Eigene Vergrößerung: die Knöpfe der Kopfzeile der App wirken auf den Hauptbereich, für die
+    // Nebenspalte gab es bisher gar nichts. Der Wert wird auf die Vergrößerung der App
+    // aufmultipliziert (siehe die font-size-Regeln), 100% ist also genau das, was ohne eigene
+    // Einstellung zu sehen wäre -- das Einschalten der Spalte ändert damit nichts an der
+    // bisherigen Darstellung.
+    const NEBENSPALTE_ZOOM_MIN = 50;
+    const NEBENSPALTE_ZOOM_MAX = 250;
+    const NEBENSPALTE_ZOOM_SCHRITT = 10;
+
+    function nebenspalteZoomAendern(richtung) {
+      const neu = Math.min(NEBENSPALTE_ZOOM_MAX, Math.max(NEBENSPALTE_ZOOM_MIN,
+        nebenspalteZoom + richtung * NEBENSPALTE_ZOOM_SCHRITT));
+      if (neu === nebenspalteZoom) return;
+      nebenspalteZoom = neu;
+      applyNebenspalteZoom();
+      saveStateToLocalStorage();
+    }
+
+    // Reine DOM-Anwendung wie applyNebenspalte() -- beim Laden gefahrlos aufrufbar.
+    function applyNebenspalteZoom() {
+      const spalte = document.getElementById('nebenspalte');
+      if (spalte) spalte.style.setProperty('--nebenspalte-zoom', String(nebenspalteZoom / 100));
+      const aus = document.getElementById('nebenspalteZoomAusBtn');
+      const ein = document.getElementById('nebenspalteZoomEinBtn');
+      if (aus) { aus.disabled = nebenspalteZoom <= NEBENSPALTE_ZOOM_MIN; aus.title = 'Kleiner (' + nebenspalteZoom + '%)'; }
+      if (ein) { ein.disabled = nebenspalteZoom >= NEBENSPALTE_ZOOM_MAX; ein.title = 'Größer (' + nebenspalteZoom + '%)'; }
+      // Die Tafel rechnet ihre Verkleinerung selbst aus und muss die neue Vergrößerung einbeziehen.
+      nebenspalteRahmenSkalieren();
+    }
 
     function nebenspalteSeiteTauschen() {
       nebenspalteRechts = !nebenspalteRechts;
@@ -15604,6 +15672,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       mainContainer.classList.toggle('nebenspalte-rechts', an && nebenspalteRechts);
       const knopf = document.getElementById('nebenspalteInhaltBtn');
       if (knopf) knopf.textContent = nebenspalteModus === 'quelltext' ? 'Quelltext' : 'Vorschau';
+      applyNebenspalteZoom();
       const auswahl = document.getElementById('nebenspalteAuswahl');
       if (auswahl) {
         // Die Liste nur neu aufbauen, wenn sich die Notizen wirklich geändert haben -- sonst
@@ -15658,6 +15727,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         rahmen.setAttribute('title', tab.name || 'HTML-Notiz');
         rahmen.srcdoc = inhalt;
         ziel.appendChild(rahmen);
+        nebenspalteRahmenSkalieren();
         return;
       }
       // Eine Tafel ist kein Fließtext: ihre Kästen liegen frei auf einer festen DIN-A4-Seite, und
@@ -15686,7 +15756,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         rahmen.setAttribute('sandbox', '');
         rahmen.srcdoc = html;
         ziel.appendChild(rahmen);
-        nebenspalteTafelSkalieren();
+        nebenspalteRahmenSkalieren();
         return;
       }
       if (nebenspalteModus === 'quelltext') {
@@ -15718,17 +15788,37 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Feste Breite im Rahmen, Verkleinerung von außen: so bleibt das Seitenverhältnis erhalten.
     const NEBENSPALTE_TAFEL_BREITE = 1000;   // px, in denen die Tafelseite gesetzt wird
 
-    function nebenspalteTafelSkalieren() {
+    function nebenspalteRahmenSkalieren() {
       const ziel = document.getElementById('nebenspalteInhalt');
       const rahmen = ziel && ziel.querySelector('.nebenspalte-rahmen');
       if (!rahmen) return;
       const platz = ziel.clientWidth;
-      if (!platz) return;
-      const faktor = Math.min(1, platz / NEBENSPALTE_TAFEL_BREITE);
-      rahmen.style.transform = 'scale(' + faktor + ')';
-      // Die Höhe des Platzhalters muss der VERKLEINERTEN Höhe folgen, sonst bliebe unter der
-      // Tafel so viel leerer Raum, wie die Verkleinerung eingespart hat.
-      ziel.style.setProperty('--tafel-faktor', String(faktor));
+      const hoehe = ziel.clientHeight;
+      if (!platz || !hoehe) return;
+      const zoom = nebenspalteZoom / 100;
+      // Eine HTML-Notiz richtet sich selbst nach der Breite, die sie bekommt, und braucht keine
+      // Einpassung -- nur die Vergrößerung. Der Kasten wird dafür um denselben Faktor kleiner
+      // gesetzt, wie er vergrößert dargestellt wird: sichtbar bleibt genau die Spaltenbreite, und
+      // die Seite darin bricht auf die neue, engere Breite um, statt seitlich wegzulaufen.
+      const voll = rahmen.classList.contains('nebenspalte-rahmen-voll');
+      if (voll) {
+        rahmen.style.width = (platz / zoom) + 'px';
+        rahmen.style.height = (hoehe / zoom) + 'px';
+        rahmen.style.transform = 'scale(' + zoom + ')';
+      } else {
+        const faktor = Math.min(1, platz / NEBENSPALTE_TAFEL_BREITE) * zoom;
+        rahmen.style.transform = 'scale(' + faktor + ')';
+        // Die Höhe des Platzhalters muss der VERKLEINERTEN Höhe folgen, sonst bliebe unter der
+        // Tafel so viel leerer Raum, wie die Verkleinerung eingespart hat.
+        ziel.style.setProperty('--tafel-faktor', String(faktor));
+      }
+      // Der Maßstab ist reine Anzeige -- der Umbruch rechnet weiter mit dem unverkleinerten
+      // Kasten. Ohne Ausgleich gäbe es deshalb schon in der eingepassten Darstellung einen
+      // Bildlauf über leeren Raum, und beim Vergrößern über die Spaltenbreite hinaus umgekehrt
+      // gar keinen. Der negative Rand bringt den Platzbedarf im Umbruch auf das, was man sieht.
+      const massstab = new DOMMatrix(getComputedStyle(rahmen).transform).a;
+      rahmen.style.marginRight = (rahmen.offsetWidth * (massstab - 1)) + 'px';
+      rahmen.style.marginBottom = (rahmen.offsetHeight * (massstab - 1)) + 'px';
     }
 
     function applyPaneVisibility() {
@@ -16111,7 +16201,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     function endPaneResize(e) {
       if (!paneResizer.classList.contains('dragging')) return;
       paneResizer.classList.remove('dragging');
-      nebenspalteTafelSkalieren();
+      nebenspalteRahmenSkalieren();
       persistTabViewState();
       saveStateToLocalStorage();
     }

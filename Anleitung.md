@@ -483,7 +483,7 @@ Am Rechner (Windows, macOS, Linux) gilt das nicht: dort reicht der Fußschalter 
 
 Burger-Menü ☰ → **Nebenspalte**: *Aus*, *Vorschau* oder *Quelltext*. Die Nebenspalte nimmt den Platz des Quelltextfensters ein und zeigt eine **zweite Notiz zum Lesen** — praktisch, um ein Liedblatt neben den Notizen zur Probe zu haben oder zwei Fassungen zu vergleichen.
 
-In ihrer Kopfzeile wählst du die Notiz, schaltest zwischen Vorschau und Quelltext um, tauschst mit ⇄ die Seiten und schließt sie mit ✕. Die Breite ziehst du wie gewohnt am Trenner in der Mitte; in dieser Ansicht dient der runde Knopf darauf nur noch als Anfasser zum Verschieben (synchrones Scrollen ergibt zwischen zwei verschiedenen Notizen keinen Sinn).
+In ihrer Kopfzeile wählst du die Notiz, schaltest zwischen Vorschau und Quelltext um, vergrößerst und verkleinerst mit **−** und **+**, tauschst mit ⇄ die Seiten und schließt sie mit ✕. Die Vergrößerung gilt nur für die Nebenspalte — die Zoomknöpfe der Fußzeile wirken weiter auf die Hauptspalte, beide lassen sich also unabhängig einstellen. 100 % ist dabei genau das, was ohne eigene Einstellung zu sehen wäre; der Wert bleibt erhalten und wirkt auf alle Formate, auch auf eine Tafel oder eine HTML-Notiz. Eine über die Spaltenbreite hinaus vergrößerte Tafel lässt sich seitlich verschieben. Die Breite ziehst du wie gewohnt am Trenner in der Mitte; in dieser Ansicht dient der runde Knopf darauf nur noch als Anfasser zum Verschieben (synchrones Scrollen ergibt zwischen zwei verschiedenen Notizen keinen Sinn).
 
 Die Nebenspalte ist **schreibgeschützt**: geschrieben wird immer in der Hauptspalte. Ein farbiger Rahmen mit runden Ecken um ihr Inhaltsfeld zeigt das an — er bleibt beim Scrollen stehen.
 
