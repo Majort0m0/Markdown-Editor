@@ -1601,14 +1601,16 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          erst ab iOS Safari 16.2, und dieses Projekt soll ohne neuere CSS-Abhängigkeiten auskommen.
          Beim Ändern von --accent hier mit anpassen -- benutzt vom Canvas-Fokusrahmen. */
       --accent-soft: rgba(9, 105, 218, 0.45);
-      /* Dedicated accent for the Quelltext/Vorschau view toggles only (see #toggleEditBtn/
-         #togglePreviewBtn below) -- deliberately a different hue from --accent so this specific
-         pair stands out from every other icon-btn's active/hover state. A solid fill (not a tint)
-         is what actually makes on/off unambiguous at a glance -- an earlier version used a light
-         background tint for "active" with the icon staying orange either way, which read as
-         active and inactive both looking orange, barely distinguishable from the hover state. */
-      --accent-view: #f97316;
-      --accent-view-hover: #ea580c;
+      /* Eigener Akzent für die Formelbedienung in Tabellen (Formelzelle, Anfasser zum Füllen,
+         die Überlagerungsknöpfe): bewusst ein anderer Ton als --accent, damit eine lebende Formel
+         im Blatt sofort als solche zu erkennen ist und nicht mit den übrigen blauen Bedienelementen
+         verschwimmt.
+         Er hieß --accent-view und färbte ursprünglich auch die Quelltext/Vorschau-Umschalter. Die
+         benutzen jetzt die allgemeine Akzentfarbe -- ein zweites Blau war dort nicht nötig, ein
+         orangefarbenes Paar mitten unter blauen Bedienelementen aber unruhig. Deshalb der neue
+         Name: er sagt, was die Farbe noch färbt. */
+      --accent-formel: #f97316;
+      --accent-formel-hover: #ea580c;
       --active-tab-bg: #ffffff;
       --inactive-tab-bg: #eaeef2;
       --toolbar-bg: #f3f4f6;
@@ -1837,7 +1839,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     }
 
     /* Quelltext/Vorschau toggles, pulled out of .actions-group to sit left-aligned right after
-       the title (see #toggleEditBtn/#togglePreviewBtn's orange accent below) -- a dedicated
+       the title (see #toggleEditBtn/#togglePreviewBtn's accent fill below) -- a dedicated
        group rather than just reordering within .actions-group so it can't drift apart from the
        title again if unrelated buttons are added/removed around it later. */
     .view-toggle-group {
@@ -1934,18 +1936,18 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        button.active/button:hover rules above via ID selector specificity. Orange is deliberately
        reserved for the active state only (inactive uses the same neutral --text-muted every other
        icon-btn's resting state uses) -- that contrast is what makes on/off unambiguous, unlike an
-       always-orange icon that only changed background tint between the two states. */
+       always-coloured icon that only changed background tint between the two states. */
     #toggleEditBtn, #togglePreviewBtn {
       color: var(--text-muted);
     }
 
     #toggleEditBtn.active, #togglePreviewBtn.active {
-      background-color: var(--accent-view);
+      background-color: var(--accent);
       color: #ffffff;
     }
 
     #toggleEditBtn.active:hover:not(:disabled), #togglePreviewBtn.active:hover:not(:disabled) {
-      background-color: var(--accent-view-hover);
+      background-color: var(--accent-hover);
     }
 
     #toggleEditBtn:not(.active):hover:not(:disabled), #togglePreviewBtn:not(.active):hover:not(:disabled) {
@@ -6828,7 +6830,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        a specific cell's live bounding rect. */
     .markdown-body table td.cell-formula-cell,
     .markdown-body table th.cell-formula-cell {
-      border: 2px solid var(--accent-view);
+      border: 2px solid var(--accent-formel);
       cursor: pointer;
       /* Anchors .formula-fill-handle (an absolutely-positioned child) to this cell's own corner
          rather than the table's — position:relative on a <td> doesn't affect table layout at all,
@@ -6854,7 +6856,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       bottom: 0;
       width: 8px;
       height: 8px;
-      background-color: var(--accent-view);
+      background-color: var(--accent-formel);
       border: 1px solid var(--bg-surface);
       border-radius: 1px;
       cursor: crosshair;
@@ -6866,7 +6868,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     .markdown-body table td.formula-fill-target,
     .markdown-body table th.formula-fill-target {
       background-color: rgba(249, 115, 22, 0.18);
-      outline: 1px dashed var(--accent-view);
+      outline: 1px dashed var(--accent-formel);
       outline-offset: -1px;
     }
 
@@ -6878,14 +6880,14 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        different reasons" states read as visually distinct. */
     .markdown-body table.formula-ref-selectable td[data-start]:hover,
     .markdown-body table.formula-ref-selectable th[data-start]:hover {
-      outline: 2px dashed var(--accent-view);
+      outline: 2px dashed var(--accent-formel);
       outline-offset: -2px;
       background-color: var(--preview-code-bg);
     }
 
     .markdown-body table.formula-ref-selectable td.formula-ref-drag-selected,
     .markdown-body table.formula-ref-selectable th.formula-ref-drag-selected {
-      background-color: var(--accent-view);
+      background-color: var(--accent-formel);
       color: #fff;
     }
 
@@ -6902,9 +6904,9 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       width: 26px;
       height: 26px;
       border-radius: 50%;
-      border: 1px solid var(--accent-view);
+      border: 1px solid var(--accent-formel);
       background-color: var(--bg-surface);
-      color: var(--accent-view);
+      color: var(--accent-formel);
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
       cursor: pointer;
       font-size: 0.85rem;
@@ -6914,7 +6916,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     }
 
     .formula-overlay-btn:hover {
-      background-color: var(--accent-view);
+      background-color: var(--accent-formel);
       color: #fff;
     }
 
@@ -8834,7 +8836,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     <!-- Nebenspalte. Steht bei den übrigen Ansichts-Einstellungen, weil sie eine davon ist: sie
          bestimmt, was an der Stelle des Quelltextfensters zu sehen ist. -->
-    <div class="burger-menu-field">
+    <div class="burger-menu-section">
       <label for="burgerNebenspalte">Nebenspalte</label>
       <select id="burgerNebenspalte" onchange="nebenspalteModusSetzen(this.value)">
         <option value="aus">Aus</option>
