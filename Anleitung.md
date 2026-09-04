@@ -1,6 +1,6 @@
 # Markdown Studio Pro – Ausführliche Anleitung
 
-Diese Anleitung beschreibt alle Funktionen von Markdown Studio Pro Schritt für Schritt. Für einen schnellen Funktionsüberblick siehe die [README](./README.md).
+Diese Anleitung beschreibt alle Funktionen von Markdown Studio Pro (Version 4.0) Schritt für Schritt. Für einen schnellen Funktionsüberblick siehe die [README](./README.md).
 
 Markdown Studio Pro läuft komplett im Browser, ohne Installation und ohne Server — alle Dokumente werden lokal auf deinem Gerät gespeichert (bzw. optional über WebDAV mit anderen Geräten synchronisiert, siehe [Abschnitt 17](#17-webdav-synchronisierung-zwischen-mehreren-geräten)).
 
@@ -549,7 +549,7 @@ Fragen, Ideen oder Fehler gefunden? [github.com/Majort0m0/Markdown-Editor](https
 
 ### Die Oberfläche
 
-- **Burger-Menü ☰** (oben rechts) — Betriebsart, Ansicht, Inhaltsbreite, Neu, Öffnen, Speichern, Formatiert kopieren, Rückgängig/Wiederherstellen, Suchen & Ersetzen, Abstände optimieren, Rechtschreibprüfung, Exporte (HTML, Drucken/PDF, E-Mail), WebDAV-Einstellungen, Design und „Über" mit Versionsnummer.
+- **Burger-Menü ☰** (oben rechts) — Betriebsart, Ansicht, Inhaltsbreite, Nebenspalte, Neu, Öffnen, Speichern, Backup, Formatiert kopieren, Rückgängig/Wiederherstellen, Suchen & Ersetzen, Abstände optimieren, Rechtschreibprüfung, ein eigener Abschnitt für Liedblätter (Akkordblatt importieren, Songbook, Fußschalter), Exporte (HTML, Drucken/PDF, E-Mail), WebDAV-Einstellungen, Design und „Über" mit Versionsnummer.
 - **Notizleiste** (Button oben links) — die Liste aller offenen Notizen, untereinander statt als Tableiste. Ein Klick öffnet sie als Overlay; über das Pin-Symbol wird daraus eine feste Seitenspalte, neben der das Notizfenster entsprechend schmaler wird.
 - **Fußleiste** — links Wörter/Zeichen, mittig die Speicherplatzanzeige, rechts Zoom, Vollbild und Präsentationsmodus.
 - **Inhaltsbreite** — in der Einzel-Vorschau wahlweise „Schmal" (zentriert, etwa DIN-A4-Breite) oder „Breit" (volle Fensterbreite). Auf schmalen Bildschirmen wird ohnehin immer die volle Breite genutzt.

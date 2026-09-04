@@ -2,7 +2,9 @@
 
 Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatierung erscheint live beim Tippen, gespeichert wird trotzdem reines Markdown. Läuft komplett im Browser: keine Installation, kein Build, keine Serverseite. Die gesamte App steckt in einer einzigen HTML-Datei.
 
-> **Neu in Version 2.0:** Die Vorschau ist jetzt selbst der Editor (WYSIWYG mit Live-Formatierung), dazu ein Slash-Menü, Block-Anfasser zum Umwandeln und Verschieben, drei Betriebsarten (Fokus/Simple/Voll) und eine aufgeräumte Oberfläche mit Burger-Menü und vertikaler Notizleiste. Der klassische Quelltext-Editor bleibt vollständig erhalten und ist jederzeit umschaltbar.
+> **Neu in Version 4.0:** **Liedblätter im ChordPro-Format** als eigener Dokumenttyp — Akkorde über den Silben, Griffbilder (auch selbst gezeichnete), Transponieren und Kapodaster, Tonartvorschlag, Metronom, Stimmgerät, Import fremder Akkordblätter, Songbook mit Setlisten und Vortragsmodus sowie ein lernfähiger Fußschalter über MIDI oder Tastatur. Dazu die **Nebenspalte**: zwei Notizen nebeneinander, die zweite zum Lesen.
+>
+> **Version 2.0** brachte die direkt bearbeitbare Vorschau (WYSIWYG mit Live-Formatierung), das Slash-Menü, Block-Anfasser zum Umwandeln und Verschieben, drei Betriebsarten (Fokus/Simple/Voll) und die aufgeräumte Oberfläche mit Burger-Menü und vertikaler Notizleiste. Der klassische Quelltext-Editor bleibt vollständig erhalten und ist jederzeit umschaltbar.
 
 **🔗 Direkt ausprobieren:** [majort0m0.github.io/Markdown-Editor](https://majort0m0.github.io/Markdown-Editor/)
 **📖 Ausführliche Anleitung:** [Anleitung.md](./Anleitung.md) — Schritt-für-Schritt-Beschreibungen aller Funktionen (auch in der App selbst über das Burger-Menü ☰ verlinkt)
