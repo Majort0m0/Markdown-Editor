@@ -429,6 +429,12 @@ Amazing grace, how sweet the sound
 
 Die **Spalte**, in der ein Akkord steht, entscheidet, über welcher Silbe er landet. Überschriften wie „Chorus" oder „Verse 1" werden zu Abschnitten, „Intro" oder „Solo" zu Kommentaren, Tabulaturzeilen bleiben zeichengetreu. Titel und Interpret werden geraten und sind überschreibbar; **Tonart, Tempo und Capo** lassen sich vorgeben oder werden aus dem Kopf der Vorlage übernommen („Capo 3rd", „Key: Am", „96 bpm").
 
+**Der Seitenkopf einer kopierten Webseite fällt weg.** Wer ein Blatt aus dem Netz kopiert, nimmt meist den halben Seitenkopf mit: Titelzeile mit Interpret, Aufrufzähler, Schwierigkeit, Autorenzeile, das Akkordverzeichnis der Seite (ein Dutzend Zeilen mit je einem Akkordnamen) und das Schlagmuster-Raster. Das wird erkannt und weggelassen — und ausgewertet: aus „Creep Chords by Radiohead" werden Titel und Interpret, aus „Key:C", „Capo:2nd fret" und „Tuning:Eb Ab Db Gb Bb Eb" werden `{key}`, `{capo}` und `{tuning}`. Steht die Titelzeile darunter noch einmal als gewöhnliche Zeile, entfällt auch sie.
+
+**Griffbilder aus der Vorlage.** Zeilen wie `D5/A      x 0 0 2 x x` oder `G/B  x-2-0-0-0-3` stehen dort, weil der übliche Griff für dieses Lied der falsche ist. Sie werden zu `{define}`-Angaben, und die Griffbild-Leiste zeigt danach genau den Griff der Vorlage.
+
+Zeilen ganz in eckigen Klammern, die kein Akkord sind („[Fade out with alternating E & B]"), werden zu Kommentaren — in ChordPro sind eckige Klammern Akkorde, unverändert übernommen stünde die ganze Anweisung als ein einziger, unsinniger „Akkord" über der nächsten Silbe.
+
 Steht im Original ein Capo, werden die Akkorde als **Griffe** gelesen: sie wandern um dessen Bünde nach oben und `{capo}` wird gesetzt, sodass die Anzeige wieder genau die Schreibweise der Vorlage zeigt. Der Schalter „Akkorde sind Griffe" schaltet das ab, falls eine Quelle schon klingend notiert.
 
 Die Umwandlung steht live neben der Eingabe.

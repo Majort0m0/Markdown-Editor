@@ -9293,7 +9293,10 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       <p class="midi-hinweis">
         Text mit Akkorden über den Zeilen einfügen. Die Spalte, in der ein Akkord steht, entscheidet,
         über welcher Silbe er landet. Überschriften wie „Chorus" oder „Verse 1" werden zu Abschnitten,
-        Tabulaturzeilen bleiben zeichengetreu.
+        Tabulaturzeilen bleiben zeichengetreu. Der Seitenkopf einer aus dem Netz kopierten Vorlage
+        (Titelzeile, Aufrufzähler, Akkordverzeichnis, Schlagmuster) fällt weg — Titel, Interpret,
+        Tonart, Kapodaster und Stimmung werden daraus übernommen; Griffbild-Zeilen wie
+        „G/B&nbsp;&nbsp;x-2-0-0-0-3" werden zu echten Griffbildern.
       </p>
       <div class="import-felder">
         <input type="text" id="importTitel" class="songbook-suche" placeholder="Titel (sonst aus der ersten Zeile)" oninput="updateImportVorschau()">
@@ -16743,7 +16746,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Zeile als Akkordzeile über den Text geschoben oder als Liedtext übernommen wird. Wörter wie
     // "Am", "A" oder "Em" sind auch im Englischen gebräuchlich -- deshalb wird der Zusatz gegen die
     // bekannten Akkordarten geprüft und nicht bloß auf "sieht irgendwie akkordig aus".
-    const CHORDPRO_IMPORT_ZUSATZ = /^(?:maj|min|m|M|dim|aug|sus|add|°|ø|\+|-)?\d*(?:sus\d?|add\d+|maj\d+|no\d)?[\d+\-#b()]*$/;
+    // Die zweite, optionale Qualitätsgruppe ist die Moll-Akkord mit großer Septime ('AmM7',
+    // 'Ammaj7'). Ohne sie fiel 'AmM7' durch die Prüfung, die ganze Akkordzeile darüber galt nicht
+    // mehr als Akkordzeile, und das Lied kam ohne Akkorde herein -- in den Beispielblättern
+    // betraf das jede Strophe von "I Saved The World Today".
+    const CHORDPRO_IMPORT_ZUSATZ = /^(?:maj|min|m|M|dim|aug|sus|add|°|ø|\+|-)?\d*(?:M|maj|Maj)?\d*(?:sus\d?|add\d+|maj\d+|no\d)?[\d+\-#b()]*$/;
 
     // Nachgestellter Klammerzusatz. Im Bestand kommen genau zwei Sorten vor: ein Alternativakkord
     // ([A(F#m)], [C(E)], [Gm7(C)]) und eine kurze Spielanweisung ([F(open)]). Beides ist erlaubt,
@@ -16791,13 +16798,56 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return CHORDPRO_IMPORT_ZUSATZ.test(rest);
     }
 
-    // Eine Zeile gilt als Akkordzeile, wenn JEDES Wort darin ein Akkord ist. Zusätzlich muss
-    // mindestens ein echter Akkord dabei sein -- eine Zeile aus lauter Taktstrichen ist keine.
+    // Wörter einer Akkordzeile. Eine eckige Klammergruppe zählt als EIN Wort, auch wenn
+    // Leerzeichen darin stehen: '[ Am ]' steht so in einem der Beispielblätter und zerfiel bei
+    // einer reinen Trennung an Leerzeichen in '[', 'Am' und ']' -- die Zeile war damit keine
+    // Akkordzeile mehr und der Text darunter blieb ohne Akkorde.
+    // Jeder Aufruf baut sich seinen eigenen Ausdruck: ein geteilter /g-Ausdruck trüge sein
+    // lastIndex zwischen den Aufrufen mit.
+    function chordProImportZeilenWorte(zeile) {
+      const re = /\[[^\]\n]*\]|\S+/g;
+      const worte = [];
+      let m;
+      while ((m = re.exec(zeile)) !== null) worte.push({ spalte: m.index, roh: m[0] });
+      return worte;
+    }
+
+    function chordProImportAkkordname(roh) {
+      return String(roh).replace(/[[\]]/g, '').trim();
+    }
+
+    // Zeichen, die auf einer Akkordzeile stehen dürfen, ohne selbst ein Akkord zu sein:
+    // Wiederholungs- und Fußnotenzeichen ('x2', '(x4)', '*', '**') und eine abweichende
+    // Taktangabe ('(2/4)'). Sie bleiben gewöhnlicher Text -- als Marke gesetzt ('[x2]') hielte
+    // die Vorschau sie für einen Akkord und böte sie zum Anhören an.
+    const CHORDPRO_IMPORT_BEIWERK_RE = /^(?:\*+|\(?(?:x\s*\d{1,2}|\d{1,2}\s*x)\)?|\(\d{1,2}\/\d{1,2}\))$/i;
+
+    // Eine Zeile gilt als Akkordzeile, wenn JEDES Wort darin ein Akkord oder Beiwerk ist.
+    // Zusätzlich muss mindestens ein echter Akkord dabei sein -- eine Zeile aus lauter
+    // Taktstrichen ist keine.
     function chordProImportIstAkkordzeile(zeile) {
-      const worte = zeile.trim().split(/\s+/).filter(Boolean);
+      const worte = chordProImportZeilenWorte(zeile);
       if (!worte.length) return false;
-      if (!worte.every(chordProImportIstAkkord)) return false;
-      return worte.some((w) => /^[A-H][#b]?/.test(w.replace(/^[(\[]+/, '')));
+      let echte = 0;
+      for (const w of worte) {
+        const name = chordProImportAkkordname(w.roh);
+        if (CHORDPRO_IMPORT_BEIWERK_RE.test(name)) continue;
+        if (!chordProImportIstAkkord(name)) return false;
+        if (/^[A-H][#b]?/.test(name.replace(/^\(+/, ''))) echte++;
+      }
+      return echte > 0;
+    }
+
+    // Eine reine Akkordzeile in Marken setzen. Die Abstände zwischen den Marken bleiben dabei
+    // erhalten: dort ist die Länge der Leerräume die einzige Angabe darüber, WANN im Takt ein
+    // Akkord kommt (siehe chordProIstReineAkkordzeile). Die frühere Fassung zog jede solche Zeile
+    // auf einfache Leerzeichen zusammen und warf genau diese Angabe weg.
+    function chordProImportAkkordzeileSetzen(zeile) {
+      return zeile.replace(/\[[^\]\n]*\]|\S+/g, (roh) => {
+        const name = chordProImportAkkordname(roh);
+        if (!name || CHORDPRO_IMPORT_BEIWERK_RE.test(name)) return roh;
+        return '[' + name + ']';
+      }).replace(/\s+$/, '');
     }
 
     // Abschnittsüberschriften, wie sie in Akkordblättern aus dem Netz vorkommen: "Chorus:",
@@ -16827,8 +16877,34 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     function chordProImportIstTabzeile(zeile) {
       const t = zeile.trim();
       if (t.length < 6) return false;
+      // Ein Saitenname mit anschließendem Raster ('D|----------h2p0-|') irgendwo in der Zeile.
+      // Diese zweite Bedingung gibt es, weil manche Vorlagen dem Raster eine Anmerkung voran-
+      // stellen (' play when * D|--------|') -- die erste Prüfung sieht nur den Zeilenanfang und
+      // riss ein Tabulaturblock dort mitten entzwei.
+      if (/(?:^|\s)[eADGBEHadgbh]\|[-0-9hpbrsxX/\\~()|]{4,}/.test(t)) return true;
       const striche = (t.match(/-/g) || []).length;
       return striche >= 5 && striche / t.length > 0.35 && /^[eADGBEHadgbh]?\s*[|\-]/.test(t);
+    }
+
+    // Darf diese Akkordzeile in die folgende Zeile hineingeschoben werden?
+    //
+    // Eine Zeile ohne echtes Wort ist kein Liedtext, sondern eine Anmerkung -- und die gehört mal
+    // zu den Akkorden darüber und mal nicht:
+    //   'F   Eb  G   A' / 'x4  x2  x2  x8'  -- jede Marke sitzt genau auf dem ANFANG einer
+    //     Anmerkung; verwoben ergibt das '[F]x4  [Eb]x2 …', und genau so steht es im Bestand.
+    //   '| C | C C/B Am | G7 |' / '                    (2/4)'  -- hier landen '[G7]' und '[|]'
+    //     MITTEN in der Anmerkung; herausgekommen ist '([G7]2/4[|])'.
+    // Unterschieden wird genau daran. Maßgeblich sind dabei nur Anmerkungszeichen
+    // (CHORDPRO_IMPORT_BEIWERK_RE): eine Füllstrecke aus Strichen ('[A]-----[Bm]-----') ist kein
+    // Wort, das zerschnitten werden könnte, und darf weiter Marken aufnehmen.
+    function chordProImportVerwebbar(akkordzeile, textzeile) {
+      if (/[A-Za-zÀ-ÖØ-öø-ÿ]{2,}/.test(textzeile)) return true;   // echter Liedtext
+      const innen = new Set();
+      for (const w of chordProImportZeilenWorte(textzeile)) {
+        if (!CHORDPRO_IMPORT_BEIWERK_RE.test(chordProImportAkkordname(w.roh))) continue;
+        for (let k = w.spalte + 1; k < w.spalte + w.roh.length; k++) innen.add(k);
+      }
+      return !chordProImportZeilenWorte(akkordzeile).some((w) => innen.has(w.spalte));
     }
 
     // Eine Akkordzeile über die folgende Textzeile schieben. Die SPALTE des Akkords in der oberen
@@ -16836,9 +16912,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // eingesetzt, sonst verschöbe jede Einfügung die Spalten aller folgenden.
     function chordProImportVerweben(akkordzeile, textzeile) {
       const marken = [];
-      const re = /\S+/g;
-      let m;
-      while ((m = re.exec(akkordzeile)) !== null) marken.push({ spalte: m.index, name: m[0].replace(/[[\]]/g, '') });
+      for (const w of chordProImportZeilenWorte(akkordzeile)) {
+        const name = chordProImportAkkordname(w.roh);
+        // Beiwerk ('x2', '*') steht ÜBER der Zeile, nicht in ihr -- in den Text geschoben zerteilte
+        // es ein Wort.
+        if (!name || CHORDPRO_IMPORT_BEIWERK_RE.test(name)) continue;
+        marken.push({ spalte: w.spalte, name });
+      }
 
       // Akkorde, die HINTER dem Zeilenende stehen, müssen von denen davor getrennt behandelt
       // werden. Vorher liefen beide durch dieselbe Rückwärtsschleife, und dabei ging jedes Mal
@@ -16866,6 +16946,27 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return ergebnis;
     }
 
+    // Griffbild-Zeilen, wie sie manche Vorlagen über das Lied setzen ("D5/A      x 0 0 2 x x",
+    // "G/B  x-2-0-0-0-3"). Genau dafür stehen sie da: der übliche Griff ist für dieses Lied der
+    // falsche. ChordPro kennt {define}, diese App liest es bereits (chordProDefinitionenLesen),
+    // zieht eine solche Angabe jeder Tabelle vor (chordProGriffFuerAnzeige) und schluckt die Zeile
+    // beim Rendern still -- als Liedtext übernommen stand sie dagegen bloß im Blatt herum.
+    const IMPORT_GRIFFZEILE_RE =
+      /^\s*(\S+)[ \t]+((?:[xXnN0-9]{1,2}[ \t-]+){5}[xXnN0-9]{1,2})[ \t]*(?:\([^)]*\))?[ \t]*$/;
+
+    function chordProImportGriffzeile(zeile) {
+      const m = IMPORT_GRIFFZEILE_RE.exec(zeile);
+      if (!m) return null;
+      // Der Name muss ein Akkord sein, sonst ginge jede Zeile aus sechs Zahlen durch. Ein
+      // angehängtes '*' ist ein Fußnotenzeichen und gehört zum Namen -- 'D6*' wird im Blatt auch
+      // in den Akkordzeilen so geschrieben, der Griff muss also unter genau diesem Namen liegen.
+      if (!chordProImportIstAkkord(m[1].replace(/\*+$/, ''))) return null;
+      const buende = m[2].trim().split(/[ \t-]+/)
+        .map((w) => (/^[xXnN]$/.test(w) ? 'x' : parseInt(w, 10)));
+      if (buende.length !== 6 || buende.some((w) => w !== 'x' && !(w >= 0 && w <= 24))) return null;
+      return '{define: ' + m[1] + ' base-fret 1 frets ' + buende.join(' ') + '}';
+    }
+
     // Angaben, die in solchen Vorlagen über dem Lied stehen: 'Capo 3rd', 'Key: Am', '120 bpm'.
     // Sie sind kein Liedtext und gehören in die Direktiven -- sonst stehen sie als Zeile mitten
     // im Blatt und die Werkzeuge (Metronom, Kapodaster, Tonartvorschlag) wissen nichts von ihnen.
@@ -16873,10 +16974,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     const IMPORT_KEY_RE   = /^\s*(?:key|tonart)\s*:?\s*([A-H][#b]?(?:m|min|maj)?)\s*$/i;
     const IMPORT_TEMPO_RE = /^\s*(?:tempo|bpm)\s*:?\s*(\d{2,3})\s*$|^\s*(\d{2,3})\s*bpm\s*$/i;
 
-    function chordProImportKopfdaten(zeilen, bis) {
+    function chordProImportKopfdaten(zeilen, von, bis) {
       const gefunden = { capo: '', key: '', tempo: '' };
       const verbraucht = new Set();
-      for (let i = 0; i < Math.min(zeilen.length, bis); i++) {
+      for (let i = von; i < Math.min(zeilen.length, bis); i++) {
         const z = zeilen[i];
         let m;
         if (!gefunden.capo && (m = IMPORT_CAPO_RE.exec(z))) { gefunden.capo = m[1]; verbraucht.add(i); continue; }
@@ -16886,18 +16987,168 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return { gefunden, verbraucht };
     }
 
+    // --- Seitenkopf einer aus dem Netz kopierten Vorlage ----------------------------------------
+    //
+    // Wer ein Akkordblatt aus dem Netz kopiert, nimmt fast immer den halben Seitenkopf mit. An den
+    // Beispielblättern in chordpro/Beispiele gemessen sieht der immer gleich aus: Titelzeile mit
+    // Interpret, Aufrufzähler, Schwierigkeit, Stimmung, Tonart, Kapodaster, Autorenzeile, das
+    // Schlagmuster-Raster -- und, das ist der teuerste Teil, das AKKORDVERZEICHNIS der Seite: ein
+    // Dutzend Zeilen mit je einem einzelnen Akkordnamen.
+    //
+    // Unbehandelt wird daraus alles Liedtext, und zwar auf drei Arten falsch: der Titel hieß
+    // "Creep Chords by Radiohead", als Interpret stand "4,512,962 views, added to favorites 71,322
+    // times" im Blatt, und das Akkordverzeichnis wurde zu einem Dutzend reiner Akkordzeilen, deren
+    // letzter Eintrag sich noch mit der ersten echten Zeile darunter verwob
+    // ("[Fm]Capo 7 or transpose -5 for original key."). In einem Blatt wurde sogar das "[a]" aus
+    // der Autorenzeile ("Author mick405 [a] 70.") beim Kapodaster-Ausgleich mittransponiert.
+    //
+    // Der Kopf wird deshalb STRIKT VON OBEN abgetragen und bei der ersten Zeile abgebrochen, die
+    // nach Lied aussieht: eine später im Blatt stehende Zeile kann so nie versehentlich wegfallen,
+    // egal wie sehr sie einem Kopfeintrag ähnelt.
+
+    // "Creep Chords by Radiohead", "Official Sultans Of Swing Chords by Dire Straits".
+    // Das Gattungswort ("Chords", "Tab", "Ukulele Chords" …) ist Pflicht -- ohne es bliebe ein
+    // bloßes "X by Y" übrig, und das ist auch ein gewöhnlicher Satz.
+    const IMPORT_KOPF_TITEL_RE =
+      /^(?:official\s+)?(.{2,80}?)\s+(?:chords?|tabs?|tabulaturen?|akkorde|lyrics?|ukulele|bass|guitar|piano|drums)(?:\s+(?:pro|chords?|tabs?))?\s+(?:by|von)\s+(.{1,60})$/i;
+
+    // Ausdrücklich benannte Felder, wie sie manche Vorlagen zusätzlich mitbringen
+    // ("Artist: Eurythmics", "Song: I Saved The World Today").
+    const IMPORT_KOPF_LIED_RE      = /^(?:song|title|titel|lied)\s*:\s*(.{1,80})$/i;
+    const IMPORT_KOPF_INTERPRET_RE = /^(?:artist|interpret|band|k(?:ü|ue)nstler|performer)\s*:\s*(.{1,60})$/i;
+
+    // Die Zeile, nach der das Akkordverzeichnis der Seite folgt.
+    const IMPORT_KOPF_VERZEICHNIS_RE = /^(?:chords?|akkorde|tabs?|griffe)$/i;
+
+    const IMPORT_KOPF_RAUSCHEN = [
+      /^\d[\d.,]*\s+views?\b/i,                       // "4,512,962 views, added to favorites …"
+      /^(?:difficulty|schwierigkeit)\s*:/i,
+      /^author\b/i,                                   // "Author Unregistered.", "Author mick405 [a] 70."
+      /^\d+\s+contributors?\s+total/i,
+      /^last\s+edit(?:ed)?\b/i,
+      /^(?:instr\.?|pro|official|strumming|tuner|favorites?|ukulele|bass|guitar|piano|drums)$/i,
+      /^is\s+this\s+strumming\s+pattern\s+correct\?$/i,
+      /^[1-9&+aeu]$/i,                                // das Schlagmuster-Raster: je ein Zeichen je Zeile
+      /^(?:capo|kapodaster)\s*:?\s*(?:no\s+capo|none|kein(?:\s+kapodaster)?|-)$/i,
+      /^(?:key|tonart)\s*:?\s*(?:n\/?a|none|unknown|-)$/i,
+      /^(?:tuning|stimmung)\s*:/i,                    // nach IMPORT_KOPF_STIMMUNG_RE: was die nicht liest, ist Rauschen
+    ];
+
+    // "Tuning:Eb Ab Db Gb Bb Eb" ist echte Spielinformation: eine halbtonweise tiefer gestimmte
+    // Gitarre macht jedes Griffbild und das Stimmgerät falsch. ChordPro kennt dafür {tuning}, und
+    // das Stimmgerät dieser App liest es bereits (chordProStimmungLesen) -- allerdings mit
+    // Oktavziffern, die eine solche Kopfzeile nicht nennt.
+    const IMPORT_KOPF_STIMMUNG_RE = /^(?:tuning|stimmung)\s*:?\s*([A-Ha-h][#b]?(?:\s+[A-Ha-h][#b]?){3,6})$/i;
+
+    // Die fehlenden Oktaven ergänzen: Bezug ist die Standardstimmung, und für jede Saite wird die
+    // Oktave gewählt, in der der genannte Ton ihrem Standardton am nächsten liegt. Das trifft jede
+    // reale Umstimmung (Halbton tiefer, Drop D, DADGAD), weil keine davon eine Saite um mehr als
+    // eine halbe Oktave verschiebt.
+    //
+    // Drei Ausgänge: der fertige Wert für {tuning}; '' für "das IST die Standardstimmung", dann
+    // gibt es nichts zu sagen; und null für "so nicht lesbar" -- eine vier- oder fünfsaitige
+    // Angabe etwa lässt sich ohne Bezug nicht in Oktaven auflösen (G C E A ist Ukulele ODER Bass),
+    // und die Zeile wird dann als Kommentar behalten statt stillschweigend weggeworfen.
+    function chordProImportStimmung(namen) {
+      const teile = namen.trim().split(/\s+/);
+      if (teile.length !== CHORDPRO_STANDARD_STIMMUNG.length) return null;
+      const midi = [];
+      for (let i = 0; i < teile.length; i++) {
+        const n = chordProNoteLesen(teile[i]);
+        if (!n || n.laenge !== teile[i].length) return null;
+        let best = null;
+        for (let oktave = 0; oktave <= 9; oktave++) {
+          const wert = 12 * (oktave + 1) + n.halbton;
+          if (best === null || Math.abs(wert - CHORDPRO_STANDARD_STIMMUNG[i]) < Math.abs(best - CHORDPRO_STANDARD_STIMMUNG[i])) best = wert;
+        }
+        midi.push(best);
+      }
+      if (midi.every((w, i) => w === CHORDPRO_STANDARD_STIMMUNG[i])) return '';
+      // Vorzeichen wie in der Vorlage: eine halbtonweise tiefer gestimmte Gitarre heißt unter
+      // Gitarristen 'Eb Ab Db Gb Bb Eb' und nicht 'D# G# C# F# A# D#'. Enharmonisch dasselbe,
+      // aber nur die eine Schreibweise liest sich wie das, was in der Vorlage stand.
+      const art = /b/.test(namen) ? 'b' : '#';
+      return midi.map((w) => chordProNoteSchreiben(w, art, false) + (Math.floor(w / 12) - 1)).join(' ');
+    }
+
+    // Zum Vergleichen von Titel- und Interpretenzeilen: die Vorlage schreibt dieselbe Angabe im
+    // Seitenkopf und im Blatt oft unterschiedlich ("Simon & Garfunkel" / "Simon and Garfunkel",
+    // "MRS. ROBINSON (Simon & Garfunkel)").
+    function chordProImportKennung(text) {
+      return String(text).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '');
+    }
+
+    function chordProImportKopfBereinigen(zeilen) {
+      const gefunden = { titel: '', interpret: '', tuning: '', stimmungText: '', key: '', capo: '', tempo: '' };
+      let start = 0, i = 0, imVerzeichnis = false, etwasErkannt = false, m;
+      while (i < zeilen.length) {
+        const t = zeilen[i].trim();
+        if (!t) { i++; continue; }               // Leerzeilen entscheiden hier nichts
+        // Erkannt wird unabhängig davon, ob das Feld schon steht -- übernommen nur, solange es
+        // leer ist. Andernfalls bräche die Schleife bei der zweiten Nennung derselben Angabe ab,
+        // und genau das kommt vor: "Creep Chords by Radiohead" oben, "Artist: …"/"Song: …"
+        // darunter.
+        const nimm = (feld, wert) => { if (!gefunden[feld] && wert) gefunden[feld] = String(wert).trim(); };
+        if ((m = IMPORT_KOPF_TITEL_RE.exec(t))) { nimm('titel', m[1]); nimm('interpret', m[2]); }
+        else if ((m = IMPORT_KOPF_LIED_RE.exec(t))) nimm('titel', m[1]);
+        else if ((m = IMPORT_KOPF_INTERPRET_RE.exec(t))) nimm('interpret', m[1]);
+        else if ((m = IMPORT_KOPF_STIMMUNG_RE.exec(t))) {
+          const stimmung = chordProImportStimmung(m[1]);
+          if (stimmung === null) nimm('stimmungText', m[1].trim());
+          else nimm('tuning', stimmung);
+        }
+        else if ((m = IMPORT_KEY_RE.exec(t))) nimm('key', m[1]);
+        else if ((m = IMPORT_CAPO_RE.exec(t))) nimm('capo', m[1]);
+        else if ((m = IMPORT_TEMPO_RE.exec(t))) nimm('tempo', m[1] || m[2]);
+        else if (IMPORT_KOPF_VERZEICHNIS_RE.test(t)) imVerzeichnis = true;
+        // Ein Verzeichniseintrag ist genau EIN Akkordname allein auf der Zeile. Die Bedingung
+        // "keine Leerzeichen" ist wichtig: eine echte Akkordzeile des Liedes hat mehrere Marken,
+        // und die soll das Verzeichnis nicht mitverschlucken.
+        else if (imVerzeichnis && !/\s/.test(t) && chordProImportIstAkkordzeile(t)) { /* Verzeichniseintrag */ }
+        else if (IMPORT_KOPF_RAUSCHEN.some((re) => re.test(t))) { /* Rauschen */ }
+        else break;
+        etwasErkannt = true;
+        i++;
+        start = i;
+      }
+      // Nichts erkannt heißt: das ist kein solcher Seitenkopf. Dann bleibt das Blatt unangetastet.
+      if (!etwasErkannt) return { start: 0, gefunden: { titel: '', interpret: '', tuning: '', stimmungText: '', key: '', capo: '', tempo: '' } };
+
+      // Titel und Interpret stehen oft ZUSÄTZLICH noch einmal als gewöhnliche Zeilen über dem
+      // Blatt ("Scarborough Fair" / "Simon and Garfunkel"). Doppelt braucht es sie nicht -- aber
+      // nur wegwerfen, was nachweislich dasselbe sagt, und nur unmittelbar hinter dem Kopf.
+      const titelK = chordProImportKennung(gefunden.titel);
+      const interpretK = chordProImportKennung(gefunden.interpret);
+      for (let n = 0; n < 3 && start < zeilen.length; n++) {
+        let j = start;
+        while (j < zeilen.length && !zeilen[j].trim()) j++;
+        if (j >= zeilen.length) break;
+        const k = chordProImportKennung(zeilen[j]);
+        const passt = (titelK && (k === titelK || (interpretK && k === titelK + interpretK)))
+                   || (interpretK && k === interpretK);
+        if (!passt) break;
+        start = j + 1;
+      }
+      return { start, gefunden };
+    }
+
     function chordProAusAkkordblatt(text, titelVorgabe, interpretVorgabe, extra) {
       const zeilen = String(text).replace(/\r\n?/g, '\n').split('\n').map((z) => z.replace(/\t/g, '    ').replace(/\s+$/, ''));
       const kopf = [];
-      let titel = (titelVorgabe || '').trim();
-      let interpret = (interpretVorgabe || '').trim();
+      // Zuerst den Seitenkopf einer aus dem Netz kopierten Vorlage abtragen -- er liefert Titel,
+      // Interpret und oft Tonart/Kapodaster/Stimmung gleich mit. Ist keiner da, ändert sich nichts.
+      const seitenkopf = chordProImportKopfBereinigen(zeilen);
+      let titel = (titelVorgabe || '').trim() || seitenkopf.gefunden.titel;
+      let interpret = (interpretVorgabe || '').trim() || seitenkopf.gefunden.interpret;
       const zusatz = extra || {};
       // Nur im Kopfbereich suchen: eine Liedzeile, die zufällig 'Tempo 120' heißt, ist Liedtext.
-      const kopfDaten = chordProImportKopfdaten(zeilen, 12);
+      const kopfDaten = chordProImportKopfdaten(zeilen, seitenkopf.start, seitenkopf.start + 12);
+      for (const feld of ['key', 'capo', 'tempo'])
+        if (!kopfDaten.gefunden[feld]) kopfDaten.gefunden[feld] = seitenkopf.gefunden[feld];
 
       // Kopfzeilen erraten, solange sie nicht vorgegeben sind: die erste nicht-leere Zeile, die
       // keine Akkordzeile ist, ist der Titel; eine folgende Zeile mit "by"/"von" der Interpret.
-      let start = 0;
+      let start = seitenkopf.start;
       while (start < zeilen.length && !zeilen[start].trim()) start++;
       if (!titel && start < zeilen.length && !chordProImportIstAkkordzeile(zeilen[start])
           && !chordProImportUeberschrift(zeilen[start]) && zeilen[start].trim().length <= 60) {
@@ -16916,6 +17167,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
       if (titel) kopf.push('{title: ' + titel + '}');
       if (interpret) kopf.push('{artist: ' + interpret + '}');
+      if (seitenkopf.gefunden.tuning) kopf.push('{tuning: ' + seitenkopf.gefunden.tuning + '}');
+      else if (seitenkopf.gefunden.stimmungText) kopf.push('{comment: Stimmung: ' + seitenkopf.gefunden.stimmungText + '}');
       // Vorgabe aus dem Dialog schlägt das Erkannte; leer heißt "nicht setzen".
       const key = (zusatz.key !== undefined ? zusatz.key : kopfDaten.gefunden.key).trim();
       const capo = (zusatz.capo !== undefined ? zusatz.capo : kopfDaten.gefunden.capo).trim();
@@ -16952,6 +17205,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
         if (!z.trim()) { aus.push(''); continue; }
 
+        const griff = chordProImportGriffzeile(z);
+        if (griff) { aus.push(griff); continue; }
+
         const kopfzeile = chordProImportUeberschrift(z);
         if (kopfzeile) {
           abschnittSchliessen();
@@ -16965,13 +17221,29 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           // Nur mit einer echten Textzeile verweben. Folgt eine Leerzeile oder wieder eine
           // Akkordzeile, bleibt sie als reine Akkordzeile stehen -- das ist im Format vorgesehen
           // und die Vorschau stellt sie auch so dar.
-          if (naechste !== undefined && naechste.trim() && !chordProImportIstAkkordzeile(naechste)
+          //
+          // Was dabei als Textzeile durchgeht, entscheidet chordProImportVerwebbar() -- siehe
+          // dort, warum eine Zeile ganz ohne Wort nicht schon deshalb verwebbar ist.
+          if (naechste !== undefined && naechste.trim() && chordProImportVerwebbar(z, naechste)
+              && !chordProImportIstAkkordzeile(naechste) && !chordProImportGriffzeile(naechste)
               && !chordProImportUeberschrift(naechste) && !chordProImportIstTabzeile(naechste)) {
             aus.push(chordProImportVerweben(z, naechste));
             i++;
           } else {
-            aus.push(z.trim().split(/\s+/).map((w) => '[' + w.replace(/[[\]]/g, '') + ']').join(' '));
+            aus.push(chordProImportAkkordzeileSetzen(z));
           }
+          continue;
+        }
+
+        // Eine Zeile, die ganz in eckigen Klammern steht und kein Akkord ist, ist eine Anweisung:
+        // "[Fade out with alternating E & B]", "[Chords]", "[Fade Out]". Sie MUSS zu einem
+        // Kommentar werden -- in ChordPro sind eckige Klammern Akkordmarken, unverändert
+        // übernommen stünde die ganze Anweisung als ein einziger, unsinniger "Akkord" über der
+        // nächsten Silbe.
+        const anweisung = /^\[([^\]]{1,80})\]$/.exec(z.trim());
+        if (anweisung && anweisung[1].trim()) {
+          abschnittSchliessen();
+          aus.push('{comment: ' + anweisung[1].trim() + '}');
           continue;
         }
 
@@ -17064,9 +17336,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       ziel.innerHTML = renderChordProSourceHighlight(aus);
       const marken = (aus.match(/\[[^\]\n]*\]/g) || []).length;
       const abschnitte = (aus.match(/\{start_of_/g) || []).length;
+      const griffe = (aus.match(/\{define:/g) || []).length;
       const capo = chordProDirektiveLesen(aus, 'capo');
       document.getElementById('importZahlen').textContent =
-        marken + ' Akkorde · ' + abschnitte + ' Abschnitte' + (capo ? ' · Capo ' + capo : '');
+        marken + ' Akkorde · ' + abschnitte + ' Abschnitte' +
+        (griffe ? ' · ' + griffe + (griffe === 1 ? ' Griffbild' : ' Griffbilder') : '') +
+        (capo ? ' · Capo ' + capo : '');
       // Der Griffe-Schalter macht nur bei gesetztem Kapodaster einen Unterschied.
       document.getElementById('importGriffeFeld').style.opacity = capo ? '1' : '.4';
       document.getElementById('importOeffnenBtn').disabled = false;
@@ -19184,7 +19459,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // aber nicht: [F(open)] und [Gm7(C)] standen deshalb als "ohne Griffbild" da, obwohl F und
     // Gm7 beide in der Tabelle stehen.
     function chordProGriffOhneZusatz(name) {
-      return String(name).replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
+      // Ein Name, der GANZ in Klammern steht ([(Cmaj7)] -- eine Alternative, keine Anmerkung),
+      // ist der Akkord selbst. Dieselbe Lesart benutzt chordProAkkordToene() für den Klang schon;
+      // hier fehlte sie, sodass nach dem Entfernen der Klammer nichts übrig blieb und ein Akkord,
+      // den man hören kann, als "ohne Griffbild" dastand.
+      const ganz = /^\(([^()]*)\)$/.exec(String(name).trim());
+      return String(ganz ? ganz[1] : name).replace(/\([^)]*\)/g, '').replace(/\*/g, '').trim();
     }
 
     function chordProGriffFinden(name) {
@@ -22290,6 +22570,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       ['maj9', [0, 4, 7, 11, 14]], ['maj7', [0, 4, 7, 11]], ['m7b5', [0, 3, 6, 10]], ['m7-5', [0, 3, 6, 10]],
       ['7sus4', [0, 5, 7, 10]], ['7sus', [0, 5, 7, 10]], ['sus4', [0, 5, 7]], ['sus2', [0, 2, 7]], ['sus', [0, 5, 7]],
       ['add9', [0, 4, 7, 14]], ['dim7', [0, 3, 6, 9]], ['dim', [0, 3, 6]], ['aug', [0, 4, 8]],
+      // Moll mit GROSSER Septime. Zwei Schreibweisen, weil beide gebräuchlich sind -- 'AmM7' steht
+      // so in einem der Beispielblätter und war vorher der einzige Akkord darin ohne Griffbild.
+      ['mmaj7', [0, 3, 7, 11]], ['mM7', [0, 3, 7, 11]],
       ['m11', [0, 3, 7, 10, 14, 17]], ['m9', [0, 3, 7, 10, 14]], ['m7', [0, 3, 7, 10]], ['m6', [0, 3, 7, 9]], ['m', [0, 3, 7]],
       ['11', [0, 4, 7, 10, 14, 17]], ['13', [0, 4, 7, 10, 14, 21]], ['9', [0, 4, 7, 10, 14]],
       ['7', [0, 4, 7, 10]], ['6', [0, 4, 7, 9]], ['5', [0, 7]],
