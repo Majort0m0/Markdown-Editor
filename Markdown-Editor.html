@@ -3120,9 +3120,20 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       min-height: 1.2em;
     }
 
-    .import-karte {
-      max-width: min(980px, 94vw);
-      width: 980px;
+    /* Der Dialog lebt von den beiden Textfeldern nebeneinander, und in einem Akkordblatt ist die
+       Spalte die Information -- eine Zeile, die nicht ganz hineinpasst, verschiebt die Akkorde
+       optisch gegen den Text darunter (deshalb steht bei .import-quelle der Umbruch aus). Feste
+       980px verschenkten auf einem Laptop links und rechts jeweils gut ein Fünftel des Bildschirms
+       und schnitten dafür jede zweite Zeile ab. Jetzt nimmt die Karte, was da ist, mit einer
+       Obergrenze, ab der eine weitere Verbreiterung nur noch Leerraum in den Spalten erzeugt. */
+    /* Zwei Klassen im Selektor, wie schon bei .modal-card.fussschalter-karte gleich darunter --
+       und das ist hier nicht Geschmack: .modal-card mit seinem max-width: 440px steht WEITER
+       UNTEN im selben Stylesheet. Bei gleicher Spezifität gewinnt das Spätere, weshalb die
+       frühere Fassung dieser Regel (max-width: min(980px, 94vw)) nie gegriffen hat und der Dialog
+       tatsächlich immer 440px breit war -- genau die gemeldete schmale Karte. */
+    .modal-card.import-karte {
+      width: min(1760px, 96vw);
+      max-width: 96vw;
       max-height: 92vh;
       display: flex;
       flex-direction: column;
