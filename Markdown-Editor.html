@@ -3471,6 +3471,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       touch-action: none;
     }
 
+    /* Als reiner Anfasser: kein Zustand, kein Anklick-Gefühl -- nur eine greifbare Fläche auf
+       dem sonst 6px schmalen Trenner. */
+    .sync-scroll-toggle-btn.nur-anfasser {
+      cursor: col-resize;
+      opacity: .75;
+    }
+
     .pane-resizer:hover,
     .pane-resizer.dragging {
       background-color: var(--accent);
@@ -5124,10 +5131,31 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     /* Neben einer zweiten Notiz will man die eigene sehen -- die Vorschau bleibt deshalb stehen,
        auch wenn der Fokus-Modus sie sonst ausblenden würde. */
     main.nebenspalte-aktiv .preview-pane { display: block; }
-    /* Beim Seitentausch wechseln nur die Gitterspalten -- die Reihenfolge im Markup bleibt, damit
-       die Lesereihenfolge für Bildschirmleser der sichtbaren entspricht ... */
-    main.nebenspalte-rechts .nebenspalte { grid-column: 3; }
-    main.nebenspalte-rechts .preview-pane { grid-column: 1; border-right: 1px solid var(--border-color); }
+
+    /* Seitentausch. Nur die Gitterspalten wechseln; die Reihenfolge im Markup bleibt, damit die
+       Lesereihenfolge für Bildschirmleser der sichtbaren entspricht.
+       Die ZEILE muss dabei ausdrücklich mitgesetzt werden: das Gitter platziert von selbst der
+       Reihe nach, und ein Element, das nach hinten in eine frühere Spalte soll, beginnt sonst eine
+       neue Zeile. Genau das ist passiert -- die getauschte Vorschau rutschte unter die Nebenspalte,
+       beide bekamen die halbe Höhe und darunter blieb toter Raum (gemeldet mit Bild).
+       In der schmalen Darstellung stapelt die App ohnehin und die Nebenspalte ist dort aus --
+       deshalb gilt der ganze Block erst ab 641px, sonst überschriebe er die Zeilen der
+       Stapel-Darstellung (er ist mit zwei Klassen spezifischer als deren Regeln). */
+    @media (min-width: 641px) {
+      main.nebenspalte-aktiv .nebenspalte,
+      main.nebenspalte-aktiv .pane-resizer,
+      main.nebenspalte-aktiv .preview-pane { grid-row: 1; }
+      main.nebenspalte-rechts .nebenspalte {
+        grid-column: 3;
+        border-right: none;
+        border-left: 1px solid var(--border-color);
+      }
+      main.nebenspalte-rechts .preview-pane { grid-column: 1; }
+      /* Vorlesen- und Inhaltsverzeichnis-Knopf schweben immer an der rechten oberen Ecke des
+         Hauptbereichs. Steht die Nebenspalte dort, liegen sie über deren Kopfzeile und verdecken
+         Umschalter und Schließen-Knopf -- deshalb wird ihnen dort Platz freigehalten. */
+      main.nebenspalte-rechts .nebenspalte-kopf { padding-right: 116px; }
+    }
 
     .nebenspalte-kopf {
       display: flex;
@@ -15544,6 +15572,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
       const menue = document.getElementById('burgerNebenspalte');
       if (menue) menue.value = nebenspalteModus;
+      const syncKnopf = document.getElementById('syncScrollBtn');
+      if (syncKnopf) {
+        syncKnopf.classList.toggle('active', !an && syncScrollEnabled);
+        syncKnopf.classList.toggle('nur-anfasser', an);
+        syncKnopf.title = an ? 'Zum Verschieben ziehen' : 'Synchrones Scrollen';
+      }
       renderNebenspalte();
     }
 
@@ -15924,7 +15958,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // real click that the button's toggle still fired, but so did an unwanted drag-classList
       // toggle immediately after. Bailing out here leaves the button's native click handling (and
       // its own onclick="toggleSyncScroll()") completely untouched.
-      if (e.target.closest('#syncScrollBtn')) return;
+      // ... außer in der Zwei-Spalten-Ansicht: dort hat der Knopf keine eigene Aufgabe mehr und
+      // ist genau das, was ein 6px schmaler Trenner auf einem Touchscreen braucht -- eine
+      // greifbare Fläche. Deshalb wird der Griff dort NICHT abgebrochen, sondern beginnt das
+      // Verschieben.
+      if (!nebenspalteAktiv() && e.target.closest('#syncScrollBtn')) return;
       paneResizer.setPointerCapture(e.pointerId);
       paneResizer.classList.add('dragging');
       resizeIsRow = window.matchMedia('(max-width: 640px)').matches;
@@ -15964,6 +16002,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     paneResizer.addEventListener('pointercancel', endPaneResize);
 
     function toggleSyncScroll() {
+      // In der Zwei-Spalten-Ansicht stehen zwei verschiedene Notizen nebeneinander -- ihre
+      // Bildläufe zu koppeln ergibt keinen Sinn. Der Knopf bleibt dort trotzdem stehen, aber
+      // ausschließlich als Anfasser zum Verschieben mit dem Finger (siehe den Zweig in
+      // paneResizer's pointerdown, der ihn dafür durchlässt).
+      if (nebenspalteAktiv()) return;
       syncScrollEnabled = !syncScrollEnabled;
       syncScrollBtn.classList.toggle('active', syncScrollEnabled);
       saveStateToLocalStorage();

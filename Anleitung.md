@@ -479,6 +479,14 @@ Am Rechner (Windows, macOS, Linux) gilt das nicht: dort reicht der Fußschalter 
 
 **Zur Fehlersuche** steht unten im Dialog die Zeile **„Zuletzt gedrückte Taste"**. Sie sagt, ob vom Pedal überhaupt etwas ankommt. Bleibt sie beim Treten leer, sendet der Fußschalter keine gewöhnliche Taste (manche Modelle schicken Mediensteuerbefehle wie Play/Pause, die eine Webseite nicht sieht) — oder es fehlt die verbundene Tastatur.
 
+### Zwei Notizen nebeneinander
+
+Burger-Menü ☰ → **Nebenspalte**: *Aus*, *Vorschau* oder *Quelltext*. Die Nebenspalte nimmt den Platz des Quelltextfensters ein und zeigt eine **zweite Notiz zum Lesen** — praktisch, um ein Liedblatt neben den Notizen zur Probe zu haben oder zwei Fassungen zu vergleichen.
+
+In ihrer Kopfzeile wählst du die Notiz, schaltest zwischen Vorschau und Quelltext um, tauschst mit ⇄ die Seiten und schließt sie mit ✕. Die Breite ziehst du wie gewohnt am Trenner in der Mitte; in dieser Ansicht dient der runde Knopf darauf nur noch als Anfasser zum Verschieben (synchrones Scrollen ergibt zwischen zwei verschiedenen Notizen keinen Sinn).
+
+Die Nebenspalte ist **schreibgeschützt**: geschrieben wird immer in der Hauptspalte. Auf schmalen Geräten ist sie abgeschaltet, dort stapelt die App die Bereiche ohnehin.
+
 ### Drucken und Exportieren
 
 Ein Liedblatt wird gedruckt und exportiert wie jede andere Notiz — mit Griffbildern, gewählter Ansicht und Design. Für Papier gibt es zusätzlich **Zweispaltig drucken** im Burger-Menü, direkt vor „Drucken / PDF": Kopfblock und Griffleiste spannen dann über beide Spalten, und kein Abschnitt wird mitten in der Spalte zerrissen.
