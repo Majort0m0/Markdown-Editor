@@ -487,7 +487,11 @@ In ihrer Kopfzeile wählst du die Notiz, schaltest zwischen Vorschau und Quellte
 
 Die Nebenspalte ist **schreibgeschützt**: geschrieben wird immer in der Hauptspalte. Ein farbiger Rahmen mit runden Ecken um ihr Inhaltsfeld zeigt das an — er bleibt beim Scrollen stehen.
 
-Eine **Canvas-Tafel** erscheint dort als die Seite, die auch ihr HTML-Export erzeugt: die ganze DIN-A4-Fläche mit allen Kästen, passend verkleinert. Ihr JSON-Inhalt als Text wäre unbrauchbar, deshalb gilt das auch, wenn die Nebenspalte auf *Quelltext* steht. Auf schmalen Geräten ist sie abgeschaltet, dort stapelt die App die Bereiche ohnehin.
+Alle Dateiformate lassen sich dort anzeigen: Markdown, CSV (als Tabelle), JSON (hübsch formatiert), TXT, Liedblätter (mit Akkorden und der gewählten Ansicht) sowie HTML und Canvas.
+
+Eine **Canvas-Tafel** erscheint als die Seite, die auch ihr HTML-Export erzeugt: die ganze DIN-A4-Fläche mit allen Kästen, passend verkleinert. Ihr JSON-Inhalt als Text wäre unbrauchbar, deshalb gilt das auch, wenn die Nebenspalte auf *Quelltext* steht.
+
+Eine **HTML-Notiz** wird wie in der Hauptvorschau in einer abgeschotteten Umgebung dargestellt — sie darf ihre eigenen Skripte ausführen, kommt aber nicht an die App und ihre gespeicherten Daten heran. Auf *Quelltext* gestellt zeigt die Spalte stattdessen den HTML-Text. Auf schmalen Geräten ist sie abgeschaltet, dort stapelt die App die Bereiche ohnehin.
 
 ### Drucken und Exportieren
 
