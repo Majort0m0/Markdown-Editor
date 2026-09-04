@@ -13218,6 +13218,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // a tab's format is the tab-bar double-click rename dialog (confirmTabRename() further down),
     // which sets both tab.name and tab.fileType together.
     function getFileTypeFromName(name) {
+      // Doppelte Endung: Browser auf dem Handy hängen beim Download ihre eigene Endung an, wenn
+      // die vorhandene nicht zum MIME-Typ passt -- aus "Lied.pro" wird "Lied.pro.txt" (siehe
+      // getSaveFileTypeMeta zur Ursache und zur Abhilfe beim Speichern). Damit eine so entstandene
+      // Datei sich trotzdem wieder als Liedblatt bzw. Canvas öffnen lässt, zählt in diesem einen
+      // Fall die vorletzte Endung. Nur für diese beiden -- bei allen übrigen Typen passt die
+      // Endung ohnehin zum MIME-Typ, dort kann eine echte ".txt"-Datei also nicht verwechselt
+      // werden.
+      const doppelt = /\.(pro|chopro|cho|chordpro|crd|canvas)\.txt$/i.exec(name);
+      if (doppelt) return doppelt[1].toLowerCase() === 'canvas' ? 'canvas' : 'chordpro';
       const ext = (name.match(/\.([a-z0-9]+)$/i) || [])[1];
       if (!ext) return 'markdown';
       const lower = ext.toLowerCase();
@@ -34312,13 +34321,29 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
     }
 
+    // `mime` ist der Typ für die Dateiauswahl (showSaveFilePicker) und das ZIP-Backup.
+    //
+    // `downloadMime` ist der Typ, unter dem der Notlösungs-Download (kein File System Access API,
+    // also Firefox, Safari und die meisten Browser auf dem Handy) den Blob anbietet -- und er ist
+    // NICHT immer derselbe. Chromium prüft beim Download, ob die Endung des Dateinamens zum
+    // angebotenen MIME-Typ passt, und hängt sonst die für diesen Typ übliche Endung an. Ein
+    // Liedblatt "Lied.pro" als text/plain wurde damit auf dem Handy jedes Mal zu "Lied.pro.txt"
+    // gespeichert -- und ließ sich danach nicht mehr als Lied öffnen, weil die Erkennung an der
+    // Endung hängt (getFileTypeFromName). Genau so gemeldet.
+    //
+    // Betroffen sind die beiden Typen, deren Endung nicht die Standardendung ihres MIME-Typs ist:
+    // .pro/.chopro (text/plain) und .canvas (application/json). Für die wird der Blob als
+    // application/octet-stream angeboten -- dazu kennt Chromium keine bevorzugte Endung, der Name
+    // bleibt also unangetastet. Bei allen übrigen Typen passt die Endung ohnehin, und dort bleibt
+    // der richtige MIME-Typ stehen: octet-stream pauschal für alles würde auf Android nur die
+    // Warnung "Dieser Dateityp kann Ihr Gerät beschädigen" einhandeln, ohne etwas zu verbessern.
     function getSaveFileTypeMeta(tab) {
       if (tab.fileType === 'csv') return { description: 'CSV-Datei', mime: 'text/csv', extensions: ['.csv'] };
       if (tab.fileType === 'json') return { description: 'JSON-Datei', mime: 'application/json', extensions: ['.json'] };
       if (tab.fileType === 'html') return { description: 'HTML-Datei', mime: 'text/html', extensions: ['.html', '.htm'] };
       if (tab.fileType === 'txt') return { description: 'Textdatei', mime: 'text/plain', extensions: ['.txt'] };
-      if (tab.fileType === 'chordpro') return { description: 'ChordPro-Liedblatt', mime: 'text/plain', extensions: ['.pro', '.chopro'] };
-      if (tab.fileType === 'canvas') return { description: 'Canvas-Datei', mime: 'application/json', extensions: ['.canvas'] };
+      if (tab.fileType === 'chordpro') return { description: 'ChordPro-Liedblatt', mime: 'text/plain', downloadMime: 'application/octet-stream', extensions: ['.pro', '.chopro'] };
+      if (tab.fileType === 'canvas') return { description: 'Canvas-Datei', mime: 'application/json', downloadMime: 'application/octet-stream', extensions: ['.canvas'] };
       return { description: 'Markdown File', mime: 'text/markdown', extensions: ['.md', '.markdown'] };
     }
 
@@ -34378,7 +34403,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // browser-level download setting this page can't see or control. Telling the user why,
       // instead of leaving it looking like an unexplained silent save, is the most this can do here.
       showToast('Kein Ordner wählbar — dieser Browser unterstützt keine Ordnerauswahl beim Speichern. Datei wurde in den Download-Ordner gespeichert. Für eine Ordnerauswahl „Nachfragen, wo jede Datei gespeichert werden soll" in den Browser-Downloadeinstellungen aktivieren.');
-      const blob = new Blob([contentToSave], { type: typeMeta.mime + ';charset=utf-8;' });
+      const blob = new Blob([contentToSave], { type: (typeMeta.downloadMime || typeMeta.mime) + ';charset=utf-8;' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = currentTab.name;
