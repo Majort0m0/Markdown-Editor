@@ -535,7 +535,7 @@ Der [Präsentationsmodus](#16-präsentationen-erstellen) lässt sich auch auf ei
 
 ### Export
 
-**Als eigenständige HTML-Datei exportieren** (siehe [Abschnitt 18](#18-export-und-teilen)) erzeugt bei einem Canvas-Dokument eine eigenständige Seite mit exakt demselben Layout (Boxen an derselben Position und Größe) und einem eigenen, funktionierenden Vorlesen-Button — auch außerhalb dieser App nutzbar.
+**Als eigenständige HTML-Datei exportieren** (siehe [Abschnitt 18](#18-export-und-teilen)) erzeugt bei einem Canvas-Dokument eine eigenständige Seite mit exakt demselben Layout (Boxen an derselben Position und Größe), dem Design jeder einzelnen Box (eine Kreidetafel-Box bleibt also eine Kreidetafel) und einem eigenen, funktionierenden Vorlesen-Button — auch außerhalb dieser App nutzbar.
 
 **🖨️ Drucken / Als PDF speichern** druckt die Canvas-Seite passend auf ein DIN-A4-Blatt (Hoch- oder Querformat, je nach Seitenausrichtung) — unabhängig davon, wie weit die Fläche gerade im Browserfenster gezoomt oder verschoben ist.
 

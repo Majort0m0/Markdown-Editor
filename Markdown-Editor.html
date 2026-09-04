@@ -12629,7 +12629,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         const current = getCurrentTab();
         if (realTabForRefresh && realTabForRefresh.fileType === 'canvas') {
           try {
-            realTabForRefresh.canvasData = JSON.parse(realTabForRefresh.content);
+            realTabForRefresh.canvasData = canvasDatenNormalisieren(JSON.parse(realTabForRefresh.content));
             repairStrandedCanvasBoxAudioAssets(realTabForRefresh);
           } catch (err) {
             // Leave whatever canvasData already exists in memory rather than crash on a
@@ -13388,13 +13388,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (targetTab.fileType === 'canvas') {
           if (!targetTab.canvasData) {
             try {
-              targetTab.canvasData = JSON.parse(targetTab.content);
+              targetTab.canvasData = canvasDatenNormalisieren(JSON.parse(targetTab.content));
               repairStrandedCanvasBoxAudioAssets(targetTab);
             } catch (err) {
               // Malformed/empty content (a corrupted save, or a synced-in file from a build
               // with a bug) shouldn't hard-crash the whole tab switch — fall back to a blank
               // A4-portrait scene, same defaults the canvas templates themselves start from.
-              targetTab.canvasData = { pageWidth: '210mm', pageHeight: '297mm', boxes: [], zCounter: 0, viewport: { zoom: 1, panX: 0, panY: 0 }, pageBackgroundColor: '#ffffff' };
+              targetTab.canvasData = canvasDatenNormalisieren(null);
             }
           }
           editor.value = '';
@@ -34342,10 +34342,64 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     function canvasDatenSicherstellen(tab) {
       if (!tab || tab.fileType !== 'canvas') return null;
       if (!tab.canvasData) {
-        try { tab.canvasData = JSON.parse(tab.content); }
+        try { tab.canvasData = canvasDatenNormalisieren(JSON.parse(tab.content)); }
         catch (err) { return null; }
       }
       return tab.canvasData;
+    }
+
+    // Füllt die Felder auf, die eine Tafel braucht. Bisher wurde nur abgefangen, dass sich der
+    // Inhalt überhaupt nicht lesen lässt (siehe switchTab) -- eine Datei, die sich zwar lesen
+    // lässt, aber anders aufgebaut ist, kam ungeprüft durch und brachte den Tabwechsel zum
+    // Absturz ("Cannot destructure property 'zoom' of undefined"), weil applyCanvasViewportTransform
+    // die Ansichtsangaben voraussetzt. Das trifft jede .canvas-Datei aus einem anderen Programm
+    // -- Obsidian etwa legt darin nodes und edges ab und kennt weder boxes noch viewport.
+    // Fehlt alles, kommt eine leere A4-Seite heraus statt eines kaputten Tabs.
+    function canvasDatenNormalisieren(daten) {
+      const d = (daten && typeof daten === 'object') ? daten : {};
+      const v = (d.viewport && typeof d.viewport === 'object') ? d.viewport : {};
+      return {
+        ...d,
+        pageWidth: d.pageWidth || '210mm',
+        pageHeight: d.pageHeight || '297mm',
+        pageBackgroundColor: d.pageBackgroundColor || '#ffffff',
+        boxes: Array.isArray(d.boxes) ? d.boxes : [],
+        zCounter: typeof d.zCounter === 'number' ? d.zCounter : 0,
+        viewport: {
+          zoom: typeof v.zoom === 'number' && v.zoom > 0 ? v.zoom : 1,
+          panX: typeof v.panX === 'number' ? v.panX : 0,
+          panY: typeof v.panY === 'number' ? v.panY : 0
+        }
+      };
+    }
+
+    // Holt die echten CSS-Regeln der übergebenen Designklassen aus dem eigenen Stylesheet.
+    // Eine Tafel hat kein Design, sondern jede Box bringt ihres mit (box.theme, siehe
+    // renderCanvasBoxes) -- der Export braucht deshalb nicht ein Design, sondern alle auf der
+    // Seite vorkommenden. Gelesen statt nachgebaut: so wandert alles mit, was ein Design
+    // ausmacht -- die sechs Farbvariablen, die Schrift, die zusätzlichen Regeln von "Bunt"
+    // (Überschriftenfarben und so weiter) und auch die zur Laufzeit erzeugte Regel des
+    // Custom-Designs, die als späteres Stylesheet hier von selbst gewinnt.
+    function designRegelnSammeln(klassen) {
+      const gesucht = Array.from(new Set(klassen)).filter(Boolean);
+      if (!gesucht.length) return '';
+      const treffer = new RegExp('\\.(?:' + gesucht.map(k => k.replace(/[^\w-]/g, '')).join('|') + ')(?![\\w-])');
+      const teile = [];
+      // Regeln können in @media-Blöcken stecken; deshalb wird abgestiegen statt nur die oberste
+      // Ebene durchgegangen -- ein Design, das eines Tages eine Regel dort unterbringt, fiele
+      // sonst still aus dem Export heraus.
+      const durchgehen = (regeln, medien) => {
+        for (const regel of Array.from(regeln || [])) {
+          if (regel.media && regel.cssRules) { durchgehen(regel.cssRules, '@media ' + regel.conditionText); continue; }
+          if (!regel.selectorText || !treffer.test(regel.selectorText)) continue;
+          teile.push(medien ? '  ' + medien + ' { ' + regel.cssText + ' }' : '  ' + regel.cssText);
+        }
+      };
+      for (const blatt of Array.from(document.styleSheets)) {
+        // Ein Blatt einer fremden Herkunft lässt sich nicht lesen und wirft beim Zugriff.
+        try { durchgehen(blatt.cssRules, ''); } catch (err) { /* übersprungen */ }
+      }
+      return teile.join('\n');
     }
 
     // Baut die eigenständige Seite einer Tafel. Herausgelöst aus performCanvasHtmlExport(), damit
@@ -34373,7 +34427,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const boxesHtml = computeCanvasReadingOrder(data.boxes).map(box => {
         canvasIdleRenderBox = box;
         const html = '<div class="canvas-export-box' + (box.isStamp ? ' stamp' : '') + '" style="left:' + box.x + 'mm; top:' + box.y + 'mm; width:' + box.w + 'mm; height:' + box.h + 'mm; z-index:' + (box.zIndex || 0) + ';">' +
-          '<div class="markdown-body">' + marked.parse(box.content || '') + '</div></div>';
+          '<div class="markdown-body ' + (box.theme || 'theme-clean') + '">' + marked.parse(box.content || '') + '</div></div>';
         canvasIdleRenderBox = null;
         return html;
       }).join('\n');
@@ -34389,13 +34443,24 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         .filter(([, value]) => value !== '')
         .map(([name, value]) => `        ${name}: ${value};`)
         .join('\n');
-      const hljsCss = DARK_THEMES.has(currentTheme)
+      // Jede Box hat ihr eigenes Design; die Einfärbung von Code gibt es aber nur einmal pro
+      // Seite. Genommen wird deshalb, was auf der Tafel überwiegt -- sonst käme auf einer Tafel
+      // voller Kreidetafel-Boxen die helle Einfärbung heraus, bloß weil die App gerade auf einem
+      // hellen Design steht (der Export soll aussehen wie die Tafel, nicht wie die App).
+      const boxDesigns = (data.boxes || []).map(box => box.theme || 'theme-clean');
+      const dunkleBoxen = boxDesigns.filter(name => DARK_THEMES.has(name)).length;
+      const dunkel = boxDesigns.length ? dunkleBoxen * 2 > boxDesigns.length : DARK_THEMES.has(currentTheme);
+      const hljsCss = dunkel
         ? document.getElementById('hljs-theme-dark').textContent
         : document.getElementById('hljs-theme-light').textContent;
 
       const html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + escapeHtmlText(title) + '</title>\n' +
         '<style>\n' +
+        // :root ist hier nur das Netz darunter: die Kästen holen ihre Farben aus ihrer eigenen
+        // Designklasse (siehe unten). Gebraucht wird es für alles außerhalb eines Kastens, also
+        // vor allem für den Vorlesen-Knopf.
         '  :root {\n' + previewVars + '\n  }\n' +
+        designRegelnSammeln(boxDesigns) + '\n' +
         // font-family stand hier bisher gar nicht -- die exportierte Tafel fiel damit auf die
         // Vorgabe des Browsers zurück und kam in Times heraus, während dieselbe Tafel in der App
         // in der Systemschrift steht. Aufgefallen, als die Nebenspalte dieselbe Seite anzeigte.
@@ -34403,8 +34468,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '  .canvas-export-page { position: relative; width: ' + data.pageWidth + '; height: ' + data.pageHeight + '; background: ' + (data.pageBackgroundColor || '#ffffff') + '; box-shadow: 0 4px 24px rgba(0,0,0,.3); flex-shrink: 0; overflow: hidden; }\n' +
         // overflow: hidden oben wie in der App und im Druck: was über den Blattrand hinausragt,
         // ist nicht Teil der Seite (siehe main.canvas-tab-active .canvas-page).
-        '  .canvas-export-box { position: absolute; overflow: hidden; border: 1px solid #ccc; background: #fffef2; box-sizing: border-box; }\n' +
-        '  .canvas-export-box .markdown-body { width: 100%; height: 100%; overflow: hidden; padding: 8px; box-sizing: border-box; font-size: 13px; line-height: 1.4; color: #1a1a1a; }\n' +
+        // Fläche und Textfarbe kommen aus dem Design der jeweiligen Box, genau wie in der App
+        // (siehe .canvas-box und .canvas-box-content). Hier stand beides bisher fest verdrahtet:
+        // ein blasses Notizzettel-Gelb und Schwarz. Damit kam jede Tafel im Export gleich heraus,
+        // eine Kreidetafel-Box also cremefarben statt grün mit Kreideschrift -- gemeldet, als die
+        // Nebenspalte dieselbe Seite zeigte. Der Kasten selbst bleibt durchsichtig, damit ein
+        // Design mit durchsichtiger Fläche (Clean) den Seitenhintergrund zeigt und nicht ein
+        // verstecktes Gelb.
+        '  .canvas-export-box { position: absolute; overflow: hidden; border: 1px solid #ccc; background: transparent; box-sizing: border-box; }\n' +
+        '  .canvas-export-box .markdown-body { width: 100%; height: 100%; overflow: hidden; padding: 8px; box-sizing: border-box; font-size: 13px; line-height: 1.4; background-color: var(--preview-bg); color: var(--preview-text); }\n' +
         '  .canvas-export-box .markdown-body :first-child { margin-top: 0; }\n' +
         // Gleiche Ausnahme wie in der Anzeige (siehe .canvas-box-content.stamp): ein Abdruck ist
         // ein Bild in Boxgroesse und fuellt seine Box randlos.
