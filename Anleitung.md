@@ -441,7 +441,11 @@ Burger-Menü ☰ → **Songbook**. Du wählst einen Ordner mit Liedblättern, da
 - **Setliste anlegen** — Name eingeben, anlegen; danach fügt das ⊕ neben einem Lied es der ausgewählten Liste hinzu. Einträge lassen sich mit ↑/↓ umsortieren.
 - **Setliste starten** — der ▶-Knopf. Eine schmale Leiste nennt Titel und Position, zwei Pfeile blättern von Lied zu Lied, ohne dass du in den Index zurückmusst. Sie bleibt auch im Vollbild und im Teleprompter sichtbar. Ein einzelnes Lied aus der Liste öffnest du weiterhin per Klick auf den Titel, ohne den Vortragsmodus.
 
-In Chromium-Browsern merkt sich die App den Ordner und findet ihn nach einem Neuladen wieder; sonst muss er einmal pro Sitzung neu gewählt werden. Fragt der Browser dabei erneut nach Erlaubnis, ist das normal.
+In Chromium-Browsern merkt sich die App den Ordner und findet ihn nach einem Neuladen wieder; sonst muss er einmal pro Sitzung neu gewählt werden. Fragt der Browser dabei erneut nach Erlaubnis, ist das normal. **Aktualisieren** durchsucht den Ordner erneut und fragt vorher nach; die Setlisten bleiben dabei erhalten.
+
+**Auf mehreren Geräten.** Index und Setlisten reisen über die WebDAV-Synchronisierung mit (siehe [Abschnitt 17](#17-webdav-synchronisierung-zwischen-mehreren-geräten)): der jüngere Stand gewinnt als Ganzes. Damit steht eine am Rechner zusammengestellte Setliste auf dem iPad zur Verfügung, ohne den Ordner dort erneut einzulesen. Zum **Öffnen** eines Liedes braucht es den Ordner weiterhin auf dem jeweiligen Gerät — zum Stöbern und für die Setlisten nicht.
+
+**Als HTML weitergeben.** Der Knopf **Als HTML** speichert den Index als eigenständige Seite: Suchfeld, Sortierung nach Titel oder Interpret und die Setlisten darunter. Eine einzelne Datei ohne Server und ohne diese App — gedacht für Abende, an denen sich die Mitspieler Lieder aussuchen sollen. Die Liedblätter selbst sind darin nicht enthalten, nur die Liste.
 
 ### Fußschalter
 

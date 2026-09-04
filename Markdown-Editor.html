@@ -3476,6 +3476,12 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       background-color: var(--accent);
     }
 
+    /* Drei Klassen im Selektor: 'main.editor-hidden .pane-resizer' darunter hat dieselbe
+       Spezifität wie eine zweiklassige Regel und stünde später -- der Trenner blieb dann null
+       Pixel breit (nachgemessen). */
+    main.nebenspalte-aktiv.editor-hidden .pane-resizer,
+    main.nebenspalte-aktiv.preview-hidden .pane-resizer { display: block; }
+
     main.editor-hidden .pane-resizer,
     main.preview-hidden .pane-resizer {
       display: none;
@@ -3656,6 +3662,16 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     main.preview-hidden {
       grid-template-columns: 1fr 0 0;
+    }
+
+    /* Die Nebenspalte belegt dieselbe Gitterspalte wie das Quelltextfenster -- und die ist im
+       Fokus-Modus (editor-hidden) auf Breite 0 gesetzt. Ohne diese Regel stand die Spalte zwar
+       auf display:flex, war aber null Pixel breit und damit unsichtbar; genau so gemessen.
+       Solange eine Nebenspalte da ist, gilt deshalb wieder das gewöhnliche geteilte Gitter --
+       samt Zieh-Trenner, der sonst ebenfalls ausgeblendet bliebe. */
+    main.nebenspalte-aktiv.editor-hidden,
+    main.nebenspalte-aktiv.preview-hidden {
+      grid-template-columns: var(--split-ratio, 50%) 6px 1fr;
     }
 
     /* Table of Contents (floats over the preview pane, stays put while it scrolls) */
@@ -5088,6 +5104,76 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     main.editor-hidden .editor-pane {
       display: none;
+    }
+
+    /* Nebenspalte. Belegt dieselbe Gitterspalte wie die Editorspalte; welche der beiden zu sehen
+       ist, entscheidet main.nebenspalte-aktiv. */
+    .nebenspalte {
+      display: none;
+      grid-column: 1;
+      height: 100%;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      min-width: 0;
+    }
+
+    main.nebenspalte-aktiv .nebenspalte { display: flex; }
+    main.nebenspalte-aktiv .editor-pane { display: none; }
+    /* Neben einer zweiten Notiz will man die eigene sehen -- die Vorschau bleibt deshalb stehen,
+       auch wenn der Fokus-Modus sie sonst ausblenden würde. */
+    main.nebenspalte-aktiv .preview-pane { display: block; }
+    /* Beim Seitentausch wechseln nur die Gitterspalten -- die Reihenfolge im Markup bleibt, damit
+       die Lesereihenfolge für Bildschirmleser der sichtbaren entspricht ... */
+    main.nebenspalte-rechts .nebenspalte { grid-column: 3; }
+    main.nebenspalte-rechts .preview-pane { grid-column: 1; border-right: 1px solid var(--border-color); }
+
+    .nebenspalte-kopf {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border-color);
+      background-color: var(--bg-main, var(--bg-surface));
+      flex-shrink: 0;
+    }
+
+    .nebenspalte-kopf select {
+      flex: 1;
+      min-width: 0;
+      font-size: 0.82rem;
+      font-family: inherit;
+      padding: 3px 6px;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      background-color: var(--bg-surface);
+      color: var(--text-main);
+    }
+
+    .nebenspalte-inhalt {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 28px;
+      min-height: 0;
+    }
+
+    /* Der Quelltext der Nebenspalte: gleiche Schrift wie das Quelltextfenster, aber nur zum Lesen. */
+    .nebenspalte-quelle {
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'Lexend', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: calc(0.95rem * var(--zoom-faktor, 1));
+      line-height: 1.6;
+      margin: 0;
+      color: var(--text-main);
+    }
+
+    /* Auf schmalen Geräten stapelt die App die Bereiche ohnehin -- eine zweite Notiz daneben ergibt
+       dort keinen Sinn, sie bekäme weniger als eine halbe Handbreite. */
+    @media (max-width: 640px) {
+      main.nebenspalte-aktiv .nebenspalte { display: none; }
+      main.nebenspalte-aktiv .editor-pane { display: flex; }
     }
 
     /* Lexend -- an accessibility/readability-focused sans-serif (not monospace) -- for the
@@ -8703,6 +8789,17 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       </select>
     </div>
 
+    <!-- Nebenspalte. Steht bei den übrigen Ansichts-Einstellungen, weil sie eine davon ist: sie
+         bestimmt, was an der Stelle des Quelltextfensters zu sehen ist. -->
+    <div class="burger-menu-field">
+      <label for="burgerNebenspalte">Nebenspalte</label>
+      <select id="burgerNebenspalte" onchange="nebenspalteModusSetzen(this.value)">
+        <option value="aus">Aus</option>
+        <option value="vorschau">Vorschau</option>
+        <option value="quelltext">Quelltext</option>
+      </select>
+    </div>
+
     <div class="burger-menu-divider"></div>
 
     <button class="slash-menu-item" onclick="openTemplateModal()"><svg viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><title>new-indicator</title><g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g id="scheduler" fill="currentColor" transform="translate(85.333333, 85.333333)"><path d="M170.666667,1.42108547e-14 C264.923264,-3.10380131e-15 341.333333,76.4100694 341.333333,170.666667 C341.333333,264.923264 264.923264,341.333333 170.666667,341.333333 C76.4100694,341.333333 2.57539587e-14,264.923264 1.42108547e-14,170.666667 C2.6677507e-15,76.4100694 76.4100694,3.15255107e-14 170.666667,1.42108547e-14 Z M170.666667,42.6666667 C99.9742187,42.6666667 42.6666667,99.9742187 42.6666667,170.666667 C42.6666667,241.359115 99.9742187,298.666667 170.666667,298.666667 C241.359115,298.666667 298.666667,241.359115 298.666667,170.666667 C298.666667,99.9742187 241.359115,42.6666667 170.666667,42.6666667 Z M192,85.3333333 L191.999333,149.333333 L256,149.333333 L256,192 L191.999333,191.999333 L192,256 L149.333333,256 L149.333333,191.999333 L85.3333333,192 L85.3333333,149.333333 L149.333333,149.333333 L149.333333,85.3333333 L192,85.3333333 Z" id="Combined-Shape"></path></g></g></svg><span>Neu</span></button>
@@ -8971,6 +9068,8 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       <h2>Songbook</h2>
       <span class="songbook-ordner" id="songbookOrdner"></span>
       <button class="cp-metronom-knopf" onclick="songbookOrdnerWaehlen()">Ordner wählen</button>
+      <button class="cp-metronom-knopf" onclick="songbookNeuEinlesen()" title="Den Ordner erneut durchsuchen und den Index auffrischen">Aktualisieren</button>
+      <button class="cp-metronom-knopf" onclick="songbookAlsHtmlExportieren()" title="Den Index als eigenständige HTML-Datei zum Weitergeben speichern">Als HTML</button>
       <button class="songbook-schliessen" onclick="closeSongbook()" title="Schließen">✕</button>
     </div>
     <div class="songbook-balken" id="songbookBalken"><div class="songbook-balken-fuellung" id="songbookBalkenFuellung"></div></div>
@@ -9325,6 +9424,26 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       <pre id="editorHighlightOverlay" class="editor-highlight-overlay" aria-hidden="true"><code></code></pre>
       <textarea id="markdownInput" placeholder="Schreibe oder füge hier deinen Markdown-Text ein..." spellcheck="false"></textarea>
     </div>
+    <!-- Nebenspalte: eine ZWEITE Notiz neben der aktuellen, nur zum Lesen. Sie sitzt in derselben
+         Gitterspalte wie das Quelltextfenster und nimmt dessen Platz ein, statt eine dritte Spalte
+         aufzumachen -- drei Spalten sind auf einem Laptop zu eng, und den eigenen Quelltext und
+         eine zweite Notiz will man selten gleichzeitig. Dadurch gelten der vorhandene Zieh-Trenner
+         und das gemerkte Breitenverhältnis unverändert weiter.
+
+         Schreibgeschützt mit Absicht: das Bearbeiten in der Vorschau hängt an einer
+         Positionszuordnung zwischen DOM und Quelltext, die auf genau EIN Dokument ausgelegt ist
+         (siehe die Positionszuordnung weiter unten). Eine zweite lesende Spalte kostet fast
+         nichts, eine zweite schreibende wäre der aufwendigste Umbau seit dem WYSIWYG-Modus. -->
+    <div class="nebenspalte" id="nebenspalte">
+      <div class="nebenspalte-kopf">
+        <select id="nebenspalteAuswahl" onchange="nebenspalteNotizWaehlen(this.value)" title="Welche Notiz hier steht"></select>
+        <button class="cp-metronom-knopf" id="nebenspalteInhaltBtn" onclick="nebenspalteInhaltUmschalten()" title="Zwischen Vorschau und Quelltext umschalten">Vorschau</button>
+        <button class="cp-metronom-knopf" onclick="nebenspalteSeiteTauschen()" title="Seiten tauschen">⇄</button>
+        <button class="cp-metronom-knopf" onclick="nebenspalteSchliessen()" title="Nebenspalte schließen">✕</button>
+      </div>
+      <div class="nebenspalte-inhalt" id="nebenspalteInhalt"></div>
+    </div>
+
     <div class="pane-resizer" id="paneResizer" title="Bereich verschieben">
       <!-- Bug fix (per explicit request): "Der Menüpunkt für synchrones Scrollen ist nur bei
            Ansicht Split notwendig. Bitte aus dem Burgermenü entfernen. Stattdessen bei Split
@@ -10360,6 +10479,14 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     // override preserves the exact same asset:ID href the live-editing path already relies on,
     // so isAudio/isDrawing detection works identically for an idle box as for one being edited.
     let canvasIdleRenderBox = null;
+    // Die Nebenspalte rendert eine ANDERE Notiz als die aktive. Ihre asset:-Verweise müssen
+    // deshalb gegen deren Anhänge aufgelöst werden, nicht gegen die des aktiven Tabs -- dasselbe
+    // Bedürfnis, das canvasIdleRenderBox für Canvas-Boxen und Präsentationsfolien schon deckt.
+    let nebenspalteRenderTab = null;
+
+    function aktiverRenderTab() {
+      return canvasIdleRenderBox || nebenspalteRenderTab || getCurrentTab();
+    }
 
     // --- IMAGE SIZE/BORDER ("#mdstyle:") — see openImageStylePopoverForIndex() further down ---
     //
@@ -10453,7 +10580,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       let isAudio = false;
       let assetId = null;
       if (baseHref && baseHref.indexOf('asset:') === 0) {
-        const tab = canvasIdleRenderBox || getCurrentTab();
+        const tab = aktiverRenderTab();
         assetId = baseHref.slice('asset:'.length);
         resolvedHref = (tab && tab.assets && tab.assets[assetId]) || '';
         isDrawing = !!(tab && tab.drawingAssetIds && tab.drawingAssetIds[assetId]);
@@ -11620,6 +11747,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         operatingMode: operatingMode,
         tabSidebarPinned: tabSidebarPinned,
         contentWidthMode: contentWidthMode,
+        nebenspalteModus: nebenspalteModus,
+        nebenspalteTabId: nebenspalteTabId,
+        nebenspalteRechts: nebenspalteRechts,
         wysiwygEnabled: wysiwygEnabled,
         lastTemplateId: lastTemplateId,
         welcomeNoteUsed: welcomeNoteUsed,
@@ -11637,6 +11767,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         songbookEintraege: songbookEintraege,
         songbookOrdnerName: songbookOrdnerName,
         songbookSetlists: songbookSetlists,
+        songbookUpdatedAt: songbookUpdatedAt,
         vortragSetlist: vortragSetlist,
         vortragIndex: vortragIndex,
         metronomLautstaerke: metronomLautstaerke,
@@ -11796,6 +11927,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (Array.isArray(state.songbookEintraege)) songbookEintraege = state.songbookEintraege;
         if (typeof state.songbookOrdnerName === 'string') songbookOrdnerName = state.songbookOrdnerName;
         if (Array.isArray(state.songbookSetlists)) songbookSetlists = state.songbookSetlists;
+        songbookUpdatedAt = state.songbookUpdatedAt || 0;
         if (typeof state.vortragSetlist === 'string') vortragSetlist = state.vortragSetlist;
         if (typeof state.vortragIndex === 'number') vortragIndex = state.vortragIndex;
         if (typeof state.metronomLautstaerke === 'number') metronomLautstaerke = state.metronomLautstaerke;
@@ -11806,6 +11938,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         operatingMode = state.operatingMode || (state.simpleMode ? 'simple' : 'focus');
         tabSidebarPinned = !!state.tabSidebarPinned;
         contentWidthMode = state.contentWidthMode || 'narrow';
+        if (typeof state.nebenspalteModus === 'string') nebenspalteModus = state.nebenspalteModus;
+        if (typeof state.nebenspalteTabId === 'string') nebenspalteTabId = state.nebenspalteTabId;
+        if (typeof state.nebenspalteRechts === 'boolean') nebenspalteRechts = state.nebenspalteRechts;
         // wysiwygEnabled is a const true now (see its own declaration) -- no longer read back
         // from persisted state, so a `false` saved by a much older session before the toggle was
         // removed can never silently reintroduce the classic, non-WYSIWYG behavior with no UI
@@ -12209,6 +12344,19 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         customThemeUpdatedAt = remoteCustomAt;
         applyCustomThemeStyle();
       }
+      // Songbook-Index und Setlisten reisen nach derselben Regel wie die Farbpalette darüber: der
+      // jüngere Stand gewinnt als Ganzes. Damit steht die auf dem Rechner zusammengestellte Setliste
+      // auf dem iPad zur Verfügung, ohne dass der Ordner dort erneut eingelesen werden muss -- zum
+      // ÖFFNEN eines Liedes braucht es den Ordner weiterhin, für Stöbern und Setlisten aber nicht.
+      const remoteSongbookAt = (remoteFetch.state && remoteFetch.state.songbookUpdatedAt) || 0;
+      if (remoteSongbookAt > songbookUpdatedAt) {
+        const rs = remoteFetch.state;
+        if (Array.isArray(rs.songbookEintraege)) songbookEintraege = rs.songbookEintraege;
+        if (Array.isArray(rs.songbookSetlists)) songbookSetlists = rs.songbookSetlists;
+        if (typeof rs.songbookOrdnerName === 'string') songbookOrdnerName = rs.songbookOrdnerName;
+        songbookUpdatedAt = remoteSongbookAt;
+        if (document.getElementById('songbookOverlay').classList.contains('active')) renderSongbook();
+      }
       const remoteTabs = (remoteFetch.state && remoteFetch.state.tabs) || [];
       const remoteById = new Map(remoteTabs.map(rt => [rt.syncId, rt]));
       const localIds = new Set(tabs.map(t => ensureSyncId(t)));
@@ -12329,7 +12477,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // Immer die jetzt geltende Palette samt Zeitstempel mitschreiben -- gleich ob sie von hier
         // stammt oder eben vom Server uebernommen wurde. Im zweiten Fall schreibt dieses Geraet sie
         // unveraendert zurueck, was den Zeitstempel erhaelt und deshalb kein Hin und Her ausloest.
-        customTheme: customTheme, customThemeUpdatedAt: customThemeUpdatedAt }, remoteFetch.rawText);
+        customTheme: customTheme, customThemeUpdatedAt: customThemeUpdatedAt,
+        // Wie bei der Palette: immer den jetzt geltenden Stand mitschreiben, gleich ob er von hier
+        // stammt oder gerade übernommen wurde -- der Zeitstempel bleibt dabei erhalten.
+        songbookEintraege: songbookEintraege, songbookSetlists: songbookSetlists,
+        songbookOrdnerName: songbookOrdnerName, songbookUpdatedAt: songbookUpdatedAt }, remoteFetch.rawText);
       // Only clear the tombstones this exact PUT actually excluded (finalPendingDeletions), not
       // webdavPendingDeletions wholesale — a tab closed while putRemoteWebdavState()'s own network
       // round-trip was in flight (after finalPendingDeletions was captured, above) would otherwise
@@ -15323,8 +15475,115 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
     }
 
+    // --- NEBENSPALTE (zweite Notiz zum Lesen) ---------------------------------------------------
+    let nebenspalteModus = 'aus';      // 'aus' | 'vorschau' | 'quelltext'
+    let nebenspalteTabId = null;
+    let nebenspalteRechts = false;     // Seiten getauscht?
+    let nebenspalteZuletzt = null;     // zuletzt Gerendertes -- gegen doppelte Arbeit je Tastendruck
+
+    function nebenspalteAktiv() { return nebenspalteModus !== 'aus'; }
+
+    function nebenspalteTab() {
+      if (!nebenspalteAktiv()) return null;
+      return tabs.find((t) => t.id === nebenspalteTabId) || null;
+    }
+
+    function nebenspalteModusSetzen(modus) {
+      nebenspalteModus = modus;
+      if (nebenspalteAktiv() && !nebenspalteTab()) {
+        // Noch keine (oder eine geschlossene) Notiz hinterlegt: die erste nehmen, die nicht die
+        // aktive ist -- sonst stünde dieselbe Notiz zweimal nebeneinander.
+        const andere = tabs.find((t) => t.id !== activeTabId) || tabs[0] || null;
+        nebenspalteTabId = andere ? andere.id : null;
+      }
+      nebenspalteZuletzt = null;
+      applyNebenspalte();
+      saveStateToLocalStorage();
+    }
+
+    function nebenspalteSchliessen() { nebenspalteModusSetzen('aus'); }
+    function nebenspalteInhaltUmschalten() { nebenspalteModusSetzen(nebenspalteModus === 'quelltext' ? 'vorschau' : 'quelltext'); }
+
+    function nebenspalteNotizWaehlen(id) {
+      nebenspalteTabId = id;
+      nebenspalteZuletzt = null;
+      applyNebenspalte();
+      saveStateToLocalStorage();
+    }
+
+    function nebenspalteSeiteTauschen() {
+      nebenspalteRechts = !nebenspalteRechts;
+      applyNebenspalte();
+      saveStateToLocalStorage();
+    }
+
+    // Reine DOM-Anwendung, wie applyTheme()/applyOperatingMode() -- gefahrlos beim Laden aufrufbar.
+    function applyNebenspalte() {
+      const spalte = document.getElementById('nebenspalte');
+      if (!spalte) return;
+      const an = nebenspalteAktiv() && !!nebenspalteTab();
+      mainContainer.classList.toggle('nebenspalte-aktiv', an);
+      mainContainer.classList.toggle('nebenspalte-rechts', an && nebenspalteRechts);
+      const knopf = document.getElementById('nebenspalteInhaltBtn');
+      if (knopf) knopf.textContent = nebenspalteModus === 'quelltext' ? 'Quelltext' : 'Vorschau';
+      const auswahl = document.getElementById('nebenspalteAuswahl');
+      if (auswahl) {
+        // Die Liste nur neu aufbauen, wenn sich die Notizen wirklich geändert haben -- sonst
+        // schlösse sich ein gerade aufgeklapptes Auswahlfeld bei jedem Tastendruck.
+        const stand = tabs.map((t) => t.id + '\u0000' + t.name).join('\u0001');
+        if (auswahl.dataset.stand !== stand) {
+          auswahl.innerHTML = '';
+          for (const t of tabs) {
+            const o = document.createElement('option');
+            o.value = t.id; o.textContent = t.name;
+            auswahl.appendChild(o);
+          }
+          auswahl.dataset.stand = stand;
+        }
+        if (nebenspalteTabId) auswahl.value = nebenspalteTabId;
+      }
+      const menue = document.getElementById('burgerNebenspalte');
+      if (menue) menue.value = nebenspalteModus;
+      renderNebenspalte();
+    }
+
+    function renderNebenspalte() {
+      const ziel = document.getElementById('nebenspalteInhalt');
+      const tab = nebenspalteTab();
+      if (!ziel || !tab || !nebenspalteAktiv()) return;
+      // Der Inhalt steht im Tab -- außer die Notiz ist gerade die aktive, dann ist der Editorinhalt
+      // der jüngere Stand.
+      const inhalt = tab.id === activeTabId ? editor.value : (tab.content || '');
+      if (nebenspalteZuletzt && nebenspalteZuletzt.id === tab.id &&
+          nebenspalteZuletzt.inhalt === inhalt && nebenspalteZuletzt.modus === nebenspalteModus) return;
+      nebenspalteZuletzt = { id: tab.id, inhalt, modus: nebenspalteModus };
+      if (nebenspalteModus === 'quelltext') {
+        ziel.className = 'nebenspalte-inhalt';
+        const vor = document.createElement('pre');
+        vor.className = 'nebenspalte-quelle';
+        vor.textContent = inhalt;
+        ziel.innerHTML = '';
+        ziel.appendChild(vor);
+        return;
+      }
+      // Vorschau: dieselbe Umwandlung wie in der Hauptspalte, aber ohne die Bedienelemente auf
+      // Bildern und Zeichnungen -- hier wird nichts bearbeitet. nebenspalteRenderTab sorgt dafür,
+      // dass asset:-Verweise gegen die Anhänge DIESER Notiz aufgelöst werden.
+      const vorher = suppressDrawingControls;
+      suppressDrawingControls = true;
+      nebenspalteRenderTab = tab;
+      try {
+        ziel.className = 'nebenspalte-inhalt markdown-body ' + (tab.theme || currentTheme || 'theme-github-light');
+        ziel.innerHTML = renderContentForTab(tab, inhalt);
+      } finally {
+        nebenspalteRenderTab = null;
+        suppressDrawingControls = vorher;
+      }
+    }
+
     function applyPaneVisibility() {
       if (!showPreview) previewTts.stop();
+      applyNebenspalte();
       mainContainer.classList.toggle('editor-hidden', !showEditor);
       mainContainer.classList.toggle('preview-hidden', !showPreview);
       // A canvas tab's showEditor is whatever some other tab last left it at (see
@@ -16604,6 +16863,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     let songbookVerzeichnis = null;    // FileSystemDirectoryHandle
     let songbookOrdnerName = '';
     let songbookSetlists = [];         // [{ id, name, dateien: [] }]
+    // Wann Index oder Setlisten zuletzt geändert wurden -- der Schiedsrichter beim WebDAV-Abgleich,
+    // dieselbe Lösung wie bei der eigenen Farbpalette (siehe customThemeUpdatedAt). Ein
+    // Zusammenführen wäre hier weder nötig noch sinnvoll: eine Setliste ist eine Reihenfolge, die
+    // man ganz übernimmt oder gar nicht. 0 heißt "nie angefasst" und verliert gegen jede Änderung.
+    let songbookUpdatedAt = 0;
+
+    function songbookGeaendert() {
+      songbookUpdatedAt = Date.now();
+    }
     let songbookAktiveSetlist = null;  // id
     let songbookSortierung = 'titel';
     let songbookSuche = '';
@@ -16658,6 +16926,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (i % 10 === 0 || i === passende.length - 1) songbookFortschritt(i + 1, passende.length);
       }
       songbookEintraege = eintraege;
+      songbookGeaendert();
       songbookZeilen = new Map();
       const listeEl = document.getElementById('songbookListe');
       if (listeEl) delete listeEl.dataset.kennung;
@@ -16681,6 +16950,131 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (dateien.length % 10 === 0) songbookFortschritt(0, 0, dateien.length + ' Dateien gefunden …');
       }
       await songbookAusDateiliste(dateien);
+    }
+
+    // Den Index auffrischen, ohne den Ordner neu zu wählen. Mit Rückfrage, weil das Einlesen bei
+    // vielen Dateien dauert und die Setlisten dabei unangetastet bleiben -- das soll man wissen.
+    async function songbookNeuEinlesen() {
+      if (!songbookVerzeichnis && !songbookDateien.size) { songbookOrdnerWaehlen(); return; }
+      if (!confirm('Den Ordner erneut durchsuchen und den Index auffrischen?\n\nDie Setlisten bleiben erhalten.')) return;
+      if (songbookVerzeichnis) { await songbookAusVerzeichnis(songbookVerzeichnis); return; }
+      // Ohne Verzeichnisgriff (der Weg über das Dateifeld) gibt es nichts erneut zu durchsuchen --
+      // die Dateiobjekte gelten nur für diese Sitzung. Dann bleibt nur die Auswahl.
+      songbookOrdnerWaehlen();
+    }
+
+    // Der Index als eigenständige Seite zum Weitergeben: Suchfeld, Sortierung, Setlisten. Gedacht
+    // für Abende, an denen sich die Musiker Lieder aussuchen sollen -- eine Datei, kein Server,
+    // keine App. Ohne die Liedblätter selbst; die Liste nennt nur, was da ist.
+    function songbookAlsHtmlExportieren() {
+      if (!songbookEintraege.length) { showToast('Es ist noch kein Index da -- zuerst einen Ordner wählen.'); return; }
+      const cs = getComputedStyle(preview);
+      const holen = (name, ersatz) => (cs.getPropertyValue(name) || '').trim() || ersatz;
+      const farben = {
+        bg: holen('--preview-bg', '#ffffff'),
+        text: holen('--preview-text', '#1f2328'),
+        link: holen('--preview-link', '#0969da'),
+        rand: holen('--preview-border', '#d0d7de'),
+        feld: holen('--preview-code-bg', '#f6f8fa')
+      };
+      const daten = songbookEintraege.map((e) => ({
+        titel: e.titel || e.datei, interpret: e.interpret || '', tonart: e.tonart || ''
+      }));
+      const listen = songbookSetlists.map((sl) => ({
+        name: sl.name,
+        lieder: sl.dateien.map((d) => {
+          const e = songbookEintraege.find((x) => x.datei === d);
+          return e ? (e.titel || d) : d;
+        })
+      })).filter((sl) => sl.lieder.length);
+      const titel = songbookOrdnerName ? 'Songbook — ' + songbookOrdnerName : 'Songbook';
+      // Die Daten stehen als JSON in einem eigenen Skriptblock, die Seite baut ihre Liste daraus.
+      // Dadurch braucht die Filterung keine Zeichenkettensuche im Markup, und der Block lässt sich
+      // von einem Programm wieder auslesen. Ein schließendes Skript-Tag im Inhalt würde den Block
+      // vorzeitig beenden -- deshalb wird sein Schrägstrich maskiert, wie an jeder anderen Stelle
+      // in dieser Datei auch. (Aus demselben Grund steht die Zeichenfolge hier nicht ausgeschrieben:
+      // der HTML-Parser sieht sie auch in einem Kommentar und schlösse den Block auf der Stelle.)
+      const json = JSON.stringify({ eintraege: daten, setlists: listen }).replace(/<\//g, '<\\/');
+      const html =
+        '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n' +
+        '<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+        '<title>' + escapeHtmlText(titel) + '</title>\n<style>\n' +
+        ':root { color-scheme: light dark; }\n' +
+        'body { margin: 0; padding: 24px 18px 60px; background: ' + farben.bg + '; color: ' + farben.text +
+        '; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.5; }\n' +
+        '.huelle { max-width: 780px; margin: 0 auto; }\n' +
+        'h1 { font-size: 1.6rem; margin: 0 0 4px; }\n' +
+        '.zahl { opacity: .6; font-size: .9rem; margin-bottom: 18px; }\n' +
+        '.werkzeuge { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; position: sticky; top: 0;' +
+        ' background: ' + farben.bg + '; padding: 10px 0; z-index: 2; }\n' +
+        'input, select { font: inherit; padding: 7px 10px; border: 1px solid ' + farben.rand +
+        '; border-radius: 7px; background: ' + farben.feld + '; color: inherit; }\n' +
+        'input { flex: 1; min-width: 160px; }\n' +
+        'ol { list-style: none; margin: 0; padding: 0; }\n' +
+        'li { display: flex; gap: 10px; align-items: baseline; padding: 7px 2px; border-bottom: 1px solid ' + farben.rand + '; }\n' +
+        '.titel { font-weight: 600; }\n' +
+        '.interpret { opacity: .7; font-size: .92rem; }\n' +
+        '.tonart { margin-left: auto; opacity: .55; font-size: .82rem; white-space: nowrap; }\n' +
+        '.leer { opacity: .6; padding: 18px 2px; }\n' +
+        'h2 { font-size: 1.05rem; margin: 28px 0 6px; padding-top: 14px; border-top: 2px solid ' + farben.rand + '; }\n' +
+        '.setliste li { border-bottom: none; padding: 3px 2px; }\n' +
+        '.setliste .nr { opacity: .5; min-width: 1.6em; }\n' +
+        '@media print { .werkzeuge { display: none; } li { break-inside: avoid; } }\n' +
+        '</style>\n</head>\n<body>\n<div class="huelle">\n' +
+        '<h1>' + escapeHtmlText(titel) + '</h1>\n' +
+        '<div class="zahl" id="zahl"></div>\n' +
+        '<div class="werkzeuge">\n' +
+        '<input type="search" id="suche" placeholder="Suchen …" autocomplete="off">\n' +
+        '<select id="sortierung"><option value="titel">Nach Titel</option><option value="interpret">Nach Interpret</option></select>\n' +
+        '</div>\n<ol id="liste"></ol>\n<div id="setlisten"></div>\n</div>\n' +
+        '<scr' + 'ipt type="application/json" id="daten">' + json + '<\/script>\n' +
+        '<scr' + 'ipt>\n' +
+        'var D = JSON.parse(document.getElementById("daten").textContent);\n' +
+        'var suche = document.getElementById("suche"), sortierung = document.getElementById("sortierung");\n' +
+        'function norm(s){ return (s||"").toLowerCase(); }\n' +
+        'function zeichne(){\n' +
+        '  var q = norm(suche.value).trim();\n' +
+        '  var treffer = D.eintraege.filter(function(e){\n' +
+        '    return !q || norm(e.titel).indexOf(q) >= 0 || norm(e.interpret).indexOf(q) >= 0;\n' +
+        '  });\n' +
+        '  var nach = sortierung.value;\n' +
+        '  treffer.sort(function(a,b){\n' +
+        '    var x = nach === "interpret" ? (a.interpret || "\uffff") : a.titel;\n' +
+        '    var y = nach === "interpret" ? (b.interpret || "\uffff") : b.titel;\n' +
+        '    return x.localeCompare(y, "de", { sensitivity: "base" });\n' +
+        '  });\n' +
+        '  var liste = document.getElementById("liste");\n' +
+        '  liste.innerHTML = "";\n' +
+        '  if (!treffer.length) { var l = document.createElement("div"); l.className = "leer"; l.textContent = "Nichts gefunden."; liste.appendChild(l); }\n' +
+        '  treffer.forEach(function(e){\n' +
+        '    var li = document.createElement("li");\n' +
+        '    var t = document.createElement("span"); t.className = "titel"; t.textContent = e.titel; li.appendChild(t);\n' +
+        '    if (e.interpret) { var i = document.createElement("span"); i.className = "interpret"; i.textContent = e.interpret; li.appendChild(i); }\n' +
+        '    if (e.tonart) { var k = document.createElement("span"); k.className = "tonart"; k.textContent = e.tonart; li.appendChild(k); }\n' +
+        '    liste.appendChild(li);\n' +
+        '  });\n' +
+        '  document.getElementById("zahl").textContent = treffer.length === D.eintraege.length\n' +
+        '    ? D.eintraege.length + " Lieder"\n' +
+        '    : treffer.length + " von " + D.eintraege.length + " Liedern";\n' +
+        '}\n' +
+        'suche.addEventListener("input", zeichne);\n' +
+        'sortierung.addEventListener("change", zeichne);\n' +
+        'var sl = document.getElementById("setlisten");\n' +
+        'D.setlists.forEach(function(s){\n' +
+        '  var h = document.createElement("h2"); h.textContent = s.name; sl.appendChild(h);\n' +
+        '  var ol = document.createElement("ol"); ol.className = "setliste";\n' +
+        '  s.lieder.forEach(function(name, i){\n' +
+        '    var li = document.createElement("li");\n' +
+        '    var n = document.createElement("span"); n.className = "nr"; n.textContent = (i+1) + ".";\n' +
+        '    var t = document.createElement("span"); t.textContent = name;\n' +
+        '    li.appendChild(n); li.appendChild(t); ol.appendChild(li);\n' +
+        '  });\n' +
+        '  sl.appendChild(ol);\n' +
+        '});\n' +
+        'zeichne();\n' +
+        '<\/script>\n</body>\n</html>';
+      downloadHtmlBlob(html, (songbookOrdnerName || 'Songbook').replace(/[\\/:*?"<>|]/g, '-') + '-Index.html');
+      showToast('Index als HTML gespeichert.');
     }
 
     async function songbookOrdnerWaehlen() {
@@ -16888,6 +17282,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!name) { feld.focus(); return; }
       const id = 'sl_' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
       songbookSetlists.push({ id, name, dateien: [] });
+      songbookGeaendert();
       songbookAktiveSetlist = id;
       feld.value = '';
       saveStateToLocalStorage();
@@ -16903,6 +17298,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const liste = songbookSetlists.find((s) => s.id === id);
       if (liste && liste.dateien.length && !confirm('Setliste „' + liste.name + '" mit ' + liste.dateien.length + ' Einträgen löschen?')) return;
       songbookSetlists = songbookSetlists.filter((s) => s.id !== id);
+      songbookGeaendert();
       if (songbookAktiveSetlist === id) songbookAktiveSetlist = null;
       saveStateToLocalStorage();
       renderSongbook();
@@ -16913,6 +17309,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!liste) { showToast('Erst eine Setliste anlegen oder auswählen.'); return; }
       // Ein Lied darf mehrfach in einer Setliste stehen (Zugabe), deshalb keine Dopplungsprüfung.
       liste.dateien.push(dateiname);
+      songbookGeaendert();
       saveStateToLocalStorage();
       renderSongbook();
     }
@@ -16921,6 +17318,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const liste = songbookSetlists.find((s) => s.id === songbookAktiveSetlist);
       if (!liste) return;
       liste.dateien.splice(index, 1);
+      songbookGeaendert();
       saveStateToLocalStorage();
       renderSongbook();
     }
@@ -16932,6 +17330,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (ziel < 0 || ziel >= liste.dateien.length) return;
       const [weg] = liste.dateien.splice(index, 1);
       liste.dateien.splice(ziel, 0, weg);
+      songbookGeaendert();
       saveStateToLocalStorage();
       renderSongbook();
     }
@@ -38020,7 +38419,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // change. canvasIdleRenderBox || getCurrentTab(), same resolution hljsRenderer.image() itself
     // already uses, so this also works for a photo inside an idle (unopened) canvas box.
     async function openImageEditModalForAsset(assetId) {
-      const tab = canvasIdleRenderBox || getCurrentTab();
+      const tab = aktiverRenderTab();
       if (!tab || !tab.assets || !tab.assets[assetId]) return;
       const edited = await openImageEditModal(tab.assets[assetId]);
       if (!edited) return;
