@@ -485,7 +485,7 @@ Burger-Menü ☰ → **Nebenspalte**: *Aus*, *Vorschau* oder *Quelltext*. Die Ne
 
 In ihrer Kopfzeile wählst du die Notiz, schaltest zwischen Vorschau und Quelltext um, tauschst mit ⇄ die Seiten und schließt sie mit ✕. Die Breite ziehst du wie gewohnt am Trenner in der Mitte; in dieser Ansicht dient der runde Knopf darauf nur noch als Anfasser zum Verschieben (synchrones Scrollen ergibt zwischen zwei verschiedenen Notizen keinen Sinn).
 
-Die Nebenspalte ist **schreibgeschützt**: geschrieben wird immer in der Hauptspalte. Auf schmalen Geräten ist sie abgeschaltet, dort stapelt die App die Bereiche ohnehin.
+Die Nebenspalte ist **schreibgeschützt**: geschrieben wird immer in der Hauptspalte. Ein farbiger Rahmen mit runden Ecken um ihr Inhaltsfeld zeigt das an — er bleibt beim Scrollen stehen. Auf schmalen Geräten ist sie abgeschaltet, dort stapelt die App die Bereiche ohnehin.
 
 ### Drucken und Exportieren
 

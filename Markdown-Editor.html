@@ -5179,11 +5179,22 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       color: var(--text-main);
     }
 
-    .nebenspalte-inhalt {
+    /* Rahmen in der Akzentfarbe mit runden Ecken: er macht auf den ersten Blick klar, dass hier
+       nur gelesen und nicht geschrieben wird -- der einzige sichtbare Unterschied wäre sonst, dass
+       ein Klick nichts bewirkt. Der Rahmen sitzt am Inhaltsfeld, nicht an der ganzen Spalte,
+       damit die Kopfzeile mit ihren Bedienelementen außerhalb bleibt: sie ist ja bedienbar. Er
+       gehört zum scrollenden Feld selbst, steht also fest, während der Inhalt darunter läuft. */
+    /* Zwei Klassen im Selektor: das Feld trägt in der Vorschau zusätzlich .markdown-body, und
+       deren Regeln stehen später in dieser Datei -- bei gleicher Spezifität gewännen sie und
+       überschrieben Radius und Innenabstand (nachgemessen: 8px statt 10px). */
+    .nebenspalte > .nebenspalte-inhalt {
       flex: 1;
       overflow-y: auto;
-      padding: 24px 28px;
+      padding: 20px 24px;
       min-height: 0;
+      margin: 10px;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
     }
 
     /* Der Quelltext der Nebenspalte: gleiche Schrift wie das Quelltextfenster, aber nur zum Lesen. */
@@ -5973,7 +5984,11 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
           inside .markdown-body (see the project's own CSV/JSON docs) and pick this up for free,
           consistent with how the rest of this file already treats them as markdown-preview content. */
     @media (min-width: 900px) {
-      body.content-width-narrow main.editor-hidden .markdown-body {
+      /* Die Nebenspalte trägt ebenfalls .markdown-body, ist aber kein zentriertes Lesefeld,
+         sondern eine eigene Spalte mit eigenem Rahmen. Ohne diesen Ausschluss bekam sie den
+         Blattschatten samt 48px Innenabstand und einem 3px-Radius, der den Akzentrahmen wieder
+         eckig machte -- im Browser nachgemessen. */
+      body.content-width-narrow main.editor-hidden .markdown-body:not(.nebenspalte-inhalt) {
         max-width: 850px;
         margin-left: auto;
         margin-right: auto;
@@ -6005,7 +6020,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          Der Schatten ist bewusst zweistufig: eine enge, dunklere Lage zeichnet die Blattkante, eine
          weite, sehr helle darunter gibt die Höhe. Ein einzelner großer Schatten wirkt an der Kante
          entweder zu hart oder verwaschen. */
-      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body {
+      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body:not(.nebenspalte-inhalt) {
         background-color: var(--preview-bg-solid, var(--preview-bg));
         padding: 48px 56px;
         margin-bottom: 24px;
@@ -6018,11 +6033,11 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          des letzten Absatzes. Beides auf null, damit allein der Seitenrand die Blattkanten bestimmt
          und oben wie unten gleich viel Luft bleibt. Nur die direkten Kinder -- verschachtelte erste
          Elemente (etwa in einem Zitat) behalten ihre Abstände. */
-      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body > :first-child {
+      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body:not(.nebenspalte-inhalt) > :first-child {
         margin-top: 0;
       }
 
-      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body > :last-child {
+      body.content-width-narrow main.editor-hidden:not(.canvas-tab-active) .markdown-body:not(.nebenspalte-inhalt) > :last-child {
         margin-bottom: 0;
       }
     }
