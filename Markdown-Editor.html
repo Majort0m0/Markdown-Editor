@@ -19424,7 +19424,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       for (const b of bloecke) {
         if (tabZeilen) {
           if (b.typ === 'abschnittEnde' && b.art === 'tab') {
-            html += '<pre class="cp-tab">' + escapeHtmlText(tabZeilen.join('\n')) + '</pre>';
+            // Eine Tabulatur ist Griffbrett-Notation, kein Liedtext -- in der Textansicht hat sie
+            // nichts verloren. In der Akkordansicht bleibt sie stehen, dort gehört sie hin.
+            if (!nurTextAnsicht) html += '<pre class="cp-tab">' + escapeHtmlText(tabZeilen.join('\n')) + '</pre>';
             tabZeilen = null;
           } else if (b.typ === 'leer') tabZeilen.push('');
           else if (b.typ === 'zeile' || b.typ === 'akkordzeile') {
@@ -19510,7 +19512,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           }
         }
       }
-      if (tabZeilen) html += '<pre class="cp-tab">' + escapeHtmlText(tabZeilen.join('\n')) + '</pre>';
+      // Nicht geschlossener {sot}-Abschnitt am Dateiende; dieselbe Regel wie oben.
+      if (tabZeilen && !nurTextAnsicht) html += '<pre class="cp-tab">' + escapeHtmlText(tabZeilen.join('\n')) + '</pre>';
       return html + '</div>';
     }
 

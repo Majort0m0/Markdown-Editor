@@ -377,7 +377,7 @@ In der Vorschau stehen die Akkorde als kleine Kästchen über der richtigen Silb
 ### Die drei Ansichten
 
 - **Alles** — Akkorde über dem Text, so wie das Blatt gedacht ist.
-- **Text** — nur der Liedtext. Reine Akkordzeilen und Instrumentalteile fallen weg, damit keine großen Lücken entstehen.
+- **Text** — nur der Liedtext. Reine Akkordzeilen, Instrumentalteile und Tabulaturen fallen weg, damit keine großen Lücken entstehen.
 - **Akkorde** — nur die Akkorde, ohne Text. Ergibt eine kompakte Akkordübersicht zum Üben.
 
 Die Wahl wandert in den Druck und in den HTML-Export mit.
