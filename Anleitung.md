@@ -453,6 +453,14 @@ In Chromium-Browsern merkt sich die App den Ordner und findet ihn nach einem Neu
 
 **Als HTML weitergeben.** Der Knopf **Als HTML** speichert den Index als eigenständige Seite: Suchfeld, Sortierung nach Titel oder Interpret und die Setlisten darunter. Eine einzelne Datei ohne Server und ohne diese App — gedacht für Abende, an denen sich die Mitspieler Lieder aussuchen sollen. Die Liedblätter selbst sind darin nicht enthalten, nur die Liste.
 
+### Teleprompter
+
+Der Knopf mit dem Bildschirm-Symbol lässt die Notiz von selbst nach oben laufen — gedacht zum Mitlesen mit den Händen am Instrument. Die Bedienung schwebt unten mittig und bleibt auch im Vollbild erreichbar: ▶ startet und pausiert, ✕ beendet, dazwischen liegt der Geschwindigkeitsregler. Mit der Tastatur: `Pfeil rechts` Start/Pause, `Pfeil hoch`/`runter` schneller/langsamer, `Pfeil links` **gedrückt halten** spult zurück, `Esc` beendet.
+
+**Die Bahn ist nicht linear, sondern prozentual.** Gleicher Weg auf der Bahn bedeutet überall dieselbe prozentuale Änderung — deshalb liegt der langsame Bereich, in dem sich ein Liedblatt abspielt, weit auseinandergezogen vor dir, während die Bahn oben trotzdem bis 300 px/s reicht. Ganz links stehen 2 px/s, und dort ist ein Rasterpunkt 0,025 px/s: langsamer und feiner, als es zum Mitlesen je nötig sein wird.
+
+Die **Skala** unter der Bahn ist mit 2, 5, 10, 30, 100 und 300 px/s beschriftet und zeigt jederzeit, wo du ungefähr stehst; beim Verstellen nennt eine kleine Blase über dem Regler den genauen Wert und verschwindet wieder. Ein Tastendruck oder ein Tritt aufs Pedal ändert das Tempo um rund 10 % — bei 4 px/s also um 0,4, bei 200 um 20, sodass er sich überall gleich anfühlt. Die eingestellte Geschwindigkeit bleibt gespeichert.
+
 ### Fußschalter
 
 Burger-Menü ☰ → **Fußschalter**. Gedacht für einen kabellosen Fußschalter am Notenständer. Die Belegung wird **gelernt**, nicht vorgegeben: Aktion auswählen, Pedal treten, fertig.

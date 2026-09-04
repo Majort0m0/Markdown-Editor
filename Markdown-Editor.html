@@ -1752,17 +1752,86 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       flex-shrink: 0;
     }
 
+    /* Regler samt Skala. Die Gesamthöhe bleibt bei 34px, genau wie die Knöpfe daneben: die Bahn
+       gibt 12px an die Skala ab, statt dass die Leiste wächst. Das ist kein Detailgeschmack --
+       das schwebende Stimmgerät steht im Teleprompter auf bottom: 82px und säße sonst auf der
+       Leiste. */
+    .teleprompter-tempo {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      width: 190px;
+      max-width: 46vw;
+      min-width: 110px;
+    }
+
     /* Ohne Beschriftung, per Wunsch. Die Bahn ist bewusst kräftiger als ein Systemregler in einer
        Fußzeile, damit sie sich mit dem Daumen treffen lässt. */
     .teleprompter-speed {
-      width: 160px;
-      max-width: 42vw;
-      min-width: 90px;
+      width: 100%;
       margin: 0;
       accent-color: var(--accent);
-      height: 34px;
+      height: 22px;
       cursor: pointer;
     }
+
+    /* Die Skala ist eine Orientierungshilfe, kein Messgerät: ihre Striche sitzen auf dem Weg, den
+       die MITTE des Reglerknopfs zurücklegt, und der ist links und rechts um dessen halbe Breite
+       eingerückt. Wie breit der Knopf ist, entscheidet der Browser (rund 16px); deshalb steht die
+       Annahme als eine Zahl in --daumen und nicht an vier Stellen im Stylesheet. */
+    .teleprompter-skala {
+      --daumen: 16px;
+      position: relative;
+      height: 12px;
+      margin: 0 calc(var(--daumen) / 2);
+      pointer-events: none;
+    }
+
+    .teleprompter-skala-strich {
+      position: absolute;
+      top: 0;
+      width: 1px;
+      height: 3px;
+      background-color: var(--text-muted);
+      opacity: .45;
+    }
+
+    .teleprompter-skala-strich.gross {
+      height: 4px;
+      opacity: .9;
+    }
+
+    .teleprompter-skala-wert {
+      position: absolute;
+      top: 5px;
+      transform: translateX(-50%);
+      font-size: 9px;
+      line-height: 1;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* Die Zahl erscheint nur beim Verstellen und geht wieder. Ein dauerhaftes Zahlenfeld war
+       ausdrücklich nicht gewollt; die Zahl im Augenblick der Einstellung ist etwas anderes -- sie
+       ist genau das, was eine Skala allein nicht leisten kann, nämlich den eingestellten Wert
+       ablesbar und wiederherstellbar zu machen. */
+    .teleprompter-tempo-wert {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 2px 9px;
+      border-radius: 10px;
+      background-color: var(--text-main);
+      color: var(--bg-surface);
+      font-size: 0.72rem;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity .18s;
+      pointer-events: none;
+    }
+
+    .teleprompter-tempo-wert.sichtbar { opacity: 1; }
 
     /* Top Navigation / App Header */
     header {
@@ -10141,8 +10210,14 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     <button type="button" id="teleprompterPlayBtn" class="teleprompter-round-btn" onclick="toggleTeleprompterRunning()" title="Start/Pause (Pfeil rechts)">
       <svg id="teleprompterPlayIcon" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M8 5.5v13l11-6.5z"/></svg>
     </button>
-    <input type="range" id="teleprompterSpeed" class="teleprompter-speed" min="10" max="300" step="5" value="20"
-           oninput="setTeleprompterSpeed(Number(this.value))" title="Geschwindigkeit (Pfeil hoch/runter)">
+    <div class="teleprompter-tempo">
+      <div class="teleprompter-tempo-wert" id="teleprompterTempoWert"></div>
+      <!-- Die Bahn zählt Rasterpunkte, keine Pixel pro Sekunde: die Abbildung ist exponentiell,
+           siehe teleprompterTempoAusRegler(). -->
+      <input type="range" id="teleprompterSpeed" class="teleprompter-speed" min="0" max="1000" step="1" value="460"
+             oninput="setTeleprompterSpeedAusRegler(Number(this.value))" title="Geschwindigkeit (Pfeil hoch/runter)">
+      <div class="teleprompter-skala" id="teleprompterSkala"></div>
+    </div>
     <button type="button" id="teleprompterExitBtn" class="teleprompter-round-btn" onclick="stopTeleprompter()" title="Teleprompter beenden (Esc)">
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     </button>
@@ -12038,7 +12113,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // Aenderung fuer jeden unsichtbar, der den Teleprompter schon einmal geoeffnet hat. Ein
         // absichtlich eingestellter anderer Wert bleibt unangetastet.
         const gespeichertesTempo = state.teleprompterSpeed;
-        teleprompterSpeed = (gespeichertesTempo === undefined || gespeichertesTempo === 45) ? 20 : gespeichertesTempo;
+        const rohesTempo = (gespeichertesTempo === undefined || gespeichertesTempo === 45) ? 20 : Number(gespeichertesTempo);
+        // Geklemmt, weil die Reglergrenzen sich geändert haben: alles Gespeicherte lag bisher
+        // zwischen 10 und 300 und passt weiterhin, aber ein aus welchem Grund auch immer
+        // unsinniger Wert soll den Regler nicht aus seiner Bahn tragen.
+        teleprompterSpeed = Math.max(TELEPROMPTER_SPEED_MIN,
+          Math.min(TELEPROMPTER_SPEED_MAX, isFinite(rohesTempo) && rohesTempo > 0 ? rohesTempo : 20));
         // Stil und Lautstärke des Metronoms sind Geräteeinstellungen (siehe chordProStilSetzen) --
         // Tempo und Taktart dagegen stehen im Lied selbst und werden nicht hier gespeichert.
         if (typeof state.metronomStil === 'string') metronomStil = state.metronomStil;
@@ -16502,11 +16582,43 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     let teleprompterScrollPos = 0;     // Scrollposition als Gleitkommazahl, siehe teleprompterFrame()
     let teleprompterRestore = null;
 
-    const TELEPROMPTER_SPEED_MIN = 10;
+    // Der Regler ist NICHT linear, und das ist der Kern der Sache. Gemeldet: "nach unten zu grob",
+    // besonders bei Liedblättern. Er war es auch: die Bahn lief von 10 bis 300 px/s in Schritten
+    // von 5, am unteren Ende also in Sprüngen von 50 % des eingestellten Wertes. Brauchbar ist
+    // beim Mitlesen eines Liedblattes aber ungefähr der Bereich von 3 bis 25 px/s -- und darin
+    // lagen ganze vier Rasterpunkte.
+    //
+    // Die Bahn zählt jetzt 1000 Rasterpunkte und bildet exponentiell ab: gleicher Weg auf der Bahn
+    // bedeutet überall dieselbe PROZENTUALE Änderung. Ein Rasterpunkt sind 0,5 %, bei 5 px/s also
+    // 0,025 px/s; oben bleibt die Bahn trotzdem bis 300 px/s durchfahrbar, ohne endlos zu werden.
+    // Ein linearer Regler kann beides nicht zugleich: Auflösung unten und Reichweite oben.
+    const TELEPROMPTER_SPEED_MIN = 2;
     const TELEPROMPTER_SPEED_MAX = 300;
-    const TELEPROMPTER_SPEED_STEP = 5;
-    // Rücklauf bei gehaltener Pfeil-links-Taste: 20% der Reglerbahn, also 20% des Hoechstwerts.
+    const TELEPROMPTER_REGLER_MAX = 1000;
+    // Ein Tastendruck (Pfeil hoch/runter, Fußschalter schneller/langsamer) bewegt die Bahn um so
+    // viele Rasterpunkte -- rund 10 % Tempoänderung, die sich bei jeder Geschwindigkeit gleich
+    // anfühlt. Vorher waren es feste 5 px/s, was oben nichts tat und unten alles umwarf.
+    const TELEPROMPTER_TEMPO_SCHRITT = 20;
+    // Rücklauf bei gehaltener Pfeil-links-Taste: 20% des Hoechstwerts.
     const TELEPROMPTER_REWIND_SPEED = Math.round(TELEPROMPTER_SPEED_MAX * 0.2);
+
+    function teleprompterTempoAusRegler(pos) {
+      const t = Math.max(0, Math.min(1, pos / TELEPROMPTER_REGLER_MAX));
+      return TELEPROMPTER_SPEED_MIN * Math.pow(TELEPROMPTER_SPEED_MAX / TELEPROMPTER_SPEED_MIN, t);
+    }
+
+    function teleprompterReglerAusTempo(tempo) {
+      const geklemmt = Math.max(TELEPROMPTER_SPEED_MIN, Math.min(TELEPROMPTER_SPEED_MAX, tempo));
+      const t = Math.log(geklemmt / TELEPROMPTER_SPEED_MIN) /
+                Math.log(TELEPROMPTER_SPEED_MAX / TELEPROMPTER_SPEED_MIN);
+      return Math.round(t * TELEPROMPTER_REGLER_MAX);
+    }
+
+    // Unter 10 px/s mit einer Nachkommastelle: dort ist der Unterschied zwischen 4 und 4,5 die
+    // Hälfte des Tempos. Darüber wäre die Stelle nur Stellenrauschen.
+    function teleprompterTempoText(tempo) {
+      return (tempo < 10 ? tempo.toFixed(1).replace('.', ',') : String(Math.round(tempo))) + ' px/s';
+    }
 
     function toggleTeleprompterMode() {
       if (teleprompterActive) stopTeleprompter();
@@ -16719,23 +16831,76 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     function setTeleprompterSpeed(value) {
-      teleprompterSpeed = Math.max(TELEPROMPTER_SPEED_MIN, Math.min(TELEPROMPTER_SPEED_MAX, Math.round(value)));
+      const geklemmt = Math.max(TELEPROMPTER_SPEED_MIN, Math.min(TELEPROMPTER_SPEED_MAX, Number(value) || TELEPROMPTER_SPEED_MIN));
+      // Auf zwei Nachkommastellen gerundet aufbewahrt: der Wert wandert durch localStorage, und
+      // eine ungekürzte Gleitkommazahl ist dort nur länger, nicht genauer.
+      teleprompterSpeed = Math.round(geklemmt * 100) / 100;
       applyTeleprompterSpeedToUi();
       saveStateToLocalStorage();
     }
 
-    // Kein Zahlen-Label mehr -- der Regler steht ohne Beschriftung in der schwebenden Gruppe (per
-    // Wunsch). Das Tempo bleibt über den Tooltip und die Reglerposition ablesbar.
-    function applyTeleprompterSpeedToUi() {
-      const slider = document.getElementById('teleprompterSpeed');
-      if (slider) {
-        slider.value = String(teleprompterSpeed);
-        slider.title = 'Geschwindigkeit: ' + teleprompterSpeed + ' Pixel/Sekunde (Pfeil hoch/runter)';
+    // Der Regler liefert Rasterpunkte, keine Pixel pro Sekunde -- siehe teleprompterTempoAusRegler().
+    function setTeleprompterSpeedAusRegler(pos) {
+      setTeleprompterSpeed(teleprompterTempoAusRegler(pos));
+      zeigeTeleprompterTempoKurz();
+    }
+
+    // Ein dauerhaftes Zahlenfeld war ausdrücklich nicht gewollt; die Skala unter der Bahn zeigt
+    // dauerhaft, wo man ungefähr steht, und diese Blase nennt beim Verstellen den genauen Wert.
+    let teleprompterTempoWertTimer = null;
+
+    function zeigeTeleprompterTempoKurz() {
+      const wert = document.getElementById('teleprompterTempoWert');
+      if (!wert) return;
+      wert.classList.add('sichtbar');
+      clearTimeout(teleprompterTempoWertTimer);
+      teleprompterTempoWertTimer = setTimeout(() => wert.classList.remove('sichtbar'), 1400);
+    }
+
+    // Die Skala hängt allein an der Abbildung und ändert sich nie -- sie wird einmal gebaut und
+    // danach nicht mehr angefasst. Beschriftet sind nur sechs Werte; die übrigen Striche stehen
+    // ohne Zahl, sonst stünde in 190px eine Zahlenreihe, die niemand mehr liest.
+    const TELEPROMPTER_SKALA_GROSS = [2, 5, 10, 30, 100, 300];
+    const TELEPROMPTER_SKALA_KLEIN = [3, 4, 7, 15, 20, 50, 70, 200];
+
+    function baueTeleprompterSkala() {
+      const feld = document.getElementById('teleprompterSkala');
+      if (!feld || feld.childElementCount) return;
+      const strichSetzen = (tempo, gross) => {
+        const anteil = teleprompterReglerAusTempo(tempo) / TELEPROMPTER_REGLER_MAX * 100;
+        const strich = document.createElement('span');
+        strich.className = 'teleprompter-skala-strich' + (gross ? ' gross' : '');
+        strich.style.left = anteil + '%';
+        feld.appendChild(strich);
+        return anteil;
+      };
+      for (const tempo of TELEPROMPTER_SKALA_KLEIN) strichSetzen(tempo, false);
+      for (const tempo of TELEPROMPTER_SKALA_GROSS) {
+        const anteil = strichSetzen(tempo, true);
+        const zahl = document.createElement('span');
+        zahl.className = 'teleprompter-skala-wert';
+        zahl.style.left = anteil + '%';
+        zahl.textContent = String(tempo);
+        feld.appendChild(zahl);
       }
     }
 
-    function adjustTeleprompterSpeed(delta) {
-      setTeleprompterSpeed(teleprompterSpeed + delta);
+    function applyTeleprompterSpeedToUi() {
+      baueTeleprompterSkala();
+      const slider = document.getElementById('teleprompterSpeed');
+      if (slider) {
+        slider.value = String(teleprompterReglerAusTempo(teleprompterSpeed));
+        slider.title = 'Geschwindigkeit: ' + teleprompterTempoText(teleprompterSpeed) + ' (Pfeil hoch/runter)';
+      }
+      const wert = document.getElementById('teleprompterTempoWert');
+      if (wert) wert.textContent = teleprompterTempoText(teleprompterSpeed);
+    }
+
+    // Verstellt um Rasterpunkte der Bahn, nicht um Pixel pro Sekunde: nur so ist ein Tastendruck
+    // bei 4 px/s und bei 200 px/s gleich viel wert.
+    function adjustTeleprompterSpeed(schritte) {
+      setTeleprompterSpeed(teleprompterTempoAusRegler(teleprompterReglerAusTempo(teleprompterSpeed) + schritte));
+      zeigeTeleprompterTempoKurz();
     }
 
 
@@ -18256,8 +18421,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
       switch (id) {
         case 'start':     toggleTeleprompterRunning(); break;
-        case 'schneller': adjustTeleprompterSpeed(TELEPROMPTER_SPEED_STEP); break;
-        case 'langsamer': adjustTeleprompterSpeed(-TELEPROMPTER_SPEED_STEP); break;
+        case 'schneller': adjustTeleprompterSpeed(TELEPROMPTER_TEMPO_SCHRITT); break;
+        case 'langsamer': adjustTeleprompterSpeed(-TELEPROMPTER_TEMPO_SCHRITT); break;
         case 'vor':       teleprompterSeite(1); break;
         case 'zurueck':   teleprompterSeite(-1); break;
         case 'beenden':   stopTeleprompter(); break;
@@ -18492,8 +18657,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // und die Zellauswahl leeren -- Nebenwirkungen, die niemand angefragt hat.
       const konsumiere = () => { e.preventDefault(); e.stopPropagation(); };
       if (e.key === 'Escape') { konsumiere(); stopTeleprompter(); return; }
-      if (e.key === 'ArrowUp') { konsumiere(); adjustTeleprompterSpeed(TELEPROMPTER_SPEED_STEP); return; }
-      if (e.key === 'ArrowDown') { konsumiere(); adjustTeleprompterSpeed(-TELEPROMPTER_SPEED_STEP); return; }
+      if (e.key === 'ArrowUp') { konsumiere(); adjustTeleprompterSpeed(TELEPROMPTER_TEMPO_SCHRITT); return; }
+      if (e.key === 'ArrowDown') { konsumiere(); adjustTeleprompterSpeed(-TELEPROMPTER_TEMPO_SCHRITT); return; }
       if (e.key === 'ArrowRight') { konsumiere(); toggleTeleprompterRunning(); return; }
       // Pfeil links spult zurück, solange die Taste gehalten wird. Wie bei der Haltepause nur
       // gesetzt, nie umgeschaltet: eine gehaltene Taste feuert keydown wiederholt.
