@@ -5200,6 +5200,28 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     }
 
     /* Der Quelltext der Nebenspalte: gleiche Schrift wie das Quelltextfenster, aber nur zum Lesen. */
+    /* Die Tafel füllt ihren Rahmen selbst aus; das Feld drumherum braucht deshalb keinen
+       Innenabstand und keinen Bildlauf -- der Rahmen bringt seinen eigenen mit. */
+    .nebenspalte > .nebenspalte-inhalt.nebenspalte-tafel {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .nebenspalte-rahmen {
+      width: 1000px;
+      height: calc(100% / var(--tafel-faktor, 1));
+      border: 0;
+      display: block;
+      transform-origin: top left;
+      background: #ffffff;
+    }
+
+    .nebenspalte-hinweis {
+      padding: 24px;
+      opacity: .6;
+      font-size: 0.9rem;
+    }
+
     .nebenspalte-quelle {
       white-space: pre-wrap;
       word-break: break-word;
@@ -15556,6 +15578,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       saveStateToLocalStorage();
     }
 
+    // Der Trenner und die Fenstergröße ändern die Spaltenbreite -- die Verkleinerung muss folgen.
+    window.addEventListener('resize', nebenspalteTafelSkalieren);
+
     function nebenspalteSeiteTauschen() {
       nebenspalteRechts = !nebenspalteRechts;
       applyNebenspalte();
@@ -15608,6 +15633,35 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (nebenspalteZuletzt && nebenspalteZuletzt.id === tab.id &&
           nebenspalteZuletzt.inhalt === inhalt && nebenspalteZuletzt.modus === nebenspalteModus) return;
       nebenspalteZuletzt = { id: tab.id, inhalt, modus: nebenspalteModus };
+      // Eine Tafel ist kein Fließtext: ihre Kästen liegen frei auf einer festen DIN-A4-Seite, und
+      // ihr Inhalt ist JSON. Gezeigt wird deshalb dieselbe eigenständige Seite, die auch der
+      // HTML-Export erzeugt, in einem eigenen Rahmen -- so stimmt die Darstellung ohne zweite
+      // Umsetzung, und die Gestaltung der Tafel kann nicht in die App durchschlagen.
+      // Auch im Quelltext-Modus: das rohe JSON einer Tafel zu lesen hilft niemandem.
+      if (tab.fileType === 'canvas') {
+        const html = canvasExportHtmlBauen(tab, true);
+        ziel.className = 'nebenspalte-inhalt nebenspalte-tafel';
+        if (!html) {
+          ziel.innerHTML = '';
+          const hinweis = document.createElement('div');
+          hinweis.className = 'nebenspalte-hinweis';
+          hinweis.textContent = 'Diese Tafel lässt sich nicht darstellen.';
+          ziel.appendChild(hinweis);
+          return;
+        }
+        ziel.innerHTML = '';
+        const rahmen = document.createElement('iframe');
+        rahmen.className = 'nebenspalte-rahmen';
+        rahmen.setAttribute('title', tab.name || 'Tafel');
+        // Ohne allow-scripts: die exportierte Seite bringt zwar ein kleines Skript mit (die
+        // file://-Erkennung und der Vorlesen-Knopf), beides braucht es in einer Leseansicht
+        // innerhalb der App aber nicht -- und was nicht laufen muss, soll auch nicht laufen.
+        rahmen.setAttribute('sandbox', '');
+        rahmen.srcdoc = html;
+        ziel.appendChild(rahmen);
+        nebenspalteTafelSkalieren();
+        return;
+      }
       if (nebenspalteModus === 'quelltext') {
         ziel.className = 'nebenspalte-inhalt';
         const vor = document.createElement('pre');
@@ -15630,6 +15684,24 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         nebenspalteRenderTab = null;
         suppressDrawingControls = vorher;
       }
+    }
+
+    // Die Tafelseite ist in Millimetern gesetzt und damit breiter als die Spalte. Statt sie
+    // abzuschneiden, wird der ganze Rahmen verkleinert -- wie ein Blatt, das man weiter weghält.
+    // Feste Breite im Rahmen, Verkleinerung von außen: so bleibt das Seitenverhältnis erhalten.
+    const NEBENSPALTE_TAFEL_BREITE = 1000;   // px, in denen die Tafelseite gesetzt wird
+
+    function nebenspalteTafelSkalieren() {
+      const ziel = document.getElementById('nebenspalteInhalt');
+      const rahmen = ziel && ziel.querySelector('.nebenspalte-rahmen');
+      if (!rahmen) return;
+      const platz = ziel.clientWidth;
+      if (!platz) return;
+      const faktor = Math.min(1, platz / NEBENSPALTE_TAFEL_BREITE);
+      rahmen.style.transform = 'scale(' + faktor + ')';
+      // Die Höhe des Platzhalters muss der VERKLEINERTEN Höhe folgen, sonst bliebe unter der
+      // Tafel so viel leerer Raum, wie die Verkleinerung eingespart hat.
+      ziel.style.setProperty('--tafel-faktor', String(faktor));
     }
 
     function applyPaneVisibility() {
@@ -16012,6 +16084,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     function endPaneResize(e) {
       if (!paneResizer.classList.contains('dragging')) return;
       paneResizer.classList.remove('dragging');
+      nebenspalteTafelSkalieren();
       persistTabViewState();
       saveStateToLocalStorage();
     }
@@ -34236,10 +34309,27 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // exported Sprachaufnahme rendered as a broken <img> instead of an <audio> player, since
     // hljsRenderer.image() never got to see the literal "asset:ID" href it needs to detect
     // audioAssetIds.
-    function performCanvasHtmlExport() {
-      const tab = getActiveTabReal();
-      if (!tab || !tab.canvasData) return;
-      const data = tab.canvasData;
+    // Sorgt dafür, dass eine Tafel ihre gelesene Fassung hat. Beim Wechsel in den Tab passiert
+    // das ohnehin (siehe switchTab) -- die Nebenspalte zeigt aber auch Tafeln, in denen noch nie
+    // jemand war, und dort ist canvasData schlicht noch nicht da.
+    function canvasDatenSicherstellen(tab) {
+      if (!tab || tab.fileType !== 'canvas') return null;
+      if (!tab.canvasData) {
+        try { tab.canvasData = JSON.parse(tab.content); }
+        catch (err) { return null; }
+      }
+      return tab.canvasData;
+    }
+
+    // Baut die eigenständige Seite einer Tafel. Herausgelöst aus performCanvasHtmlExport(), damit
+    // die Nebenspalte dieselbe Darstellung benutzen kann: eine Tafel ist kein Fließtext, und ohne
+    // diesen Weg landete ihr JSON als Textwüste in der Spalte.
+    // ohneBedienelemente: für die Nebenspalte. Dort steckt die Seite in einem abgeschotteten
+    // Rahmen ohne Skripte -- ein Vorlesen-Knopf wäre dort ein Knopf, der nichts tut.
+    function canvasExportHtmlBauen(tab, ohneBedienelemente) {
+      if (!tab) return null;
+      const data = canvasDatenSicherstellen(tab);
+      if (!data) return null;
       const title = (tab.name || 'Canvas').replace(/\.canvas$/i, '');
       const isLandscape = parseFloat(data.pageWidth) > parseFloat(data.pageHeight);
 
@@ -34279,7 +34369,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const html = '<!DOCTYPE html>\n<html lang="de">\n<head>\n<meta charset="UTF-8">\n<title>' + escapeHtmlText(title) + '</title>\n' +
         '<style>\n' +
         '  :root {\n' + previewVars + '\n  }\n' +
-        '  html, body { margin: 0; background: #6b7280; display: flex; justify-content: center; padding: 24px; box-sizing: border-box; }\n' +
+        // font-family stand hier bisher gar nicht -- die exportierte Tafel fiel damit auf die
+        // Vorgabe des Browsers zurück und kam in Times heraus, während dieselbe Tafel in der App
+        // in der Systemschrift steht. Aufgefallen, als die Nebenspalte dieselbe Seite anzeigte.
+        '  html, body { margin: 0; background: #6b7280; display: flex; justify-content: center; padding: 24px; box-sizing: border-box; font-family: ' + cs.fontFamily + '; }\n' +
         '  .canvas-export-page { position: relative; width: ' + data.pageWidth + '; height: ' + data.pageHeight + '; background: ' + (data.pageBackgroundColor || '#ffffff') + '; box-shadow: 0 4px 24px rgba(0,0,0,.3); flex-shrink: 0; overflow: hidden; }\n' +
         // overflow: hidden oben wie in der App und im Druck: was über den Blattrand hinausragt,
         // ist nicht Teil der Seite (siehe main.canvas-tab-active .canvas-page).
@@ -34303,10 +34396,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // onSlideCompleteExpr is 'null' -- a single continuous container (the whole page), not a
         // slide-by-slide advance like the eBook export needs, since every box is already a real,
         // permanent sibling in the DOM in reading order (see boxesHtml above).
-        getTtsButtonExportHtml('document.querySelector(".canvas-export-page")', 'null') +
+        (ohneBedienelemente ? '' : getTtsButtonExportHtml('document.querySelector(".canvas-export-page")', 'null')) +
         '</body>\n</html>';
 
-      downloadHtmlBlob(html, title + '.html');
+      return html;
+    }
+
+    function performCanvasHtmlExport() {
+      const tab = getActiveTabReal();
+      const html = canvasExportHtmlBauen(tab);
+      if (!html) return;
+      downloadHtmlBlob(html, (tab.name || 'Canvas').replace(/\.canvas$/i, '') + '.html');
     }
 
     function performHtmlExport() {
