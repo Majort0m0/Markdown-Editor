@@ -19,3 +19,18 @@ CLAUDE.md
 docs/
 Neugestaltung Markdown Studio.md
 Sprachfunktion.txt
+
+# Zugangsdaten. Dieses Dokument legt die App selbst an (openWebdavConfigTemplate),
+# und darin steht das App-Passwort im Klartext -- es darf nie ins Repository.
+# Als Muster und nicht als Dateiname, weil eine zweite Konfiguration für ein
+# anderes Ziel anders heißt und sonst durchrutschte.
+*WebDAV Config*.md
+
+# Arbeitskopien der einen HTML-Datei ("Markdown-Editor 2.html" und Ähnliches).
+# Das Leerzeichen vor der Ziffer ist wichtig: Markdown-Editor.html selbst bleibt
+# damit versioniert.
+Markdown-Editor [0-9]*.html
+
+# Material im Projektordner (Arbeitsblätter, Vorlagen). Die App braucht davon
+# nichts, und auf GitHub liegt kein einziges PDF.
+*.pdf
