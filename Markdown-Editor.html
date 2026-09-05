@@ -6421,6 +6421,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     }
     .markdown-body .cp-griff-bild-flaeche:hover .cp-griff-bild { opacity: .75; }
 
+    /* Ein Akkord ohne hinterlegten Griff: der Name steht wie bei jedem anderen, nur das Griffbrett
+       ist leer und zurückgenommen -- auf einen Blick zu sehen, welcher Griff noch fehlt. Beim
+       Überfahren wird es kräftiger (die Hover-Regel darüber hat die höhere Spezifität und gewinnt
+       mit .75), was hier in die andere Richtung geht als sonst und genau richtig ist: dieses Bild
+       lädt zum Ausfüllen ein, statt bloß anklickbar zu sein. */
+    .markdown-body .cp-griff-leer .cp-griff-bild { opacity: .38; }
+
     .markdown-body .cp-griff-name {
       font-size: .78em;
       font-weight: 600;
@@ -6433,13 +6440,6 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     .markdown-body .cp-griff-eigen .cp-griff-name::after {
       content: '•';
       margin-left: .25em;
-      opacity: .55;
-    }
-
-    .markdown-body .cp-griff-rest {
-      align-self: center;
-      font-size: .72em;
-      color: var(--preview-text);
       opacity: .55;
     }
 
@@ -20122,13 +20122,19 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (kasten) kasten.checked = chordProZweispaltig;
     }
 
+    // Ohne Griff (griff === null) entsteht dasselbe Bild, nur ohne Punkte und ohne die Marken über
+    // dem Sattel: ein leeres Griffbrett zum Ausfüllen. Solche Akkorde standen vorher bloß als
+    // Namensliste am Ende der Leiste ("ohne Griffbild: Cmajor7") -- also ohne das eine, was dort
+    // gebraucht wird: den Weg, den Griff selbst einzutragen.
     function chordProGriffSvg(name, griff, quelle, berechnet, eigen) {
+      const leer = !Array.isArray(griff);
+      const form = leer ? [] : griff;
       const B = 5;                         // dargestellte Bünde
       const breite = 46, hoehe = 58;
       const links = 5, oben = 14;
       const saitenAbstand = (breite - 2 * links) / 5;
       const bundHoehe = (hoehe - oben - 4) / B;
-      const gegriffen = griff.filter((f) => f > 0);
+      const gegriffen = form.filter((f) => f > 0);
       const kleinster = gegriffen.length ? Math.min(...gegriffen) : 1;
       // Erst ab dem vierten Bund verschieben -- ein Griff im 2. oder 3. Bund liest sich mit Sattel
       // deutlich vertrauter als mit einer Bundzahl daneben.
@@ -20147,8 +20153,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         t += '<line x1="' + x + '" y1="' + oben + '" x2="' + x + '" y2="' + (oben + B * bundHoehe) +
              '" stroke="currentColor" stroke-width="0.7"/>';
       }
-      // Marken über dem Sattel und Punkte
-      griff.forEach((f, s) => {
+      // Marken über dem Sattel und Punkte. Beim leeren Griffbild bleibt beides weg -- ein leeres
+      // Brett heißt "noch nichts eingetragen", sechs Kreuze hießen "keine Saite wird gespielt".
+      form.forEach((f, s) => {
         const x = links + s * saitenAbstand;
         if (f < 0) {
           t += '<path d="M' + (x - 2.2) + ' ' + (oben - 7) + 'l4.4 4.4M' + (x + 2.2) + ' ' + (oben - 7) +
@@ -20180,17 +20187,21 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // den Akkord. Vorher tat beides dasselbe, und für ein eigenes Griffbild gab es gar keinen
       // Weg. Die Trennung folgt dem, was man sieht -- auf ein Bild tippt, wer das Bild meint.
       const spielName = JSON.stringify(quelle).replace(/"/g, '&quot;');
+      const bildTitel = leer
+        ? 'Für ' + name + ' ist kein Griffbild hinterlegt -- hier eintragen. Steckt ein Schreibfehler im Namen, ist er im Quelltext markiert.'
+        : 'Eigenes Griffbild für ' + name + ' festlegen';
       const bild = suppressDrawingControls
         ? '<span class="cp-griff-bild-flaeche">' + t + '</span>'
         : '<button type="button" class="cp-griff-bild-flaeche" title="' +
-          escapeHtmlText('Eigenes Griffbild für ' + name + ' festlegen') +
+          escapeHtmlText(bildTitel) +
           '" onclick="chordProGriffEditorOeffnen(' + JSON.stringify(name).replace(/"/g, '&quot;') + ')">' + t + '</button>';
       const nameTeil = suppressDrawingControls
         ? '<span class="cp-griff-name">' + escapeHtmlText(name) + '</span>'
         : '<button type="button" class="cp-griff-name" title="' + escapeHtmlText(beschrift) +
           '" onclick="chordProAkkordSpielen(' + spielName + ', this.parentElement)">' + escapeHtmlText(name) + '</button>';
       return '<span class="cp-griff' + (berechnet ? ' cp-griff-berechnet' : '') +
-             (eigen ? ' cp-griff-eigen' : '') + '">' + bild + nameTeil + '</span>';
+             (eigen ? ' cp-griff-eigen' : '') + (leer ? ' cp-griff-leer' : '') + '">' +
+             bild + nameTeil + '</span>';
     }
 
     // Die Griffleiste für ein Liedblatt: jeder vorkommende Akkord einmal, in der Reihenfolge des
@@ -20212,20 +20223,20 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         const angezeigt = chordProAnzeigeName(marke.name);
         if (!gesehen.some((g) => g.angezeigt === angezeigt)) gesehen.push({ angezeigt, quelle: marke.name });
       }
+      // Auch ein Akkord ohne hinterlegten Griff steht an seiner Stelle in der Leiste: mit Namen wie
+      // jeder andere und einem leeren, zurückgenommenen Griffbrett. Das nennt den fehlenden Griff
+      // nicht nur, es ist zugleich der Knopf, der ihn eintragen lässt -- vorher sammelten sich
+      // diese Akkorde als bloße Namensliste am Ende der Leiste, aus der kein Weg weiterführte.
+      // Dieselben Akkorde bleiben im Quelltext hervorgehoben (siehe renderChordProSourceHighlight),
+      // denn meist steckt ein Schreibfehler dahinter ('Cmajor7', 'Bbmin').
       const teile = [];
-      const fehlend = [];
       for (const g of gesehen) {
         const griff = chordProGriffFuerAnzeige(g.angezeigt);
-        if (griff) teile.push(chordProGriffSvg(g.angezeigt, griff.form, g.quelle, griff.berechnet, griff.eigen));
-        else fehlend.push(g.angezeigt);
+        teile.push(chordProGriffSvg(g.angezeigt, griff ? griff.form : null, g.quelle,
+                                    !!(griff && griff.berechnet), !!(griff && griff.eigen)));
       }
-      // Die fehlenden beim NAMEN nennen statt nur zu zählen: meist sind es Schreibfehler
-      // ('Cmajor7', 'Bbmin'), und nur mit dem Namen weiß man, wo zu korrigieren ist. Dieselben
-      // Akkorde werden im Quelltext hervorgehoben (siehe renderChordProSourceHighlight).
-      if (!teile.length && !fehlend.length) return '';
-      return '<div class="cp-griffleiste">' + teile.join('') +
-        (fehlend.length ? '<span class="cp-griff-rest" title="Für diese Akkorde ist kein Griffbild hinterlegt. Häufig steckt ein Schreibfehler dahinter -- im Quelltext sind sie markiert.">ohne Griffbild: ' +
-          escapeHtmlText(fehlend.join(', ')) + '</span>' : '') + '</div>';
+      if (!teile.length) return '';
+      return '<div class="cp-griffleiste">' + teile.join('') + '</div>';
     }
 
     // Drei Ansichten für das Liedblatt. Bewusst ein durchschaltender Knopf und keine Auswahlliste:
@@ -34660,7 +34671,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '  .markdown-body .cp-griff-name { font-size: .78em; font-weight: 600; color: var(--preview-link); margin-top: .1em; }\n' +
         '  .markdown-body .cp-griff-bild-flaeche, .markdown-body button.cp-griff-name { display: block; margin: 0; padding: 0; border: 0; background: none; font-family: inherit; -webkit-appearance: none; appearance: none; }\n' +
         '  .markdown-body .cp-griff-eigen .cp-griff-name::after { content: \'•\'; margin-left: .25em; opacity: .55; }\n' +
-        '  .markdown-body .cp-griff-rest { align-self: center; font-size: .72em; opacity: .55; }\n' +
+        '  .markdown-body .cp-griff-leer .cp-griff-bild { opacity: .38; }\n' +
         '  .markdown-body .cp-abschnitt { margin: .2em 0; position: relative; }\n' +
         '  .markdown-body .cp-abschnitt::before, .markdown-body .cp-abschnitt::after { content: \'\'; position: absolute; left: 0; width: .8em; pointer-events: none; }\n' +
         '  .markdown-body .cp-abschnitt::before { top: 0; }\n' +

@@ -389,7 +389,7 @@ Das Griffbild-Symbol blendet über dem Liedtext eine Leiste mit allen vorkommend
 - **Klick auf den Akkordnamen** spielt den Akkord.
 - **Klick auf das Griffbild** öffnet den Griffeditor.
 
-Die Griffe kommen aus einer von Hand geprüften Tabelle. Was nicht darin steht, wird berechnet — meist, indem eine bekannte Form derselben Akkordart verschoben wird, so wie man es selbst tut. Bleibt ein Akkord ganz ohne Bild, steht sein **Name** unter der Leiste („ohne Griffbild: Cmajor7") und er ist im Quelltext orange gewellt unterstrichen. Das ist fast immer ein Schreibfehler und der Hinweis, wo nachzusehen ist.
+Die Griffe kommen aus einer von Hand geprüften Tabelle. Was nicht darin steht, wird berechnet — meist, indem eine bekannte Form derselben Akkordart verschoben wird, so wie man es selbst tut. Bleibt ein Akkord ganz ohne Bild, steht er trotzdem an seiner Stelle in der Leiste: mit **Namen** wie jeder andere, darüber ein leeres, blass gezeichnetes Griffbrett. Ein Klick darauf öffnet den Griffeditor, sodass der fehlende Griff gleich dort eingetragen werden kann. Zusätzlich ist der Akkord im Quelltext orange gewellt unterstrichen — fast immer steckt ein Schreibfehler dahinter, und das ist der Hinweis, wo nachzusehen ist.
 
 **Eigenes Griffbild.** Im Editor tippst du in eine Zelle, um einen Punkt zu setzen oder zu löschen; die Reihe über dem Sattel schaltet die Saite zwischen leer (○) und gedämpft (✕), und die Lage lässt sich verschieben. Gespeichert wird es **im Liedblatt** als Standard-Direktive:
 
