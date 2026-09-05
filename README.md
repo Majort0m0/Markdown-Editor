@@ -69,7 +69,7 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 ### Liedblätter (ChordPro)
 - **Akkorde über den Silben** — `.pro`/`.chopro`/`.cho`/`.chordpro`/`.crd` werden als Liedblatt gerendert, jeder Akkord in einem eigenen Kästchen über der richtigen Silbe; Abschnitte (Refrain, Strophe, Bridge) bekommen unterscheidbare Seitenklammern, Strophen werden nummeriert, der Refrain ist dezent hinterlegt
 - **Transponieren und Kapodaster** — Transponieren schreibt das Blatt wirklich um, der Capo ändert nur die angezeigten Griffe; dazu ein **Tonartvorschlag**, der ausrechnet, bei welcher Kapodasterlage das Lied am leichtesten greifbar wird, und eine **Tonartschätzung** aus den Akkorden für Blätter ohne `{key}`
-- **Griffbilder** — für jeden vorkommenden Akkord, aus einer geprüften Tabelle oder berechnet; Klick auf den Namen spielt den Akkord (synthetisiert, ohne Klangdateien), Klick auf das Bild öffnet einen **Editor für eigene Griffbilder**, die als Standard-`{define}` im Liedblatt gespeichert werden und damit auf jedem Gerät erscheinen
+- **Griffbilder** — für jeden vorkommenden Akkord, mit der Bundlage neben dem obersten Bund: zuerst aus einer geprüften Tabelle, dann aus einer eingebauten Griffdatenbank mit 780 Akkorden in 2728 von Hand ausgesuchten Lagen ([chords-db](https://github.com/tombatossals/chords-db) von David Rubert, MIT), und nur für den Rest berechnet; Klick auf den Namen spielt den Akkord (synthetisiert, ohne Klangdateien), Klick auf das Bild öffnet einen **Editor für eigene Griffbilder**, die als Standard-`{define}` im Liedblatt gespeichert werden und damit auf jedem Gerät erscheinen
 - **Drei Ansichten** — alles, nur Text oder nur Akkorde; dazu zweispaltiger Druck für Papier
 - **Metronom** mit acht Stilen, Taktarten bis 12/8, Tempo-Antippen und wachem Bildschirm — als schwebendes Feld auch im Vollbild und im Teleprompter erreichbar
 - **Stimmgerät** — nach Gehör oder chromatisch übers Mikrofon, mit zwölf Stimmungen für Gitarre, Bass und Ukulele
@@ -120,3 +120,5 @@ Die komplette App (HTML, CSS, JavaScript) liegt in `Markdown-Editor.html`. Es gi
 ## 📄 Lizenz
 
 CC-BY-NC — [Lernsachen.blog](https://lernsachen.blog)
+
+Die Griffdatenbank der Liedblätter stammt aus [chords-db](https://github.com/tombatossals/chords-db), Copyright (c) 2016 David Rubert, MIT-Lizenz. Der vollständige Lizenztext steht als Kommentar über dem Datenblock in `Markdown-Editor.html`.
