@@ -19592,8 +19592,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       'D': [-1,-1,0,2,3,2], 'D7': [-1,-1,0,2,1,2], 'Dmaj7': [-1,-1,0,2,2,2], 'Dm': [-1,-1,0,2,3,1],
       'Dm7': [-1,-1,0,2,1,1], 'Dsus4': [-1,-1,0,2,3,3], 'Dsus2': [-1,-1,0,2,3,0], 'D6': [-1,-1,0,2,0,2],
       'Ddim': [-1,-1,0,1,3,1], 'Daug': [-1,-1,0,3,3,2], 'D9': [-1,5,4,5,5,5],
-      'D#': [-1,6,5,3,4,3], 'D#m': [-1,6,8,8,7,6], 'Eb': [-1,6,5,3,4,3], 'Ebm': [-1,6,8,8,7,6],
-      'Eb7': [-1,6,8,6,8,6], 'Ebmaj7': [-1,6,5,3,3,3],
+      // Eb/D# und Ebmaj7 standen als [x,6,5,3,4,3] bzw. [x,6,5,3,3,3] hier: beide greifen bis in
+      // den sechsten Bund hinauf, fangen aber im dritten an -- vier bzw. drei Finger über drei
+      // Bünde, und dazu die einzigen Tabellengriffe, die aus dem gezeichneten Fenster ragten.
+      // Ersetzt durch die A-Form-Barrégriffe im sechsten Bund, also dieselbe Lage, in der Ebm und
+      // Eb7 danebenstehen: gleiche Töne, kompaktere Form.
+      'D#': [-1,6,8,8,8,6], 'D#m': [-1,6,8,8,7,6], 'Eb': [-1,6,8,8,8,6], 'Ebm': [-1,6,8,8,7,6],
+      'Eb7': [-1,6,8,6,8,6], 'Ebmaj7': [-1,6,8,7,8,6],
       'E': [0,2,2,1,0,0], 'E7': [0,2,0,1,0,0], 'Em': [0,2,2,0,0,0], 'Em7': [0,2,0,0,0,0],
       'Emaj7': [0,2,1,1,0,0], 'Esus4': [0,2,2,2,0,0], 'E6': [0,2,2,1,2,0], 'Edim': [0,1,2,0,-1,-1],
       'Eaug': [0,3,2,1,1,0], 'Em6': [0,2,2,0,2,0], 'E9': [0,2,0,1,0,2],
@@ -19883,8 +19888,18 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     // Kleiner ist besser: tiefe Lage, leere Saiten, viele klingende Saiten und wenige Finger.
+    //
+    // Die Spreizung wiegt schwerer als die Lage (1,8 gegen 1,2 je Bund) -- vorher war es umgekehrt
+    // (0,6 gegen 2,2), und das ist am Instrument falsch herum: die Bünde sind unten am breitesten,
+    // eine Spreizung über drei Bünde ist im ersten Bund also deutlich unbequemer als im sechsten.
+    // Mit der alten Gewichtung kostete ein ganzer Bund Spreizung weniger als ein Bund Lage, also
+    // nahm die Suche jede Verrenkung in Kauf, um einen Bund tiefer zu liegen. Gemeldet als
+    // "unnötig kompliziert". Gemessen über alle 720 gerechneten Griffe: Griffe mit vier Fingern
+    // 167 -> 119, Spreizungen über drei Bünde 231 -> 110, und das für eine mittlere Lage, die nur
+    // von 1,37 auf 1,94 steigt -- also einen halben Bund. Die 144 Tabellengriffe sind davon nicht
+    // berührt, die werden unverändert durchgereicht.
     function chordProFormGuete(b) {
-      return b.tiefster * 2.2 + b.finger * 1.2 + b.spanne * 0.6
+      return b.tiefster * 1.2 + b.finger * 1.4 + b.spanne * 1.8
            - b.klingend.length * 2 - b.offene * 1.2 + (b.barre ? -0.8 : 0) + b.luecken * 3.5;
     }
 
@@ -20028,6 +20043,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           if (toene[0] !== (z.bass !== null ? z.bass : z.grund)) probleme.push('falsche Bassnote');
           const b = chordProFormBewerten(form);
           if (!b) probleme.push('nach eigener Regel nicht greifbar');
+          // Passt der Griff in die fünf Bünde, die chordProGriffSvg zeichnet? Dieselbe Rechnung
+          // wie dort. Ohne diese Prüfung fielen Punkte unterhalb des Griffbretts nur auf, wenn
+          // jemand genau dieses Bild ansah -- so war 'Ebmaj7' gemeldet worden.
+          const ge = form.filter((f) => f > 0);
+          if (ge.length) {
+            const kl = Math.min(...ge), ho = Math.max(...ge);
+            const bas = (kl <= 3 && ho <= 5) ? 1 : kl;
+            if (ho > bas + 4 || kl < bas) probleme.push('ragt aus dem gezeichneten Griffbrett (Bünde ' + kl + '-' + ho + ')');
+          }
         }
         if (probleme.length) beanstandet.push(name + ' [' + treffer.form.join(',') + '] -> ' + probleme.join('; '));
       }
@@ -20172,9 +20196,20 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const bundHoehe = (hoehe - oben - 4) / B;
       const gegriffen = form.filter((f) => f > 0);
       const kleinster = gegriffen.length ? Math.min(...gegriffen) : 1;
+      const hoechster = gegriffen.length ? Math.max(...gegriffen) : 1;
       // Erst ab dem vierten Bund verschieben -- ein Griff im 2. oder 3. Bund liest sich mit Sattel
       // deutlich vertrauter als mit einer Bundzahl daneben.
-      const basis = kleinster > 3 ? kleinster : 1;
+      //
+      // Ob der Sattel gezeigt werden kann, entscheidet aber der HÖCHSTE Bund mit, nicht nur der
+      // tiefste: 'Ebmaj7' [x,6,5,3,3,3] fing im dritten Bund an, reichte aber bis in den sechsten,
+      // und die Regel schickte ihn wegen des tiefsten Bundes an den Sattel -- der Punkt im
+      // sechsten Bund landete dann UNTERHALB des gezeichneten Griffbretts. Gemeldet mit genau
+      // diesem Akkord; nachgemessen waren es 3 Tabellengriffe und 21 gerechnete, alle um genau
+      // einen Bund daneben. Verschoben wird sonst immer auf den tiefsten Bund des Griffs: eine
+      // Rechnung wie min(kleinster, hoechster - B + 1) legt die Lage bei einem Griff, der ohnehin
+      // passt, unnötig tiefer (Ebmaj7 in den Bünden 6-8 begann damit bei 4) und beschriftet ihn
+      // dann auch noch falsch.
+      const basis = (kleinster <= 3 && hoechster <= B) ? 1 : kleinster;
       let t = '<svg class="cp-griff-bild" viewBox="' + (-rand) + ' 0 ' + (breite + 2 * rand) + ' ' +
               hoehe + '" aria-hidden="true">';
       // Bundstäbe
