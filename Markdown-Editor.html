@@ -39792,7 +39792,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         const href = node.getAttribute('data-md-href') || '';
         const title = node.getAttribute('data-md-title');
         const alt = (node.querySelector('img') || {}).alt || '';
-        return '![' + alt + '](' + href + ')' + (title ? ' "' + title + '"' : '');
+        // Titel gehoert IN die Klammern -- '![alt](href "Titel")' ist die Bildunterschrift (siehe
+        // captionHtml in hljsRenderer.image()), '![alt](href) "Titel"' dagegen ein Bild und
+        // dahinter ein Stueck Text in Anfuehrungszeichen. Beim Testen des Einfuegepfads
+        // aufgefallen; traf ueber serializeBlockToMarkdown() auch das Tippen in einem Absatz mit
+        // Bildunterschrift, die dabei jedes Mal abriss.
+        return '![' + alt + '](' + href + (title ? ' "' + title + '"' : '') + ')';
       },
     });
     // The visible caption under an image is just data-md-title rendered as text (see
@@ -39866,8 +39871,183 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       replacement: (content) => content,
     });
 
+    // --- Fremdes HTML beim Einfuegen auf das eindampfen, was Markdown ausdruecken kann ---
+    //
+    // Gemeldet mit Bildschirmfoto: eine Kopie von einer Webseite landete als
+    //   **Erweiterter Zugriff** <span style="color: rgb(102, 102, 102); font-family: ...; float: none;">auf neue ...</span>
+    // in der Notiz -- ein seitenlanges Style-Attribut mitten im Text, das dort nichts zu suchen hat.
+    // Nachgemessen statt vermutet: htmlToMarkdown() auf genau so einen Zwischenablage-Ausschnitt
+    // angewandt liefert diese Zeile zeichengenau.
+    //
+    // Ursache ist NICHT Turndown selbst -- fuer ein unbekanntes <span> hat es keine Regel und gibt
+    // nur dessen Inhalt zurueck. Es ist die eigene Regel studioProFarbSpan, die bei JEDEM <span>
+    // greift, dessen style mit "color:"/"background-color:" beginnt, und genau so schreibt Chrome
+    // beim Kopieren die berechneten Stile der Quellseite in die Zwischenablage. Gemeint war die
+    // Regel fuer die Farb-Spans, die diese Anwendung selbst in den Quelltext schreibt.
+    //
+    // Die Regel bleibt trotzdem unangetastet: serializeBlockToMarkdown() laeuft nach jedem
+    // Tastendruck ueber die eigene Vorschau und muss die Farbe dort erhalten. Stattdessen wird
+    // fremdes HTML VOR der Umwandlung auf eine Positivliste reduziert. Erlaubt ist genau das, was
+    // Markdown abbilden kann (Ueberschriften, Absaetze, Aufzaehlungen, fett/kursiv/durchgestrichen,
+    // Code, Zitate, Links, Bilder, Tabellen); jedes andere Element verliert seine Huelle und laesst
+    // nur seinen Text zurueck. Attribute fallen bis auf die wenigen bedeutungstragenden (href, src,
+    // alt, ...) weg -- style also immer, egal an welchem Element.
+    //
+    // Positivliste statt Sperrliste, aus demselben Grund wie bei simple-hide: was hier kuenftig
+    // ankommt, ist nicht absehbar (jede Seite bringt eigene Elemente mit), und Unbekanntes soll
+    // schlicht Text werden statt ungeprueft durchzurutschen.
+    //
+    // Ausgenommen sind die eigenen "unantastbaren Inseln" (Bild-/Video-/Audio-Huelle, Formelzelle):
+    // eine Kopie aus der eigenen Vorschau nimmt genau denselben Weg, und deren data-md-*-Attribute
+    // sind das, woraus die studioPro*-Regeln die urspruengliche Markdown-Referenz wiederherstellen.
+    // Ohne diese Ausnahme wuerde aus einer kopierten "asset:img_1"-Referenz die aufgeloeste,
+    // mehrere Kilobyte grosse data:-URI -- siehe den Abschnittskommentar bei diesen Regeln.
+    //
+    // Die Farbe eines Farb-Spans aus der EIGENEN Vorschau geht dabei mit verloren. Das ist
+    // hingenommen und nicht zu umgehen: Chrome schreibt beim Kopieren aus einer gerenderten Seite
+    // die berechneten Stile mit, ein eigener Farb-Span ist auf der Zwischenablage also von einem
+    // fremden nicht mehr zu unterscheiden. Ueber den Quelltext (Nur-Text-Einfuegen) kommt er
+    // weiterhin unveraendert an, dieser Weg ist von der Bereinigung gar nicht beruehrt.
+    const PASTE_HTML_ERLAUBT = new Set([
+      // Block: eigene Bedeutung in Markdown ...
+      'P', 'BR', 'HR', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'DL', 'DT', 'DD',
+      'BLOCKQUOTE', 'PRE', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH',
+      // ... und Block ohne eigene Bedeutung, der trotzdem bleiben muss: Turndown zaehlt diese
+      // Namen zu seinen Block-Elementen und setzt Leerzeilen darum. Aufgeloest wuerden zwei
+      // aufeinanderfolgende <section>Text</section> zu einer einzigen Zeile verschmelzen.
+      'DIV', 'SECTION', 'ARTICLE', 'ASIDE', 'HEADER', 'FOOTER', 'MAIN', 'NAV', 'ADDRESS', 'CENTER',
+      'FIGURE', 'FIGCAPTION', 'FIELDSET', 'FORM', 'HGROUP',
+      // Inline
+      'A', 'STRONG', 'B', 'EM', 'I', 'DEL', 'S', 'STRIKE', 'CODE', 'IMG', 'INPUT',
+    ]);
+
+    // Elemente, die samt Inhalt verschwinden: ihr Textinhalt ist kein Text der Seite (Skript- und
+    // Stilquelltext wuerde Turndown als gewoehnlichen Text ausgeben) oder gehoert zur Bedienung
+    // statt zum Inhalt (Schaltflaechen, Auswahlfelder). Wird vor der Positivliste geprueft.
+    const PASTE_HTML_ENTFERNEN = new Set([
+      'SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'META', 'LINK', 'TITLE', 'BASE',
+      'SVG', 'CANVAS', 'IFRAME', 'OBJECT', 'EMBED', 'VIDEO', 'AUDIO', 'SOURCE', 'TRACK',
+      'BUTTON', 'SELECT', 'OPTION', 'OPTGROUP', 'TEXTAREA', 'MAP', 'AREA', 'PARAM',
+    ]);
+
+    // Was ein erlaubtes Element an Attributen behalten darf. Alles Uebrige (style, class, id,
+    // data-*, aria-*, Ereignis-Attribute) faellt weg. Fuer INPUT stehen genau die beiden da, die
+    // die Regel taskListCheckbox liest (node.checked spiegelt das Attribut nach dem Parsen).
+    const PASTE_HTML_ATTRIBUTE = { A: ['href', 'title'], IMG: ['src', 'alt', 'title'], INPUT: ['type', 'checked'] };
+
+    // Eigene Insel: unangetastet lassen, samt Attributen und Inhalt -- genau daraus bauen die
+    // studioPro*-Regeln die Original-Markdown-Referenz wieder auf. Dieselben Formen wie dort, nur
+    // ohne die Regeln umzuschreiben; kommt eine Inselart dazu, gehoert sie auch hierher.
+    function istEigeneEinfuegeInsel(el) {
+      const klassen = el.classList;
+      if (klassen.contains('image-wrapper') || klassen.contains('video-embed-wrapper')) return true;
+      if (el.nodeName === 'AUDIO' && klassen.contains('audio-asset-player')) return true;
+      if ((el.nodeName === 'TD' || el.nodeName === 'TH') && klassen.contains('cell-formula-cell')) return true;
+      return false;
+    }
+
+    // <b style="font-weight:normal"> ist kein Fettdruck. Google Docs legt genau so eine Huelle um
+    // das GESAMTE kopierte Dokument (<b style="font-weight:normal" id="docs-internal-guid-...">),
+    // und Turndown macht daraus gehorsam ein '**' um alles. Ein <i style="font-style:normal">
+    // entsteht auf demselben Weg. Das style-Attribut faellt gleich darauf sowieso weg -- deshalb
+    // muss diese Frage hier gestellt werden, solange die Angabe noch dasteht.
+    //
+    // Die umgekehrte Richtung (Stil sagt fett, Element nicht) steht in auszeichnungAusStil().
+    function istUnechteAuszeichnung(el) {
+      const stil = el.getAttribute('style') || '';
+      if (el.nodeName === 'B' || el.nodeName === 'STRONG') {
+        const m = /(?:^|;)\s*font-weight\s*:\s*([^;]+)/i.exec(stil);
+        if (!m) return false;
+        const wert = m[1].trim().toLowerCase();
+        return wert === 'normal' || (/^\d+$/.test(wert) && parseInt(wert, 10) < 600);
+      }
+      if (el.nodeName === 'I' || el.nodeName === 'EM') {
+        return /(?:^|;)\s*font-style\s*:\s*normal/i.test(stil);
+      }
+      return false;
+    }
+
+    // Die Gegenrichtung: viele Seiten (und Google Docs durchgaengig) zeichnen fett/kursiv nicht mit
+    // <b>/<i> aus, sondern als Stil auf einem <span>. Beim Kopieren schreibt Chrome die BERECHNETEN
+    // Stile mit, die Angabe steht also da -- ohne sie hier zu lesen faellt der Span gleich darauf
+    // ersatzlos weg und die Auszeichnung ist verloren, obwohl sie uebernommen werden soll.
+    //
+    // Genau dieses Mitschreiben ist zugleich die Gefahr: in einer Ueberschrift oder Kopfzelle ist
+    // 700 schlicht die normale Schriftstaerke, und aus '## Titel' wuerde '## **Titel**'. Deshalb
+    // die Sperre ueber die Vorfahren -- und weil sie den bereits fertig umgebauten Baum sieht
+    // (entschieden wird VOR dem Abstieg, siehe bereinigeEinfuegeKnoten), faengt sie auch
+    // ineinandergeschachtelte Fett-Spans ab, die sonst '****' ergaeben.
+    const AUSZEICHNUNG_SCHON_VORHANDEN = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TH', 'B', 'STRONG', 'I', 'EM', 'CODE', 'PRE']);
+    function auszeichnungAusStil(el) {
+      if (el.nodeName !== 'SPAN' && el.nodeName !== 'FONT') return null;
+      const stil = el.getAttribute('style') || '';
+      const fett = /(?:^|;)\s*font-weight\s*:\s*(?:bold(?:er)?|[6-9]\d\d|1000)\s*(?:;|$)/i.test(stil);
+      const kursiv = /(?:^|;)\s*font-style\s*:\s*italic/i.test(stil);
+      if (!fett && !kursiv) return null;
+      for (let vorfahr = el.parentNode; vorfahr && vorfahr.nodeType === Node.ELEMENT_NODE; vorfahr = vorfahr.parentNode) {
+        // Ein <b style="font-weight:normal"> faellt selbst gleich weg und darf deshalb nicht als
+        // "hier ist schon fett" zaehlen -- sonst bliebe ausgerechnet Google Docs, wo genau so eine
+        // Huelle um das ganze Dokument liegt, ohne jede Auszeichnung.
+        if (istUnechteAuszeichnung(vorfahr)) continue;
+        if (AUSZEICHNUNG_SCHON_VORHANDEN.has(vorfahr.nodeName)) return null;
+      }
+      return { fett, kursiv };
+    }
+
+    // Ersetzt den Span durch echtes <strong>/<em> (beides zusammen: <strong><em>...</em></strong>)
+    // und gibt die neue Huelle zurueck, in die weiter abgestiegen wird.
+    function auszeichnungHuelleSetzen(el, art) {
+      const doc = el.ownerDocument;
+      const innen = doc.createElement(art.kursiv ? 'em' : 'strong');
+      while (el.firstChild) innen.appendChild(el.firstChild);
+      const aussen = (art.fett && art.kursiv) ? doc.createElement('strong') : innen;
+      if (aussen !== innen) aussen.appendChild(innen);
+      el.replaceWith(aussen);
+      return aussen;
+    }
+
+    function einfuegeAttributeBeschneiden(el) {
+      const erlaubt = PASTE_HTML_ATTRIBUTE[el.nodeName] || [];
+      for (const attribut of Array.prototype.slice.call(el.attributes)) {
+        if (erlaubt.indexOf(attribut.name) === -1) el.removeAttribute(attribut.name);
+      }
+    }
+
+    function bereinigeEinfuegeKnoten(el) {
+      // Kindliste vorher festhalten: die Schleife veraendert den Baum unter sich.
+      for (const kind of Array.prototype.slice.call(el.childNodes)) {
+        if (kind.nodeType === Node.COMMENT_NODE) { kind.remove(); continue; }
+        if (kind.nodeType !== Node.ELEMENT_NODE) continue; // Text bleibt, wie er ist
+        if (istEigeneEinfuegeInsel(kind)) continue;        // samt Inhalt stehen lassen
+        // Die sichtbare Bildunterschrift ist nur data-md-title als Text (siehe captionHtml in
+        // hljsRenderer.image()) -- die Huellen-Regel gibt den Titel bereits aus, hier stehen
+        // lassen hiesse ihn doppelt zu bekommen. Entspricht studioProImageCaption.
+        if (kind.nodeName === 'SPAN' && kind.classList.contains('image-caption')) { kind.remove(); continue; }
+        if (PASTE_HTML_ENTFERNEN.has(kind.nodeName)) { kind.remove(); continue; }
+        // Stil-Auszeichnung VOR dem Abstieg umsetzen, damit die Vorfahren-Sperre in
+        // auszeichnungAusStil() weiter innen den fertigen <strong>/<em> sieht und nicht den
+        // Span, der es gerade erst wird.
+        const art = auszeichnungAusStil(kind);
+        const knoten = art ? auszeichnungHuelleSetzen(kind, art) : kind;
+        bereinigeEinfuegeKnoten(knoten);
+        if (PASTE_HTML_ERLAUBT.has(knoten.nodeName) && !istUnechteAuszeichnung(knoten)) { einfuegeAttributeBeschneiden(knoten); continue; }
+        knoten.replaceWith(...knoten.childNodes); // Huelle weg, Inhalt bleibt an Ort und Stelle
+      }
+    }
+
+    // Einstiegspunkt fuer beide Einfuege-Wege (Quelltextfeld und Vorschau): einmal parsen, einmal
+    // bereinigen. htmlHasRichFormatting() prueft danach auf demselben, bereits reduzierten Baum --
+    // HTML, dessen einzige "Formatierung" Style-Attribute waren, gilt damit zu Recht als
+    // unformatiert und faellt auf das Nur-Text-Einfuegen zurueck.
+    function parsePasteHtml(html) {
+      const doc = new DOMParser().parseFromString(html || '', 'text/html');
+      if (doc.body) bereinigeEinfuegeKnoten(doc.body);
+      return doc;
+    }
+
     function htmlToMarkdown(html) {
-      return turndownService.turndown(html).trim();
+      const doc = parsePasteHtml(html);
+      return turndownService.turndown(doc.body ? doc.body.innerHTML : '').trim();
     }
 
     // Studio Pro: same conversion as htmlToMarkdown() above, but with Turndown's own character-
@@ -40703,7 +40883,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // first place.
     const RICH_TEXT_PASTE_SELECTOR = 'h1, h2, h3, h4, h5, h6, strong, b, em, i, del, s, strike, a[href], ul, ol, li, blockquote, code, pre, hr, br, input[type=checkbox], table, img';
     function htmlHasRichFormatting(html) {
-      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const doc = parsePasteHtml(html); // bereinigter Baum -- siehe parsePasteHtml()
       return !!(doc.body && doc.body.querySelector(RICH_TEXT_PASTE_SELECTOR));
     }
 
