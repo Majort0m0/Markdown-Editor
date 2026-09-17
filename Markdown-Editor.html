@@ -6924,9 +6924,50 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       margin-top: 0.25em;
     }
 
+    /* Hängende Einrückung: gemeldet als "bei einem Zeilenumbruch eines Checkboxtextes fehlt in der
+       zweiten und den folgenden Zeilen die Einrückung". Das Kästchen stand als Inline-Element im
+       Textfluss, also begann nur die ERSTE Zeile rechts davon (gemessen +23px), jede weitere darunter
+       am linken Rand. Jetzt hält der Punkt selbst die Einrückung (padding), und Kästchen samt
+       Abstands-Span liegen absolut in diesem Rand. Das Kästchen sitzt mittig auf der ersten Zeile
+       (halbe Zeilenhöhe plus translate, dadurch unabhängig davon, wie groß ein Browser es zeichnet)
+       -- mit top:auto landete es gemessen 6,5px zu hoch an der Oberkante der Zeile. Die halbe
+       Zeilenhöhe wird am Listenpunkt ausgerechnet und über eine REGISTRIERTE Eigenschaft vererbt:
+       direkt am Kästchen bezöge sich 0.5lh auf dessen eigene Zeilenhöhe, und ein Formularelement
+       hat seine eigene, kleinere Schrift (gemessen weiterhin 5,7px zu hoch). Registriert wird der
+       Wert schon am Listenpunkt in Pixel umgerechnet und kommt so unverändert beim Kästchen an --
+       dessen Schriftgröße anzufassen hätte dagegen in Safari seine Größe verändert.
+       1.4em hebt das negative margin gerade auf: der Text steht damit genau
+       dort, wo er auch bei einem gewöhnlichen Aufzählungspunkt steht, und eine Unterliste rückt
+       unter einer Aufgabe so weit ein wie unter jedem anderen Punkt. Das zweite Selektorpaar deckt
+       die lockere Liste ab, in der das Kästchen im ersten <p> steht (siehe hljsRenderer.listitem).
+       Gleiche Regeln in getMarkdownTypographyCss() für die Exporte. */
+    @property --aufgabe-zeilenmitte {
+      syntax: '<length>';
+      inherits: true;
+      initial-value: 13.6px;
+    }
+
     .markdown-body li.task-list-item {
       list-style-type: none;
       margin-left: -1.4em;
+      padding-left: 1.4em;
+      position: relative;
+      --aufgabe-zeilenmitte: 0.5lh;
+    }
+
+    .markdown-body li.task-list-item > input[type="checkbox"],
+    .markdown-body li.task-list-item > p:first-child > input[type="checkbox"]:first-child {
+      position: absolute;
+      left: 0;
+      top: var(--aufgabe-zeilenmitte);
+      margin-top: 0;
+      margin-bottom: 0;
+      transform: translateY(-50%);
+    }
+
+    .markdown-body li.task-list-item > .task-checkbox-gap,
+    .markdown-body li.task-list-item > p:first-child > .task-checkbox-gap {
+      position: absolute;
     }
 
     /* display:block turns the table itself into the horizontal-scroll container (its own box
@@ -9636,7 +9677,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         <button id="tabSidebarPinBtn" class="tab-sidebar-pin-btn" onclick="toggleTabSidebarPin()" title="Seitenleiste dauerhaft anzeigen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8L6 12H18L16 8V4H8V8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="12" y1="12" x2="12" y2="21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="4" x2="17" y2="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
       </div>
       <div class="tab-list" id="tabList"></div>
-      <button class="add-tab-btn" onclick="createNewTab()" title="Neue Notiz erstellen">+ Neue Notiz</button>
+      <button class="add-tab-btn" onclick="createNewTab(); closeTabSidebarNachAuswahl()" title="Neue Notiz erstellen">+ Neue Notiz</button>
     </div>
 
   <main id="mainContainer">
@@ -11569,8 +11610,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     function openAssetDb() {
       if (assetDbPromise) return assetDbPromise;
-      assetDbPromise = new Promise((resolve, reject) => {
-        if (!('indexedDB' in window)) { reject(new Error('IndexedDB nicht verfügbar')); return; }
+      if (!('indexedDB' in window)) return Promise.reject(new Error('IndexedDB nicht verfügbar'));
+      const versprechen = new Promise((resolve, reject) => {
+        // Nur asynchron aufgerufen (Ereignisse der Anfrage), versprechen ist dann schon belegt.
+        const vergessen = () => { if (assetDbPromise === versprechen) assetDbPromise = null; };
         const req = indexedDB.open(ASSET_DB_NAME, ASSET_DB_VERSION);
         req.onupgradeneeded = () => {
           const db = req.result;
@@ -11584,10 +11627,37 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             db.createObjectStore(FILE_HANDLE_STORE, { keyPath: 'syncId' });
           }
         };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error);
+        req.onsuccess = () => {
+          const db = req.result;
+          // Eine geschlossene Verbindung darf nicht für den Rest der Sitzung gemerkt bleiben --
+          // siehe assetDbTransaction() gleich darunter.
+          db.onclose = vergessen;
+          db.onversionchange = () => { db.close(); vergessen(); };
+          resolve(db);
+        };
+        req.onerror = () => { vergessen(); reject(req.error); };
       });
-      return assetDbPromise;
+      assetDbPromise = versprechen;
+      return versprechen;
+    }
+
+    // Öffnet eine Transaktion auf der Asset-Datenbank und baut die Verbindung EINMAL neu auf, wenn
+    // die gemerkte nicht mehr taugt. Vorher wurde das Versprechen aus openAssetDb() für immer
+    // behalten, auch ein abgelehntes -- ein einziger Fehlschlag beim Öffnen, oder eine Verbindung,
+    // die iOS Safari beim Wechsel in den Hintergrund still schließt ("Connection to Indexed Database
+    // server lost"), ließ danach JEDEN Lese- und Schreibzugriff der Sitzung scheitern. Für die
+    // Bilddaten war das mehr als lästig: ensureTabAssetsHydrated() fand dann nichts, und der
+    // WebDAV-Abgleich hielt die fehlenden Bilder für eine eigene Änderung (siehe attemptWebdavSync()).
+    async function assetDbTransaction(stores, mode) {
+      let db = await openAssetDb();
+      try {
+        return db.transaction(stores, mode);
+      } catch (err) {
+        if (!err || err.name !== 'InvalidStateError') throw err;
+        assetDbPromise = null;
+        db = await openAssetDb();
+        return db.transaction(stores, mode);
+      }
     }
 
     // --- REMEMBERED SAVE FOLDER (File System Access API) ---
@@ -11655,12 +11725,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // below) in sync with the in-memory truth right away, synchronously, before the IndexedDB
       // write below even starts -- the cache describes "what's in tab.assets right now", which is
       // true regardless of whether that write ends up succeeding.
-      if (!tab._cachedAssetFingerprint) tab._cachedAssetFingerprint = {};
+      // Fehlt der Zwischenspeicher, wird er aus ALLEN Assets der Notiz aufgebaut, nicht als leeres
+      // Objekt mit nur diesem einen Eintrag begonnen -- sonst fehlten darin sämtliche übrigen Bilder,
+      // und tabSyncSnapshot() meldete eine Änderung, die es nie gab.
+      if (!tab._cachedAssetFingerprint) getAssetFingerprint(tab);
       tab._cachedAssetFingerprint[assetId] = cheapHash(dataUrl);
       try {
-        const db = await openAssetDb();
+        const tx = await assetDbTransaction(ASSET_STORE, 'readwrite');
         await new Promise((resolve, reject) => {
-          const tx = db.transaction(ASSET_STORE, 'readwrite');
           tx.objectStore(ASSET_STORE).put({ key: assetDbKey(tab.syncId, assetId), syncId: tab.syncId, dataUrl });
           tx.oncomplete = resolve;
           tx.onerror = () => reject(tx.error);
@@ -11673,9 +11745,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     async function idbLoadAssetsForTab(syncId) {
-      const db = await openAssetDb();
+      const tx = await assetDbTransaction(ASSET_STORE, 'readonly');
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(ASSET_STORE, 'readonly');
         const index = tx.objectStore(ASSET_STORE).index('syncId');
         const req = index.openCursor(IDBKeyRange.only(syncId));
         const result = {};
@@ -11701,9 +11772,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     async function idbGetAssetsSizeForTab(syncId) {
       if (!syncId) return 0;
       try {
-        const db = await openAssetDb();
+        const tx = await assetDbTransaction(ASSET_STORE, 'readonly');
         return await new Promise((resolve, reject) => {
-          const tx = db.transaction(ASSET_STORE, 'readonly');
           const index = tx.objectStore(ASSET_STORE).index('syncId');
           const req = index.openCursor(IDBKeyRange.only(syncId));
           let total = 0;
@@ -11724,17 +11794,21 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
     }
 
-    async function idbDeleteAssetsForTab(syncId) {
+    // keepIds (optional, ein Set von Asset-Kennungen): diese Einträge bleiben stehen, gelöscht wird
+    // nur der Rest -- siehe persistAllAssetsToIndexedDb(), die so erst schreibt und dann aufräumt.
+    async function idbDeleteAssetsForTab(syncId, keepIds) {
       if (!syncId) return;
       try {
-        const db = await openAssetDb();
+        const tx = await assetDbTransaction(ASSET_STORE, 'readwrite');
         await new Promise((resolve, reject) => {
-          const tx = db.transaction(ASSET_STORE, 'readwrite');
           const index = tx.objectStore(ASSET_STORE).index('syncId');
           const req = index.openCursor(IDBKeyRange.only(syncId));
+          const prefix = syncId + '::';
           req.onsuccess = () => {
             const cursor = req.result;
-            if (cursor) { cursor.delete(); cursor.continue(); }
+            if (!cursor) return;
+            if (!keepIds || !keepIds.has(cursor.value.key.slice(prefix.length))) cursor.delete();
+            cursor.continue();
           };
           tx.oncomplete = resolve;
           tx.onerror = () => reject(tx.error);
@@ -11746,18 +11820,42 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     // Used by the WebDAV pull paths (applyRemoteTabToLocal/addRemoteTabAsNewLocalTab), which set
     // tab.assets wholesale from a freshly-pulled remote payload rather than adding one asset at a
-    // time -- clears out this tab's previous IndexedDB entries first (the pulled version may have
-    // dropped an asset the old local version had) and writes the current set fresh, rather than
-    // reusing persistAssetToIndexedDb() per key and risking stale leftovers.
-    async function persistAllAssetsToIndexedDb(tab) {
+    // time. Stale IndexedDB entries (an asset the pulled version no longer has) are removed too.
+    //
+    // Reihenfolge und Umfang geändert, gemeldet als "beim Übertragen über WebDAV gehen eingebettete
+    // Bilder oft verloren, es sind nur noch Platzhalter zu sehen". Vorher wurde bei JEDEM Abholen
+    // erst alles gelöscht und danach alles neu geschrieben, ohne dass jemand darauf wartete -- auch
+    // wenn sich auf dem anderen Gerät nur ein Buchstabe geändert hatte. Bei einer Notiz mit ein paar
+    // PDF-Seiten dauert das Neuschreiben spürbar; wurde die Seite in diesem Fenster geschlossen oder
+    // neu geladen (auf iOS genügt der Wechsel in eine andere App), standen die Bilder lokal gar nicht
+    // mehr da. localStorage hatte den Abgleichstand aber schon sicher -- der nächste Abgleich hielt
+    // die fehlenden Bilder deshalb für eine eigene Änderung und schrieb sie leer auf den Server,
+    // von wo sie sich auf alle Geräte verteilten.
+    //
+    // Jetzt wird erst geschrieben und danach nur noch Überzähliges gelöscht, es gibt also keinen
+    // Moment mehr, in dem ein gültiges Bild fehlt. previousAssets (das Asset-Objekt vor dem
+    // Ersetzen, optional) beschränkt das Schreiben auf tatsächlich geänderte Bilder.
+    async function persistAllAssetsToIndexedDb(tab, previousAssets) {
       if (!tab || !tab.syncId) return;
-      // Reset rather than incrementally patch -- a wholesale replacement (this is only ever
-      // called after tab.assets was just replaced entirely from a remote pull) can drop assets
-      // the old local version had, and a stale leftover fingerprint would make tabSyncSnapshot()
-      // think an asset the tab no longer even has is still there.
-      tab._cachedAssetFingerprint = {};
-      await idbDeleteAssetsForTab(tab.syncId);
-      await Promise.all(Object.keys(tab.assets || {}).map(assetId => persistAssetToIndexedDb(tab, assetId)));
+      const assets = tab.assets || {};
+      const alterFingerabdruck = tab._cachedAssetFingerprint || {};
+      const fingerabdruck = {};
+      const geaendert = [];
+      Object.keys(assets).forEach((id) => {
+        if (previousAssets && previousAssets[id] === assets[id] && alterFingerabdruck[id]) {
+          fingerabdruck[id] = alterFingerabdruck[id];
+        } else {
+          geaendert.push(id);
+        }
+      });
+      // Synchron vollständig, bevor irgendetwas abgewartet wird: persistAssetToIndexedDb() trägt die
+      // geänderten Einträge noch vor seinem ersten await nach. Ein Bild, das die abgeholte Fassung
+      // nicht mehr hat, fällt dabei von selbst heraus.
+      tab._cachedAssetFingerprint = fingerabdruck;
+      await Promise.all(geaendert.map(assetId => persistAssetToIndexedDb(tab, assetId)));
+      // Die Menge erst JETZT lesen, nicht vor dem Schreiben: ein in der Zwischenzeit eingefügtes
+      // Bild steht in tab.assets und darf nicht als "überzählig" mitgelöscht werden.
+      await idbDeleteAssetsForTab(tab.syncId, new Set(Object.keys(tab.assets || {})));
     }
 
     // Lazily loads a tab's assets from IndexedDB the first time it's actually switched to (see
@@ -11769,6 +11867,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!tab || tab._assetsHydrated) return;
       if (!tab._hydratingPromise) {
         tab._hydratingPromise = (async () => {
+          let geladen = true;
           if (tab.syncId) {
             try {
               const loaded = await idbLoadAssetsForTab(tab.syncId);
@@ -11776,11 +11875,23 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
               // but favors in-memory content on the off chance something raced ahead of us).
               tab.assets = Object.assign({}, loaded, tab.assets);
             } catch (err) {
+              geladen = false;
               console.warn('Assets konnten nicht aus IndexedDB geladen werden:', err);
               markTabLocalSaveIssue(tab, 'Bild-/Anhangsdaten konnten nicht geladen werden.');
             }
           }
-          tab._assetsHydrated = true;
+          // Der Fingerabdruck-Zwischenspeicher kann aus der Zeit VOR dem Laden stammen: renderTabs()
+          // fragt isTabSynced() schon beim Start ab, und für eine noch nicht geladene Notiz ergab das
+          // einen leeren Abdruck, der danach stehen blieb. Der Abgleich sah dann eine Notiz ohne
+          // Bilder, die lokal gar nicht verändert war.
+          tab._cachedAssetFingerprint = null;
+          if (geladen) {
+            tab._assetsHydrated = true;
+          } else {
+            // Ein Fehlschlag ist nicht "keine Bilder": nicht als geladen markieren, damit der
+            // nächste Aufruf es erneut versucht und attemptWebdavSync() die Notiz schonen kann.
+            tab._hydratingPromise = null;
+          }
         })();
       }
       await tab._hydratingPromise;
@@ -12120,7 +12231,30 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           }
         });
 
-        tabIdCounter = state.tabIdCounter || (tabs.length + 1);
+        // Doppelte tab.id auflösen und den Zähler über die höchste vergebene Nummer heben. Gefunden
+        // beim Nachstellen des WebDAV-Bildverlusts: in einem Bestand teilten sich 83 Notizen 6 IDs,
+        // tabIdCounter stand auf 6. Entstehung: saveStateToLocalStorage() übernimmt die Notizen
+        // eines zweiten, gleichzeitig offenen Browser-Tabs mitsamt ihren IDs, schreibt aber den
+        // Zähler nur dieser Sitzung -- ebenso nach einem Start mit ?localstorage=false, der bei 1
+        // beginnt und beim ersten Speichern den alten Bestand dazulegt. Nach dem nächsten Laden
+        // vergab createNewTab() dann bereits belegte IDs. Weil getCurrentTab()/switchTab() per
+        // find() immer den ERSTEN Treffer nehmen, landeten eingefügte Bilder in einer ganz anderen
+        // Notiz, und die sichtbare stand beim nächsten Abgleich ohne ihre Bilder da.
+        //
+        // Umbenannt werden nur spätere Dubletten, der erste Träger einer ID behält sie -- genau der,
+        // auf den activeTabId, nebenspalteTabId & Co. bisher schon aufgelöst wurden. tab.id ist rein
+        // sitzungsintern (IndexedDB und WebDAV schlüsseln über syncId), eine neue ID verliert nichts.
+        let hoechsteTabNummer = 0;
+        tabs.forEach(t => {
+          const nummer = parseInt(String(t.id).replace(/^tab_/, ''), 10);
+          if (!isNaN(nummer)) hoechsteTabNummer = Math.max(hoechsteTabNummer, nummer);
+        });
+        tabIdCounter = Math.max(Number(state.tabIdCounter) || 0, tabs.length + 1, hoechsteTabNummer + 1);
+        const vergebeneTabIds = new Set();
+        tabs.forEach(t => {
+          if (!t.id || vergebeneTabIds.has(t.id)) t.id = 'tab_' + tabIdCounter++;
+          vergebeneTabIds.add(t.id);
+        });
         currentTheme = state.currentTheme || 'theme-github-light';
         // Studio Pro UI redesign: "App startet immer sofort im Single-Vorschau-Modus" -- only the
         // FALLBACK for a session that never explicitly chose a view (no state.showEditor key at
@@ -12358,8 +12492,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // later switchTab() into this one) reparses from the just-synced content instead of
       // silently continuing to show whatever this session last had in memory.
       if (t.fileType === 'canvas' || rt.fileType === 'canvas') t.canvasData = null;
+      const vorherigeAssets = t.assets;
       t.assets = rt.assets || {};
-      t.assetCounter = Object.keys(t.assets).length;
+      t.assetCounter = assetZaehlerNachAbgleich(t.assets, rt.assetCounter);
       t.drawingAssetIds = rt.drawingAssetIds || {};
       t.rawDrawingAssetIds = rt.rawDrawingAssetIds || {};
       t.pdfDrawingAssetIds = rt.pdfDrawingAssetIds || {};
@@ -12385,8 +12520,77 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // editing, one only ever pulling) before this fix, and confirmed gone after it.
       t.lastSyncedSnapshot = remoteTabSnapshot(rt);
       t._assetsHydrated = true; // already fully in memory from rt.assets above, nothing to fetch
-      persistAllAssetsToIndexedDb(t);
+      persistAllAssetsToIndexedDb(t, vorherigeAssets);
       syncNativeFileIfLinked(t);
+    }
+
+    // Der Zähler, aus dem neue Kennungen entstehen (registerImageAsset() prüft nicht, ob 'img_N'
+    // schon vergeben ist). Er wurde nach dem Abholen aus der ANZAHL der Assets abgeleitet -- fehlte
+    // darin eines, lag er zu niedrig, und das nächste eingefügte Bild überschrieb ein vorhandenes
+    // unter derselben Kennung. Jetzt das Höchste aus mitgeschicktem Zähler, Anzahl und größter
+    // vorhandener Nummer.
+    function assetZaehlerNachAbgleich(assets, gemeldet) {
+      let hoechste = 0;
+      Object.keys(assets || {}).forEach((id) => {
+        const nummer = parseInt(id.split('_').pop(), 10);
+        if (!isNaN(nummer)) hoechste = Math.max(hoechste, nummer);
+      });
+      return Math.max(Number(gemeldet) || 0, Object.keys(assets || {}).length, hoechste);
+    }
+
+    const ASSET_MARKER_FELDER = ['drawingAssetIds', 'rawDrawingAssetIds', 'pdfDrawingAssetIds', 'audioAssetIds'];
+
+    function referenzierteAssetIds(text) {
+      const ids = new Set();
+      const muster = /asset:([A-Za-z0-9_]+)/g;
+      let treffer;
+      while ((treffer = muster.exec(text || ''))) ids.add(treffer[1]);
+      return ids;
+    }
+
+    // Gemeldet als "beim Übertragen über WebDAV gehen eingebettete Bilder oft (nicht immer)
+    // verloren, es sind nur noch Platzhalter zu sehen". Der Abgleich vergleicht drei Stände (lokal,
+    // Server, letzter gemeinsamer) und kann dabei nicht unterscheiden, ob ein Bild lokal gelöscht
+    // wurde oder lokal bloß FEHLT -- weil IndexedDB es nicht (mehr) hatte, ein Schreiben
+    // unterbrochen wurde oder das Laden scheiterte (siehe persistAllAssetsToIndexedDb() und
+    // ensureTabAssetsHydrated()). Beides sah wie eine lokale Änderung aus und wurde hochgeschrieben;
+    // damit war das Bild auch auf dem Server und nach dem nächsten Abholen auf jedem Gerät weg.
+    //
+    // Dabei ist "der Text verweist auf asset:img_3, die Daten dazu fehlen" nie ein gewollter Zustand:
+    // ein Bild wird entfernt, indem man seinen Verweis löscht, die Daten bleiben dabei ohnehin liegen.
+    // Deshalb wird vor dem Vergleich in BEIDE Richtungen aufgefüllt, was fehlt, aber noch auf der
+    // anderen Seite liegt -- lokal aus dem Server, und die Serverfassung aus dem lokalen Bestand.
+    // Letzteres stellt Bilder wieder her, die ein anderes Gerät schon leer hochgeschrieben hat,
+    // solange dieses Gerät sie noch besitzt: rt wird hier direkt ergänzt, und genau dieses Objekt
+    // schreibt attemptWebdavSync() beim Abholen zurück auf den Server.
+    //
+    // Vorhandene Daten werden nie überschrieben, nur Lücken gefüllt. Canvas-Notizen bleiben außen
+    // vor: ihre Verweise stehen im JSON der einzelnen Boxen, deren Bilder in box.assets und nicht in
+    // tab.assets liegen.
+    function fuelleFehlendeAssetsBeimAbgleich(t, rt) {
+      if (!rt || t.fileType === 'canvas' || rt.fileType === 'canvas') return;
+      if (!t.assets) t.assets = {};
+      if (!rt.assets) rt.assets = {};
+      const uebernehmen = (ziel, quelle, id) => {
+        ziel.assets[id] = quelle.assets[id];
+        ASSET_MARKER_FELDER.forEach((feld) => {
+          if (quelle[feld] && quelle[feld][id] && !(ziel[feld] && ziel[feld][id])) {
+            ziel[feld] = Object.assign({}, ziel[feld], { [id]: true });
+          }
+        });
+      };
+      let lokalErgaenzt = false;
+      referenzierteAssetIds(t.content).forEach((id) => {
+        if (t.assets[id] !== undefined || typeof rt.assets[id] !== 'string') return;
+        uebernehmen(t, rt, id);
+        persistAssetToIndexedDb(t, id);
+        lokalErgaenzt = true;
+      });
+      if (lokalErgaenzt) t.assetCounter = assetZaehlerNachAbgleich(t.assets, t.assetCounter);
+      referenzierteAssetIds(rt.content).forEach((id) => {
+        if (rt.assets[id] !== undefined || typeof t.assets[id] !== 'string') return;
+        uebernehmen(rt, t, id);
+      });
     }
 
     function appendNameSuffix(name, suffix) {
@@ -12409,7 +12613,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         history: [remoteTabData.content],
         historyIndex: 0,
         assets: assets,
-        assetCounter: Object.keys(assets).length,
+        assetCounter: assetZaehlerNachAbgleich(assets, remoteTabData.assetCounter),
         isDefaultName: false,
         drawingAssetIds: remoteTabData.drawingAssetIds || {},
         rawDrawingAssetIds: remoteTabData.rawDrawingAssetIds || {},
@@ -12563,6 +12767,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // this, every open tab stays hydrated for the rest of the session (ensureTabAssetsHydrated
       // is a no-op once tab._assetsHydrated is true), so this only actually does work once.
       await Promise.all(tabs.map(ensureTabAssetsHydrated));
+      // Notizen, deren Bilder sich lokal nicht laden ließen. Ein leeres tab.assets heißt bei ihnen
+      // nicht "keine Bilder", sondern "unbekannt" -- siehe den Umgang damit in der Schleife unten.
+      const assetsNichtGeladen = new Set(tabs.filter(t => !t._assetsHydrated).map(t => ensureSyncId(t)));
 
       const remoteFetch = await fetchRemoteWebdavState();
       // Das Custom-Design reist mit, obwohl es keine Notiz ist, sondern eine geräteweite Einstellung
@@ -12618,6 +12825,18 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       for (const t of tabs) {
         const syncId = ensureSyncId(t);
         const rt = remoteById.get(syncId);
+
+        // Vor jedem Vergleich: Lücken zwischen Text und Bilddaten auf beiden Seiten schließen,
+        // siehe fuelleFehlendeAssetsBeimAbgleich().
+        fuelleFehlendeAssetsBeimAbgleich(t, rt);
+
+        if (assetsNichtGeladen.has(syncId)) {
+          // Ohne Server-Fassung gibt es nichts, womit sich die fehlenden Bilder auffüllen ließen --
+          // diese Notiz bleibt diesmal ganz außen vor, statt womöglich ohne ihre Bilder hochgeladen
+          // (oder als "anderswo gelöscht" entfernt) zu werden. Mit Server-Fassung sind die
+          // referenzierten Bilder soeben ergänzt worden, der normale Vergleich darf also laufen.
+          if (!rt) continue;
+        }
 
         if (!rt) {
           const previouslySynced = !!t.lastSyncedSnapshot;
@@ -13910,6 +14129,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           // whatever tab the pointer happened to end up over.
           if (tabDragJustEnded) { tabDragJustEnded = false; return; }
           switchTab(tab.id);
+          closeTabSidebarNachAuswahl();
         };
         tabEl.ondblclick = () => startTabRename(tab.id);
         tabEl.addEventListener('pointerdown', (e) => handleTabDragPointerDown(e, tab, tabEl));
@@ -13991,6 +14211,24 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     document.getElementById('tabSidebarPanel').addEventListener('mouseleave', closeTabSidebar);
+
+    // Gemeldet für iOS: "wenn aus dem linken Menü neue Notiz oder eine bestehende Notiz ausgewählt
+    // wird, bleibt das schwebende Fenster offen". Auf einem Touchgerät gibt es kein Verlassen mit
+    // der Maus, der wichtigste der drei Einklapp-Auslöser oben feuert dort also nie. Die Auswahl
+    // selbst schließt deshalb -- über closeTabSidebar(), damit das Anheften weiter gilt.
+    //
+    // Bewusst nur bei Touch/Stift, nicht bei der Maus: dort klappt die Leiste ohnehin beim
+    // Verlassen ein, und das Umbenennen hängt am Doppelklick auf einen Eintrag -- schlösse schon der
+    // erste Klick, wäre der zweite nicht mehr zu erreichen. Der Zeigertyp wird in der Einfangphase
+    // gemerkt, weil das 'click'-Ereignis ihn nicht in jedem Browser trägt.
+    let tabSidebarLetzterZeigertyp = 'mouse';
+    document.getElementById('tabSidebarPanel').addEventListener('pointerdown', (e) => {
+      tabSidebarLetzterZeigertyp = e.pointerType || 'mouse';
+    }, true);
+
+    function closeTabSidebarNachAuswahl() {
+      if (tabSidebarLetzterZeigertyp !== 'mouse') closeTabSidebar();
+    }
 
     // "...oder in den Editor getippt wird" -- separate, additional listeners on both typing
     // surfaces (the classic Quelltext textarea AND the WYSIWYG preview, see the project's own
@@ -23495,6 +23733,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             if (!previewStructureDesynced) strukturHeilungVersucht = false;
             attachTextBlockSourcePositions(wordBlockElements, textCharMaps);
             attachBlockSourcePositions();
+            // Nur nach echtem Neuzeichnen: beim Tippen ist der DOM der des Browsers (der das
+            // Zeichen selbst schon schützt), und .data neu zu setzen würde dort den Cursor versetzen.
+            if (!previewIsAuthoring) schuetzeSchlussLeerzeichenInVorschau();
             updatePreviewRepairBanner();
           } else {
             textCharMaps = [];
@@ -32446,6 +32687,51 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return Array.from(preview.querySelectorAll(WORD_BLOCK_SELECTOR));
     }
 
+    // Gemeldet als "beim Einfügen aus der Zwischenablage wird ein bestehendes Leerzeichen hinter
+    // einem Wort gelöscht", genauer beim Einfügen von URLs. Nachgemessen ist das Einfügen selbst
+    // unschuldig, und Tippen trifft es genauso: aus "Siehe hier: " wurde "Siehe hier:abc ".
+    //
+    // Ursache ist ein gewöhnliches Leerzeichen am Ende eines Blocks. Tippt man es in der Vorschau,
+    // setzt Chrome selbst ein geschütztes (U+00A0) ein, weil ein normales am Zeilenende keine Breite
+    // hat und zusammenfällt. Kommt der Block dagegen frisch aus marked -- nach jedem Notizwechsel,
+    // also genau dann, wenn man die URL gerade aus einer anderen Notiz geholt hat --, steht dort ein
+    // normales. Hinter einem zusammengefallenen Zeichen gibt es keine Cursorposition: ein Klick ans
+    // Zeilenende landet VOR dem Leerzeichen (gemessen: Offset 11 in "Siehe hier: "), und alles
+    // Eingefügte oder Getippte schiebt sich zwischen Wort und Leerzeichen.
+    //
+    // Hier wird deshalb nachgeholt, was Chrome beim Tippen tut. Nur für Textknoten, die direkte
+    // Kinder des Blocks sind: in einem <code> oder einem Linktext würde Turndown das geschützte
+    // Zeichen beim Zurückschreiben INNERHALB der Auszeichnung ausgeben, während
+    // serializeBlockToMarkdown() das Schluss-Leerzeichen dahinter noch einmal anhängt. Für den
+    // direkten Fall ist genau dieser Weg längst erprobt -- er ist derselbe wie für ein getipptes
+    // Leerzeichen. Die Länge bleibt gleich, Zeichenkarte und Cursor-Versätze stimmen also weiter.
+    function schuetzeSchlussLeerzeichenInVorschau() {
+      preview.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li').forEach((block) => {
+        const blaetter = [];
+        // Nur der eigene Inhalt des Blocks bis zu einem verschachtelten Block (Unterliste eines
+        // Listenpunkts); nicht editierbare Inseln und leere Elemente zählen als ein einziges Blatt.
+        const sammeln = (el) => {
+          for (const kind of el.childNodes) {
+            if (kind.nodeType === Node.TEXT_NODE) { blaetter.push(kind); continue; }
+            if (kind.nodeType !== Node.ELEMENT_NODE) continue;
+            if (NESTED_WORD_BLOCK_TAGS.has(kind.tagName)) return true;
+            if (kind.getAttribute('contenteditable') === 'false' || !kind.firstChild) { blaetter.push(kind); continue; }
+            if (sammeln(kind)) return true;
+          }
+          return false;
+        };
+        sammeln(block);
+        for (let i = blaetter.length - 1; i >= 0; i--) {
+          const blatt = blaetter[i];
+          if (blatt.nodeType === Node.TEXT_NODE && /^[\u200B\n]*$/.test(blatt.data)) continue;
+          if (blatt.nodeType !== Node.TEXT_NODE || blatt.parentNode !== block) return;
+          const schluss = / +$/.exec(blatt.data);
+          if (schluss) blatt.data = blatt.data.slice(0, schluss.index) + '\u00A0'.repeat(schluss[0].length);
+          return;
+        }
+      });
+    }
+
     // Tags whose subtree must NOT be walked when collecting "this block's own text" — a list
     // item's nested sub-list/blockquote/loose-paragraph is a separate entry in textWordRanges
     // (see collectListItemWordRanges), so its text must not also be counted as part of the outer
@@ -35027,7 +35313,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '  .markdown-body pre { padding: 16px; overflow: auto; font-size: 85%; line-height: 1.45; background-color: var(--preview-code-bg); border-radius: 6px; }\n' +
         '  .markdown-body pre code { background-color: transparent; padding: 0; }\n' +
         '  .markdown-body ul, .markdown-body ol { padding-left: 2em; }\n' +
-        '  .markdown-body li.task-list-item { list-style-type: none; margin-left: -1.4em; }\n' +
+        '  @property --aufgabe-zeilenmitte { syntax: "<length>"; inherits: true; initial-value: 13.6px; }\n' +
+        '  .markdown-body li.task-list-item { list-style-type: none; margin-left: -1.4em; padding-left: 1.4em; position: relative; --aufgabe-zeilenmitte: .5lh; }\n' +
+        '  .markdown-body li.task-list-item > input[type="checkbox"], .markdown-body li.task-list-item > p:first-child > input[type="checkbox"]:first-child { position: absolute; left: 0; top: var(--aufgabe-zeilenmitte); margin-top: 0; margin-bottom: 0; transform: translateY(-50%); }\n' +
+        '  .markdown-body li.task-list-item > .task-checkbox-gap, .markdown-body li.task-list-item > p:first-child > .task-checkbox-gap { position: absolute; }\n' +
         '  .markdown-body table { display: block; overflow-x: auto; border-collapse: collapse; width: 100%; margin-bottom: 16px; }\n' +
         '  .markdown-body table th, .markdown-body table td { padding: 8px 13px; border: 1px solid var(--preview-header-border); }\n' +
         '  .markdown-body table th { font-weight: 600; background-color: var(--preview-code-bg); }\n' +
