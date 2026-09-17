@@ -25147,12 +25147,38 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       }
     }
 
-    editor.addEventListener('input', () => {
+    // Rücktaste/Entf auf einer Leerabsatz-Zeile: siehe leerabsatzLoeschen(). Nur bei eingeklapptem
+    // Cursor; eine Markierung löscht der Browser selbst, und der input-Handler unten legt den dabei
+    // übrig gebliebenen Lauf zusammen. Das Ergebnis läuft über ein synthetisches 'input' durch
+    // genau denselben Weg wie jede andere Eingabe (Vorschau, Verlauf, Speichern).
+    editor.addEventListener('beforeinput', (e) => {
+      if (e.inputType !== 'deleteContentBackward' && e.inputType !== 'deleteContentForward') return;
+      if (editor.disabled || editor.selectionStart !== editor.selectionEnd) return;
+      const tab = getCurrentTab();
+      if (!tab || tab.fileType !== 'markdown') return;
+      const ergebnis = leerabsatzLoeschen(editor.value, editor.selectionStart, e.inputType === 'deleteContentForward');
+      if (!ergebnis) return;
+      e.preventDefault();
+      editor.value = ergebnis.text;
+      editor.setSelectionRange(ergebnis.caret, ergebnis.caret);
+      editor.dispatchEvent(new InputEvent('input', { inputType: e.inputType, bubbles: true }));
+    });
+
+    editor.addEventListener('input', (e) => {
       // Vor updatePreview(), damit die Vorschau gleich die umgeformte Fassung sieht und nicht erst
       // einen Takt spaeter -- siehe normalizeBlankLineParagraphs() fuer den Grund. Nur fuer
       // Markdown: in CSV/JSON/HTML sind aufeinanderfolgende Leerzeilen gewoehnlicher Inhalt.
       const eingabeTab = getCurrentTab();
       if (eingabeTab && eingabeTab.fileType === 'markdown' && !editor.disabled) {
+        // Nach einem Löschen den Lauf am Cursor zusammenlegen, statt ihn unten zu Leerabsätzen
+        // aufzublähen -- siehe leerzeilenlaufAmCursorZusammenlegen().
+        if (e && typeof e.inputType === 'string' && e.inputType.startsWith('delete')) {
+          const zusammengelegt = leerzeilenlaufAmCursorZusammenlegen(editor.value, editor.selectionStart);
+          if (zusammengelegt.text !== editor.value) {
+            editor.value = zusammengelegt.text;
+            editor.setSelectionRange(zusammengelegt.caret, zusammengelegt.caret);
+          }
+        }
         const erweitert = normalizeBlankLineParagraphs(editor.value, editor.selectionStart);
         const umgeformt = stripObsoleteBlankParagraphPlaceholders(erweitert.text, erweitert.caret);
         if (umgeformt.text !== editor.value) {
@@ -25513,8 +25539,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const curTail = editor.value.slice(curContentStart, curMap.srcEnd).replace(/​/g, '');
       const afterCur = editor.value.slice(curMap.srcEnd);
 
-      const joinOffset = prevMap.srcStart + cleanPrevSpan.length;
-      editor.value = editor.value.slice(0, prevMap.srcStart) + cleanPrevSpan + curTail + afterCur;
+      // Verschmelzen zwei Leerabsätze (beide nur ein Platzhalter), bleibt nach dem Entfernen beider
+      // Platzhalter gar nichts übrig -- und ein Absatz ohne Inhalt ist für marked kein Absatz. Gemessen
+      // an "Text⏎⏎Z⏎⏎Z⏎⏎Text" mit Rücktaste im zweiten Leerabsatz: BEIDE verschwanden aus der Vorschau,
+      // im Quelltext blieben vier Umbrüche am Stück stehen, also drei leere Zeilen ohne Gegenstück --
+      // und die nächste Eingabe im Quelltext machte daraus per normalizeBlankLineParagraphs() wieder
+      // zwei Leerabsätze. Der verschmolzene Absatz ist leer und behält deshalb EINEN Platzhalter,
+      // genau wie jeder andere leere Absatz dieser Datei. Gilt ebenso für zwei leere Listenpunkte.
+      const bleibtLeer = cleanPrevSpan === '' && curTail === '' && prevSpan.includes('\u200B');
+      const verbunden = bleibtLeer ? '\u200B' : cleanPrevSpan + curTail;
+      const joinOffset = prevMap.srcStart + (bleibtLeer ? 1 : cleanPrevSpan.length);
+      editor.value = editor.value.slice(0, prevMap.srcStart) + verbunden + afterCur;
       return joinOffset;
     }
 
@@ -36290,6 +36325,88 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         return vorlauf;
       });
       return { text: neuerText, caret: neuerCaret };
+    }
+
+    // Löschen im Quelltext, gemeldet als "wenn in der Quelltextansicht versucht wird, eine leere
+    // Zeile mit der Rücktaste zu löschen, wird stattdessen ein neuer Absatz eingefügt; Quelltext und
+    // Vorschau verhalten sich dabei nicht synchron". Nachgemessen an "Text⏎⏎Z⏎⏎Z⏎⏎Text" (Z = der
+    // Platzhalter oben), mit echter Rücktaste:
+    //   - hinter einem Platzhalter löschte sie ihn, übrig blieben vier Umbrüche am Stück, und
+    //     normalizeBlankLineParagraphs() machte daraus ZWEI neue Leerabsätze: aus zwei wurden drei;
+    //   - vor dem Platzhalter oder auf der Trennzeile davor löschte sie einen Umbruch, der Platzhalter
+    //     hing danach mit einfachem Umbruch am Textabsatz ("Text⏎Z"). Im Quelltext standen weiter zwei
+    //     leer aussehende Zeilen, in der Vorschau nur noch ein Leerabsatz.
+    // Beides kommt daher, dass ein Leerabsatz im Quelltext ZWEI Zeilen belegt (Platzhalter und
+    // Trennzeile), die Taste aber nur ein Zeichen entfernt. Rücktaste und Entf auf einer solchen
+    // Zeile entfernen deshalb eine ganze Einheit aus Platzhalterzeile und einer angrenzenden
+    // Leerzeile. Das Ergebnis hat wieder genau die Form, die die Umformung oben erzeugt, und es bleibt
+    // nie ein angeklebter Platzhalter zurück. Dazu die beiden Randfälle, in denen die Taste von einer
+    // Textzeile aus in den Lauf hineinlöscht (Rücktaste am Anfang der Zeile darunter, Entf am Ende der
+    // Zeile darüber). Liefert { text, caret } oder null, wenn die Stelle nichts damit zu tun hat.
+    function leerabsatzLoeschen(text, caret, vorwaerts) {
+      if (typeof text !== 'string' || text.indexOf(LEERABSATZ_PLATZHALTER) === -1) return null;
+      if (geschuetzteCodeBereiche(text).some(([von, bis]) => caret >= von && caret <= bis)) return null;
+      const zeilen = text.split('\n');
+      let zeile = 0, zeilenStart = 0;
+      while (zeile < zeilen.length - 1 && zeilenStart + zeilen[zeile].length < caret) {
+        zeilenStart += zeilen[zeile].length + 1;
+        zeile++;
+      }
+      const spalte = caret - zeilenStart;
+      const istPlatzhalter = (i) => zeilen[i] === LEERABSATZ_PLATZHALTER;
+      const istLeer = (i) => zeilen[i] === '';
+
+      let einheit = null;      // [erste, zweite] zu entfernende Zeile
+      let cursorAmTextrand = false;
+      if (istPlatzhalter(zeile)) {
+        einheit = istLeer(zeile + 1) ? [zeile, zeile + 1] : (istLeer(zeile - 1) ? [zeile - 1, zeile] : null);
+      } else if (istLeer(zeile)) {
+        einheit = istPlatzhalter(zeile + 1) ? [zeile, zeile + 1] : (istPlatzhalter(zeile - 1) ? [zeile - 1, zeile] : null);
+      } else if (!vorwaerts && spalte === 0 && istLeer(zeile - 1) && istPlatzhalter(zeile - 2)) {
+        einheit = [zeile - 2, zeile - 1];
+        cursorAmTextrand = true;
+      } else if (vorwaerts && spalte === zeilen[zeile].length && istLeer(zeile + 1) && istPlatzhalter(zeile + 2)) {
+        einheit = [zeile + 1, zeile + 2];
+        cursorAmTextrand = true;
+      }
+      if (!einheit) return null;
+
+      const neueZeilen = zeilen.slice(0, einheit[0]).concat(zeilen.slice(einheit[1] + 1));
+      const startVon = (i) => neueZeilen.slice(0, i).reduce((summe, z) => summe + z.length + 1, 0);
+      let neuerCaret;
+      if (cursorAmTextrand) {
+        // Der Cursor bleibt an seiner Textzeile: am Anfang der Zeile darunter bzw. am Ende der darüber.
+        neuerCaret = vorwaerts ? caret : startVon(einheit[0]);
+      } else if (vorwaerts || einheit[0] === 0) {
+        neuerCaret = startVon(einheit[0]);
+      } else {
+        // Rücktaste: ans Ende der Zeile über der entfernten Einheit, wie beim Löschen jeder anderen Zeile.
+        neuerCaret = startVon(einheit[0] - 1) + neueZeilen[einheit[0] - 1].length;
+      }
+      return { text: neueZeilen.join('\n'), caret: Math.min(neuerCaret, neueZeilen.join('\n').length) };
+    }
+
+    // Gegenstück für das Löschen einer MARKIERUNG über Leerabsätze hinweg: dabei bleiben Läufe von
+    // drei und mehr Umbrüchen zurück, und normalizeBlankLineParagraphs() -- gebaut für das Einfügen,
+    // wo jeder zusätzliche Umbruch einen Leerabsatz bedeutet -- würde daraus neue Leerabsätze machen
+    // und das Löschen teilweise rückgängig machen. Nach einem Löschen wird der Lauf, in dem der Cursor
+    // steht, deshalb auf eine einfache Leerzeile zurückgeführt: was gelöscht wurde, bleibt gelöscht.
+    // Nur dieser eine Lauf; überall sonst gilt die gewohnte Umformung.
+    function leerzeilenlaufAmCursorZusammenlegen(text, caret) {
+      if (typeof text !== 'string' || typeof caret !== 'number') return { text, caret };
+      let von = caret, bis = caret;
+      while (von > 0 && text[von - 1] === '\n') von--;
+      while (bis < text.length && text[bis] === '\n') bis++;
+      if (bis - von < 3) return { text, caret };
+      if (geschuetzteCodeBereiche(text).some(([a, b]) => von >= a && von < b)) return { text, caret };
+      // Dieselben Ausnahmen wie in normalizeBlankLineParagraphs(): in eingerücktem Code sind die
+      // Leerzeilen Inhalt, zwischen zwei Listenpunkten bleibt es beim Markdown-Verhalten.
+      const vorher = text.slice(text.lastIndexOf('\n', von - 1) + 1, von);
+      const naechstesEnde = text.indexOf('\n', bis);
+      const nachher = text.slice(bis, naechstesEnde === -1 ? text.length : naechstesEnde);
+      if (zeileIstEingerueckt(vorher) || zeileIstEingerueckt(nachher)) return { text, caret };
+      if (zeileIstListenmarke(vorher) && zeileIstListenmarke(nachher)) return { text, caret };
+      return { text: text.slice(0, von) + '\n\n' + text.slice(bis), caret: von + Math.min(caret - von, 2) };
     }
 
     function expandBlankLinesForClipboard(markdown) {
