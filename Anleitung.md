@@ -592,7 +592,7 @@ Im Burger-Menü ☰ gibt es unter **Farbschema** drei Möglichkeiten:
 
 Die Einstellung gilt für die **Oberfläche**: Kopf- und Fußzeile, Werkzeug- und Liedblattleisten, Burger-Menü, Notizliste, alle Dialoge, das Quelltextfenster samt seiner Syntaxfarben sowie die schwebenden Schalter über der Vorschau. Sie wird geräteweit gespeichert und **nicht** über WebDAV mitsynchronisiert — welches Licht am Arbeitsplatz herrscht, ist eine Eigenschaft des Geräts, nicht des Dokuments.
 
-**Was mit dem Design der Notiz passiert:** grundsätzlich nichts. Ein Design, das Sie für eine Notiz ausgesucht haben — Sepia, Gruvbox, Bunt, Journal —, gehört zum Dokument und bleibt unverändert, auch im Dunkelmodus. Die einzige Ausnahme ist das Standarddesign **„GitHub Light“**: es wird im Dunkelmodus als **„GitHub Dark“ angezeigt**. Die Einstellung der Notiz ändert sich dabei nicht — in der Designauswahl steht weiterhin „GitHub Light“, und beim Zurückschalten auf Hell ist alles wie vorher. Gedacht ist das für den Normalfall: Notizen, für die nie bewusst ein Design gewählt wurde, sollen im Dunkeln nicht als weiße Fläche blenden.
+**Was mit dem Design der Notiz passiert:** grundsätzlich nichts. Ein Design, das Sie für eine Notiz ausgesucht haben — Sepia, Gruvbox Dark, Bunt, Journal oder Ihre eigene Custom-Palette —, gehört zum Dokument und bleibt unverändert, auch im Dunkelmodus. Die einzige Ausnahme ist das Standarddesign **„GitHub Light“**: es wird im Dunkelmodus als **„GitHub Dark“ angezeigt**. Die Einstellung der Notiz ändert sich dabei nicht — in der Designauswahl steht weiterhin „GitHub Light“, und beim Zurückschalten auf Hell ist alles wie vorher. Gedacht ist das für den Normalfall: Notizen, für die nie bewusst ein Design gewählt wurde, sollen im Dunkeln nicht als weiße Fläche blenden.
 
 **Drucken, Exportieren und Kopieren bleiben hell.** Der Dunkelmodus ist eine Bildschirm-Einstellung. Alles, was die App verlässt — Ausdruck und PDF, die beiden HTML-Exporte, der Canvas-Export und „Formatierte Notiz in die Zwischenablage kopieren“ —, verwendet immer das Design, das für die Notiz *eingestellt* ist. Eine Notiz im Standarddesign kommt also hell aus dem Drucker, auch wenn sie am Bildschirm gerade dunkel aussieht. Wer bewusst „GitHub Dark“ (oder ein anderes dunkles Design) gewählt hat, bekommt es wie bisher auch dunkel gedruckt und exportiert.
 
@@ -600,7 +600,26 @@ Zwei Darstellungen folgen bewusst dem Bildschirm statt dem Ausdruck, weil sie se
 
 ### Designs
 
-15 Vorschau-Designs stehen über das Dropdown im Burger-Menü ☰ zur Auswahl: GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (mit farbiger Code-Hervorhebung). Das Design wird **pro Tab** gemerkt, nicht global für die ganze App — jedes Dokument kann also sein eigenes Design haben, und diese Wahl wird bei aktivem WebDAV-Sync mit übertragen. Eine neue Notiz startet dabei immer im Design „GitHub Light“, unabhängig davon, welches Design in der zuvor aktiven Notiz eingestellt war — dieses eine Design wird im Dunkelmodus als „GitHub Dark“ angezeigt, ohne die Einstellung zu verändern (siehe **Farbschema** direkt darüber).
+Über **Design** im Burger-Menü ☰ öffnet sich die Designauswahl: ein Raster aus 16 Kacheln, die jeweils eine kleine Vorschau der Farben zeigen — Überschrift, Linie, Textzeilen, Linkfarbe und Code-Fläche. Ein Klick wählt das Design aus.
+
+Fünfzehn davon sind fertig mitgeliefert: **GitHub Light**, **GitHub Dark**, **Solarized Paper**, **Academic Serif**, **Kreidetafel**, **Gruvbox Dark**, **Sepia**, **High Contrast**, **Tokyo Night**, **Catppuccin Latte**, **PDF**, **Word**, **Journal**, **Clean** und **Bunt** (das einzige mit einer eigenen Farbe je Überschriftenebene, statt einer Akzentfarbe für alles).
+
+Das sechzehnte, **Custom**, stellen Sie selbst zusammen. Ein Klick auf seine Kachel — oder auf „bearbeiten“ darunter — öffnet den Editor im selben Fenster; die Notiz dahinter ändert sich bei jedem Zug am Farbwähler sofort mit:
+
+| Einstellung | Wirkung |
+| --- | --- |
+| Hintergrund | Papierfarbe der Notiz |
+| Text | Schriftfarbe |
+| Links / Akzent | Links, Akkorde im Liedblatt, Wortmarkierung beim Vorlesen |
+| Code-Fläche | Hintergrund von `Code`, Codeblöcken und Tabellenköpfen |
+| Rahmen | Zitatbalken und die Klammern der Liedblatt-Abschnitte |
+| Überschriften-Linie | Linie unter H1 und H2, Tabellenlinien, Trennlinien (`---`) |
+| Schriftart | Serifenlos, Serif oder Monospace |
+| Code-Einfärbung | Hell oder Dunkel — passend zur gewählten Code-Fläche |
+
+**Zurücksetzen** stellt die Ausgangspalette wieder her, **Fertig** führt zurück ins Raster. Es gibt genau **eine** Custom-Palette: sie gilt geräteweit für jede Notiz und jede Canvas-Box, die auf „Custom“ steht, und wird bei aktivem WebDAV-Sync mit übertragen — ändern Sie sie auf einem Gerät, gilt die zuletzt geänderte Fassung auf allen.
+
+Das Design selbst wird dagegen **pro Tab** gemerkt, nicht global für die ganze App — jedes Dokument kann also sein eigenes Design haben, und diese Wahl wird bei aktivem WebDAV-Sync mit übertragen. Eine neue Notiz startet dabei immer im Design „GitHub Light“, unabhängig davon, welches Design in der zuvor aktiven Notiz eingestellt war — dieses eine Design wird im Dunkelmodus als „GitHub Dark“ angezeigt, ohne die Einstellung zu verändern (siehe **Farbschema** direkt darüber).
 
 ### Editor/Vorschau und geteilte Ansicht
 
