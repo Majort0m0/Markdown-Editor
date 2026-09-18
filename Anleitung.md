@@ -583,9 +583,24 @@ Fragen, Ideen oder Fehler gefunden? [github.com/Majort0m0/Markdown-Editor](https
 
 ## 13. Designs, Ansicht und Fokus-Modi
 
+### Farbschema: Hell, Dunkel oder Automatisch
+
+Im Burger-Menü ☰ gibt es unter **Farbschema** drei Möglichkeiten:
+
+- **Automatisch** (Voreinstellung) — die App übernimmt, was am Gerät eingestellt ist. Wechselt das Betriebssystem während der Arbeit (macOS und iOS tun das zur Dämmerung von selbst), wechselt die App sofort mit, ohne dass die Seite neu geladen werden muss.
+- **Hell** und **Dunkel** — feste Wahl, unabhängig vom Gerät.
+
+Die Einstellung gilt für die **Oberfläche**: Kopf- und Fußzeile, Werkzeug- und Liedblattleisten, Burger-Menü, Notizliste, alle Dialoge, das Quelltextfenster samt seiner Syntaxfarben sowie die schwebenden Schalter über der Vorschau. Sie wird geräteweit gespeichert und **nicht** über WebDAV mitsynchronisiert — welches Licht am Arbeitsplatz herrscht, ist eine Eigenschaft des Geräts, nicht des Dokuments.
+
+**Was mit dem Design der Notiz passiert:** grundsätzlich nichts. Ein Design, das Sie für eine Notiz ausgesucht haben — Sepia, Gruvbox, Bunt, Journal —, gehört zum Dokument und bleibt unverändert, auch im Dunkelmodus. Die einzige Ausnahme ist das Standarddesign **„GitHub Light“**: es wird im Dunkelmodus als **„GitHub Dark“ angezeigt**. Die Einstellung der Notiz ändert sich dabei nicht — in der Designauswahl steht weiterhin „GitHub Light“, und beim Zurückschalten auf Hell ist alles wie vorher. Gedacht ist das für den Normalfall: Notizen, für die nie bewusst ein Design gewählt wurde, sollen im Dunkeln nicht als weiße Fläche blenden.
+
+**Drucken, Exportieren und Kopieren bleiben hell.** Der Dunkelmodus ist eine Bildschirm-Einstellung. Alles, was die App verlässt — Ausdruck und PDF, die beiden HTML-Exporte, der Canvas-Export und „Formatierte Notiz in die Zwischenablage kopieren“ —, verwendet immer das Design, das für die Notiz *eingestellt* ist. Eine Notiz im Standarddesign kommt also hell aus dem Drucker, auch wenn sie am Bildschirm gerade dunkel aussieht. Wer bewusst „GitHub Dark“ (oder ein anderes dunkles Design) gewählt hat, bekommt es wie bisher auch dunkel gedruckt und exportiert.
+
+Zwei Darstellungen folgen bewusst dem Bildschirm statt dem Ausdruck, weil sie selbst Bildschirmansichten sind: der **Präsentationsmodus** und die **Nebenspalte**. Ausgenommen bleiben umgekehrt die **Boxen im Canvas-Modus** — sie liegen auf einer weißen DIN-A4-Seite, die auch im Dunkelmodus Papier bleibt; ebenso die Vorschau einer eigenen HTML-Datei und das Zeichenfenster.
+
 ### Designs
 
-15 Vorschau-Designs stehen über das Dropdown im Burger-Menü ☰ zur Auswahl: GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (mit farbiger Code-Hervorhebung). Das Design wird **pro Tab** gemerkt, nicht global für die ganze App — jedes Dokument kann also sein eigenes Design haben, und diese Wahl wird bei aktivem WebDAV-Sync mit übertragen. Eine neue Notiz startet dabei immer im Design „GitHub Light“, unabhängig davon, welches Design in der zuvor aktiven Notiz eingestellt war.
+15 Vorschau-Designs stehen über das Dropdown im Burger-Menü ☰ zur Auswahl: GitHub Light/Dark, Solarized Paper, Academic Serif, Dracula, Gruvbox Dark, Sepia, High Contrast, Tokyo Night, Catppuccin Latte, PDF, Word, Journal, Clean, Bunt (mit farbiger Code-Hervorhebung). Das Design wird **pro Tab** gemerkt, nicht global für die ganze App — jedes Dokument kann also sein eigenes Design haben, und diese Wahl wird bei aktivem WebDAV-Sync mit übertragen. Eine neue Notiz startet dabei immer im Design „GitHub Light“, unabhängig davon, welches Design in der zuvor aktiven Notiz eingestellt war — dieses eine Design wird im Dunkelmodus als „GitHub Dark“ angezeigt, ohne die Einstellung zu verändern (siehe **Farbschema** direkt darüber).
 
 ### Editor/Vorschau und geteilte Ansicht
 
@@ -658,7 +673,7 @@ Der ☁️-Button färbt sich **hellgrün**, sobald mindestens eine Synchronisie
 ## 18. Export und Teilen
 
 - **Als eigenständige HTML-Datei exportieren** — erzeugt eine einzelne, komplett unabhängige HTML-Datei mit dem aktuellen Design, die sich in jedem Browser ohne diese App öffnen lässt (inklusive funktionierendem Vorlesemodus und Inhaltsverzeichnis). Enthält das Dokument Folientrennlinien (`---`), fragt die App zusätzlich, ob stattdessen als **eBook-Widget** exportiert werden soll — eine eigenständige, klickbare Diaschau-Datei mit denselben Übergängen wie der Präsentationsmodus.
-- **🖨️ Drucken / Als PDF speichern** — nutzt den normalen Druckdialog des Browsers; nur die Vorschau wird gedruckt, im aktuell gewählten Design (inklusive Hintergrundfarben).
+- **🖨️ Drucken / Als PDF speichern** — nutzt den normalen Druckdialog des Browsers; nur die Vorschau wird gedruckt, im aktuell gewählten Design (inklusive Hintergrundfarben). Der Dunkelmodus der Oberfläche wirkt dabei nicht mit: gedruckt wird immer das Design, das für die Notiz eingestellt ist (siehe [Abschnitt 13](#13-designs-ansicht-und-fokus-modi)). Dasselbe gilt für die beiden HTML-Exporte und das Kopieren in die Zwischenablage.
 - **📋 Formatierte Notiz in die Zwischenablage kopieren** — kopiert das gerenderte Dokument (Überschriften, Fett/Kursiv, Listen, Tabellen, Bilder) als formatierten Text, bereit zum Einfügen in Word, Outlook, Gmail o. Ä. Für exakte Absatz-Abstände zählt hier auch die Anzahl mehrerer aufeinanderfolgender Leerzeilen im Quelltext.
 
 ## 19. Tastenkürzel
@@ -827,7 +842,7 @@ Praktisch z. B. für einen Lesezeichen-Link auf einem Tablet, der immer im reduz
 
 Alle Dokumente und eingefügten Medien werden ausschließlich lokal im Browser gespeichert — es findet keine Übertragung an einen Server statt, außer wenn WebDAV-Synchronisierung aktiv eingerichtet wurde (siehe [Abschnitt 17](#17-webdav-synchronisierung-zwischen-mehreren-geräten)), und dann nur an das selbst angegebene Ziel.
 
-Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere Anhänge (Bilder, Zeichnungen, PDF-Seiten, Audio) liegen in IndexedDB, das deutlich mehr Kapazität bietet. Die Fußleiste zeigt rechts neben der Wort-/Zeichen-Statistik der aktuellen Notiz einen Prozentbalken sowie die reine Datengröße aller aktuell geöffneten Notizen zusammen. Der Prozentwert bezieht sich dabei auf das jeweils knappere der beiden Speicher — meist `localStorage`, das ein deutlich kleineres, festes Limit hat (wenige MB) als IndexedDB, wo die eigentlichen Anhänge liegen; ein `~` davor zeigt an, dass es sich um eine Schätzung handelt (die genaue `localStorage`-Grenze lässt sich nicht browserübergreifend zuverlässig abfragen). Sollte der Speicherplatz des Browsers dennoch einmal knapp werden, erscheint zusätzlich ein kleines Warndreieck am betroffenen Tab.
+Text und Metadaten liegen im schnellen `localStorage` des Browsers; größere Anhänge (Bilder, Zeichnungen, PDF-Seiten, Audio) liegen in IndexedDB, das deutlich mehr Kapazität bietet. Die Fußleiste zeigt einen Prozentbalken sowie die reine Datengröße aller aktuell geöffneten Notizen zusammen — allerdings **erst ab 70 % Auslastung**. Solange reichlich Platz ist, bleibt die Anzeige ausgeblendet; dass sie überhaupt erscheint, ist also bereits der Hinweis. Sie wechselt dann bei 70 % auf Orange und ab 90 % auf Rot. Der Prozentwert bezieht sich dabei auf das jeweils knappere der beiden Speicher — meist `localStorage`, das ein deutlich kleineres, festes Limit hat (wenige MB) als IndexedDB, wo die eigentlichen Anhänge liegen; ein `~` davor zeigt an, dass es sich um eine Schätzung handelt (die genaue `localStorage`-Grenze lässt sich nicht browserübergreifend zuverlässig abfragen). Sollte der Speicherplatz des Browsers dennoch einmal knapp werden, erscheint zusätzlich ein kleines Warndreieck am betroffenen Tab.
 
 **Empfehlung bei sehr großen Dokumenten** (viele/hochauflösende Bilder, umfangreiche PDF-Importe): regelmäßig über WebDAV sichern oder als Datei exportieren — das lokale lokale Speicherlimit des Browsers ist zwar großzügig, aber nicht unbegrenzt.
 

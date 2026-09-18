@@ -89,15 +89,16 @@ Ein Markdown-Editor, in dem du **direkt in der Vorschau schreibst** — Formatie
 - **Inhaltsbreite** — im Einzel-Vorschaumodus wahlweise „Schmal" (zentriert, etwa DIN-A4-Textbreite) oder „Breit" (volle Fensterbreite); auf schmalen Bildschirmen wird ohnehin immer die volle Breite genutzt
 
 ### Betriebsarten und Oberfläche
+- **Farbschema** über das Burger-Menü: **Automatisch** (Standard — folgt der Einstellung des Betriebssystems und wechselt auch mit, wenn diese sich mitten in der Sitzung ändert), **Hell** oder **Dunkel**. Betroffen ist die Oberfläche der App (Kopf- und Fußzeile, Werkzeugleisten, Menüs, Dialoge, Notizliste, Quelltextfenster). Die Designs der Notizen bleiben davon unberührt — mit einer Ausnahme: das Standarddesign „GitHub Light“ wird im Dunkelmodus als „GitHub Dark“ **angezeigt**, ohne die Einstellung der Notiz zu verändern. Gedruckt, exportiert und in die Zwischenablage kopiert wird immer im eingestellten Design, also hell. Die Wahl bleibt geräteweit gespeichert
 - **Drei Betriebsarten** über das Burger-Menü: **Fokus** (Standard — nur der Text, keine Titelzeile, keine Werkzeugleiste, alle Aktionen im Menü), **Simple** (große Schrift, Design „Clean", stark reduzierte Werkzeugleiste — für Tablets, jüngere Nutzer:innen oder ablenkungsfreies Schreiben) und **Voll** (alle Werkzeuge sichtbar). Die Einstellung bleibt geräteweit gespeichert; `?simple=true`/`?simple=false` schaltet den Simple Modus auch per Link
 - **Burger-Menü** — Öffnen, Speichern, Neu, Suchen & Ersetzen, Rechtschreibprüfung, Designwahl, Exporte, WebDAV-Einstellungen und „Über" mit Versionsnummer an einer Stelle statt in einer vollen Symbolleiste
 - **Vertikale Notizleiste** — Button oben links öffnet die Notizliste als Overlay; angepinnt wird daraus eine feste Seitenspalte neben dem Notizfenster. Umbenennen, Umsortieren per Drag & Drop und Schließen funktionieren dort wie in der klassischen Tableiste
-- **Fußleiste** — Zoom, Vollbild und Präsentation rechts unten, dazu Wort-/Zeichenzähler und Speicherplatzanzeige
+- **Fußleiste** — Zoom, Vollbild und Präsentation rechts unten, dazu Wort-/Zeichenzähler und eine Speicherplatzanzeige, die sich erst ab 70 % Auslastung einblendet (darunter sagt sie nichts, was man wissen müsste)
 - **Synchrones Scrollen** — Schalter direkt oben auf der Trennlinie, sichtbar nur in der geteilten Ansicht
 
 ### Synchronisation & Export
 - **WebDAV-Synchronisierung** zwischen mehreren Geräten — automatisch bei Änderungen, in Intervallen oder manuell, inkl. Konfliktbehandlung (lokale Version behalten, Server-Version übernehmen oder beide als getrennte Dokumente behalten); der Sync-Button färbt sich hellgrün bei erfolgreich bestehender Verbindung, mit einem dunkelgrünen Ring als Countdown bis zur nächsten automatischen Synchronisierung, und erfolgreich synchronisierte Tabs bekommen einen grünen Rand in der Tableiste
-- **Export** als eigenständige HTML-Datei oder direkt **Drucken/als PDF speichern**
+- **Export** als eigenständige HTML-Datei oder direkt **Drucken/als PDF speichern** — immer im Design, das für die Notiz eingestellt ist; der Dunkelmodus der Oberfläche wirkt nur auf den Bildschirm, ein Ausdruck bleibt also hell
 - **Per E-Mail versenden** — öffnet das E-Mail-Programm des Geräts mit dem Notiztitel als Betreff und dem gerenderten Text (ohne Markdown-Zeichen) als Nachricht
 - **Formatierte Notiz in die Zwischenablage kopieren** (zum Einfügen in Word, Outlook, Gmail, …)
 
