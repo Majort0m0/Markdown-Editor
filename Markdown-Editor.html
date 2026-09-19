@@ -30439,7 +30439,29 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // match to its rendered text (an existing "**bold**" span earlier in the same paragraph,
       // say, which Turndown re-emits as literal "**" characters that were never their own DOM
       // text node to begin with).
-      const newSrcOffset = domPositionToSource(range.startContainer, range.startOffset);
+      let newSrcOffset = domPositionToSource(range.startContainer, range.startOffset);
+      // Rueckfall, wenn sich die Position nicht mehr zuordnen laesst. Das passiert, sobald ein
+      // einzelner Tastendruck die STRUKTUR des Blocks umwirft und der Cursor dabei in einem Knoten
+      // landet, den keine Zeichenkarte kennt.
+      //
+      // Gemeldet an einem Datum in einem Aufgabenpunkt: "13." am Anfang des Punktinhalts ist nach
+      // CommonMark eine Aufzaehlungsmarke -- marked baut daraus eine verschachtelte, leere
+      // Nummernliste (nachgemessen: <li><ol start="13"><li></li></ol></li>). Der Cursor stand danach
+      // im Zwischenraum-Textknoten zwischen </li> und </ol>, den keine Karte abdeckt. Beim naechsten
+      // Zeichen ("6") wurde der Quelltext zwar richtig zu "- [ ] 13.6", diese Zuordnung lieferte aber
+      // null -- und ohne sie sprang der Cursor beim Neuaufbau unten an den Anfang des Dokuments, und
+      // das darauf folgende Zeichen ging verloren, weil es keine Einfuegestelle mehr gab. Genau so
+      // gemeldet: "springt der Cursor nach dem zweiten Punkt nach links oben und der Punkt wird gar
+      // nicht dargestellt".
+      //
+      // Genommen wird dann das Ende des gerade bearbeiteten Blocks. Fuer den weitaus haeufigsten
+      // Fall -- man tippt am Ende einer Zeile weiter -- ist das genau die richtige Stelle. Tippt
+      // jemand mitten im Block und die Struktur kippt dabei, ist es nicht die richtige, aber immer
+      // noch der richtige BLOCK: schlechter als exakt, deutlich besser als der Sprung an den
+      // Dokumentanfang mitsamt verschlucktem Zeichen.
+      if (newSrcOffset == null && owner._studioProLastSpan) {
+        newSrcOffset = owner._studioProLastSpan.end;
+      }
       if (newSrcOffset != null) editor.setSelectionRange(newSrcOffset, newSrcOffset);
 
       // Sicherheitsnetz: hat sich beim Tippen die BLOCKSTRUKTUR veraendert, steht in der Vorschau
