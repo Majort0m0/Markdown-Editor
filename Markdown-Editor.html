@@ -29239,7 +29239,18 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // That is the right outcome rather than a regression to guard against: a soft break is exactly
       // what Shift+Enter conventionally produces, and it is already what this app's plain Enter
       // produces on its first press -- silently ignoring the key was never intentional behaviour.
-      if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak') {
+      // Manche Tastaturen -- gemeldet von iOS -- schicken die Eingabetaste nicht als
+      // insertParagraph/insertLineBreak, sondern als gewoehnlichen Text, dessen Inhalt ein
+      // Zeilenumbruch ist. Ohne diesen Zweig faellt so ein Tastendruck durch die Erlaubnisliste
+      // unten als normales Tippen durch: der Browser bricht die Zeile selbst um, und erst danach
+      // schreibt syncPreviewBlockToSource() das Ergebnis in den Quelltext zurueck -- also genau
+      // der Weg, den diese Anwendung fuer alles Strukturelle gerade NICHT nehmen will.
+      // Bewusst eng gefasst auf Daten, die AUSSCHLIESSLICH ein Umbruch sind: ein mehrzeiliger
+      // Einwurf (Diktat, Autokorrektur) darf nicht als Eingabetaste gedeutet und dabei um seinen
+      // Text gebracht werden, der geht weiter den gewoehnlichen Weg.
+      const istUmbruchAlsText = (e.inputType === 'insertText' || e.inputType === 'insertReplacementText')
+        && (e.data === '\n' || e.data === '\r' || e.data === '\r\n');
+      if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak' || istUmbruchAlsText) {
         e.preventDefault();
         // previewEnterWithShift is captured from the real keydown (see its own declaration) --
         // beforeinput itself carries no modifier state, and the inputType alone is not a reliable
