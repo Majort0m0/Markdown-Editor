@@ -26072,9 +26072,35 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // right after an atomic contenteditable="false" island (see the beforeinput handler's own
     // comment on that). Capturing the real modifier from keydown (which always fires first, and in
     // the capture phase before any other listener can stop it) is the only reliable source.
+    // --- Ist die Umschalttaste hier ueberhaupt eine Absichtserklaerung? -------------------------
+    // Auf einer Bildschirmtastatur nicht. iOS schaltet die Grossschreibung am Satzanfang von selbst
+    // ein, und jedes Tastenereignis meldet dann shiftKey true, ohne dass jemand eine Taste gedrueckt
+    // haette. Das hat bereits zwei Stellen lahmgelegt (siehe die Kommentare bei handlePreviewEnter()
+    // und beim Enter-Zweig des Quelltextfensters): beide lasen daraus "Umschalt+Enter" und liessen
+    // damit das Fortfuehren und Beenden von Listen aus.
+    //
+    // Unterschieden wird an einem direkten Merkmal statt an Geraeteraten: eine ECHTE Umschalttaste
+    // meldet beim Druecken ein eigenes keydown mit key === 'Shift'. Die Automatik von iOS tut das
+    // nicht -- sie setzt nur das Kennzeichen an den folgenden Ereignissen. Wer also noch nie eine
+    // Umschalttaste gedrueckt hat, hat keine, und dann ist shiftKey hier nichts wert.
+    //
+    // Der Merker bleibt absichtlich gesetzt: er beschreibt das GERAET ("hier gibt es eine
+    // Umschalttaste"), nicht den Zustand eines einzelnen Tastendrucks. Bei einem echten
+    // Umschalt+Enter kommt das keydown der Umschalttaste ohnehin zuerst, der Merker steht also
+    // rechtzeitig. Der Grundwert false ist die sichere Seite: im Zweifel gilt ein Enter als
+    // gewoehnliches Enter, und das ist das, was in einer Liste gemeint ist.
+    let echteUmschalttasteGesehen = false;
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Shift') echteUmschalttasteGesehen = true;
+    }, true);
+
+    function umschaltAbsichtlich(e) {
+      return !!e.shiftKey && echteUmschalttasteGesehen;
+    }
+
     let previewEnterWithShift = false;
     preview.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') previewEnterWithShift = e.shiftKey;
+      if (e.key === 'Enter') previewEnterWithShift = umschaltAbsichtlich(e);
     }, true);
 
     // softBreak: true for Shift+Enter (a "bedingter Absatz" -- a "\n" WITHIN the current block,
@@ -29286,6 +29312,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // insertLineBreak, die Auto-Grossschreibung dagegen insertParagraph, und das einfache Enter
         // neben einer Insel hat keine Umschalttaste.
         const istWeicherUmbruch = previewEnterWithShift && e.inputType === 'insertLineBreak';
+        // Nach Gebrauch zuruecksetzen: der Merker wird nur von einem keydown mit key === 'Enter'
+        // gefuellt, und manche Tastaturen schicken dafuer gar keines. Ohne das Zuruecksetzen wuerde
+        // ein einmal gesetztes true bei jedem spaeteren Enter ohne eigenes keydown weitergelten.
+        previewEnterWithShift = false;
         handlePreviewEnter(undefined, istWeicherUmbruch);
         return;
       }
@@ -30273,7 +30303,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // e.preventDefault() here is what keeps this a pure "settle, no paragraph" exit rather than
     // needing a second flag threaded through to suppress handlePreviewEnter() downstream.
     preview.addEventListener('keydown', (e) => {
-      if ((e.key !== 'ArrowRight' && e.key !== 'Enter') || e.shiftKey || e.altKey || e.metaKey || e.ctrlKey) return;
+      // Auch hier umschaltAbsichtlich() statt e.shiftKey (siehe dort): sonst verliesse Enter eine
+      // gerade geschriebene Fettung/Kursivierung auf dem iPhone ueberall dort nicht mehr, wo die
+      // Auto-Grossschreibung gerade ansteht -- etwa direkt hinter einem Satzpunkt.
+      if ((e.key !== 'ArrowRight' && e.key !== 'Enter') || umschaltAbsichtlich(e) || e.altKey || e.metaKey || e.ctrlKey) return;
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
       const range = sel.getRangeAt(0);
@@ -35261,7 +35294,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         return;
       }
 
-      if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      // umschaltAbsichtlich() statt e.shiftKey: auf dem iPhone steht die Umschaltung nach einem
+      // Enter durch die Auto-Grossschreibung von selbst an, und dieser Zweig fiel dadurch aus --
+      // im Quelltextfenster blieb eine leere Listenmarke genauso stehen wie in der Vorschau
+      // (nachgemessen: mit shiftKey wird nichts verhindert und die native Zeile eingefuegt, ohne
+      // shiftKey verschwindet die Marke). Siehe die Erklaerung bei umschaltAbsichtlich().
+      if (e.key === 'Enter' && !umschaltAbsichtlich(e) && !e.ctrlKey && !e.altKey && !e.metaKey) {
         const listEdit = computeEnterEdit(editor.value, editor.selectionStart);
         if (listEdit) {
           e.preventDefault();
