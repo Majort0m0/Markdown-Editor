@@ -26317,7 +26317,19 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // Siehe emptyListMarkerExitBeforeCursor(): fängt das Beenden einer Liste ab, wenn der Cursor
       // nicht mehr im leeren Punkt steht. Läuft nach beiden Wegen oben, damit ein normal
       // erkannter Ausstieg oder eine Fortsetzung unverändert Vorrang behält.
-      if (!listEdit && !softBreak) {
+      // Bewusst OHNE die softBreak-Sperre, anders als beim Fortfuehren der Liste darueber: in einen
+      // LEEREN Listenpunkt laesst sich nichts umbrechen, dort gibt es keinen Text, den ein weicher
+      // Umbruch teilen koennte. Umschalt+Enter soll also auch dort die Marke beenden statt eine
+      // leere Marke mit einer Leerzeile darunter stehen zu lassen.
+      // Das Fortfuehren bleibt gesperrt, und das ist der Unterschied, auf den es ankommt: in einem
+      // Punkt MIT Inhalt macht Umschalt+Enter weiterhin einen Zeilenumbruch und keinen neuen Punkt
+      // (der Fall, den der Kommentar oben mit "- Punkt eins" beschreibt). Hier kann nichts
+      // dazwischenkommen, weil emptyListMarkerExitBeforeCursor() nur anspringt, wenn die Zeile des
+      // Cursors -- oder die unmittelbar davor -- eine Marke ohne jeden Inhalt ist.
+      // Zweiter Grund, es hier nicht an softBreak zu haengen: auf einer Bildschirmtastatur ist gar
+      // nicht sicher zu erkennen, ob die Umschalttaste wirklich gedrueckt war (siehe die Stelle im
+      // beforeinput-Handler). Diese Regel greift unabhaengig davon.
+      if (!listEdit) {
         const ausstieg = emptyListMarkerExitBeforeCursor(editor.value, cursorSrc);
         if (ausstieg) listEdit = ausstieg;
       }
@@ -29252,10 +29264,29 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         && (e.data === '\n' || e.data === '\r' || e.data === '\r\n');
       if (e.inputType === 'insertParagraph' || e.inputType === 'insertLineBreak' || istUmbruchAlsText) {
         e.preventDefault();
-        // previewEnterWithShift is captured from the real keydown (see its own declaration) --
-        // beforeinput itself carries no modifier state, and the inputType alone is not a reliable
-        // proxy for it.
-        handlePreviewEnter(undefined, previewEnterWithShift);
+        // Ein weicher Umbruch wird nur angenommen, wenn BEIDE Anzeichen dafuer sprechen: die
+        // Umschalttaste beim Tastendruck (previewEnterWithShift, siehe dort) UND der dafuer
+        // vorgesehene inputType. Jedes Anzeichen fuer sich ist unzuverlaessig, und zwar in
+        // entgegengesetzte Richtungen:
+        //
+        // - e.shiftKey ist auf einer Bildschirmtastatur kein Hinweis auf eine gedrueckte Taste.
+        //   iOS schaltet die Umschaltung am Satzanfang von selbst ein (Auto-Grossschreibung), und
+        //   genau dieser Zustand herrscht, nachdem Enter einen neuen, leeren Listenpunkt angelegt
+        //   hat. Im gemeldeten Bildschirmvideo nachgemessen: bei 3,2 s Kleinbuchstaben und
+        //   Pfeiltaste als Umriss, ab 4,0 s -- nach dem ersten Enter -- Grossbuchstaben und
+        //   gefuellte Pfeiltaste. Das folgende Enter galt damit als Umschalt+Enter, und dieser Weg
+        //   ueberspringt das Fortfuehren UND das Beenden der Liste. Ergebnis: die leere Marke blieb
+        //   stehen und darunter entstand ein Absatz -- nachgebaut ergibt handlePreviewEnter(pos,
+        //   true) zeichengenau den Quelltext aus dem Video ("- [ ]" ohne Leerzeichen, Leerzeile,
+        //   Platzhalterabsatz).
+        // - Der inputType allein reicht auch nicht: Chrome meldet ein einfaches Enter neben einer
+        //   eingebetteten Insel als insertLineBreak (siehe den Kommentar oben).
+        //
+        // Zusammen decken sie die Schwaeche des jeweils anderen ab: eine echte Umschalttaste meldet
+        // insertLineBreak, die Auto-Grossschreibung dagegen insertParagraph, und das einfache Enter
+        // neben einer Insel hat keine Umschalttaste.
+        const istWeicherUmbruch = previewEnterWithShift && e.inputType === 'insertLineBreak';
+        handlePreviewEnter(undefined, istWeicherUmbruch);
         return;
       }
 
