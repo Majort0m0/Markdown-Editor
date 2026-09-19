@@ -38644,7 +38644,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // whole interaction (click a preview button, drag sliders) never focuses the editor on its
       // own, and without this a plain Ctrl/Cmd+Z right after closing the popover can be swallowed
       // by the browser's native Undo instead of reaching this app's own keydown handler.
-      editor.focus();
+      //
+      // Auf einem Tastgeraet aber gerade nicht: dort wuerde genau das die Bildschirmtastatur wieder
+      // hervorholen, die beim Oeffnen bewusst geschlossen wurde (siehe
+      // bildschirmtastaturSchliessen()). Der Grund fuer den Fokus faellt dort ohnehin weg -- er
+      // schuetzt ein Tastenkuerzel, das ohne Tastatur niemand druecken kann.
+      if (!istTastgeraet()) editor.focus();
     }
 
     function toggleImageStyleBorderFields() {
@@ -38998,6 +39003,30 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Checked first/separately from the drawing-open branch below since the alt-text button can
     // sit inside a .drawing-classed wrapper too (a drawing has both buttons at once) — without
     // this branch a click on it would also bubble into "open the drawing modal".
+    // Auf einem Tastgeraet haengt die Bildschirmtastatur an der Schreibmarke: die Vorschau ist
+    // editierbar, ein Tipp hinein oeffnet sie also. Fuer die Knoepfe ueber einem Bild ist das nur
+    // beim Alt-Text richtig -- dort wird wirklich getippt. Bei "Groesse" (Schieberegler und
+    // Farbwaehler) und bei "Bearbeiten" (bildschirmfuellendes Fenster) steht sie bloss im Weg;
+    // gemeldet als "das aufploppen der tastatur ist ein wenig nervig ... bei groesse aendern und
+    // beim bearbeiten ist sie eigentlich nicht noetig".
+    //
+    // Geschlossen wird sie, indem der Schreibmarke ihr Ziel genommen wird -- ein anderes Mittel
+    // gibt es dafuer im Web nicht. Nur auf Tastgeraeten, damit am Schreibtisch nichts den Fokus
+    // verliert, was ihn dort gerade braucht (siehe den Hinweis zu editor.focus() weiter unten).
+    const nurTasten = window.matchMedia ? window.matchMedia('(hover: none)') : null;
+    function istTastgeraet() {
+      return !!(nurTasten && nurTasten.matches);
+    }
+
+    function bildschirmtastaturSchliessen() {
+      if (!istTastgeraet()) return;
+      const aktiv = document.activeElement;
+      if (aktiv && typeof aktiv.blur === 'function' &&
+          (aktiv === preview || aktiv === editor || aktiv.isContentEditable)) {
+        aktiv.blur();
+      }
+    }
+
     preview.addEventListener('click', (e) => {
       const altBtn = e.target.closest('.alt-text-btn');
       if (altBtn) {
@@ -39008,16 +39037,21 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const styleBtn = e.target.closest('.image-style-btn');
       if (styleBtn) {
         const wrapper = styleBtn.closest('.image-wrapper');
+        // Vor dem Oeffnen, nicht danach: das Ausblenden der Tastatur veraendert die Fensterhoehe,
+        // und das Aufklappfenster wird gleich an der Stelle des Knopfes ausgerichtet.
+        bildschirmtastaturSchliessen();
         openImageStylePopoverForIndex(Array.from(preview.querySelectorAll('.image-wrapper')).indexOf(wrapper), styleBtn);
         return;
       }
       const photoEditBtn = e.target.closest('.photo-edit-btn');
       if (photoEditBtn) {
+        bildschirmtastaturSchliessen();
         openImageEditModalForAsset(photoEditBtn.closest('.image-wrapper').dataset.assetId);
         return;
       }
       const drawingWrapper = e.target.closest('.image-wrapper.drawing');
       if (drawingWrapper) {
+        bildschirmtastaturSchliessen();
         openDrawingModal(drawingWrapper.dataset.assetId);
         return;
       }
