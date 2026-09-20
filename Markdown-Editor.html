@@ -2489,10 +2489,30 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       color: var(--text-main);
     }
 
+    /* Beim Umbenennen steht unter dem Namensfeld der Herkunftsvermerk (siehe herkunftText()),
+       deshalb wird der Eintrag hier zur Spalte. Das ist zugleich die einzige Stelle, an der der
+       Vermerk auf einem Touchgeraet ueberhaupt zu sehen ist: das title-Attribut am Eintrag
+       braucht einen Mauszeiger, der Doppeltipp zum Umbenennen kommt auch ohne aus. */
     .tab.renaming {
       cursor: default;
       user-select: auto;
       background-color: var(--active-tab-bg);
+      flex-direction: column;
+      align-items: stretch;
+      gap: 5px;
+    }
+
+    .tab-herkunft {
+      font-size: 0.7rem;
+      line-height: 1.35;
+      color: var(--text-muted);
+      /* .tab setzt nowrap; pre-line erlaubt den Umbruch UND behaelt das \n zwischen Satz und
+         Zeitpunkt. max-width statt width, weil die erweiterte Ansicht align-items: flex-start
+         setzt (hoehere Spezifitaet als .tab.renaming) -- ohne die Deckelung liefe eine lange
+         Adresse dort aus der Leiste heraus, statt umzubrechen. */
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+      max-width: 100%;
     }
 
     .tab-rename-form {
@@ -14819,6 +14839,18 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
         if (tab.id === renamingTabId) {
           tabEl.appendChild(buildTabRenameForm(tab));
+          const herkunftZeile = herkunftText(tab.herkunft);
+          if (herkunftZeile) {
+            const herkunftEl = document.createElement('div');
+            herkunftEl.className = 'tab-herkunft';
+            herkunftEl.textContent = herkunftZeile;
+            // Dasselbe onmousedown-preventDefault wie bei den Quelltext-Werkzeugen der
+            // Liedblattleiste: ein Klick auf diesen Text darf dem Namensfeld nicht den Fokus
+            // nehmen -- der focusout-Horcher der Form wuerde das Umbenennen sonst sofort
+            // abschliessen, nur weil man den Vermerk lesen wollte.
+            herkunftEl.onmousedown = (e) => e.preventDefault();
+            tabEl.appendChild(herkunftEl);
+          }
           tabList.appendChild(tabEl);
           return;
         }
