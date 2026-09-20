@@ -234,6 +234,11 @@ Ein eingebauter Bildeditor erlaubt einfache Anpassungen, ganz ohne externe Softw
 
 - **✂️ Zuschneiden** — öffnet einen eigenen Zuschneide-Schritt mit einem frei verschieb- und größenveränderbaren Auswahlrahmen (per Maus oder Finger); „✓ Zuschneiden anwenden" übernimmt den Ausschnitt, „✕ Abbrechen" kehrt unverändert zurück.
 - **Schieberegler** für Helligkeit, Kontrast und Sättigung, mit sofortiger Live-Vorschau.
+- **🔲 Zensieren** — macht einzelne Stellen unkenntlich, etwa Gesichter, Namensschilder, Adressen oder Kennzeichen. Ein eigener Schritt mit Radius-Schieberegler: **antippen** setzt eine Stelle, **ziehen** fährt eine ganze Zeile ab. Die betroffene Fläche wird grob verpixelt — je größer der Radius, desto gröber die Kästchen, damit auch eine große Fläche wirklich nicht mehr lesbar ist. „↶ Letzte Stelle“ nimmt den zuletzt gesetzten Punkt bzw. den zuletzt gezogenen Strich wieder zurück.
+
+  Wie groß die Stelle wird, zeigt ein Ring: mit der Maus hängt er am Zeiger, auf einem Tablet oder Telefon erscheint er während des Schiebens am Radius-Regler in der Bildmitte (bzw. an der zuletzt gesetzten Stelle) und bleibt beim Tippen unter dem Finger noch kurz stehen — so lässt sich auch ohne Mauszeiger abschätzen, was gleich verdeckt wird.
+
+  Das Verpixeln geschieht **im Bild selbst**, nicht als darübergelegte Markierung: nach „✓ Übernehmen“ sind die Bildpunkte darunter fort und lassen sich auch von niemandem mehr hervorholen, der die Datei später bekommt.
 - **Effekte** — ein Klick genügt. Vierzehn stehen zur Wahl:
 
   | Effekt | Was er macht |

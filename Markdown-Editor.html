@@ -7866,7 +7866,58 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     .image-edit-crop-toggle-row {
       display: flex;
       justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
       margin-bottom: 14px;
+    }
+
+    /* --- Zensieren -------------------------------------------------------------------------
+       Wie der Zuschneide-Schritt ein eigener Bereich im selben Fenster. Statt eines <img> steht
+       hier ein <canvas>: gezeichnet wird waehrend des Tippens, also braucht es eine Flaeche, auf
+       der sich malen laesst. */
+    .zensur-rahmen {
+      position: relative;
+      display: inline-block;
+      max-width: 100%;
+      line-height: 0;
+    }
+
+    #imgEditZensurCanvas {
+      display: block;
+      max-width: 100%;
+      max-height: 60vh;
+      border-radius: 6px;
+      /* Ohne das faengt der Browser das Ziehen als Bildlauf ab, und auf dem Telefon laesst sich
+         nicht malen, sondern nur scrollen. */
+      touch-action: none;
+      cursor: crosshair;
+      -webkit-user-drag: none;
+      user-select: none;
+    }
+
+    /* Der Ring zeigt, wie gross der naechste Punkt wird. Zwei Rahmen uebereinander -- aussen
+       dunkel, innen hell -- damit er auf hellem wie auf dunklem Bildinhalt zu sehen ist; ein
+       einfarbiger Ring verschwindet je nach Motiv. */
+    .zensur-ring {
+      position: absolute;
+      display: none;
+      border: 2px solid rgba(255, 255, 255, 0.95);
+      outline: 2px solid rgba(0, 0, 0, 0.55);
+      border-radius: 50%;
+      box-sizing: border-box;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+    }
+
+    .zensur-ring.sichtbar {
+      display: block;
+    }
+
+    .zensur-hinweis {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      text-align: center;
+      margin: 2px 0 10px;
     }
 
     .crop-box {
@@ -10214,6 +10265,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         </div>
         <div class="image-edit-crop-toggle-row">
           <button class="image-dialog-choice-btn" style="width:auto;" onclick="startImageEditCrop()" type="button">✂️ Zuschneiden</button>
+          <button class="image-dialog-choice-btn" style="width:auto;" onclick="startImageEditZensur()" type="button">🔲 Zensieren</button>
         </div>
         <div class="image-edit-sliders">
           <label class="image-edit-slider-row">
@@ -10254,6 +10306,28 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         <div class="camera-controls">
           <button class="image-dialog-choice-btn" style="width:auto;" onclick="cancelImageEditCrop()" type="button">✕ Abbrechen</button>
           <button class="btn-primary" onclick="applyImageEditCrop()" type="button">✓ Zuschneiden anwenden</button>
+        </div>
+      </div>
+      <div id="imageEditZensurView" style="display:none;">
+        <div class="image-edit-preview-wrap">
+          <div id="imgEditZensurRahmen" class="zensur-rahmen">
+            <canvas id="imgEditZensurCanvas"></canvas>
+            <div id="imgEditZensurRing" class="zensur-ring"></div>
+          </div>
+        </div>
+        <div class="image-edit-sliders">
+          <label class="image-edit-slider-row">
+            <span>Radius</span>
+            <input type="range" id="imgEditZensurRadius" min="10" max="140" value="36"
+                   oninput="zensurRadiusGeaendert()" onchange="zensurRadiusGeaendert()">
+            <span class="image-edit-slider-value" id="imgEditZensurRadiusVal">36</span>
+          </label>
+        </div>
+        <div class="zensur-hinweis" id="imgEditZensurHinweis">Tippen oder ziehen, um Stellen unkenntlich zu machen.</div>
+        <div class="camera-controls">
+          <button class="image-dialog-choice-btn" style="width:auto;" onclick="zensurLetztenZurueck()" type="button" id="imgEditZensurZurueck">↶ Letzte Stelle</button>
+          <button class="image-dialog-choice-btn" style="width:auto;" onclick="cancelImageEditZensur()" type="button">✕ Abbrechen</button>
+          <button class="btn-primary" onclick="applyImageEditZensur()" type="button">✓ Übernehmen</button>
         </div>
       </div>
     </div>
@@ -40895,6 +40969,265 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       document.getElementById('imageEditPreview').src = imageEditState.workingDataUrl;
       cancelImageEditCrop();
     }
+
+    // --- ZENSIEREN -----------------------------------------------------------------------------
+    //
+    // Stellen unkenntlich machen: Punkte aufs Bild setzen, an denen grob gerastert wird -- fuer
+    // Gesichter, Namensschilder, Adressen. Eigener Schritt im selben Fenster, wie das Zuschneiden,
+    // nur mit einem <canvas> statt eines <img>, weil hier waehrend der Bedienung gezeichnet wird.
+    //
+    // Der Radius wird in BILDSCHIRMpixeln eingestellt, nicht in Bildpunkten, und erst beim Malen
+    // umgerechnet. Nur so deckt der angezeigte Ring genau die Flaeche, die hinterher verdeckt ist:
+    // ein grosses Foto wird in diesem Fenster stark verkleinert gezeigt, und ein in Bildpunkten
+    // gemessener Radius waere dort ein winziger Kringel, der nachher das halbe Gesicht bedeckt.
+    // striche: eine Liste von Zuegen, jeder Zug eine Liste von Tupfern {x,y,r}. Gruppiert wird,
+    // damit das Zuruecknehmen einen ganzen Zug entfernt und nicht einen der hundert Tupfer, aus
+    // denen er besteht.
+    let zensurZustand = null; // { basis, striche: [[{x,y,r}]], malt, ringAus } waehrend des Schritts
+
+    function zensurElemente() {
+      return {
+        canvas: document.getElementById('imgEditZensurCanvas'),
+        ring: document.getElementById('imgEditZensurRing'),
+        regler: document.getElementById('imgEditZensurRadius'),
+      };
+    }
+
+    // Ein Rasterpunkt: der Kreis wird in Bloecke zerlegt, jeder Block bekommt die Durchschnitts-
+    // farbe seiner Flaeche. Die Blockgroesse haengt am Radius (ein Drittel davon), damit ein
+    // kleiner Punkt fein und ein grosser Punkt grob rastert -- eine feste Blockgroesse liesse
+    // einen grossen Bereich noch erkennbar und machte einen kleinen zu einem einzigen Klecks.
+    //
+    // Die Bloecke sitzen auf einem Raster, das vom Bildursprung aus zaehlt, nicht vom Punktmittel:
+    // so fallen zwei ueberlappende Punkte gleichen Radius' in dieselben Bloecke und es entsteht
+    // eine durchgehende Flaeche statt eines sichtbaren Flickenmusters an der Nahtstelle.
+    function zensurPunktZeichnen(ctx, breite, hoehe, mx, my, radius) {
+      const block = Math.max(4, Math.round(radius / 3));
+      const links = Math.max(0, Math.floor((mx - radius) / block) * block);
+      const oben = Math.max(0, Math.floor((my - radius) / block) * block);
+      const rechts = Math.min(breite, Math.ceil((mx + radius) / block) * block);
+      const unten = Math.min(hoehe, Math.ceil((my + radius) / block) * block);
+      if (rechts <= links || unten <= oben) return;
+      const feld = ctx.getImageData(links, oben, rechts - links, unten - oben);
+      const d = feld.data;
+      const fb = rechts - links;
+      for (let by = oben; by < unten; by += block) {
+        for (let bx = links; bx < rechts; bx += block) {
+          // Nur Bloecke, deren Mitte im Kreis liegt -- daraus ergibt sich der runde Umriss.
+          const cx = bx + block / 2, cy = by + block / 2;
+          if ((cx - mx) * (cx - mx) + (cy - my) * (cy - my) > radius * radius) continue;
+          let r = 0, g = 0, b = 0, n = 0;
+          const bisX = Math.min(bx + block, rechts), bisY = Math.min(by + block, unten);
+          for (let y = by; y < bisY; y++) {
+            for (let x = bx; x < bisX; x++) {
+              const k = ((y - oben) * fb + (x - links)) * 4;
+              r += d[k]; g += d[k + 1]; b += d[k + 2]; n++;
+            }
+          }
+          if (!n) continue;
+          r = (r / n) | 0; g = (g / n) | 0; b = (b / n) | 0;
+          for (let y = by; y < bisY; y++) {
+            for (let x = bx; x < bisX; x++) {
+              const k = ((y - oben) * fb + (x - links)) * 4;
+              d[k] = r; d[k + 1] = g; d[k + 2] = b; d[k + 3] = 255;
+            }
+          }
+        }
+      }
+      ctx.putImageData(feld, links, oben);
+    }
+
+    // Alles neu aufbauen -- nur fuer das Zuruecknehmen. Beim Malen wird der neue Punkt direkt auf
+    // die sichtbare Flaeche gesetzt, sonst muesste bei jedem Fingerzucken das ganze Bild neu
+    // gezeichnet werden.
+    function zensurNeuAufbauen() {
+      if (!zensurZustand) return;
+      const { canvas } = zensurElemente();
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(zensurZustand.basis, 0, 0);
+      for (const zug of zensurZustand.striche) {
+        for (const p of zug) zensurPunktZeichnen(ctx, canvas.width, canvas.height, p.x, p.y, p.r);
+      }
+      zensurKnoepfeAktualisieren();
+    }
+
+    function zensurKnoepfeAktualisieren() {
+      const knopf = document.getElementById('imgEditZensurZurueck');
+      if (knopf) knopf.disabled = !zensurZustand || zensurZustand.striche.length === 0;
+    }
+
+    function zensurLetztenZurueck() {
+      if (!zensurZustand || !zensurZustand.striche.length) return;
+      zensurZustand.striche.pop();
+      zensurNeuAufbauen();
+    }
+
+    // Der zuletzt gesetzte Tupfer -- Bezugspunkt fuer den Ring am Regler und fuer das Verbinden
+    // beim Ziehen.
+    function zensurLetzterTupfer() {
+      if (!zensurZustand || !zensurZustand.striche.length) return null;
+      const zug = zensurZustand.striche[zensurZustand.striche.length - 1];
+      return zug.length ? zug[zug.length - 1] : null;
+    }
+
+    // Bildschirmpunkt -> Bildpunkt. Das Canvas wird per CSS kleingerechnet, seine Flaeche in
+    // Bildpunkten bleibt die volle Aufloesung.
+    function zensurMassstab() {
+      const { canvas } = zensurElemente();
+      const r = canvas.getBoundingClientRect();
+      return r.width ? canvas.width / r.width : 1;
+    }
+
+    function zensurRingZeigen(clientX, clientY) {
+      const { canvas, ring, regler } = zensurElemente();
+      const rect = canvas.getBoundingClientRect();
+      const d = Number(regler.value) * 2;
+      ring.style.width = d + 'px';
+      ring.style.height = d + 'px';
+      ring.style.left = (clientX - rect.left) + 'px';
+      ring.style.top = (clientY - rect.top) + 'px';
+      ring.classList.add('sichtbar');
+    }
+
+    function zensurRingVerbergen(verzoegerung) {
+      if (!zensurZustand) return;
+      clearTimeout(zensurZustand.ringAus);
+      const { ring } = zensurElemente();
+      if (!verzoegerung) { ring.classList.remove('sichtbar'); return; }
+      zensurZustand.ringAus = setTimeout(() => ring.classList.remove('sichtbar'), verzoegerung);
+    }
+
+    // Am Regler selbst laesst sich die Groesse sonst nicht abschaetzen -- auf einem Tastgeraet gibt
+    // es keinen Mauszeiger, an dem der Ring haengen koennte. Er erscheint deshalb waehrend des
+    // Schiebens in der Bildmitte (oder beim zuletzt gesetzten Punkt, wenn es einen gibt) und
+    // verschwindet kurz danach von selbst.
+    function zensurRadiusGeaendert() {
+      const { canvas, regler } = zensurElemente();
+      document.getElementById('imgEditZensurRadiusVal').textContent = regler.value;
+      if (!zensurZustand) return;
+      const rect = canvas.getBoundingClientRect();
+      const letzter = zensurLetzterTupfer();
+      const massstab = zensurMassstab();
+      const x = letzter ? rect.left + letzter.x / massstab : rect.left + rect.width / 2;
+      const y = letzter ? rect.top + letzter.y / massstab : rect.top + rect.height / 2;
+      zensurRingZeigen(x, y);
+      zensurRingVerbergen(1200);
+    }
+
+    function zensurTupfer(ctx, canvas, zug, x, y, r) {
+      zug.push({ x, y, r });
+      zensurPunktZeichnen(ctx, canvas.width, canvas.height, x, y, r);
+    }
+
+    function zensurMalen(clientX, clientY, neuerZug) {
+      if (!zensurZustand) return;
+      const { canvas, regler } = zensurElemente();
+      const rect = canvas.getBoundingClientRect();
+      const massstab = zensurMassstab();
+      const x = (clientX - rect.left) * massstab;
+      const y = (clientY - rect.top) * massstab;
+      const r = Number(regler.value) * massstab;
+      const ctx = canvas.getContext('2d');
+      if (neuerZug || !zensurZustand.striche.length) zensurZustand.striche.push([]);
+      const zug = zensurZustand.striche[zensurZustand.striche.length - 1];
+      const letzter = neuerZug ? null : (zug.length ? zug[zug.length - 1] : null);
+      if (!letzter) { zensurTupfer(ctx, canvas, zug, x, y, r); zensurKnoepfeAktualisieren(); return; }
+
+      // Zwischen zwei gemeldeten Zeigerstellen wird aufgefuellt. Ohne das reisst die Spur bei
+      // jeder schnellen Bewegung auf: der Browser meldet die Bewegung nur in Schueben, und bei
+      // einem Testzug blieben zwischen zwei Tupfern 151 Bildpunkte bei Radius 50 -- mitten in der
+      // verdeckten Zeile stand die Schrift wieder lesbar da. Der Abstand von einem halben Radius
+      // laesst die Kreise sicher ueberlappen und haelt die Liste trotzdem kurz.
+      const dx = x - letzter.x, dy = y - letzter.y;
+      const strecke = Math.sqrt(dx * dx + dy * dy);
+      const schritt = Math.max(1, r * 0.5);
+      if (strecke < schritt) return;
+      const anzahl = Math.ceil(strecke / schritt);
+      for (let i = 1; i <= anzahl; i++) {
+        zensurTupfer(ctx, canvas, zug, letzter.x + dx * (i / anzahl), letzter.y + dy * (i / anzahl), r);
+      }
+      zensurKnoepfeAktualisieren();
+    }
+
+    function setupZensurInteraktionen() {
+      const canvas = document.getElementById('imgEditZensurCanvas');
+      canvas.addEventListener('pointerdown', (e) => {
+        if (!zensurZustand) return;
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+        zensurZustand.malt = true;
+        zensurRingZeigen(e.clientX, e.clientY);
+        zensurMalen(e.clientX, e.clientY, true);
+      });
+      canvas.addEventListener('pointermove', (e) => {
+        if (!zensurZustand) return;
+        // Der Ring folgt immer: mit der Maus schon beim blossen Ueberfahren, auf einem Tastgeraet
+        // erst waehrend der Beruehrung -- dort gibt es kein Ueberfahren.
+        zensurRingZeigen(e.clientX, e.clientY);
+        if (zensurZustand.malt) { e.preventDefault(); zensurMalen(e.clientX, e.clientY); }
+      });
+      const fertig = (e) => {
+        if (!zensurZustand) return;
+        zensurZustand.malt = false;
+        // Kurz stehen lassen, damit auf dem Telefon noch zu sehen ist, was gerade verdeckt wurde --
+        // der Finger lag ja darauf.
+        if (e.pointerType !== 'mouse') zensurRingVerbergen(900);
+      };
+      canvas.addEventListener('pointerup', fertig);
+      canvas.addEventListener('pointercancel', fertig);
+      canvas.addEventListener('pointerleave', (e) => {
+        if (!zensurZustand || zensurZustand.malt) return;
+        if (e.pointerType === 'mouse') zensurRingVerbergen(0);
+      });
+    }
+
+    function startImageEditZensur() {
+      if (!imageEditState) return;
+      bakeImageEditSliders(); // wie beim Zuschneiden: schwebende Reglerwerte zuerst einrechnen
+      const { canvas, regler } = zensurElemente();
+      const bild = new Image();
+      bild.onload = () => {
+        canvas.width = bild.naturalWidth;
+        canvas.height = bild.naturalHeight;
+        canvas.getContext('2d').drawImage(bild, 0, 0);
+        // Unveraenderte Fassung fuer das Zuruecknehmen aufheben.
+        const basis = document.createElement('canvas');
+        basis.width = canvas.width; basis.height = canvas.height;
+        basis.getContext('2d').drawImage(bild, 0, 0);
+        zensurZustand = { basis, striche: [], malt: false, ringAus: null };
+        zensurKnoepfeAktualisieren();
+        document.getElementById('imgEditZensurRadiusVal').textContent = regler.value;
+      };
+      bild.src = imageEditState.workingDataUrl;
+      document.getElementById('imageEditNormalView').style.display = 'none';
+      document.getElementById('imageEditZensurView').style.display = '';
+    }
+
+    function zensurBeenden() {
+      if (zensurZustand) clearTimeout(zensurZustand.ringAus);
+      zensurZustand = null;
+      document.getElementById('imgEditZensurRing').classList.remove('sichtbar');
+      document.getElementById('imageEditZensurView').style.display = 'none';
+      document.getElementById('imageEditNormalView').style.display = '';
+    }
+
+    function cancelImageEditZensur() {
+      zensurBeenden();
+    }
+
+    function applyImageEditZensur() {
+      if (!imageEditState || !zensurZustand) { zensurBeenden(); return; }
+      const { canvas } = zensurElemente();
+      // Nichts gesetzt: dann auch nichts neu kodieren -- ein Durchlauf durch JPEG kostet sonst
+      // Bildqualitaet, ohne dass sich etwas geaendert haette.
+      if (zensurZustand.striche.length) {
+        imageEditState.workingDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        document.getElementById('imageEditPreview').src = imageEditState.workingDataUrl;
+      }
+      zensurBeenden();
+    }
+
+    setupZensurInteraktionen();
 
     setupImageEditCropInteractions();
 
