@@ -40356,6 +40356,214 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // that need a parameter CamanJS's own presets don't. Each `apply` runs inside a live Caman()
     // instance (`this` is that instance, matching CamanJS's own idiomatic chaining style) --
     // see applyImageEditEffect().
+    // --- Eigene Bildrechnungen fuer die Effekte, die CamanJS nicht leisten kann ----------------
+    //
+    // Zwei Sorten von Effekt stehen in IMAGE_EDIT_EFFECTS: die meisten sind ein Dreizeiler auf
+    // CamanJS ('apply'), einzelne rechnen selbst auf dem Canvas ('canvasApply'). Der Grund fuer die
+    // zweite Sorte ist jedes Mal derselbe: CamanJS' process() reicht nur die FARBE eines Bildpunkts
+    // durch, nicht seine LAGE. Alles, was Nachbarpunkte braucht -- ein Raster, eine Kante -- kann es
+    // damit nicht ausdruecken.
+    //
+    // Fuer die Kanten waere edgeDetect() zwar da, aber nicht brauchbar: an einem Foto mit normalem
+    // Bildrauschen nachgemessen liefert es eine dichte Schneeflaeche statt Linien, und weder ein
+    // vorgeschalteter Weichzeichner noch threshold() dahinter bekommen das in den Griff (beides
+    // durchprobiert, threshold aendert dabei praktisch nichts). Selbst gerechnet ist es sowohl
+    // sauberer als auch schneller.
+
+    // Helligkeit je Bildpunkt, als Fliesskommafeld -- Grundlage fuer alles Folgende.
+    function bildHelligkeiten(daten, breite, hoehe) {
+      const g = new Float32Array(breite * hoehe);
+      for (let i = 0, k = 0; i < g.length; i++, k += 4) {
+        g[i] = 0.299 * daten[k] + 0.587 * daten[k + 1] + 0.114 * daten[k + 2];
+      }
+      return g;
+    }
+
+    // Kastenweichzeichner, getrennt nach den beiden Achsen: zwei Durchgaenge mit je (2r+1)
+    // Summanden statt einem mit (2r+1)^2 -- bei r=3 also 14 statt 49 Zugriffen je Bildpunkt.
+    function feldWeichzeichnen(feld, breite, hoehe, radius) {
+      if (radius < 1) return feld;
+      const zwischen = new Float32Array(feld.length);
+      const aus = new Float32Array(feld.length);
+      for (let y = 0; y < hoehe; y++) {
+        for (let x = 0; x < breite; x++) {
+          let summe = 0, anzahl = 0;
+          for (let i = -radius; i <= radius; i++) {
+            const xx = x + i;
+            if (xx < 0 || xx >= breite) continue;
+            summe += feld[y * breite + xx]; anzahl++;
+          }
+          zwischen[y * breite + x] = summe / anzahl;
+        }
+      }
+      for (let y = 0; y < hoehe; y++) {
+        for (let x = 0; x < breite; x++) {
+          let summe = 0, anzahl = 0;
+          for (let i = -radius; i <= radius; i++) {
+            const yy = y + i;
+            if (yy < 0 || yy >= hoehe) continue;
+            summe += zwischen[yy * breite + x]; anzahl++;
+          }
+          aus[y * breite + x] = summe / anzahl;
+        }
+      }
+      return aus;
+    }
+
+    // Wie stark sich die Helligkeit an einer Stelle aendert (Sobel). Der Rand bleibt null -- dort
+    // fehlen Nachbarn, und eine erfundene Kante am Bildrand waere schlimmer als keine.
+    function kantenStaerken(hell, breite, hoehe) {
+      const m = new Float32Array(hell.length);
+      for (let y = 1; y < hoehe - 1; y++) {
+        for (let x = 1; x < breite - 1; x++) {
+          const i = y * breite + x;
+          const gx = -hell[i - breite - 1] - 2 * hell[i - 1] - hell[i + breite - 1]
+                     + hell[i - breite + 1] + 2 * hell[i + 1] + hell[i + breite + 1];
+          const gy = -hell[i - breite - 1] - 2 * hell[i - breite] - hell[i - breite + 1]
+                     + hell[i + breite - 1] + 2 * hell[i + breite] + hell[i + breite + 1];
+          m[i] = Math.sqrt(gx * gx + gy * gy);
+        }
+      }
+      return m;
+    }
+
+    // Die Schwelle, ab der eine Stelle als Kante gilt, wird nicht fest vorgegeben, sondern so
+    // gewaehlt, dass ungefaehr der gewuenschte ANTEIL der Bildpunkte zur Linie wird. Ein fester
+    // Wert waere auf einem kontrastarmen Foto ein leeres Blatt und auf einem harten Motiv eine
+    // schwarze Flaeche; der Anteil traegt ueber beide. Untergrenze trotzdem, damit ein nahezu
+    // einfarbiges Bild nicht sein eigenes Rauschen nachzeichnet.
+    function kantenSchwelleFuerAnteil(staerken, anteil) {
+      const haeufigkeit = new Uint32Array(256);
+      for (let i = 0; i < staerken.length; i++) haeufigkeit[Math.min(255, staerken[i] | 0)]++;
+      const ziel = staerken.length * anteil;
+      let summe = 0;
+      for (let v = 255; v >= 0; v--) { summe += haeufigkeit[v]; if (summe >= ziel) return v; }
+      return 0;
+    }
+
+    // Anteil der Bildpunkte, die zur Kontur werden. 3 % nachgemessen an zwei Testfotos -- einem
+    // klaren und einem stark verrauschten: darunter reissen feine Konturen ab, darueber faengt das
+    // koernige Foto an, sein Rauschen mitzuzeichnen.
+    const KONTUR_ANTEIL = 0.03;
+
+    // Schwarze Linien auf Weiss.
+    function konturAufCanvas(canvas) {
+      const ctx = canvas.getContext('2d');
+      const breite = canvas.width, hoehe = canvas.height;
+      if (!breite || !hoehe) return;
+      const bild = ctx.getImageData(0, 0, breite, hoehe);
+      const daten = bild.data;
+      const staerken = kantenStaerken(feldWeichzeichnen(bildHelligkeiten(daten, breite, hoehe), breite, hoehe, 1), breite, hoehe);
+      const schwelle = Math.max(24, kantenSchwelleFuerAnteil(staerken, KONTUR_ANTEIL));
+      for (let i = 0, k = 0; i < staerken.length; i++, k += 4) {
+        const v = staerken[i] > schwelle ? 0 : 255;
+        daten[k] = daten[k + 1] = daten[k + 2] = v;
+        daten[k + 3] = 255;
+      }
+      ctx.putImageData(bild, 0, 0);
+    }
+
+    // Comic: Farbflaechen zusammenfassen, Farbigkeit anheben, dieselben Kanten als schwarze Linien
+    // darueber.
+    //
+    // Gestuft wird die HELLIGKEIT, danach werden die drei Kanaele proportional darauf gezogen --
+    // nicht jeder Kanal fuer sich. Kanalweise gestuft springen Rot, Gruen und Blau an
+    // verschiedenen Stellen um, und der Farbton wandert: ein hellblauer Himmel wurde dabei violett
+    // (am Testfoto gesehen). Ueber die Helligkeit bleibt das Verhaeltnis der Kanaele -- also der
+    // Farbton -- unangetastet, und nur die Helligkeit wird flaechig.
+    //
+    // Die Farben kommen aus einer weichgezeichneten Fassung: das Stufen des ungeglaetteten Bildes
+    // quantisiert auch das Rauschen mit, und benachbarte Punkte fallen dann in verschiedene Stufen
+    // -- die Flaechen werden gesprenkelt statt flach.
+    function comicAufCanvas(canvas) {
+      const ctx = canvas.getContext('2d');
+      const breite = canvas.width, hoehe = canvas.height;
+      if (!breite || !hoehe) return;
+      const bild = ctx.getImageData(0, 0, breite, hoehe);
+      const daten = bild.data;
+      const staerken = kantenStaerken(feldWeichzeichnen(bildHelligkeiten(daten, breite, hoehe), breite, hoehe, 1), breite, hoehe);
+      const schwelle = Math.max(24, kantenSchwelleFuerAnteil(staerken, KONTUR_ANTEIL));
+      const anzahl = breite * hoehe;
+      const kanal = [new Float32Array(anzahl), new Float32Array(anzahl), new Float32Array(anzahl)];
+      for (let c = 0; c < 3; c++) {
+        for (let i = 0, k = c; i < anzahl; i++, k += 4) kanal[c][i] = daten[k];
+        kanal[c] = feldWeichzeichnen(kanal[c], breite, hoehe, 3);
+      }
+      const STUFEN = 6, SAETTIGUNG = 1.3;
+      const schritt = 255 / (STUFEN - 1);
+      for (let i = 0, k = 0; i < anzahl; i++, k += 4) {
+        if (staerken[i] > schwelle) { daten[k] = daten[k + 1] = daten[k + 2] = 26; continue; }
+        let r = kanal[0][i], g = kanal[1][i], b = kanal[2][i];
+        const hell = 0.299 * r + 0.587 * g + 0.114 * b;
+        const gestuft = Math.round(hell / schritt) * schritt;
+        const faktor = hell > 1 ? gestuft / hell : 0;
+        r *= faktor; g *= faktor; b *= faktor;
+        const mitte = (r + g + b) / 3;
+        r = mitte + (r - mitte) * SAETTIGUNG;
+        g = mitte + (g - mitte) * SAETTIGUNG;
+        b = mitte + (b - mitte) * SAETTIGUNG;
+        daten[k] = Math.max(0, Math.min(255, r)) | 0;
+        daten[k + 1] = Math.max(0, Math.min(255, g)) | 0;
+        daten[k + 2] = Math.max(0, Math.min(255, b)) | 0;
+      }
+      ctx.putImageData(bild, 0, 0);
+    }
+
+    // Zeichnet das Bild als Druckraster neu: das Blatt wird Papier, und je dunkler eine Stelle war,
+    // desto groesser der Punkt, der dort sitzt. Bewusst ECHTE Punkte und kein Pixel-fuer-Pixel-
+    // Streumuster -- ein Streumuster ist zwar in drei Zeilen geschrieben, ueberlebt aber die
+    // JPEG-Kodierung nicht, mit der das Ergebnis gleich gespeichert wird (harte Einzelpixel sind
+    // der unguenstigste denkbare Fall fuer JPEG, um jeden Punkt saesse ein grauer Hof). Punkte von
+    // mehreren Pixeln Durchmesser ueberstehen das.
+    //
+    // Jede zweite Reihe ist um eine halbe Zelle versetzt. Das ergibt ein schraeges Punktgitter
+    // statt eines rechtwinkligen -- echte Zeitungsraster stehen aus demselben Grund schraeg: ein
+    // gerades Gitter faellt dem Auge als Streifen auf.
+    function zeitungsRasterAufCanvas(canvas) {
+      const ctx = canvas.getContext('2d');
+      const breite = canvas.width, hoehe = canvas.height;
+      if (!breite || !hoehe) return;
+      const quelle = ctx.getImageData(0, 0, breite, hoehe).data;
+      // Zellgroesse an der Bildgroesse: ein festes Mass waere auf einem kleinen Bild ein grobes
+      // Muster und auf einem grossen kaum noch zu sehen. Untergrenze 3px, damit die Punkte auch
+      // nach dem Speichern noch Punkte sind.
+      const zelle = Math.max(3, Math.round(Math.min(breite, hoehe) / 110));
+      ctx.fillStyle = '#f2ece0';                      // Papier
+      ctx.fillRect(0, 0, breite, hoehe);
+      ctx.fillStyle = '#1c1a17';                      // Druckfarbe
+      for (let y = 0, reihe = 0; y < hoehe; y += zelle, reihe++) {
+        const versatz = (reihe % 2) * (zelle / 2);
+        for (let x = -zelle; x < breite; x += zelle) {
+          const links = Math.max(0, Math.round(x + versatz));
+          const rechts = Math.min(breite, Math.round(x + versatz + zelle));
+          const unten = Math.min(hoehe, y + zelle);
+          let summe = 0, anzahl = 0;
+          for (let yy = y; yy < unten; yy++) {
+            for (let xx = links; xx < rechts; xx++) {
+              const k = (yy * breite + xx) * 4;
+              summe += 0.299 * quelle[k] + 0.587 * quelle[k + 1] + 0.114 * quelle[k + 2];
+              anzahl++;
+            }
+          }
+          if (!anzahl) continue;
+          // Kontrast anheben, bevor aus der Helligkeit ein Punktdurchmesser wird: ohne das bleibt
+          // ein durchschnittlich belichtetes Foto ein gleichfoermiges Grau aus mittelgrossen
+          // Punkten, und genau der Wechsel zwischen fast leer und fast zu macht den Zeitungsdruck
+          // aus.
+          let hell = summe / anzahl / 255;
+          hell = Math.max(0, Math.min(1, (hell - 0.5) * 1.35 + 0.5));
+          // Die FLAECHE waechst mit der Dunkelheit, nicht der Durchmesser -- deshalb die Wurzel.
+          // Sonst wirkten die Mitteltoene zu hell. Der Zuschlag laesst die dunkelsten Punkte
+          // einander beruehren, wie auf Papier.
+          const r = Math.sqrt(1 - hell) * (zelle / 2) * 1.28;
+          if (r < 0.3) continue;
+          ctx.beginPath();
+          ctx.arc(links + (rechts - links) / 2, y + zelle / 2, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
     const IMAGE_EDIT_EFFECTS = [
       { label: 'Schwarz-Weiß', apply: function () { this.greyscale(); } },
       { label: 'Sepia', apply: function () { this.sepia(60); } },
@@ -40363,6 +40571,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       { label: 'Lomo', apply: function () { this.lomo(); } },
       { label: 'Crossprozess', apply: function () { this.crossProcess(); } },
       { label: 'Sonnenaufgang', apply: function () { this.sunrise(); } },
+      { label: 'Kontur', canvasApply: konturAufCanvas },
+      { label: 'Comic', canvasApply: comicAufCanvas },
+      { label: 'Zeitungspapier', canvasApply: zeitungsRasterAufCanvas },
+      { label: 'Relief', apply: function () { this.emboss(); } },
+      { label: 'Weichzeichnen', apply: function () { this.stackBlur(4); } },
+      // Die kraeftigere Farbe gehoert dazu: die Unschaerfe oben und unten allein liest sich als
+      // verwackeltes Foto, erst mit satteren Farben wird daraus der Spielzeug-Eindruck, der den
+      // Namen traegt.
+      { label: 'Miniatur', apply: function () { this.tiltShift(); this.saturation(20); this.contrast(8); } },
       { label: 'Schärfen', apply: function () { this.sharpen(20); } },
       { label: 'Vignette', apply: function () { this.vignette(20, 40); } },
     ];
@@ -40454,12 +40671,28 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         canvas.width = sourceImg.naturalWidth;
         canvas.height = sourceImg.naturalHeight;
         canvas.getContext('2d').drawImage(sourceImg, 0, 0);
-        await new Promise((resolve) => {
-          Caman(canvas, function () {
-            effect.apply.call(this);
-            this.render(resolve);
+        // Zwei Sorten Effekt: die meisten laufen ueber CamanJS, einzelne brauchen die Lage eines
+        // Pixels und nicht nur seine Farbe (siehe zeitungsRasterAufCanvas()) und bekommen deshalb
+        // das Canvas selbst in die Hand. Was danach damit geschieht -- speichern, anzeigen, auf den
+        // naechsten Effekt stapeln -- ist fuer beide dasselbe.
+        if (effect.canvasApply) {
+          effect.canvasApply(canvas);
+        } else {
+          await new Promise((resolve) => {
+            Caman(canvas, function () {
+              effect.apply.call(this);
+              this.render(resolve);
+            });
           });
-        });
+          // CamanJS legt jede Instanz in seinem eigenen Speicher ab und gibt sie nie wieder her.
+          // Da hier fuer JEDEN Effekt ein frisches Canvas entsteht, waechst der Speicher sonst mit
+          // jedem Klick: nachgemessen 30 Eintraege nach 30 Effekten, und jeder haelt die
+          // Bildpunkte seines Canvas fest -- bei einem 1600er Foto sind das mehrere Megabyte pro
+          // Eintrag. Auf die Geschwindigkeit schlaegt es nicht durch (die Zeiten bleiben flach,
+          // ebenfalls nachgemessen), auf den Arbeitsspeicher schon. Wiederverwendet wird hier
+          // ohnehin nichts, das Leeren kostet also nichts.
+          if (window.Caman && Caman.Store && Caman.Store.flush) Caman.Store.flush();
+        }
         imageEditState.workingDataUrl = canvas.toDataURL('image/jpeg', 0.9);
         document.getElementById('imageEditPreview').src = imageEditState.workingDataUrl;
       } catch (err) {

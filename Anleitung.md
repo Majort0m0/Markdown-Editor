@@ -234,7 +234,23 @@ Ein eingebauter Bildeditor erlaubt einfache Anpassungen, ganz ohne externe Softw
 
 - **✂️ Zuschneiden** — öffnet einen eigenen Zuschneide-Schritt mit einem frei verschieb- und größenveränderbaren Auswahlrahmen (per Maus oder Finger); „✓ Zuschneiden anwenden" übernimmt den Ausschnitt, „✕ Abbrechen" kehrt unverändert zurück.
 - **Schieberegler** für Helligkeit, Kontrast und Sättigung, mit sofortiger Live-Vorschau.
-- **Effekte** — ein Klick genügt: Schwarz-Weiß, Sepia, Vintage, Lomo, Crossprozess, Sonnenaufgang, Schärfen, Vignette. Effekte, Schieberegler und Zuschnitt lassen sich beliebig kombinieren (z. B. erst zuschneiden, dann „Vintage" anklicken, danach die Helligkeit noch etwas erhöhen).
+- **Effekte** — ein Klick genügt. Vierzehn stehen zur Wahl:
+
+  | Effekt | Was er macht |
+  | --- | --- |
+  | Schwarz-Weiß, Sepia | Entfernt bzw. ersetzt die Farbe |
+  | Vintage, Lomo, Crossprozess, Sonnenaufgang | Farblooks nach dem Vorbild alter Filme |
+  | **Kontur** | Reine Strichzeichnung: schwarze Linien auf weißem Grund |
+  | **Comic** | Farben zu wenigen Flächen zusammengefasst, kräftiger, mit schwarzen Konturen |
+  | **Zeitungspapier** | Druckraster aus echten Punkten auf Papierton — je dunkler die Stelle, desto größer der Punkt |
+  | **Relief** | Das Bild wie in Metall geprägt |
+  | **Weichzeichnen** | Gleichmäßige Unschärfe |
+  | **Miniatur** | Oben und unten unscharf, Farben kräftiger — die Landschaft wirkt wie ein Modell |
+  | Schärfen, Vignette | Kanten betonen bzw. die Ränder abdunkeln |
+
+  Effekte, Schieberegler und Zuschnitt lassen sich beliebig kombinieren (z. B. erst zuschneiden, dann „Vintage“ anklicken, danach die Helligkeit noch etwas erhöhen). Dabei baut jeder Effekt auf dem bisherigen Ergebnis auf, nicht auf dem Original — „Comic“ auf ein schon abgedunkeltes Bild ergibt also etwas anderes als auf das unveränderte. „↺ Zurücksetzen“ führt jederzeit zum Original zurück.
+
+  Kontur, Comic und Zeitungspapier reagieren empfindlicher auf Bildrauschen als die übrigen — bei einem sehr körnigen Foto (Innenaufnahme, wenig Licht) werden die Linien unruhiger. Ein vorheriges „Weichzeichnen“ hilft dagegen.
 - **↺ Zurücksetzen** verwirft alle Änderungen und stellt das Originalbild wieder her; „✓ Übernehmen" speichert das Ergebnis.
 
 Zwei Wege dorthin:
