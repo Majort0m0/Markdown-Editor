@@ -12048,7 +12048,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // isDefaultName:true / first-heading auto-rename behavior); only a non-markdown template
       // (e.g. the HTML one) sets it, so createNewTab's extension-based getFileTypeFromName()
       // classifies the new tab correctly instead of defaulting to 'markdown'.
-      createNewTab(tpl.filename || null, tpl.content);
+      createNewTab(tpl.filename || null, tpl.content, null, null, herkunftNotieren('vorlage', tpl.name));
     }
 
     // --- ASSET STORAGE (IndexedDB) ---
@@ -12495,6 +12495,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // payload; its only job is letting a later visit to the same ?url= link recognize "this
         // was already imported" instead of creating a duplicate tab every time the link is opened.
         sourceUrl: t.sourceUrl || null,
+        // Woher die Notiz stammt (siehe herkunftNotieren()) -- aus demselben Grund wie die beiden
+        // Felder darueber geraetelokal und nie Teil der Sync-Nutzlast.
+        herkunft: t.herkunft || null,
         syncId: t.syncId,
         lastSyncedSnapshot: t.lastSyncedSnapshot || null
       }));
@@ -12666,6 +12669,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           syncId: t.syncId || null,
           lastSyncedSnapshot: t.lastSyncedSnapshot || null,
           sourceUrl: t.sourceUrl || null,
+          // null fuer Notizen aus der Zeit vor diesem Feld; herkunftText() zeigt dann nichts an.
+          herkunft: t.herkunft || null,
           _localSaveIssue: null
         }));
         // Backfills a permanent syncId for tabs saved before it became eager (see createNewTab)
@@ -13094,6 +13099,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         showPreview: remoteTabData.showPreview !== undefined ? remoteTabData.showPreview : true,
         splitRatio: remoteTabData.splitRatio !== undefined ? remoteTabData.splitRatio : 50,
         syncId: nameSuffix ? null : remoteTabData.syncId,
+        // Nicht aus remoteTabData: die Herkunft beschreibt, wie die Notiz auf DIESES Geraet kam,
+        // und das war der Abgleich -- unabhaengig davon, woher sie auf dem anderen stammte.
+        herkunft: herkunftNotieren('webdav'),
         lastSyncedSnapshot: nameSuffix ? null : remoteTabSnapshot(remoteTabData),
         _assetsHydrated: true, // already fully in memory from remoteTabData.assets above
         _localSaveIssue: null
@@ -14054,7 +14062,45 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // multi-page PDF import's first page consistently ended up in the previously-open tab instead
     // of the new one, while every later page (each preceded by a real `await
     // renderPdfPageToDataUrl()`, giving switchTab() time to actually finish) landed correctly.
-    async function createNewTab(name = null, content = null, fileHandle = null, nativeFilePath = null) {
+    // HERKUNFTSVERMERK. Woher eine Notiz stammt, ist das Einzige, was sich ueber ihren "Ort"
+    // ueberhaupt sagen laesst: ein File-Objekt aus <input type="file"> traegt in KEINEM Browser
+    // einen Dateisystempfad (bewusste Sicherheitsgrenze), und auch ein FileSystemFileHandle kennt
+    // nur seinen Namen. Statt eines Pfades wird deshalb festgehalten, auf welchem Weg die Notiz
+    // entstanden ist -- und das weiss nur die aufrufende Stelle, nicht createNewTab() selbst.
+    // Bewusst GERAETELOKAL, wie nativeFilePath und sourceUrl daneben: dieselbe Notiz ist auf
+    // diesem Geraet aus einer Datei geoeffnet und auf dem naechsten per Abgleich angekommen.
+    // Deshalb steht das Feld in saveStateToLocalStorage()/loadStateFromLocalStorage(), aber in
+    // KEINER der fuenf WebDAV-Nutzlastfunktionen -- in tabSyncSnapshot()/remoteTabSnapshot()
+    // waere es sogar schaedlich, weil ein geraetelokaler Wert dort falsche Konflikte erzeugt.
+    function herkunftNotieren(art, quelle) {
+      return { art: art, quelle: quelle || null, zeit: Date.now() };
+    }
+
+    // Der Text fuer den Tooltip am Eintrag in der Notizenleiste. Leerer String heisst "nichts
+    // bekannt" -- dann bekommt der Eintrag gar kein title-Attribut, statt etwas zu behaupten:
+    // Notizen aus der Zeit vor diesem Feld haben keinen Vermerk und sollen auch keinen erfinden.
+    function herkunftText(h) {
+      if (!h || !h.art) return '';
+      let satz;
+      switch (h.art) {
+        case 'datei':   satz = h.quelle ? 'Aus der Datei „' + h.quelle + '" geöffnet' : 'Aus einer Datei geöffnet'; break;
+        case 'adresse': satz = 'Von ' + (h.quelle || 'einer Web-Adresse') + ' geladen'; break;
+        case 'webdav':  satz = 'Über die Synchronisierung hereingekommen'; break;
+        case 'vorlage': satz = h.quelle ? 'Aus der Vorlage „' + h.quelle + '" erstellt' : 'Aus einer Vorlage erstellt'; break;
+        case 'pdf':     satz = h.quelle ? 'Aus dem PDF „' + h.quelle + '" erstellt' : 'Aus einem PDF erstellt'; break;
+        case 'import':  satz = 'Aus einem fremden Akkordblatt importiert'; break;
+        case 'neu':     satz = 'Hier neu angelegt'; break;
+        default: return '';
+      }
+      if (!h.zeit) return satz;
+      let zeit;
+      try {
+        zeit = new Date(h.zeit).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
+      } catch (err) { return satz; }
+      return satz + '\n' + zeit;
+    }
+
+    async function createNewTab(name = null, content = null, fileHandle = null, nativeFilePath = null, herkunft = null) {
       const tabId = 'tab_' + tabIdCounter++;
       const tabName = name || 'Notiz ' + (tabs.length + 1) + '.md';
       // Die Willkommensnotiz nur beim allerersten Mal, danach nie wieder -- siehe welcomeNoteUsed.
@@ -14095,6 +14141,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // browser, which has no equivalent (fileHandle above is the closest browser analog, but
         // only Chromium-family browsers ever populate it, and only after a "Speichern unter").
         nativeFilePath: nativeFilePath,
+        // Siehe herkunftNotieren() oben. Ohne Angabe der aufrufenden Stelle ist die Notiz genau
+        // das, was sie dann ist: hier in der App entstanden.
+        herkunft: herkunft || herkunftNotieren('neu'),
         isModified: false,
         history: [tabContent],
         historyIndex: 0,
@@ -14773,6 +14822,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           tabList.appendChild(tabEl);
           return;
         }
+
+        // Woher diese Notiz stammt, als Tooltip am ganzen Eintrag (siehe herkunftText()). Leer
+        // heisst: nichts bekannt, dann bleibt das Attribut weg. Das Warndreieck im selben Eintrag
+        // hat sein eigenes title und gewinnt beim Zeigen darauf, wie gehabt.
+        const herkunftHinweis = herkunftText(tab.herkunft);
+        if (herkunftHinweis) tabEl.title = herkunftHinweis;
 
         tabEl.onclick = () => {
           // A completed drag-reorder still fires a native 'click' right on its own pointerup --
@@ -18494,7 +18549,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const titel = chordProDirektiveLesen(aus, 'title') || 'Import';
       // Endung .pro, damit die neue Notiz sofort als Liedblatt erkannt wird.
       const name = titel.replace(/[\\/:*?"<>|]/g, '').trim().slice(0, 60) + '.pro';
-      createNewTab(name, aus);
+      createNewTab(name, aus, null, null, herkunftNotieren('import'));
       closeImportModal();
       document.getElementById('importQuelle').value = '';
       for (const id of ['importTitel','importInterpret','importKey','importCapo','importTempo'])
@@ -18836,7 +18891,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         showToast('„' + dateiname + '" ist nicht erreichbar. Der Ordner muss im Songbook erneut gewählt werden.');
         return;
       }
-      createNewTab(dateiname, text);
+      createNewTab(dateiname, text, null, null, herkunftNotieren('datei', dateiname));
       closeSongbook();
     }
 
@@ -18894,7 +18949,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           updateVortragLeiste();
           return;
         }
-        createNewTab(datei, text);
+        createNewTab(datei, text, null, null, herkunftNotieren('datei', datei));
       }
       saveStateToLocalStorage();
       updateVortragLeiste();
@@ -35790,7 +35845,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // (which would just show it as unreadable binary "text").
         if (isAudioFile(file)) { insertAudioFileAsset(file); return; }
         const nativePath = (nativePaths && nativePaths[i]) || null;
-        leseTextDatei(file).then((text) => createNewTab(file.name, text, null, nativePath));
+        leseTextDatei(file).then((text) => createNewTab(file.name, text, null, nativePath, herkunftNotieren('datei', file.name)));
       });
       event.target.value = '';
     }
@@ -35960,7 +36015,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             // fixes: without it, the insertNewDrawingAsset() call below (which reads/writes
             // editor.value and getCurrentTab()) could run before the new tab actually becomes
             // active, landing the first page in whatever tab was open beforehand instead.
-            await createNewTab(baseName + '.md', '# ' + baseName + '\n\n## Seite ' + pageNum + '\n\n');
+            await createNewTab(baseName + '.md', '# ' + baseName + '\n\n## Seite ' + pageNum + '\n\n',
+              null, null, herkunftNotieren('pdf', fileName));
             tabCreated = true;
           } else {
             // No leading blank line needed here — the previous iteration's insertNewDrawingAsset()
@@ -43191,7 +43247,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
               if (activeTabId) insertAudioFileAsset(file);
               continue;
             }
-            createNewTab(file.name, await leseTextDatei(file), null);
+            createNewTab(file.name, await leseTextDatei(file), null, null, herkunftNotieren('datei', file.name));
           }
         }
       }
@@ -43238,7 +43294,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (!response.ok) throw new Error('HTTP ' + response.status);
         const content = await response.text();
         const name = decodeURIComponent(resolvedUrl.pathname.split('/').filter(Boolean).pop() || '') || 'Importiert.md';
-        await createNewTab(name, content);
+        await createNewTab(name, content, null, null, herkunftNotieren('adresse', url));
         const tab = getCurrentTab();
         if (tab) {
           tab.sourceUrl = url;
