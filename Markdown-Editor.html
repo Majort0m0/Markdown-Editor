@@ -2345,6 +2345,86 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       transition: background 0.15s;
     }
 
+    /* --- Erweiterte Notizliste ---------------------------------------------------------------
+       Alles hier haengt an .erweitert am Panel: ohne die Klasse bleibt die Leiste Zeile fuer Zeile
+       genau wie vorher, es gibt also keine Regel, die im ausgeschalteten Zustand etwas anfassen
+       koennte. */
+    .tab-sidebar-panel.erweitert .tab {
+      align-items: flex-start;
+      padding: 8px;
+    }
+
+    .tab-eintrag-text {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .tab-erste-zeile {
+      font-size: 0.72rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Das quadratische Vorschaubild. Es zeigt keine Rasterung des Bildes, sondern die Notiz selbst,
+       nur klein: darin steht echtes, verkleinertes HTML (siehe tabVorschauZeichnen()). Deshalb ein
+       Rahmen mit overflow:hidden, in dem der Inhalt in voller Breite gesetzt und per transform
+       heruntergerechnet wird -- eine Verkleinerung ueber die Schriftgroesse ergaebe andere
+       Zeilenumbrueche und damit ein Bild, das mit der Notiz nichts mehr zu tun hat. */
+    .tab-vorschau {
+      position: relative;
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      overflow: hidden;
+      border-radius: 5px;
+      border: 1px solid var(--border-color);
+      /* Nur zu sehen, solange das Bild noch nicht gezeichnet ist (die Anhaenge werden dafuer erst
+         geholt). Deshalb ein ruhiger Ton der Oberflaeche und kein festes Weiss, das im
+         Dunkelmodus als heller Fleck aufblitzte. */
+      background-color: var(--bg-subtle);
+    }
+
+    .tab-vorschau-inhalt {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: top left;
+      padding: 10px;
+      pointer-events: none;
+      /* .tab setzt white-space: nowrap, damit ein Notizname nicht umbricht. Geerbt wuerde daraus
+         im Vorschaubild eine einzige endlos lange Zeile je Absatz -- das Bild saehe der Notiz
+         dann nicht mehr aehnlich. */
+      white-space: normal;
+    }
+
+    /* Eine Pinnwand wird nicht als Text gesetzt, sondern als Seite mit frei liegenden Kaesten --
+       ein eigener Zeichenweg, der hier nichts zu suchen hat. Sie bekommt ein Sinnbild. */
+    .tab-vorschau-symbol {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: var(--text-muted);
+      background-color: var(--bg-subtle);
+    }
+
+    .tab-vorschau-symbol svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    /* Zweites Netz unter der Breitenpruefung in JS: faellt das Fenster unter die Schwelle, ohne
+       dass neu gezeichnet wird, verschwindet das Bild trotzdem. */
+    @media (max-width: 899px) {
+      .tab-vorschau { display: none; }
+    }
+
     .tab:hover {
       background-color: var(--bg-hover);
     }
@@ -9975,6 +10055,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     <div class="tab-sidebar-panel" id="tabSidebarPanel">
       <div class="tab-sidebar-header">
         <span>Notizen</span>
+        <button id="tabSidebarErweiternBtn" class="tab-sidebar-pin-btn" onclick="toggleTabSidebarErweitert()" title="Erweiterte Ansicht: erste Zeile und Vorschaubild"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="14" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M6 7h6M6 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
         <button id="tabSidebarPinBtn" class="tab-sidebar-pin-btn" onclick="toggleTabSidebarPin()" title="Seitenleiste dauerhaft anzeigen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8L6 12H18L16 8V4H8V8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="12" y1="12" x2="12" y2="21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="4" x2="17" y2="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
       </div>
       <div class="tab-list" id="tabList"></div>
@@ -10677,6 +10758,9 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     // closeTabSidebar()'s own comments. Persisted like any other UI preference (device-local, not
     // WebDAV-synced, matching splitRatio/zoomLevel/pane visibility).
     let tabSidebarPinned = false;
+    // Erweiterte Notizliste: unter dem Namen die erste inhaltliche Zeile, und ab genug Fensterbreite
+    // dahinter ein quadratisches Vorschaubild der Notiz. Geraeteweit gemerkt wie das Anheften.
+    let tabSidebarErweitert = false;
     // Studio Pro UI redesign (Phase 3): "schmal" (narrow, the default) caps and centers
     // .markdown-body's width in SINGLE-PREVIEW mode only (main.editor-hidden -- see
     // applyContentWidth()'s own CSS-side comment for why that's the natural, already-existing
@@ -12423,6 +12507,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         simpleMode: simpleMode,
         operatingMode: operatingMode,
         tabSidebarPinned: tabSidebarPinned,
+        tabSidebarErweitert: tabSidebarErweitert,
         contentWidthMode: contentWidthMode,
         nebenspalteModus: nebenspalteModus,
         nebenspalteTabId: nebenspalteTabId,
@@ -12643,6 +12728,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // defaults to 'focus' per explicit request (see operatingMode's own declaration comment).
         operatingMode = state.operatingMode || (state.simpleMode ? 'simple' : 'focus');
         tabSidebarPinned = !!state.tabSidebarPinned;
+        tabSidebarErweitert = !!state.tabSidebarErweitert;
         contentWidthMode = state.contentWidthMode || 'narrow';
         if (typeof state.nebenspalteModus === 'string') nebenspalteModus = state.nebenspalteModus;
         if (typeof state.nebenspalteTabId === 'string') nebenspalteTabId = state.nebenspalteTabId;
@@ -12680,6 +12766,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // enterSimpleMode()'s own "always starts fresh" reasoning above.
         applyOperatingMode(operatingMode);
         applyTabSidebarPinned();
+        applyTabSidebarErweitert();
         applyContentWidth(contentWidthMode);
         syncScrollBtn.classList.toggle('active', syncScrollEnabled);
 
@@ -14444,6 +14531,189 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       tabDragState = null;
     }
 
+    // --- ERWEITERTE NOTIZLISTE -----------------------------------------------------------------
+
+    // Ab dieser Fensterbreite ist neben Name und erster Zeile noch Platz fuer das Vorschaubild.
+    // Dieselbe Schwelle, die die App schon fuer die schmale Inhaltsbreite benutzt -- sie liegt
+    // ueber jeder gaengigen iPad-Hochkantbreite, ein Telefon oder Tablet hochkant bleibt also bei
+    // den zwei Textzeilen.
+    const TAB_VORSCHAU_SCHWELLE = 900;
+    // In dieser Breite wird der Inhalt fuer das Vorschaubild gesetzt und dann heruntergerechnet.
+    // Nicht die Kachelbreite nehmen: bei 52px waere jede Zeile ein einzelnes Wort, und das Bild
+    // saehe keiner Notiz aehnlich. 420px entspricht etwa einer schmalen Spalte.
+    const TAB_VORSCHAU_QUELLBREITE = 420;
+    const TAB_VORSCHAU_KANTE = 52;
+
+    const TAB_VORSCHAU_PINNWAND_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/>' +
+      '<rect x="6" y="6" width="6" height="5" rx="1" fill="currentColor" opacity=".55"/>' +
+      '<rect x="14" y="9" width="4" height="7" rx="1" fill="currentColor" opacity=".55"/>' +
+      '<rect x="6" y="14" width="5" height="4" rx="1" fill="currentColor" opacity=".55"/></svg>';
+
+    function tabVorschauMoeglich() {
+      return window.innerWidth >= TAB_VORSCHAU_SCHWELLE;
+    }
+
+    // Der Inhalt, der gerade gilt: fuer die offene Notiz steht er im Textfeld, tab.content wird
+    // erst beim Wechseln zurueckgeschrieben. Ohne diese Unterscheidung zeigte gerade die Notiz,
+    // an der man schreibt, den veralteten Stand.
+    function tabInhaltJetzt(tab) {
+      return tab.id === activeTabId && !editor.disabled ? editor.value : (tab.content || '');
+    }
+
+    // Die erste Zeile, die wirklich Inhalt ist -- keine Ueberschrift (die steht schon als Name
+    // darueber), keine Leerzeile, keine Auszeichnung. Die Markdown-Zeichen werden abgeraeumt,
+    // sonst staende in der Leiste "- [ ] **Milch**" statt "Milch".
+    const TAB_ZEILE_MARKE_RE = /^\s*(?:[-*+]\s+(?:\[[ xX]\]\s*)?|\d+\.\s+|>\s?)/;
+    function ersteInhaltszeile(tab) {
+      if (!tab) return '';
+      if (tab.fileType === 'canvas') {
+        // Eine Pinnwand haelt JSON, keinen Text -- der erste Kasten mit Inhalt ist das Naechste,
+        // was einer ersten Zeile entspricht.
+        try {
+          const daten = JSON.parse(tab.content || '{}');
+          for (const box of (daten.boxes || [])) {
+            const z = ersteZeileAusText(box.content || '');
+            if (z) return z;
+          }
+        } catch (err) { /* unlesbar: dann eben keine Zeile */ }
+        return '';
+      }
+      return ersteZeileAusText(tabInhaltJetzt(tab));
+    }
+
+    function ersteZeileAusText(text) {
+      const zeilen = String(text).split('\n');
+      for (let roh of zeilen) {
+        let z = roh.replace(/\u200B/g, '').trim();
+        if (!z) continue;
+        if (z.startsWith('#')) continue;                       // Ueberschrift
+        if (/^\{[^}]*\}$/.test(z)) continue;                   // Liedblatt-Direktive
+        if (/^(?:[-*_]\s*){3,}$/.test(z)) continue;             // Trennlinie
+        if (/^\|?\s*:?-{2,}/.test(z)) continue;                 // Tabellen-Trennzeile
+        z = z.replace(TAB_ZEILE_MARKE_RE, '');
+        // Akkordmarken eines Liedblatts: "[G]Die Sonne" soll als "Die Sonne" dastehen. Der Ausdruck
+        // trifft nur kurze Klammerinhalte ohne Leerzeichen, eine gewoehnliche Fussnote oder ein
+        // Markdown-Link bleibt davon unberuehrt (Links werden gleich darunter eigens behandelt).
+        z = z.replace(/\[[A-Ha-h][#b]?[^\]\s]{0,7}\](?!\()/g, '');
+        z = z.replace(/!\[[^\]]*\]\([^)]*\)/g, '')            // Bilder ganz raus
+             .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')         // Links: nur der Text
+             .replace(/<[^>]+>/g, '')                          // rohes HTML
+             .replace(/[*_`~]/g, '')
+             .replace(/\s+/g, ' ')
+             .trim();
+        if (z) return z;
+      }
+      return '';
+    }
+
+    // Erst zeichnen, wenn der Eintrag wirklich zu sehen ist. Das spart nicht nur Rechenzeit: die
+    // Anhaenge einer Notiz liegen in der Datenbank und werden sonst erst beim Oeffnen geholt
+    // (siehe ensureTabAssetsHydrated) -- ohne diese Bremse zoege das blosse Aufklappen der Leiste
+    // bei einem bildlastigen Notizbuch alles auf einmal in den Arbeitsspeicher.
+    // Die Leiste ist im geschlossenen Zustand display:none, ihre Kacheln schneiden sich dann mit
+    // nichts, und der Beobachter meldet von selbst nichts -- es braucht also keine zusaetzliche
+    // Abfrage "ist die Leiste offen".
+    let tabVorschauBeobachter = null;
+    function tabVorschauBeobachten(kachel) {
+      if (!('IntersectionObserver' in window)) { tabVorschauZeichnen(kachel); return; }
+      if (!tabVorschauBeobachter) {
+        tabVorschauBeobachter = new IntersectionObserver((eintraege) => {
+          for (const e of eintraege) {
+            if (!e.isIntersecting) continue;
+            tabVorschauBeobachter.unobserve(e.target);
+            tabVorschauZeichnen(e.target);
+          }
+        }, { rootMargin: '120px' });
+      }
+      tabVorschauBeobachter.observe(kachel);
+    }
+
+    async function tabVorschauZeichnen(kachel) {
+      const tab = tabs.find(t => t.id === kachel.dataset.tabId);
+      if (!tab || !kachel.isConnected) return;
+      try {
+        await ensureTabAssetsHydrated(tab);
+      } catch (err) { /* ohne Anhaenge zeichnen ist besser als gar nicht */ }
+      if (!kachel.isConnected) return;                          // inzwischen neu aufgebaut
+      const inhalt = document.createElement('div');
+      inhalt.className = 'tab-vorschau-inhalt markdown-body ' +
+        effektivesNotizDesign(tab.theme || 'theme-github-light');
+      inhalt.style.width = TAB_VORSCHAU_QUELLBREITE + 'px';
+      // Quadratischer Ausschnitt: die Kachel ist quadratisch, also muss es der abgebildete Bereich
+      // auch sein. Ohne die Mindesthoehe endet eine kurze Notiz auf halber Kachel, und darunter
+      // steht die Hintergrundfarbe der Kachel statt der des Blattes -- im Dunkelmodus ein weisser
+      // Streifen unter einer dunklen Notiz.
+      inhalt.style.minHeight = TAB_VORSCHAU_QUELLBREITE + 'px';
+      inhalt.style.transform = 'scale(' + (TAB_VORSCHAU_KANTE / TAB_VORSCHAU_QUELLBREITE) + ')';
+      // Derselbe Weg, den die Nebenspalte schon geht: nebenspalteRenderTab sorgt dafuer, dass die
+      // asset:-Verweise gegen DIESE Notiz aufgeloest werden und nicht gegen die gerade offene,
+      // suppressDrawingControls haelt die Bearbeiten-Knoepfe aus einem Bild heraus, das 52 Pixel
+      // breit ist.
+      const vorherSuppress = suppressDrawingControls;
+      const vorherTab = nebenspalteRenderTab;
+      suppressDrawingControls = true;
+      nebenspalteRenderTab = tab;
+      try {
+        inhalt.innerHTML = renderContentForTab(tab, tabInhaltJetzt(tab));
+      } catch (err) {
+        inhalt.textContent = '';
+      } finally {
+        nebenspalteRenderTab = vorherTab;
+        suppressDrawingControls = vorherSuppress;
+      }
+      kachel.innerHTML = '';
+      kachel.appendChild(inhalt);
+    }
+
+    function tabVorschauKachel(tab) {
+      const kachel = document.createElement('div');
+      kachel.className = 'tab-vorschau';
+      kachel.dataset.tabId = tab.id;
+      if (tab.fileType === 'canvas') {
+        const symbol = document.createElement('div');
+        symbol.className = 'tab-vorschau-symbol';
+        symbol.innerHTML = TAB_VORSCHAU_PINNWAND_SVG;
+        kachel.appendChild(symbol);
+        return kachel;
+      }
+      if (tab.fileType === 'html') {
+        // Fremdes HTML wird in der App bewusst nur in einem abgeschotteten Rahmen gezeigt (siehe
+        // updateHtmlPreview) -- es hier roh in die eigene Seite zu setzen, waere genau der Weg,
+        // den die App sonst meidet. Deshalb auch hier das Sinnbild.
+        const symbol = document.createElement('div');
+        symbol.className = 'tab-vorschau-symbol';
+        symbol.innerHTML = TAB_VORSCHAU_PINNWAND_SVG;
+        kachel.appendChild(symbol);
+        return kachel;
+      }
+      tabVorschauBeobachten(kachel);
+      return kachel;
+    }
+
+    function toggleTabSidebarErweitert() {
+      tabSidebarErweitert = !tabSidebarErweitert;
+      applyTabSidebarErweitert();
+      renderTabs();
+      saveStateToLocalStorage();
+    }
+
+    function applyTabSidebarErweitert() {
+      const panel = document.getElementById('tabSidebarPanel');
+      const btn = document.getElementById('tabSidebarErweiternBtn');
+      if (panel) panel.classList.toggle('erweitert', tabSidebarErweitert);
+      if (btn) btn.classList.toggle('active', tabSidebarErweitert);
+    }
+
+    // Faellt das Fenster unter die Schwelle (oder steigt darueber), muss die Liste neu gebaut
+    // werden -- die Kacheln entstehen beim Zeichnen, nicht per CSS.
+    if (window.matchMedia) {
+      const vorschauAbfrage = window.matchMedia('(min-width: ' + TAB_VORSCHAU_SCHWELLE + 'px)');
+      const beiWechsel = () => { if (tabSidebarErweitert) renderTabs(); };
+      if (vorschauAbfrage.addEventListener) vorschauAbfrage.addEventListener('change', beiWechsel);
+      else if (vorschauAbfrage.addListener) vorschauAbfrage.addListener(beiWechsel);
+    }
+
     function renderTabs() {
       tabList.innerHTML = '';
       tabs.forEach(tab => {
@@ -14478,7 +14748,23 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         const nameSpan = document.createElement('span');
         nameSpan.className = 'tab-name';
         nameSpan.textContent = tab.name + (tab.isModified ? ' *' : '');
-        tabEl.appendChild(nameSpan);
+        if (!tabSidebarErweitert) {
+          tabEl.appendChild(nameSpan);
+        } else {
+          // Name und erste Zeile untereinander, deshalb ein eigener Kasten -- die Zeile darunter
+          // soll die Hoehe des Eintrags bestimmen, nicht neben dem Namen stehen.
+          const textEl = document.createElement('div');
+          textEl.className = 'tab-eintrag-text';
+          textEl.appendChild(nameSpan);
+          const zeile = ersteInhaltszeile(tab);
+          if (zeile) {
+            const zeileEl = document.createElement('div');
+            zeileEl.className = 'tab-erste-zeile';
+            zeileEl.textContent = zeile;
+            textEl.appendChild(zeileEl);
+          }
+          tabEl.appendChild(textEl);
+        }
 
         // Deliberately separate from the '*' above (tab.isModified, unsaved-vs-file) -- see
         // markTabLocalSaveIssue()'s own comment on why the two are never conflated into one glyph.
@@ -14489,6 +14775,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           warnEl.innerHTML = TAB_LOCAL_SAVE_WARNING_SVG;
           tabEl.appendChild(warnEl);
         }
+
+        // Reihenfolge: Text, Vorschaubild, Schliessen. Das Kreuz gehoert an den aussersten Rand --
+        // zwischen Text und Bild gesetzt zerschneidet es den Eintrag.
+        if (tabSidebarErweitert && tabVorschauMoeglich()) tabEl.appendChild(tabVorschauKachel(tab));
 
         const closeBtn = document.createElement('button');
         closeBtn.className = 'close-btn';
