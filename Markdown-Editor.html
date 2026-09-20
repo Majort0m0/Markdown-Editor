@@ -4215,6 +4215,10 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       position: absolute;
       top: 16px;
       left: 28px;
+      /* Der Knopf weicht der offenen Notizenleiste aus (Regel unter .canvas-tts-toggle-btn.paused).
+         Der Uebergang ist nicht Zierrat: ohne ihn springt er, und der Sprung sieht aus wie ein
+         Fehler statt wie eine Folge des Aufklappens. */
+      transition: left .15s ease;
       z-index: 10;
       width: 34px;
       height: 34px;
@@ -4259,6 +4263,16 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     main.preview-hidden .canvas-tts-toggle-btn {
       display: none;
+    }
+
+    /* Die NICHT angeheftete Notizenleiste liegt als Overlay genau ueber dieser Ecke (left: 12px,
+       240px breit, also bis 252px) und verdeckte den Knopf -- und der Knopf umgekehrt die Kopfzeile
+       der Leiste mit ihren beiden Schaltern. Angeheftet ist die Leiste dagegen eine echte
+       Flex-Spalte neben <main> (siehe .tab-sidebar-panel.pinned), main schrumpft dann von selbst
+       und der Knopf steht schon frei -- deshalb das :not(.pinned). Das Panel ist ein VORHERIGES
+       Geschwister von <main> (beide in .app-body-row), daher der ~-Kombinator. */
+    .tab-sidebar-panel.active:not(.pinned) ~ main .canvas-tts-toggle-btn {
+      left: 264px;
     }
 
     .preview-pane.canvas-active {
@@ -9046,6 +9060,12 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
         border-radius: 8px;
         border: 1px solid var(--border-color);
         box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      }
+
+      /* Weil die Leiste hier auch angeheftet ein Overlay ist, muss der Vorlese-Knopf in BEIDEN
+         Zustaenden ausweichen -- die Regel oben greift nur fuer die nicht angeheftete. */
+      .tab-sidebar-panel.active ~ main .canvas-tts-toggle-btn {
+        left: 264px;
       }
     }
 
