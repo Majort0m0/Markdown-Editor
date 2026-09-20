@@ -2869,8 +2869,22 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       background-color: var(--bg-surface);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
       max-width: min(46vw, 420px);
+      /* Weicht der offenen Notizenleiste aus, siehe die Regel unter der Medienabfrage weiter
+         unten -- ohne Uebergang springt sie, und der Sprung sieht aus wie ein Fehler. */
+      transition: left .15s ease;
     }
     .vortrag-leiste.active { display: flex; }
+
+    /* Die NICHT angeheftete Notizenleiste liegt als Overlay genau hier (left: 12px, 240px breit).
+       Dieselbe Ausweichbewegung wie beim Pinnwand-Vorleseknopf und in dieselbe Spalte (264px),
+       damit beide an derselben Kante stehen; angeheftet ist die Leiste eine echte Flex-Spalte und
+       main schrumpft schon von selbst, daher das :not(.pinned). Der max-width-Deckel muss mit: um
+       248px nach rechts geschoben liefe eine 420px breite Leiste sonst rechts aus main heraus. Der
+       Titel kuerzt sich dabei von allein, .vortrag-titel hat text-overflow: ellipsis. */
+    .tab-sidebar-panel.active:not(.pinned) ~ main .vortrag-leiste {
+      left: 264px;
+      max-width: min(46vw, 420px, calc(100% - 280px));
+    }
     .vortrag-titel {
       font-size: 0.85rem; font-weight: 600; color: var(--text-main);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -9066,6 +9080,15 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          Zustaenden ausweichen -- die Regel oben greift nur fuer die nicht angeheftete. */
       .tab-sidebar-panel.active ~ main .canvas-tts-toggle-btn {
         left: 264px;
+      }
+
+      /* Die Vortragsleiste kann hier nicht ausweichen: neben den 240px der Notizenleiste bleiben
+         auf einem Telefon keine 100px, und die braucht allein schon die Bedienung (zwei Pfeile,
+         das Kreuz). Also tritt sie ab, solange die Liste offen ist -- mit der Auswahl einer Notiz
+         schliesst sich die Liste und die Leiste ist wieder da. Gewinnt gegen .vortrag-leiste.active
+         (0,3,1 gegen 0,2,0) und steht ausserdem spaeter. */
+      .tab-sidebar-panel.active ~ main .vortrag-leiste {
+        display: none;
       }
     }
 
