@@ -1625,6 +1625,25 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          erst ab iOS Safari 16.2, und dieses Projekt soll ohne neuere CSS-Abhängigkeiten auskommen.
          Beim Ändern von --accent hier mit anpassen -- benutzt vom Canvas-Fokusrahmen. */
       --accent-soft: rgba(9, 105, 218, 0.45);
+      /* Die Farbe, mit der eine Fundstelle der Notizsuche unterlegt wird -- im Quelltextfenster
+         (siehe .such-treffer) wie in der Vorschau (::highlight(notizsuche)) und in den
+         Ausschnitten der Notizenleiste. Halbdurchsichtig, weil sie im Quelltext HINTER dem echten
+         Text der Textarea liegt und die Syntaxfarben einer Liedblatt-Notiz durchscheinen lassen
+         muss. Eigene Variable statt eines festen Werts an fuenf Stellen, damit der Dunkelmodus
+         nur diese eine Zeile ueberschreiben muss -- dieselbe Bauart wie --accent-soft darueber. */
+      --such-treffer-bg: rgba(255, 196, 0, 0.55);
+      /* Die acht Schlagwortfarben. Je Farbe zwei Werte: der kraeftige Ton fuer den Punkt am
+         Abschnitt, die stark verduennte Flaeche fuer die Chips. Ausgeschrieben statt aus einem
+         Ton gerechnet -- dieselbe Ueberlegung wie bei --accent-soft: so laesst sich jede Farbe
+         fuer den Dunkelmodus einzeln nachziehen, statt auf eine Mischfunktion zu bauen. */
+      --tag-1: #c9364c; --tag-1-flaeche: rgba(201, 54, 76, 0.14);
+      --tag-2: #b85c00; --tag-2-flaeche: rgba(184, 92, 0, 0.14);
+      --tag-3: #8a7300; --tag-3-flaeche: rgba(138, 115, 0, 0.16);
+      --tag-4: #2a7f4f; --tag-4-flaeche: rgba(42, 127, 79, 0.14);
+      --tag-5: #0f7585; --tag-5-flaeche: rgba(15, 117, 133, 0.14);
+      --tag-6: #2a63c8; --tag-6-flaeche: rgba(42, 99, 200, 0.13);
+      --tag-7: #7044bd; --tag-7-flaeche: rgba(112, 68, 189, 0.14);
+      --tag-8: #b03e87; --tag-8-flaeche: rgba(176, 62, 135, 0.13);
       /* Eigener Akzent für die Formelbedienung in Tabellen (Formelzelle, Anfasser zum Füllen,
          die Überlagerungsknöpfe): bewusst ein anderer Ton als --accent, damit eine lebende Formel
          im Blatt sofort als solche zu erkennen ist und nicht mit den übrigen blauen Bedienelementen
@@ -1668,6 +1687,19 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       --accent: #3b82f6;
       --accent-hover: #60a5fa;
       --accent-soft: rgba(59, 130, 246, 0.45);
+      /* Im Dunkeln ist dasselbe Gelb zu grell und frisst den Text unter sich auf; gedaempft und
+         etwas durchsichtiger bleibt die Stelle deutlich, ohne zu blenden. */
+      --such-treffer-bg: rgba(214, 158, 0, 0.5);
+      /* Heller und etwas weniger gesaettigt: dieselben Toene wuerden auf dunklem Grund absaufen.
+         Die Flaechen duerfen kraeftiger sein, weil sie gegen einen dunklen Untergrund stehen. */
+      --tag-1: #ff7b8a; --tag-1-flaeche: rgba(255, 123, 138, 0.18);
+      --tag-2: #f0983f; --tag-2-flaeche: rgba(240, 152, 63, 0.18);
+      --tag-3: #d7bf4a; --tag-3-flaeche: rgba(215, 191, 74, 0.18);
+      --tag-4: #5ec98a; --tag-4-flaeche: rgba(94, 201, 138, 0.18);
+      --tag-5: #4fc0d4; --tag-5-flaeche: rgba(79, 192, 212, 0.18);
+      --tag-6: #74a5ff; --tag-6-flaeche: rgba(116, 165, 255, 0.18);
+      --tag-7: #b58bf5; --tag-7-flaeche: rgba(181, 139, 245, 0.18);
+      --tag-8: #f083c6; --tag-8-flaeche: rgba(240, 131, 198, 0.18);
       --accent-formel: #fb923c;
       --accent-formel-hover: #fdba74;
       /* Wie im Hellen: die aktive Notiz traegt den Flaechenton des Panels, abgehoben wird sie
@@ -2311,6 +2343,149 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       color: var(--accent);
     }
 
+    /* Die fuenf Kopfknoepfe (Sortieren, Suchen, Schlagwoerter, Erweitern, Anheften) als eigene
+       Gruppe. Der Kopf selbst hat justify-content: space-between und kein gap -- ohne diese Huelle
+       stuenden die Sinnbilder ueber die ganze Zeile verstreut statt als Block rechts neben der
+       Ueberschrift. Nachgerechnet passt es: 218px Inhaltsbreite, "Notizen" 48px, fuenf Knoepfe je
+       23px mit 2px Abstand = 123px, bleiben rund 47px Luft. Ein sechster waere der letzte -- wer
+       hier etwas ergaenzt, rechnet diese Zeile bitte mit. */
+    .tab-sidebar-werkzeuge {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Das Sortiermenue haengt bewusst am <body> und ist position: fixed, nicht ein Kind des
+       Panels: .tab-sidebar-panel hat overflow: hidden, ein Menue darin waere an der Panelkante
+       abgeschnitten. Angeankert wird es beim Oeffnen an seinen Knopf -- dasselbe Muster wie
+       toggleBurgerMenu(). */
+    .sortier-menue {
+      position: fixed;
+      z-index: 46;
+      display: none;
+      flex-direction: column;
+      width: 228px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      padding: 5px;
+    }
+
+    .sortier-menue.active {
+      display: flex;
+    }
+
+    .sortier-kopf {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 6px 8px 3px;
+    }
+
+    .sortier-eintrag {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      width: 100%;
+      padding: 6px 8px;
+      border: none;
+      background: transparent;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-family: inherit;
+      color: var(--text-main);
+      text-align: left;
+    }
+
+    .sortier-eintrag:hover {
+      background-color: var(--bg-hover);
+    }
+
+    /* Der Haken belegt seinen Platz auch dann, wenn er nicht zu sehen ist -- sonst ruecken die
+       Beschriftungen beim Umschalten um 14px hin und her. */
+    .sortier-haken {
+      width: 14px;
+      flex-shrink: 0;
+      color: var(--accent);
+      visibility: hidden;
+    }
+
+    .sortier-eintrag.gewaehlt .sortier-haken {
+      visibility: visible;
+    }
+
+    .sortier-eintrag.gewaehlt {
+      font-weight: 600;
+    }
+
+    /* Suchzeile zwischen Kopf und Liste. flex-shrink: 0 ist Pflicht: das Panel ist auf
+       min(70%, 520px) gedeckelt und schneidet ab (overflow: hidden) -- schrumpfen darf allein
+       .tab-list (flex: 0 1 auto; min-height: 0), sonst wird das Suchfeld zusammengequetscht. */
+    .tab-suche-zeile {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border-color);
+      flex-shrink: 0;
+    }
+
+    .tab-suche-zeile.active {
+      display: flex;
+    }
+
+    .tab-suche-feld {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 4px 7px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      color: var(--text-main);
+      background-color: var(--bg-app);
+      outline: none;
+    }
+
+    .tab-suche-feld:focus {
+      border-color: var(--accent);
+    }
+
+    .tab-suche-leeren {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 5px;
+      flex-shrink: 0;
+    }
+
+    .tab-suche-leeren:hover {
+      background-color: var(--bg-hover);
+      color: var(--text-main);
+    }
+
+    /* "Keine Notiz enthaelt ..." -- bewusst NEBEN der Liste, nicht darin: der Zieh-Handler misst
+       jedes Kind von #tabList aus und wuerde eine Meldung darin als Ablegeziel behandeln. */
+    .tab-suche-leer {
+      display: none;
+      padding: 10px 12px 12px;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .tab-suche-leer.active {
+      display: block;
+    }
+
     .tab-list {
       display: flex;
       flex-direction: column;
@@ -2332,6 +2507,11 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     .tab {
       background-color: transparent;
       border-radius: 6px;
+      /* Bezugsbasis fuer die Zielmarkierung beim Ziehen (.tab.dragging::before/::after). Ohne sie
+         waere der naechste positionierte Vorfahr im Overlay-Zustand das Panel und im angehefteten
+         Zustand gar keiner -- nachgemessen landete die Linie dann am Panelboden bzw. quer ueber
+         die ganze Seite. */
+      position: relative;
       padding: 7px 8px;
       font-size: 0.82rem;
       color: var(--text-muted);
@@ -2358,6 +2538,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       flex: 1;
       min-width: 0;
       overflow: hidden;
+    }
+
+    /* Der Name ist ein <span> und traegt seine Auslassungspunkte aus der .tab .tab-name-Regel.
+       Die greift nur an einem Blockkasten -- als Inline-Element im Textkasten wuerde der Name
+       hart abgeschnitten statt mit "…" zu enden. */
+    .tab-eintrag-text .tab-name {
+      display: block;
     }
 
     .tab-erste-zeile {
@@ -2445,12 +2632,464 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       padding-left: 10px;
     }
 
+    /* --- Ziehen: Anfasser und Zielanzeige ----------------------------------------------------
+       Der Anfasser ist nicht nur Zierde. Auf einem Touchgeraet ist er der EINZIGE verlaessliche
+       Griff: .tab-list ist mit overflow-y: auto selbst ein senkrechter Rollbereich, und der
+       Browser vergibt eine senkrechte Wischgeste anhand von touch-action -- ohne die Angabe
+       beansprucht das Rollen der Liste die Geste und die Zeigerkette endet mit pointercancel.
+       touch-action: none steht deshalb NUR hier und nicht am ganzen Eintrag, damit das Wischen
+       ueber den Eintrag weiter die Liste rollt. Dasselbe Vorgehen wie beim Block-Anfasser der
+       Vorschau. */
+    .tab-griff {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      /* Nicht in der Mitte des Eintrags, sondern auf Hoehe der ersten Zeile: in der erweiterten
+         Ansicht ist der Eintrag durch die 52px-Kachel deutlich hoeher als der Name. */
+      align-self: flex-start;
+      margin-top: 1px;
+      color: var(--text-muted);
+      cursor: grab;
+      /* Knapp gesetzt: der Anfasser steht im Fluss und schiebt den Namen nach rechts. Gemessen
+         kostete er 19px Namensbreite, mit diesen Raendern noch 12px -- die Trefferflaeche bleibt
+         dabei unveraendert, es wird nur der Abstand ringsum zurueckgeholt. */
+      margin-left: -4px;
+      margin-right: -3px;
+      touch-action: none;
+      /* Sichtbar erst beim Zeigen darauf -- aber ueber die Deckkraft, nicht ueber display: none.
+         Nachgemessen kostet der Anfasser 12px plus die 8px gap des Eintrags; mit display wuerde
+         der ganze Zeileninhalt bei jedem Mauseintritt um 20px springen. */
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+
+    .tab-griff svg {
+      width: 11px;
+      height: 16px;
+    }
+
+    .tab:hover .tab-griff,
+    .tab.dragging .tab-griff {
+      opacity: 0.8;
+    }
+
+    /* Ohne Mauszeiger gibt es kein Zeigen darauf -- dort steht der Anfasser dauerhaft, sonst
+       waere das Umsortieren auf dem Telefon unauffindbar. */
+    @media (hover: none) {
+      .tab-griff { opacity: 0.5; }
+    }
+
+    /* Beim Umbenennen wird der Eintrag zur Spalte (.tab.renaming) -- ein Anfasser darin waere ein
+       Balken ueber dem Namensfeld. Er wird dort ohnehin nicht erzeugt; die Regel ist das zweite
+       Netz. */
+    .tab.renaming .tab-griff {
+      display: none;
+    }
+
+    /* Waehrend gefiltert wird, ist das Umsortieren gesperrt (siehe handleTabDragPointerDown):
+       sichtbar sind dann nur die Treffer, und eine Teilmenge umzuordnen hat keine definierte
+       Bedeutung fuer die Gesamtreihenfolge. Der Anfasser bleibt stehen (sonst spraenge die Zeile),
+       zeigt aber an, dass er gerade nichts tut. */
+    .tab-list.suche-aktiv .tab-griff {
+      opacity: 0.18;
+      cursor: default;
+    }
+
     /* Applied only once a drag-reorder gesture actually engages (past TAB_DRAG_THRESHOLD's worth
        of pointer movement, see handleTabDragPointerMove) -- never during a plain click/tab
-       switch, so this never flickers for ordinary use. */
+       switch, so this never flickers for ordinary use.
+
+       Der gezogene Eintrag wird nicht blasser, sondern angehoben: der vorhandene Zug verschiebt
+       den echten Knoten bei jeder Bewegung schon an seine Zielstelle, es gibt also keine
+       getrennte "Ablegezone", die man markieren koennte -- der Eintrag SELBST steht dort, wo er
+       landen wird. Deshalb markieren die beiden Linien den Platz, den er gerade einnimmt, und die
+       uebrigen Eintraege treten zurueck. */
     .tab.dragging {
-      opacity: 0.6;
+      opacity: 0.97;
       cursor: grabbing;
+      background-color: var(--bg-surface);
+      /* outline statt border: ein Rahmen machte den Eintrag 2px hoeher, und der Zug entscheidet
+         ueber rect.top + rect.height / 2 -- die Umschaltschwelle wanderte mit. */
+      outline: 1px solid var(--accent);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+    }
+
+    /* position: absolute ist Pflicht: ::before/::after eines Flex-Containers sind selbst
+       Flex-Elemente und nehmen am Layout teil -- nachgemessen wuchs ein Eintrag im
+       Umbenennen-Zustand dadurch von 51,5 auf 58,5 Pixel. Ausserhalb des Flusses aendern die
+       Linien weder Hoehe noch Breite; sie liegen in der 2px-Luecke zwischen den Eintraegen. */
+    .tab.dragging::before,
+    .tab.dragging::after {
+      content: '';
+      position: absolute;
+      left: 2px;
+      right: 2px;
+      height: 2px;
+      background-color: var(--accent);
+      border-radius: 2px;
+    }
+
+    .tab.dragging::before { top: -3px; }
+    .tab.dragging::after { bottom: -3px; }
+
+    .tab-list.zieht .tab:not(.dragging) {
+      opacity: 0.45;
+    }
+
+    /* --- Suche: Trefferzahl und Ausschnitt ---------------------------------------------------- */
+
+    /* Ausgeblendet, weil gerade gefiltert wird. Eigene Regel statt des hidden-Attributs: .tab ist
+       display: flex und gewaenne gegen die Browservorgabe [hidden] { display: none } -- dieselbe
+       Falle, die .songbook-zeile schon dokumentiert. */
+    .tab.gefiltert-weg {
+      display: none;
+    }
+
+    /* --- Schlagwoerter -------------------------------------------------------------------------
+       Der Etikett-Knopf am Eintrag. Wie .alt-text-btn ueber einem Bild: mit der Maus erst beim
+       Zeigen darauf, ohne Mauszeiger dauerhaft -- dort gibt es kein Zeigen, und er ist der
+       einzige Weg zu den Schlagwoertern, der auf dem Telefon mit EINEM Tipp auskommt. */
+    .tab-tag-btn {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0 2px;
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+
+    .tab-tag-btn svg { width: 13px; height: 13px; }
+    .tab:hover .tab-tag-btn { opacity: 0.75; }
+    .tab-tag-btn:hover { opacity: 1; color: var(--accent); }
+
+    @media (hover: none) {
+      .tab-tag-btn { opacity: 0.55; }
+    }
+
+    .tab.renaming .tab-tag-btn { display: none; }
+
+    /* Die Schlagwort-Zeilen im Bearbeiten-Formular. Alles echte Kinder der Form und im Fluss --
+       ein schwebendes Menue waere kein Kind (der focusout-Horcher der Form beendete das
+       Bearbeiten beim ersten Klick darauf) und wuerde ausserdem an .tab-sidebar-panels
+       overflow: hidden abgeschnitten. */
+    .tab-tag-bereich {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      width: 100%;
+    }
+
+    .tab-tag-chips,
+    .tab-tag-vorschlaege {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+      /* .tab setzt nowrap; hier soll umbrochen werden. */
+      white-space: normal;
+    }
+
+    .tab-tag-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 0.7rem;
+      padding: 1px 4px 1px 6px;
+      border-radius: 9px;
+      background-color: var(--bg-active);
+      color: var(--text-main);
+    }
+
+    .tab-tag-chip-weg {
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.62rem;
+      line-height: 1;
+      padding: 1px 2px;
+      border-radius: 50%;
+    }
+
+    .tab-tag-chip-weg:hover { background-color: var(--border-color); color: var(--text-main); }
+
+    .tab-tag-eingabe {
+      width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      padding: 2px 4px;
+      font-size: 0.75rem;
+      font-family: inherit;
+      color: var(--text-main);
+      background-color: var(--bg-surface);
+      outline: none;
+    }
+
+    .tab-tag-eingabe:focus { border-color: var(--accent); }
+    .tab-tag-eingabe:disabled { color: var(--text-muted); background-color: var(--bg-subtle); }
+
+    .tab-tag-vorschlag {
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-surface);
+      color: var(--text-muted);
+      border-radius: 9px;
+      padding: 1px 6px;
+      font-size: 0.68rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+
+    .tab-tag-vorschlag:hover { background-color: var(--bg-hover); color: var(--text-main); }
+
+    /* --- Abschnitte der Tag-Ansicht ------------------------------------------------------------
+       Es gibt in dieser Oberflaeche sonst kein ein-/ausklappbares Element (nur <details> IM
+       Notizinhalt), deshalb hier gebaut wie die Rubrik des Sortiermenues: leise, klein, in
+       --text-muted -- ein Abschnittskopf soll sich als Rubrik lesen und nicht als Notiz. */
+    .tag-abschnitt {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tag-abschnitt.gefiltert-weg { display: none; }
+
+    .tag-abschnitt-kopf {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      width: 100%;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding: 7px 8px 4px;
+      text-align: left;
+    }
+
+    .tag-abschnitt-kopf:hover { color: var(--text-main); }
+
+    /* Der Farbpunkt vor dem Namen. Ohne gewaehlte Farbe bleibt er weg (kein grauer Platzhalter --
+       ein Punkt, der nichts bedeutet, liest sich wie ein Zustand). */
+    .tag-punkt {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background-color: var(--tag-farbe, transparent);
+    }
+
+    .tag-abschnitt[data-farbe] .tag-abschnitt-name { color: var(--tag-farbe); }
+
+    /* Der Anfasser am Abschnitt -- dieselbe Bauart und derselbe Grund wie .tab-griff: ohne
+       touch-action beansprucht das Rollen der Liste die senkrechte Wischgeste. */
+    .tag-abschnitt-griff {
+      display: flex;
+      align-items: center;
+      flex-shrink: 0;
+      color: var(--text-muted);
+      cursor: grab;
+      touch-action: none;
+      margin-left: -3px;
+      opacity: 0;
+      transition: opacity 0.12s;
+    }
+
+    .tag-abschnitt-griff svg { width: 9px; height: 13px; }
+    .tag-abschnitt-kopf:hover .tag-abschnitt-griff { opacity: 0.75; }
+    .tag-abschnitt.zieht-gerade .tag-abschnitt-griff { opacity: 0.9; }
+
+    @media (hover: none) {
+      .tag-abschnitt-griff { opacity: 0.45; }
+    }
+
+    /* Waehrend gesucht wird, ist das Umsortieren der Abschnitte ausgesetzt -- sichtbar ist dann
+       nur ein Teil von ihnen. */
+    .tab-list.suche-aktiv .tag-abschnitt-griff { opacity: 0.15; cursor: default; }
+
+    .tag-abschnitt.zieht-gerade {
+      background-color: var(--bg-surface);
+      outline: 1px solid var(--accent);
+      border-radius: 6px;
+    }
+
+    .tab-list.abschnitt-zieht .tag-abschnitt:not(.zieht-gerade) { opacity: 0.45; }
+
+    /* Das Menue eines Abschnitts. Wie #sortierMenue am <body> und position: fixed -- das Panel
+       schneidet ab (overflow: hidden). */
+    .tag-menue {
+      position: fixed;
+      z-index: 46;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+      width: 214px;
+      background-color: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+      padding: 7px;
+    }
+
+    .tag-menue.active { display: flex; }
+
+    .tag-menue-name {
+      width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 4px 6px;
+      font-size: 0.8rem;
+      font-family: inherit;
+      color: var(--text-main);
+      background-color: var(--bg-app);
+      outline: none;
+    }
+
+    .tag-menue-name:focus { border-color: var(--accent); }
+
+    .tag-menue-farben {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 4px 1px 2px;
+    }
+
+    .tag-farbwahl {
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      padding: 0;
+      background-color: var(--tag-farbe, transparent);
+    }
+
+    .tag-farbwahl.gewaehlt { box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 3px var(--accent); }
+
+    /* "Keine Farbe": ein durchgestrichener Kreis, damit er sich von einer echten Farbe
+       unterscheidet und nicht wie Weiss aussieht. */
+    .tag-farbwahl.keine {
+      background-image: linear-gradient(45deg, transparent 44%, var(--text-muted) 44%, var(--text-muted) 56%, transparent 56%);
+    }
+
+    .tag-menue-zeile {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      width: 100%;
+      padding: 5px 7px;
+      border: none;
+      background: transparent;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-family: inherit;
+      color: var(--text-main);
+      text-align: left;
+    }
+
+    .tag-menue-zeile:hover { background-color: var(--bg-hover); }
+    .tag-menue-zeile:disabled { opacity: 0.4; cursor: default; background: transparent; }
+    .tag-menue-zeile.entfernen { color: #c9364c; }
+    :root.app-dark .tag-menue-zeile.entfernen { color: #ff7b8a; }
+
+    .tab-tag-chip { --tag-farbe: transparent; }
+    .tab-tag-chip[data-farbe] { background-color: var(--tag-flaeche); }
+    .tab-tag-chip[data-farbe] .tab-tag-chip-punkt { background-color: var(--tag-farbe); }
+
+    .tab-tag-chip-punkt {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tag-abschnitt-name {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tag-abschnitt-zahl {
+      flex-shrink: 0;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      opacity: 0.75;
+    }
+
+    .tag-abschnitt-menue {
+      flex-shrink: 0;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.8rem;
+      line-height: 1;
+      padding: 0 3px;
+      border-radius: 4px;
+      opacity: 0;
+    }
+
+    .tag-abschnitt-kopf:hover .tag-abschnitt-menue { opacity: 0.8; }
+    .tag-abschnitt-menue:hover { background-color: var(--bg-hover); color: var(--text-main); }
+
+    @media (hover: none) {
+      .tag-abschnitt-menue { opacity: 0.55; }
+    }
+
+    .tag-abschnitt-pfeil {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+
+    .tag-abschnitt-inhalt {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    /* Eigene Klasse statt des hidden-Attributs: .tag-abschnitt-inhalt ist display: flex und
+       gewaenne gegen die Browservorgabe [hidden] { display: none } -- dieselbe Falle, die
+       .tab.gefiltert-weg und .songbook-zeile schon dokumentieren. */
+    .tag-abschnitt.zu .tag-abschnitt-inhalt { display: none; }
+    .tag-abschnitt.zu .tag-abschnitt-pfeil { transform: rotate(-90deg); }
+
+    /* Waehrend gesucht wird, sind alle Abschnitte offen -- sonst saesse ein Treffer in einem
+       eingeklappten Abschnitt und waere weder zu sehen noch (per Enter) zu erreichen, obwohl die
+       Trefferzahl ihn nennt. Rein ueber CSS, ohne den gemerkten Zustand anzufassen: nach dem
+       Leeren der Suche steht alles wieder so, wie es war. */
+    .tab-list.suche-aktiv .tag-abschnitt .tag-abschnitt-inhalt { display: flex; }
+    .tab-list.suche-aktiv .tag-abschnitt .tag-abschnitt-pfeil { transform: none; }
+
+    .tab-treffer {
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin-top: 1px;
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background-color: var(--bg-hover);
+      border-radius: 9px;
+      padding: 1px 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Der hervorgehobene Suchbegriff im Ausschnitt und im Namen. mark bringt vom Browser eine
+       eigene Textfarbe mit (MarkText, meist Schwarz) -- die muss ausdruecklich zurueckgenommen
+       werden, sonst steht der Text im Dunkelmodus schwarz auf gelb. */
+    .tab mark {
+      background-color: var(--such-treffer-bg);
+      color: inherit;
+      border-radius: 2px;
+      padding: 0 1px;
     }
 
     .tab .tab-name {
@@ -5611,6 +6250,14 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       color: var(--text-main);
     }
 
+    /* Nur die Editor-Textarea, nicht jedes Textfeld der Datei: siehe die gleichlautende Angabe an
+       .editor-highlight-overlay -- nur hier gibt es ueberhaupt Malschichten, mit denen der Umbruch
+       zusammenpassen muss. An der Typregel darueber traefe es auch #embedQuelle und #importQuelle,
+       und bei letzterem IST die nutzbare Breite die Information (Spaltenvergleich beim Import). */
+    #markdownInput {
+      scrollbar-gutter: stable;
+    }
+
     textarea:disabled {
       background-color: var(--bg-app);
       cursor: not-allowed;
@@ -5635,10 +6282,50 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       word-wrap: break-word;
       color: #24292e;
       background-color: var(--bg-surface);
+      /* Die Schicht bekommt wegen overflow: hidden nie einen Rollbalken, die Textarea darueber
+         schon. Ohne dieselbe Rinne auf beiden Seiten verliert nur die Textarea deren Breite, und
+         ab der ersten umgebrochenen Zeile stehen Text und Einfaerbung versetzt. */
+      scrollbar-gutter: stable;
     }
 
     .editor-highlight-overlay.active {
       display: block;
+    }
+
+    /* --- Zweite Malschicht: die Fundstellen der Notizsuche ------------------------------------
+       Sie liegt zwischen der Syntaxschicht und der Textarea und zeigt NUR die Unterlegungen: der
+       Text darin ist unsichtbar und dient allein dazu, dass die Marken an derselben Stelle
+       umbrechen wie der echte Text. Sichtbar bleibt der echte Text der Textarea, die dafuer
+       lediglich ihren Hintergrund abgibt (.hat-suchschicht). Nachgemessen stimmen beide Schichten
+       zeichengenau ueberein -- gleiche Schrift, gleiche Polsterung, gleiche scrollHoehe.
+       Der Hintergrund MUSS durchsichtig bleiben: die Syntaxschicht darunter traegt --bg-surface
+       und waere sonst bei jeder Liedblatt- und HTML-Notiz komplett verdeckt. */
+    /* Die Fundstellen in der VORSCHAU. Die CSS-Highlight-Schnittstelle malt Bereiche, ohne das
+       DOM anzufassen -- das ist hier der entscheidende Punkt und nicht bloss elegant: die
+       Vorschau ist beschreibbar und haengt an einer zeichengenauen Zuordnung zwischen DOM und
+       Quelltext; eingefuegte <span> waeren genau der Eingriff, den die Vorlesefunktion mit ihren
+       Wortmarken nur unter grossem Aufwand wieder unschaedlich macht. Nachgemessen: mit gesetzten
+       Bereichen bleibt preview.innerHTML zeichengleich und selfTestPositionMapping() meldet
+       1642 Pruefungen ohne Beanstandung.
+       Browser ohne diese Schnittstelle (vor Safari 17.2) zeigen hier schlicht nichts; die
+       Markierung im Quelltextfenster ist davon unabhaengig und greift ueberall. */
+    ::highlight(notizsuche) {
+      background-color: var(--such-treffer-bg);
+    }
+
+    .editor-highlight-overlay.such-schicht {
+      background-color: transparent;
+      color: transparent;
+    }
+
+    /* Ein <span>, kein <mark>: mark bringt vom Browser eine eigene Textfarbe mit, die das geerbte
+       color: transparent der Schicht schlaegt -- es stuende dann ein zweiter, undurchsichtiger
+       Textzug hinter dem echten. Die Farbe hier trotzdem ausdruecklich, nicht auf Vererbung
+       vertrauend. */
+    .such-treffer {
+      background-color: var(--such-treffer-bg);
+      color: transparent;
+      border-radius: 2px;
     }
 
     .editor-highlight-overlay code {
@@ -5684,6 +6371,19 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       background-color: transparent;
       color: transparent;
       caret-color: var(--text-main);
+    }
+
+    /* Waehrend die Notizsuche laeuft. Anders als .has-highlight-overlay bleibt der Text hier
+       SICHTBAR -- die Textarea gibt nur ihren Hintergrund ab, damit die Unterlegungen der Schicht
+       darunter durchscheinen. Cursor, Textauswahl und Rechtschreibpruefung bleiben dadurch
+       unveraendert die der echten Textarea. position/z-index sind Pflicht: ohne sie ist die
+       Textarea statisch positioniert und die absolut positionierte Schicht wuerde nach dem
+       Malmodell ueber ihr liegen. Die Flaeche dahinter liefert .editor-pane, die ohnehin
+       --bg-surface traegt. */
+    textarea.hat-suchschicht {
+      position: relative;
+      z-index: 1;
+      background-color: transparent;
     }
 
     .audio-trim-card {
@@ -7209,6 +7909,43 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       margin-bottom: 16px;
     }
 
+    /* Eine dauerhaft sichtbare waagerechte Rollleiste an einer zu breiten Tabelle. Gerollt werden
+       konnte schon immer (die Regel darueber macht die Tabelle selbst zum Rollbereich), aber auf
+       macOS und iOS ist das eine ueberlagernde Leiste, die erst beim Rollen erscheint -- an einer
+       CSV-Datei mit dreissig Spalten sieht der rechte Rand dann einfach abgeschnitten aus, und
+       dass es dort weitergeht, ist nicht zu erkennen. Gemeldet fuer genau diesen Fall.
+       Nachgemessen in einem Rahmen fester Groesse: ohne diese Regeln reserviert die Leiste 0px
+       (also ueberlagernd), mit ihnen 11px; eine Tabelle, die hineinpasst, bekommt weiterhin
+       keine. Die Farbe kommt aus der Notizpalette, nicht aus der Oberflaeche -- die Tabelle steht
+       im Notizinhalt, und nur die --preview-*-Werte gelten dort (siehe CLAUDE.md).
+       Bewusst nur in der App und nicht in getMarkdownTypographyCss(): ein ausgegebenes HTML-
+       Dokument und das Papier brauchen keine Rollleiste. */
+    .markdown-body table::-webkit-scrollbar {
+      -webkit-appearance: none;
+      height: 11px;
+    }
+
+    .markdown-body table::-webkit-scrollbar-thumb {
+      border-radius: 6px;
+      background-color: var(--preview-border);
+    }
+
+    .markdown-body table::-webkit-scrollbar-track {
+      background-color: transparent;
+    }
+
+    /* Hier stand einmal zusaetzlich `scrollbar-width: thin` -- als Zugestaendnis an Firefox
+       gedacht, in Wahrheit aber genau der Grund, warum die Leiste oben nichts bewirkte: sobald
+       die genormte Angabe am selben Element steht, uebergeht Chrome die ::-webkit-Regeln
+       vollstaendig. Nachgemessen am selben Kasten: nur ::-webkit -> 11px reserviert,
+       mit scrollbar-width:thin -> 0px, mit scrollbar-width:auto -> wieder 11px. Firefox zeigt
+       seine Leiste ohnehin dauerhaft an und braucht die Angabe nicht. */
+    .markdown-body table {
+      /* Das Rollen der Tabelle soll nicht in die Vor-/Zurueck-Geste des Browsers umschlagen,
+         sobald man am rechten Ende ankommt. */
+      overscroll-behavior-x: contain;
+    }
+
     .markdown-body table th, .markdown-body table td {
       padding: 8px 13px;
       border: 1px solid var(--preview-header-border);
@@ -8671,8 +9408,19 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          Drucken aus dem Präsentationsmodus heraus die ganze Seite ab; das Ausblenden erfasst seine
          Bedienelemente gleich mit). */
       #colorPickerPopover, #imageStylePopover, #formulaConfirmBtn, #formulaEditOverlayBtn, #formulaFreezeOverlayBtn, #audioRecordControls,
-      .burger-menu-panel, .toast, .pane-resizer, .presentation-overlay {
+      .burger-menu-panel, .toast, .pane-resizer, .presentation-overlay, .sortier-menue {
         display: none !important;
+      }
+
+      /* Die Fundstellen der Notizsuche gehoeren nicht aufs Papier. Sie sind ein Zustand der
+         Bedienung, kein Inhalt -- und der Block weiter unten setzt print-color-adjust: exact,
+         nimmt dem Browser also gerade die Heuristik weg, die Hintergruende sonst weglaesst.
+         Bewusst eine reine CSS-Regel und kein Umschalten bei beforeprint: afterprint feuert nicht
+         verlaesslich, und ein nicht zurueckgesetzter Zustand bliebe danach stehen -- dieselbe
+         Begruendung wie bei druckDesignRegelSetzen(). Dieselbe Klasse Zustand wie .cell-selected
+         direkt darunter. */
+      ::highlight(notizsuche) {
+        background-color: transparent;
       }
 
       /* Bug fix (Drucken/PDF-Export-Runde), continued: unlike the popovers above, these three are
@@ -9184,6 +9932,11 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        deshalb brauchen sie hier ihren eigenen dunklen Satz: sonst stuenden dunkelblaue und
        dunkelgruene Marken auf dunklem Grund. */
     :root.app-dark .editor-highlight-overlay { color: #c9d1d9; }
+    /* Muss direkt daneben stehen und nicht oben bei der Schicht selbst: die Zeile darueber ist
+       (0,3,0) und schlaegt .editor-highlight-overlay.such-schicht (0,2,0) -- ohne diese Ergaenzung
+       malt die Suchschicht im Dunkelmodus ihren Text deckend ueber die Syntaxfarben. Nachgemessen:
+       color loeste sich dort zu rgb(201, 209, 217) auf statt zu transparent. */
+    :root.app-dark .editor-highlight-overlay.such-schicht { color: transparent; }
     :root.app-dark .editor-highlight-overlay .hljs-tag,
     :root.app-dark .editor-highlight-overlay .hljs-name { color: #7ee787; }
     :root.app-dark .editor-highlight-overlay .hljs-attr { color: #d2a8ff; }
@@ -10114,20 +10867,42 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
        anzufassen. Bewusst NICHT wie #tocToggleBtn per main.preview-hidden ausgeblendet --
        Notizen wechseln muss in JEDEM Ansichtsmodus funktionieren (auch reiner Quelltext), anders
        als eine Überschriften-Gliederung, die ohne sichtbare Vorschau keinen Sinn ergibt. -->
+  <!-- Sortiermenue der Notizenleiste. Liegt hier und nicht im Panel, weil das Panel abschneidet
+       (overflow: hidden); angeankert wird es beim Oeffnen an seinen Knopf. -->
+  <div class="sortier-menue" id="sortierMenue"></div>
+
+  <!-- Menue eines Schlagwort-Abschnitts (umbenennen, faerben, verschieben, ueberall entfernen).
+       Wie das Sortiermenue hier und nicht im Panel: das schneidet ab (overflow: hidden). -->
+  <div class="tag-menue" id="tagMenue"></div>
+
   <div class="app-body-row" id="appBodyRow">
     <div class="tab-sidebar-panel" id="tabSidebarPanel">
       <div class="tab-sidebar-header">
         <span>Notizen</span>
+        <div class="tab-sidebar-werkzeuge">
+        <button id="tabSidebarSortBtn" class="tab-sidebar-pin-btn" onclick="toggleSortierMenue(event)" title="Notizen sortieren"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 13.125C12.3013 13.125 12.5733 13.3052 12.6907 13.5827C12.8081 13.8601 12.7482 14.1808 12.5384 14.3971L8.53844 18.5221C8.39719 18.6678 8.20293 18.75 8.00002 18.75C7.79711 18.75 7.60285 18.6678 7.46159 18.5221L3.46159 14.3971C3.25188 14.1808 3.19192 13.8601 3.30934 13.5827C3.42676 13.3052 3.69877 13.125 4.00002 13.125H7.25002V6C7.25002 5.58579 7.5858 5.25 8.00002 5.25C8.41423 5.25 8.75002 5.58579 8.75002 6V13.125H12Z" fill="currentColor"/><path d="M20 10.875C20.3013 10.875 20.5733 10.6948 20.6907 10.4173C20.8081 10.1399 20.7482 9.81916 20.5384 9.60289L16.5384 5.47789C16.3972 5.33222 16.2029 5.25 16 5.25C15.7971 5.25 15.6029 5.33222 15.4616 5.47789L11.4616 9.60289C11.2519 9.81916 11.1919 10.1399 11.3093 10.4173C11.4268 10.6948 11.6988 10.875 12 10.875H15.25V18C15.25 18.4142 15.5858 18.75 16 18.75C16.4142 18.75 16.75 18.4142 16.75 18L16.75 10.875H20Z" fill="currentColor"/></svg></button>
+        <button id="tabSidebarSuchBtn" class="tab-sidebar-pin-btn" onclick="toggleNotizSuche()" title="In allen offenen Notizen suchen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.29289 1.29289C9.48043 1.10536 9.73478 1 10 1H18C19.6569 1 21 2.34315 21 4V8C21 8.55228 20.5523 9 20 9C19.4477 9 19 8.55228 19 8V4C19 3.44772 18.5523 3 18 3H11V8C11 8.55228 10.5523 9 10 9H5V20C5 20.5523 5.44772 21 6 21H10C10.5523 21 11 21.4477 11 22C11 22.5523 10.5523 23 10 23H6C4.34315 23 3 21.6569 3 20V8C3 7.73478 3.10536 7.48043 3.29289 7.29289L9.29289 1.29289ZM6.41421 7H9V4.41421L6.41421 7ZM20.1716 18.7574C20.6951 17.967 21 17.0191 21 16C21 13.2386 18.7614 11 16 11C13.2386 11 11 13.2386 11 16C11 18.7614 13.2386 21 16 21C17.0191 21 17.967 20.6951 18.7574 20.1716L21.2929 22.7071C21.6834 23.0976 22.3166 23.0976 22.7071 22.7071C23.0976 22.3166 23.0976 21.6834 22.7071 21.2929L20.1716 18.7574ZM13 16C13 14.3431 14.3431 13 16 13C17.6569 13 19 14.3431 19 16C19 17.6569 17.6569 19 16 19C14.3431 19 13 17.6569 13 16Z" fill="currentColor"/></svg></button>
+        <button id="tabSidebarTagBtn" class="tab-sidebar-pin-btn" onclick="toggleTagAnsicht()" title="Nach Schlagwörtern gruppieren"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 12V4a1 1 0 011-1h8l9 9-9 9-9-9z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor"/></svg></button>
         <button id="tabSidebarErweiternBtn" class="tab-sidebar-pin-btn" onclick="toggleTabSidebarErweitert()" title="Erweiterte Ansicht: erste Zeile und Vorschaubild"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="3" y="14" width="18" height="6" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M6 7h6M6 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
         <button id="tabSidebarPinBtn" class="tab-sidebar-pin-btn" onclick="toggleTabSidebarPin()" title="Seitenleiste dauerhaft anzeigen"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 8L6 12H18L16 8V4H8V8Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><line x1="12" y1="12" x2="12" y2="21" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="7" y1="4" x2="17" y2="4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button>
+        </div>
+      </div>
+      <!-- Suchzeile. Sie steht zwischen Kopf und Liste und wird ueber den Lupenknopf ein- und
+           ausgeklappt; die Eingabe filtert die Liste sofort (siehe notizSucheSetzen()). -->
+      <div class="tab-suche-zeile" id="tabSucheZeile">
+        <input type="text" id="tabSucheFeld" class="tab-suche-feld" placeholder="In allen Notizen suchen …" spellcheck="false" autocomplete="off"
+               oninput="notizSucheSetzen(this.value)" onkeydown="notizSucheTaste(event)">
+        <button class="tab-suche-leeren" onclick="notizSucheLeeren()" title="Suche zurücksetzen">✕</button>
       </div>
       <div class="tab-list" id="tabList"></div>
+      <div class="tab-suche-leer" id="tabSucheLeer"></div>
       <button class="add-tab-btn" onclick="createNewTab(); closeTabSidebarNachAuswahl()" title="Neue Notiz erstellen">+ Neue Notiz</button>
     </div>
 
   <main id="mainContainer">
     <div class="editor-pane" id="editorPane">
       <pre id="editorHighlightOverlay" class="editor-highlight-overlay" aria-hidden="true"><code></code></pre>
+      <pre id="editorSuchOverlay" class="editor-highlight-overlay such-schicht" aria-hidden="true"><code></code></pre>
       <textarea id="markdownInput" placeholder="Schreibe oder füge hier deinen Markdown-Text ein..." spellcheck="false"></textarea>
     </div>
     <!-- Nebenspalte: eine ZWEITE Notiz neben der aktuellen, nur zum Lesen. Sie sitzt in derselben
@@ -10824,6 +11599,31 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     // Erweiterte Notizliste: unter dem Namen die erste inhaltliche Zeile, und ab genug Fensterbreite
     // dahinter ein quadratisches Vorschaubild der Notiz. Geraeteweit gemerkt wie das Anheften.
     let tabSidebarErweitert = false;
+
+    // Nach welchem Feld die Notizenleiste ANGEZEIGT wird. `tabs` selbst bleibt davon unberuehrt
+    // und traegt immer die selbst geordnete Reihenfolge -- siehe sortierteTabs().
+    let tabSortierung = 'manuell';
+
+    // Der Suchbegriff der Notizsuche und ob ihr Feld ausgeklappt ist. Bewusst NICHT gespeichert:
+    // eine Suche ist ein Augenblick, kein Zustand -- nach einem Neustart eine gefilterte Liste
+    // vorzufinden, ohne zu wissen warum, waere der schlechtere Start.
+    let notizSuche = '';
+    let notizSucheOffen = false;
+
+    // Tag-Ansicht: Notizen in Abschnitte je Schlagwort einsortiert. Geraetelokal wie die
+    // erweiterte Ansicht -- sie beschreibt diesen Bildschirm, nicht die Dokumente. tagEingeklappt
+    // merkt sich je Schlagwort, ob sein Abschnitt zu ist.
+    let tagAnsicht = false;
+    let tagEingeklappt = {};
+
+    // Farbe und selbst gewaehlte Reihenfolge der Schlagwoerter. Anders als tagAnsicht/
+    // tagEingeklappt (die beschreiben diesen Bildschirm) reisen diese beiden ueber WebDAV mit --
+    // nach demselben Muster wie die eigene Farbpalette und das Songbook: EIN Zeitstempel, der
+    // juengere Stand gewinnt als Ganzes. Ein Konfliktdialog waere hier unangemessen, es gibt nur
+    // eine Zuordnung und sie laesst sich nicht sinnvoll "beide behalten".
+    let tagFarben = {};          // { schluessel: 1..8 }
+    let tagReihenfolge = [];     // Schluessel in selbst gewaehlter Reihenfolge; alles Unbekannte kommt alphabetisch dahinter
+    let tagEinstellungenUpdatedAt = 0;
     // Studio Pro UI redesign (Phase 3): "schmal" (narrow, the default) caps and centers
     // .markdown-body's width in SINGLE-PREVIEW mode only (main.editor-hidden -- see
     // applyContentWidth()'s own CSS-side comment for why that's the natural, already-existing
@@ -10884,6 +11684,8 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     const editorHighlightOverlay = document.getElementById('editorHighlightOverlay');
     const editorHighlightOverlayCode = editorHighlightOverlay.querySelector('code');
     const tabList = document.getElementById('tabList');
+    const editorSuchOverlay = document.getElementById('editorSuchOverlay');
+    const editorSuchOverlayCode = editorSuchOverlay.querySelector('code');
     const mainContainer = document.getElementById('mainContainer');
     const paneResizer = document.getElementById('paneResizer');
     const toggleEditBtn = document.getElementById('toggleEditBtn');
@@ -12518,6 +13320,16 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // Woher die Notiz stammt (siehe herkunftNotieren()) -- aus demselben Grund wie die beiden
         // Felder darueber geraetelokal und nie Teil der Sync-Nutzlast.
         herkunft: t.herkunft || null,
+        // Zeitstempel fuer die Sortierung der Notizenleiste (siehe notizZeitstempel()). Anders als
+        // die drei Felder darueber reisen sie sehr wohl mit ueber WebDAV.
+        erstelltAm: t.erstelltAm || null,
+        geaendertAm: t.geaendertAm || null,
+        // Die Vergroesserung ist geraetelokal (ein Telefon braucht eine andere als ein grosser
+        // Bildschirm) und steht deshalb HIER, aber in keiner Sync-Nutzlast. Die Inhaltsbreite reist
+        // dagegen mit, siehe changeContentWidth().
+        zoomLevel: t.zoomLevel !== undefined ? t.zoomLevel : null,
+        contentWidthMode: t.contentWidthMode || null,
+        tags: tagListe(t),
         syncId: t.syncId,
         lastSyncedSnapshot: t.lastSyncedSnapshot || null
       }));
@@ -12574,6 +13386,20 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         operatingMode: operatingMode,
         tabSidebarPinned: tabSidebarPinned,
         tabSidebarErweitert: tabSidebarErweitert,
+        // Geraetelokal wie die erweiterte Ansicht -- beschreibt diesen Bildschirm, nicht die
+        // Dokumente. Die Schlagwoerter selbst gehoeren dagegen zur Notiz und reisen mit.
+        tagAnsicht: tagAnsicht,
+        tagEingeklappt: tagEingeklappt,
+        // Farbe und Reihenfolge reisen ueber WebDAV mit (siehe dort), werden aber natuerlich
+        // auch hier gespeichert -- der Zeitstempel entscheidet beim Abgleich.
+        tagFarben: tagFarben,
+        tagReihenfolge: tagReihenfolge,
+        tagEinstellungenUpdatedAt: tagEinstellungenUpdatedAt,
+        // Die Anzeigereihenfolge der Notizenleiste. Geraeteweit wie die uebrigen Bedienvorlieben
+        // und nicht Teil der Sync-Nutzlast: welche Reihenfolge am Bildschirm angenehm ist, ist
+        // eine Eigenschaft dieses Bildschirms, nicht der Dokumente. notizSuche steht bewusst
+        // nicht dabei -- siehe die Erklaerung an der Variablen.
+        tabSortierung: tabSortierung,
         contentWidthMode: contentWidthMode,
         nebenspalteModus: nebenspalteModus,
         nebenspalteTabId: nebenspalteTabId,
@@ -12691,6 +13517,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           sourceUrl: t.sourceUrl || null,
           // null fuer Notizen aus der Zeit vor diesem Feld; herkunftText() zeigt dann nichts an.
           herkunft: t.herkunft || null,
+          // Ebenso null fuer Altbestand -- notizZeitstempel() faellt dann auf die Herkunftszeit
+          // zurueck und sortiert, wenn auch die fehlt, ans Ende.
+          erstelltAm: t.erstelltAm || null,
+          geaendertAm: t.geaendertAm || null,
+          // null heisst hier "nie eigens gewaehlt": switchTab() behaelt dann die zuletzt gueltige
+          // Vergroesserung bei, und notizInhaltsbreite() entscheidet nach Dateityp.
+          zoomLevel: t.zoomLevel !== undefined ? t.zoomLevel : null,
+          contentWidthMode: t.contentWidthMode || null,
+          // Wehrhaft eingelesen: eine andere Fassung oder ein von Hand veraenderter Speicher
+          // koennte mehr als drei oder leere Eintraege liefern.
+          tags: Array.isArray(t.tags) ? t.tags.slice(0, 3) : [],
           _localSaveIssue: null
         }));
         // Backfills a permanent syncId for tabs saved before it became eager (see createNewTab)
@@ -12797,6 +13634,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         operatingMode = state.operatingMode || (state.simpleMode ? 'simple' : 'focus');
         tabSidebarPinned = !!state.tabSidebarPinned;
         tabSidebarErweitert = !!state.tabSidebarErweitert;
+        tagAnsicht = !!state.tagAnsicht;
+        tagEingeklappt = (state.tagEingeklappt && typeof state.tagEingeklappt === 'object') ? state.tagEingeklappt : {};
+        tagFarben = (state.tagFarben && typeof state.tagFarben === 'object') ? state.tagFarben : {};
+        tagReihenfolge = Array.isArray(state.tagReihenfolge) ? state.tagReihenfolge : [];
+        tagEinstellungenUpdatedAt = state.tagEinstellungenUpdatedAt || 0;
+        // Ueber sortierungEintrag() gefiltert: ein unbekannter Wert (aeltere Fassung, von Hand
+        // veraenderter Speicher) faellt auf 'manuell' zurueck statt eine leere Liste zu zeichnen.
+        tabSortierung = sortierungEintrag(state.tabSortierung).id;
         contentWidthMode = state.contentWidthMode || 'narrow';
         if (typeof state.nebenspalteModus === 'string') nebenspalteModus = state.nebenspalteModus;
         if (typeof state.nebenspalteTabId === 'string') nebenspalteTabId = state.nebenspalteTabId;
@@ -12928,11 +13773,23 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // 3-way merge (see attemptWebdavSync()), never to reconstruct content from. tabToSyncPayload()
     // below is the one that carries the real bytes to the server, deliberately unfingerprinted.
     function tabSyncSnapshot(tab) {
-      return JSON.stringify({ name: tab.name, content: tab.content, assets: sortedFingerprint(getAssetFingerprint(tab)), drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, pdfDrawingAssetIds: tab.pdfDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light', showEditor: tab.showEditor !== undefined ? tab.showEditor : true, showPreview: tab.showPreview !== undefined ? tab.showPreview : true, splitRatio: tab.splitRatio !== undefined ? tab.splitRatio : 50 });
+      return JSON.stringify({ name: tab.name, content: tab.content, assets: sortedFingerprint(getAssetFingerprint(tab)), drawingAssetIds: tab.drawingAssetIds || {}, rawDrawingAssetIds: tab.rawDrawingAssetIds || {}, pdfDrawingAssetIds: tab.pdfDrawingAssetIds || {}, audioAssetIds: tab.audioAssetIds || {}, fileType: tab.fileType || 'markdown', csvDelimiter: tab.csvDelimiter || null, theme: tab.theme || 'theme-github-light', showEditor: tab.showEditor !== undefined ? tab.showEditor : true, showPreview: tab.showPreview !== undefined ? tab.showPreview : true, splitRatio: tab.splitRatio !== undefined ? tab.splitRatio : 50, contentWidthMode: tab.contentWidthMode || null, tags: tagListe(tab) });
     }
 
     function remoteTabSnapshot(rt) {
-      return JSON.stringify({ name: rt.name, content: rt.content, assets: fingerprintAssets(rt.assets), drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, pdfDrawingAssetIds: rt.pdfDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light', showEditor: rt.showEditor !== undefined ? rt.showEditor : true, showPreview: rt.showPreview !== undefined ? rt.showPreview : true, splitRatio: rt.splitRatio !== undefined ? rt.splitRatio : 50 });
+      return JSON.stringify({ name: rt.name, content: rt.content, assets: fingerprintAssets(rt.assets), drawingAssetIds: rt.drawingAssetIds || {}, rawDrawingAssetIds: rt.rawDrawingAssetIds || {}, pdfDrawingAssetIds: rt.pdfDrawingAssetIds || {}, audioAssetIds: rt.audioAssetIds || {}, fileType: rt.fileType || 'markdown', csvDelimiter: rt.csvDelimiter || null, theme: rt.theme || 'theme-github-light', showEditor: rt.showEditor !== undefined ? rt.showEditor : true, showPreview: rt.showPreview !== undefined ? rt.showPreview : true, splitRatio: rt.splitRatio !== undefined ? rt.splitRatio : 50, contentWidthMode: rt.contentWidthMode || null, tags: tagListe(rt) });
+    }
+
+    // Die Zeitstempel stehen bewusst nicht in der Vergleichsbasis des Dreiwege-Abgleichs (siehe
+    // notizGeaendertStempeln()). Damit entscheidet ueber sie sonst allein, wer zuletzt schreibt --
+    // und zwei Geraete koennten denselben Wert endlos hin- und herschieben, ohne dass je ein
+    // Konflikt entstuende. Deshalb werden sie vor dem Hochschieben zusammengefuehrt: der spaetere
+    // Aenderungszeitpunkt gilt, der fruehere Erstellungszeitpunkt. Das ist unabhaengig von der
+    // Reihenfolge der Geraete und laeuft deshalb immer auf denselben Wert zu.
+    function zeitstempelVereinen(t, rt) {
+      if (!rt) return;
+      if (rt.geaendertAm) t.geaendertAm = Math.max(t.geaendertAm || 0, rt.geaendertAm) || null;
+      if (rt.erstelltAm) t.erstelltAm = Math.min(t.erstelltAm || rt.erstelltAm, rt.erstelltAm) || null;
     }
 
     function tabToSyncPayload(t) {
@@ -12954,7 +13811,20 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // persistTabViewState() and switchTab()'s per-tab restore.
         showEditor: t.showEditor !== undefined ? t.showEditor : true,
         showPreview: t.showPreview !== undefined ? t.showPreview : true,
-        splitRatio: t.splitRatio !== undefined ? t.splitRatio : 50
+        splitRatio: t.splitRatio !== undefined ? t.splitRatio : 50,
+        // Reist mit wie theme darueber -- eine Eigenschaft des Dokuments. zoomLevel steht
+        // ausdruecklich NICHT dabei: die Vergroesserung ist je Geraet verschieden.
+        contentWidthMode: t.contentWidthMode || null,
+        // Ebenso eine Eigenschaft des Dokuments -- und anders als die Zeitstempel stehen die
+        // Schlagwoerter AUCH in den beiden Schnappschuessen darueber, sonst bliebe eine reine
+        // Tag-Aenderung dem Abgleich verborgen und wuerde nie hochgeschoben.
+        tags: tagListe(t),
+        // Die Zeitstempel reisen mit (siehe notizGeaendertStempeln()), stehen aber ausdruecklich
+        // NICHT in tabSyncSnapshot()/remoteTabSnapshot() darueber -- die beiden sind die
+        // Vergleichsbasis des Dreiwege-Abgleichs, ein dort mitgezaehlter Stempel erfaende
+        // Konflikte bei jedem Tastendruck.
+        erstelltAm: t.erstelltAm || null,
+        geaendertAm: t.geaendertAm || null
       };
     }
 
@@ -12998,6 +13868,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       t.showEditor = rt.showEditor !== undefined ? rt.showEditor : true;
       t.showPreview = rt.showPreview !== undefined ? rt.showPreview : true;
       t.splitRatio = rt.splitRatio !== undefined ? rt.splitRatio : 50;
+      t.contentWidthMode = rt.contentWidthMode || null;
+      t.tags = Array.isArray(rt.tags) ? rt.tags.slice(0, 3) : [];
       t.isModified = false;
       t.history = [t.content];
       t.historyIndex = 0;
@@ -13012,6 +13884,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // made. Reproduced directly with two genuinely concurrent devices (one continuously
       // editing, one only ever pulling) before this fix, and confirmed gone after it.
       t.lastSyncedSnapshot = remoteTabSnapshot(rt);
+      // Bringt der Serverstand keinen Stempel mit (aeltere Fassung auf dem anderen Geraet), waere
+      // der hiesige nach dem Uebernehmen des Inhalts falsch: die Notiz hat gerade frischen Text
+      // bekommen und gaelte trotzdem als unveraendert. Dann zaehlt der Augenblick -- aber nur,
+      // wenn sich der Inhalt wirklich geaendert hat.
+      if (!rt.geaendertAm && rt.content !== t.content) t.geaendertAm = Date.now();
+      // Die Zeitstempel vom Server UEBERNEHMEN, nicht neu setzen: ein stilles Abholen ist keine
+      // Bearbeitung (zwei Zeilen darueber wird isModified ausdruecklich auf false gesetzt). Ein
+      // Date.now() hier gaebe allen Notizen, die ein laenger ausgeschaltetes Geraet auf einmal
+      // abholt, denselben Zeitpunkt und zerstoerte die Ordnung endgueltig.
+      if (rt.erstelltAm) t.erstelltAm = rt.erstelltAm;
+      if (rt.geaendertAm) t.geaendertAm = rt.geaendertAm;
       t._assetsHydrated = true; // already fully in memory from rt.assets above, nothing to fetch
       persistAllAssetsToIndexedDb(t, vorherigeAssets);
       syncNativeFileIfLinked(t);
@@ -13118,10 +14001,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         showEditor: remoteTabData.showEditor !== undefined ? remoteTabData.showEditor : true,
         showPreview: remoteTabData.showPreview !== undefined ? remoteTabData.showPreview : true,
         splitRatio: remoteTabData.splitRatio !== undefined ? remoteTabData.splitRatio : 50,
+        contentWidthMode: remoteTabData.contentWidthMode || null,
+        tags: Array.isArray(remoteTabData.tags) ? remoteTabData.tags.slice(0, 3) : [],
         syncId: nameSuffix ? null : remoteTabData.syncId,
         // Nicht aus remoteTabData: die Herkunft beschreibt, wie die Notiz auf DIESES Geraet kam,
         // und das war der Abgleich -- unabhaengig davon, woher sie auf dem anderen stammte.
         herkunft: herkunftNotieren('webdav'),
+        // Die Zeitstempel dagegen SCHON aus remoteTabData: sie beschreiben das Dokument, nicht den
+        // Weg hierher. Nur wenn der andere Stand noch keine hat (aeltere Fassung), gilt jetzt --
+        // sonst faellt die Notiz in der Sortierung durch, obwohl es sie seit Monaten gibt.
+        erstelltAm: remoteTabData.erstelltAm || Date.now(),
+        geaendertAm: remoteTabData.geaendertAm || remoteTabData.erstelltAm || Date.now(),
         lastSyncedSnapshot: nameSuffix ? null : remoteTabSnapshot(remoteTabData),
         _assetsHydrated: true, // already fully in memory from remoteTabData.assets above
         _localSaveIssue: null
@@ -13295,6 +14185,19 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         songbookUpdatedAt = remoteSongbookAt;
         if (document.getElementById('songbookOverlay').classList.contains('active')) renderSongbook();
       }
+      // Farbe und Reihenfolge der Schlagwoerter nach derselben Regel wie die Farbpalette und das
+      // Songbook darueber: EIN Zeitstempel, der juengere Stand gewinnt als Ganzes. Ein
+      // Konfliktdialog waere unangemessen -- es gibt nur diese eine Zuordnung, sie laesst sich
+      // nicht "beide behalten", und sie laesst sich mit zwei Klicks wiederherstellen. Die
+      // Schlagwoerter SELBST stehen dagegen an den Notizen und gehen den gewoehnlichen
+      // Dreiwege-Abgleich (siehe tabToSyncPayload).
+      const remoteTagAt = (remoteFetch.state && remoteFetch.state.tagEinstellungenUpdatedAt) || 0;
+      if (remoteTagAt > tagEinstellungenUpdatedAt) {
+        const rs = remoteFetch.state;
+        if (rs.tagFarben && typeof rs.tagFarben === 'object') tagFarben = rs.tagFarben;
+        if (Array.isArray(rs.tagReihenfolge)) tagReihenfolge = rs.tagReihenfolge;
+        tagEinstellungenUpdatedAt = remoteTagAt;
+      }
       const remoteTabs = (remoteFetch.state && remoteFetch.state.tabs) || [];
       const remoteById = new Map(remoteTabs.map(rt => [rt.syncId, rt]));
       const localIds = new Set(tabs.map(t => ensureSyncId(t)));
@@ -13357,6 +14260,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         const remoteSnap = remoteTabSnapshot(rt);
         const localChanged = !lastSnap || localSnap !== lastSnap;
         const remoteChanged = !lastSnap || remoteSnap !== lastSnap;
+
+        // Vor jeder Entscheidung: die Zeitstempel beider Seiten zusammenfuehren (siehe
+        // zeitstempelVereinen()). Sie stehen in keinem der beiden Schnappschuesse, veraendern die
+        // Vergleiche darueber also nicht -- aber ohne diesen Schritt schoebe ein Geraet, das
+        // nichts geaendert hat, seinen aelteren Wert wieder hoch.
+        zeitstempelVereinen(t, rt);
 
         if (!remoteChanged) {
           resultTabsById.set(syncId, tabToSyncPayload(t));
@@ -13431,7 +14340,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // Wie bei der Palette: immer den jetzt geltenden Stand mitschreiben, gleich ob er von hier
         // stammt oder gerade übernommen wurde -- der Zeitstempel bleibt dabei erhalten.
         songbookEintraege: songbookEintraege, songbookSetlists: songbookSetlists,
-        songbookOrdnerName: songbookOrdnerName, songbookUpdatedAt: songbookUpdatedAt }, remoteFetch.rawText);
+        songbookOrdnerName: songbookOrdnerName, songbookUpdatedAt: songbookUpdatedAt,
+        // Wie die beiden darueber: immer den jetzt geltenden Stand mitschreiben, gleich ob er von
+        // hier stammt oder eben uebernommen wurde -- der Zeitstempel bleibt dabei erhalten und
+        // loest deshalb kein Hin und Her aus.
+        tagFarben: tagFarben, tagReihenfolge: tagReihenfolge,
+        tagEinstellungenUpdatedAt: tagEinstellungenUpdatedAt }, remoteFetch.rawText);
       // Only clear the tombstones this exact PUT actually excluded (finalPendingDeletions), not
       // webdavPendingDeletions wholesale — a tab closed while putRemoteWebdavState()'s own network
       // round-trip was in flight (after finalPendingDeletions was captured, above) would otherwise
@@ -13858,6 +14772,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
       updateStats();
       renderTabs();
+      // updatePreview() -- der sonstige Ort, an dem die Suchmarkierung nachgezogen wird -- steigt
+      // ohne offene Notiz sofort wieder aus. Ohne diesen Aufruf blieben die Fundstellen der eben
+      // geschlossenen Notiz ueber dem leeren Textfeld stehen.
+      suchMarkierungAktualisieren();
     }
 
     function enableEditorUI() {
@@ -14092,6 +15010,35 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Deshalb steht das Feld in saveStateToLocalStorage()/loadStateFromLocalStorage(), aber in
     // KEINER der fuenf WebDAV-Nutzlastfunktionen -- in tabSyncSnapshot()/remoteTabSnapshot()
     // waere es sogar schaedlich, weil ein geraetelokaler Wert dort falsche Konflikte erzeugt.
+    // --- ZEITSTEMPEL EINER NOTIZ ---------------------------------------------------------------
+    //
+    // Nur fuer die Sortierung der Notizenleiste da. Anders als herkunft/nativeFilePath/sourceUrl
+    // daneben reisen beide Felder MIT dem Dokument ueber WebDAV (tabToSyncPayload nimmt sie auf,
+    // applyRemoteTabToLocal uebernimmt sie): "zuletzt geaendert" soll auf jedem Geraet dasselbe
+    // heissen. Gefahrlos ist das, weil tabSyncSnapshot()/remoteTabSnapshot() -- die Vergleichsbasis
+    // des Dreiwege-Abgleichs -- ausdruckliche Feldlisten ohne Spread sind: die Stempel koennen dort
+    // gar nicht landen und also auch keinen Konflikt erfinden. Sie NICHT mitzuschicken waere die
+    // schlechtere Wahl gewesen: ein Geraet, das nach einer Woche 20 Notizen auf einmal abholt,
+    // haette dann zwanzigmal denselben Zeitpunkt und die ganze Ordnung waere dahin.
+    function notizGeaendertStempeln(tab) {
+      if (tab) tab.geaendertAm = Date.now();
+    }
+
+    // Der Wert, nach dem sortiert wird. Rueckfall auf die Herkunftszeit und zuletzt auf null:
+    // Notizen aus der Zeit vor diesen Feldern haben keinen Stempel, und es ist besser, sie
+    // ehrlich als "unbekannt" ans Ende zu stellen, als ihnen einen Zeitpunkt anzudichten.
+    // Bewusst eine gemeinsame Lesefunktion statt eines Rueckfalls nur beim Laden: sonst staende
+    // dieselbe Notiz vor und nach einem Neuladen an verschiedenen Stellen der Liste.
+    function notizZeitstempel(tab, feld) {
+      if (!tab) return null;
+      const w = feld === 'erstellt' ? tab.erstelltAm : tab.geaendertAm;
+      if (typeof w === 'number' && isFinite(w)) return w;
+      const ersatz = feld === 'erstellt' ? null : tab.erstelltAm;
+      if (typeof ersatz === 'number' && isFinite(ersatz)) return ersatz;
+      const h = tab.herkunft && tab.herkunft.zeit;
+      return (typeof h === 'number' && isFinite(h)) ? h : null;
+    }
+
     function herkunftNotieren(art, quelle) {
       return { art: art, quelle: quelle || null, zeit: Date.now() };
     }
@@ -14122,6 +15069,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     async function createNewTab(name = null, content = null, fileHandle = null, nativeFilePath = null, herkunft = null) {
       const tabId = 'tab_' + tabIdCounter++;
+      const jetzt = Date.now();
       const tabName = name || 'Notiz ' + (tabs.length + 1) + '.md';
       // Die Willkommensnotiz nur beim allerersten Mal, danach nie wieder -- siehe welcomeNoteUsed.
       const nimmWillkommen = content === null && tabs.length === 0 && !welcomeNoteUsed;
@@ -14164,6 +15112,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // Siehe herkunftNotieren() oben. Ohne Angabe der aufrufenden Stelle ist die Notiz genau
         // das, was sie dann ist: hier in der App entstanden.
         herkunft: herkunft || herkunftNotieren('neu'),
+        // Zeitpunkte fuer die Sortierung der Notizenleiste (siehe sortierteTabs()). Beide aus
+        // DERSELBEN Ablesung, sonst unterscheiden sie sich um eine Millisekunde und eine gerade
+        // erstellte Notiz gilt schon als "seither geaendert".
+        erstelltAm: jetzt,
+        geaendertAm: jetzt,
         isModified: false,
         history: [tabContent],
         historyIndex: 0,
@@ -14211,6 +15164,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         showEditor: fileType === 'canvas' ? false : showEditor,
         showPreview: fileType === 'canvas' ? true : showPreview,
         splitRatio: 50,
+        // Eine Tabelle ist breit. null heisst "nie eigens gewaehlt", notizInhaltsbreite() nimmt
+        // dann fuer eine CSV-Datei 'wide' und sonst die zuletzt gewaehlte Breite.
+        contentWidthMode: null,
+        tags: [],
+        // null heisst auch hier "noch nichts gewaehlt": die Notiz uebernimmt beim Oeffnen die
+        // zuletzt gueltige Vergroesserung und merkt sie sich, sobald sie verstellt wird.
+        zoomLevel: null,
         // A brand-new tab's assets (empty, or already extracted from a pasted/opened document
         // with inline images -- see extractInlineImagesToAssets() above) are already fully in
         // memory, so there's nothing for switchTab()'s lazy hydration to fetch.
@@ -14356,6 +15316,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           splitRatio = targetTab.splitRatio !== undefined ? targetTab.splitRatio : 50;
           applySplitRatio();
         }
+        // Vergroesserung und Inhaltsbreite gehoeren beide zur Notiz, aber aus verschiedenen
+        // Gruenden und mit verschiedener Reichweite -- und ausdruecklich NICHT am Simple Modus
+        // vorbei: dort war der gemeldete Fehler, dass die App immer wieder vergroessert hochkam.
+        zoomLevel = targetTab.zoomLevel !== undefined && targetTab.zoomLevel !== null ? targetTab.zoomLevel : zoomLevel;
+        applyZoomLevel();
+        contentWidthMode = notizInhaltsbreite(targetTab);
+        applyContentWidth(contentWidthMode);
         updatePreview();
         applyPaneVisibility(); // toggleEditBtn/togglePreviewBtn must not read "active" for a
                                 // source/preview split a freshly-entered canvas tab isn't showing
@@ -14376,6 +15343,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (tabIndex === -1) return;
 
       const removedTab = tabs[tabIndex];
+      // Der Nachbar wird VOR dem Entfernen bestimmt, und zwar aus der ANZEIGEreihenfolge: seit die
+      // Leiste sortiert dargestellt werden kann, ist das nicht mehr dasselbe wie die Reihenfolge
+      // des Arrays, und der Blick soll auf der Notiz landen, die in der Liste darueber stand. Bei
+      // 'manuell' kommt genau das heraus, was hier vorher stand.
+      const anzeigeVorher = sortierteTabs();
+      const posAnzeige = anzeigeVorher.findIndex(t => t.id === id);
+      const nachbar = posAnzeige > 0 ? anzeigeVorher[posAnzeige - 1] : anzeigeVorher.find(t => t.id !== id);
       tabs.splice(tabIndex, 1);
       // Its assets no longer belong to any open tab -- both call sites (an explicit close and a
       // remote-deletion-follow) mean the same thing here: this document is gone, so its IndexedDB
@@ -14385,8 +15359,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (tabs.length === 0) {
         setEmptyState();
       } else if (activeTabId === id) {
-        const nextIndex = Math.max(0, tabIndex - 1);
-        switchTab(tabs[nextIndex].id);
+        // nachbar stammt aus der Anzeigeliste von vor dem Entfernen (siehe oben); ist sie aus
+        // irgendeinem Grund leer ausgegangen, gilt der bisherige Weg ueber das Array.
+        switchTab((nachbar && nachbar.id) || tabs[Math.max(0, Math.min(tabIndex, tabs.length - 1))].id);
       } else {
         renderTabs();
       }
@@ -14399,9 +15374,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (tabIndex === -1) return;
 
       const targetTab = tabs[tabIndex];
-      if (targetTab.isModified && !confirm('"' + targetTab.name + '" enthält ungespeicherte Änderungen. Wirklich schließen?')) {
-        return;
-      }
+      // IMMER nachfragen, nicht nur bei ungespeicherten Aenderungen. Gemeldet: das Kreuz zum
+      // Zuruecksetzen der Suche sitzt dicht ueber den Kreuzen der Eintraege, und ein Fehlgriff
+      // schloss die Notiz wortlos. Der Hinweis auf ungespeicherte Aenderungen bleibt der
+      // deutlichere Text, wo er zutrifft.
+      const frage = targetTab.isModified
+        ? '"' + targetTab.name + '" enthält ungespeicherte Änderungen. Wirklich schließen?'
+        : '"' + targetTab.name + '" wirklich schließen?';
+      if (!confirm(frage)) return;
 
       // Every tab has a syncId from creation (see ensureSyncId) regardless of whether it was
       // ever actually pushed to the remote -- tombstoning one that was never synced is simply a
@@ -14440,11 +15420,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return m ? { base: m[1], ext: m[2].toLowerCase() } : { base: name, ext: 'md' };
     }
 
-    function startTabRename(tabId) {
+    function startTabRename(tabId, zuDenTags) {
       renamingTabId = tabId;
       renderTabs();
-      const input = tabList.querySelector('.tab.renaming .tab-rename-input');
-      if (input) { input.focus(); input.select(); }
+      // Kommt der Aufruf vom Etikett-Knopf, gehoert der Fokus ins Schlagwortfeld statt in den
+      // Namen -- dort ist die Bildschirmtastatur ausdruecklich erwuenscht.
+      const ziel = zuDenTags
+        ? tabList.querySelector('.tab.renaming .tab-tag-eingabe')
+        : tabList.querySelector('.tab.renaming .tab-rename-input');
+      if (ziel) { ziel.focus(); if (ziel.select) ziel.select(); }
     }
 
     function cancelTabRename() {
@@ -14452,9 +15436,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       renderTabs();
     }
 
-    function confirmTabRename(tabId, rawBaseName, ext) {
+    function confirmTabRename(tabId, rawBaseName, ext, tags) {
       const tab = tabs.find(t => t.id === tabId);
       renamingTabId = null;
+      // Die Schlagwoerter zuerst, damit sie auch dann ankommen, wenn der Name leer bleibt und die
+      // Funktion gleich darunter vorzeitig zurueckkehrt.
+      if (tab && tags) tagsSetzen(tab, tags, true);
 
       const baseName = rawBaseName.trim();
       if (!tab || !baseName) {
@@ -14470,7 +15457,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // very first option (.md) and reclassified the tab as fileType 'markdown' while its raw
       // canvasData JSON stayed as tab.content — reported as renaming a canvas tab destroying it.
       if (tab.fileType === 'canvas') {
-        tab.name = baseName + '.canvas';
+        const neuerName = baseName + '.canvas';
+        if (neuerName !== tab.name) notizGeaendertStempeln(tab);
+        tab.name = neuerName;
         tab.isDefaultName = false;
         renderTabs();
         saveStateToLocalStorage();
@@ -14480,7 +15469,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const option = TAB_FORMAT_OPTIONS.find(o => o.ext === ext) || TAB_FORMAT_OPTIONS[0];
       const fileTypeChanged = option.fileType !== tab.fileType;
 
-      tab.name = baseName + '.' + option.ext;
+      const neuerName = baseName + '.' + option.ext;
+      // Ein neuer Name (oder ein anderes Format) ist eine Aenderung am Dokument -- die Notiz
+      // rueckt in der Sortierung nach "zuletzt geaendert" also nach vorn, wie im Dateimanager.
+      // Nur dann aber auch: das Umbenennen wird ueber focusout auch dann abgeschlossen, wenn gar
+      // nichts geaendert wurde (ein Doppelklick beim schnellen Oeffnen genuegt).
+      if (neuerName !== tab.name || fileTypeChanged) notizGeaendertStempeln(tab);
+      tab.name = neuerName;
       tab.fileType = option.fileType;
       tab.isDefaultName = false;
 
@@ -14528,7 +15523,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         });
       }
 
-      const commit = () => confirmTabRename(tab.id, input.value, select ? select.value : null);
+      const commit = () => confirmTabRename(tab.id, input.value, select ? select.value : null, form._tagsLesen ? form._tagsLesen() : null);
       const handleKeydown = (e) => {
         // Keep Enter/Escape from also reaching the document-level shortcut/modal handler while
         // typing a tab name (e.g. its own Escape-closes-modals logic has nothing to do here).
@@ -14552,6 +15547,97 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
       form.appendChild(input);
       if (select) form.appendChild(select);
+
+      // --- Schlagwoerter ------------------------------------------------------------------------
+      // Alles hier sind echte KINDER der Form und stehen im Fluss. Beides ist Pflicht: der
+      // focusout-Horcher oben beendet das Bearbeiten, sobald der Fokus die Form verlaesst -- ein
+      // schwebendes Vorschlagsmenue am <body> (wie #sortierMenue) waere kein Kind und der erste
+      // Klick darauf schloesse die Form. Und .tab-sidebar-panel hat overflow: hidden, ein
+      // Aufklapper INNERHALB des Panels waere an dessen Kante abgeschnitten.
+      const tagBereich = document.createElement('div');
+      tagBereich.className = 'tab-tag-bereich';
+      let aktuelle = tagListe(tab);
+
+      const zeichneTags = () => {
+        tagBereich.innerHTML = '';
+
+        const chips = document.createElement('div');
+        chips.className = 'tab-tag-chips';
+        aktuelle.forEach((t, i) => {
+          const chip = document.createElement('span');
+          chip.className = 'tab-tag-chip';
+          const cf = tagFarbe(tagSchluessel(t));
+          if (cf) {
+            chip.dataset.farbe = String(cf);
+            chip.style.setProperty('--tag-farbe', 'var(--tag-' + cf + ')');
+            chip.style.setProperty('--tag-flaeche', 'var(--tag-' + cf + '-flaeche)');
+            const punkt = document.createElement('span');
+            punkt.className = 'tab-tag-chip-punkt';
+            chip.appendChild(punkt);
+          }
+          chip.appendChild(document.createTextNode(t));
+          const weg = document.createElement('button');
+          weg.type = 'button';
+          weg.className = 'tab-tag-chip-weg';
+          weg.innerHTML = '✕';
+          weg.title = 'Schlagwort entfernen';
+          weg.onmousedown = (e) => e.preventDefault();   // nimmt der Form nicht den Fokus
+          weg.onclick = (e) => { e.stopPropagation(); aktuelle.splice(i, 1); zeichneTags(); };
+          chip.appendChild(weg);
+          chips.appendChild(chip);
+        });
+        tagBereich.appendChild(chips);
+
+        const voll = aktuelle.length >= TAG_MAX;
+        const feld = document.createElement('input');
+        feld.type = 'text';
+        feld.className = 'tab-tag-eingabe';
+        feld.placeholder = voll ? 'Höchstens ' + TAG_MAX + ' Schlagwörter' : 'Schlagwort …';
+        feld.spellcheck = false;
+        feld.disabled = voll;
+        const uebernehmen = (wort) => {
+          const w = String(wort || '').trim();
+          if (!w) return;
+          if (aktuelle.length >= TAG_MAX) { showToast('Höchstens ' + TAG_MAX + ' Schlagwörter je Notiz.'); return; }
+          if (aktuelle.some(t => tagSchluessel(t) === tagSchluessel(w))) return;
+          aktuelle.push(w);
+          zeichneTags();
+          const neuesFeld = tagBereich.querySelector('.tab-tag-eingabe');
+          if (neuesFeld && !neuesFeld.disabled) neuesFeld.focus();
+        };
+        feld.onkeydown = (e) => {
+          e.stopPropagation();
+          if (e.key === 'Enter') { e.preventDefault(); uebernehmen(feld.value); feld.value = ''; }
+          else if (e.key === 'Escape') { e.preventDefault(); cancelTabRename(); }
+        };
+        tagBereich.appendChild(feld);
+
+        // Was anderswo schon vergeben ist, zum Antippen -- damit nicht jedes Mal neu getippt
+        // (und dabei anders geschrieben) wird.
+        const schonVergeben = alleTags()
+          .filter(t => !aktuelle.some(a => tagSchluessel(a) === t.schluessel))
+          .sort((a, b) => b.anzahl - a.anzahl);
+        if (schonVergeben.length && !voll) {
+          const vorschlaege = document.createElement('div');
+          vorschlaege.className = 'tab-tag-vorschlaege';
+          schonVergeben.slice(0, 8).forEach(t => {
+            const v = document.createElement('button');
+            v.type = 'button';
+            v.className = 'tab-tag-vorschlag';
+            v.textContent = t.name;
+            v.onmousedown = (e) => e.preventDefault();
+            v.onclick = (e) => { e.stopPropagation(); uebernehmen(t.name); };
+            vorschlaege.appendChild(v);
+          });
+          tagBereich.appendChild(vorschlaege);
+        }
+      };
+      zeichneTags();
+      form.appendChild(tagBereich);
+
+      // Die Form gibt ihre Schlagwoerter ueber diese Funktion heraus -- confirmTabRename() liest
+      // sie beim Bestaetigen, egal ob per Enter, Klick daneben oder Format-Wechsel.
+      form._tagsLesen = () => aktuelle.slice();
       return form;
     }
 
@@ -14581,8 +15667,18 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     function handleTabDragPointerDown(e, tab, tabEl) {
       if (e.button !== 0) return; // primary mouse button / primary touch contact only
-      if (e.target.closest('.close-btn')) return; // let the close button behave exactly as before
+      if (e.target.closest('.close-btn, .tab-tag-btn')) return; // Kreuz und Etikett-Knopf verhalten sich wie gehabt
       if (tabs.length < 2) return; // nothing to reorder against with only one tab open
+      // Waehrend gefiltert wird, ist Umsortieren gesperrt. Sichtbar ist dann nur eine Teilmenge,
+      // und eine Teilmenge umzuordnen hat keine definierte Bedeutung fuer die Gesamtreihenfolge --
+      // der Abgleich weiter unten (newOrder.length === tabs.length) scheiterte ohnehin, der Zug
+      // waere also nur scheinbar gelungen und beim naechsten Zeichnen lautlos zurueckgenommen.
+      if (notizSuche) return;
+      // In der Tag-Ansicht steht dieselbe Notiz womoeglich in mehreren Abschnitten -- daraus laesst
+      // sich keine eindeutige Gesamtreihenfolge ableiten, und der Abgleich weiter unten
+      // (newOrder.length === tabs.length) scheiterte ohnehin. Dieselbe ehrliche Sperre wie bei der
+      // Suche, statt eines Zugs, der nur so aussieht, als haette er gewirkt.
+      if (tagAnsicht) return;
       tabDragState = { tabId: tab.id, tabEl, pointerId: e.pointerId, startY: e.clientY, dragging: false };
     }
 
@@ -14596,15 +15692,43 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!tabDragState.dragging) {
         if (Math.abs(e.clientY - tabDragState.startY) < TAB_DRAG_THRESHOLD) return;
         tabDragState.dragging = true;
+        // Wird bei aktiver Sortierung gezogen, gilt ab hier wieder die selbst gewaehlte
+        // Reihenfolge: die gerade SICHTBARE wird als neue manuelle uebernommen, danach wirkt der
+        // Zug wie immer. Genau an dieser Stelle und nirgends sonst -- davor steht nur die
+        // Schwellenpruefung, danach wird schon verschoben. Und ausdruecklich ohne renderTabs():
+        // das setzt tabList.innerHTML leer und risse den gerade gezogenen Eintrag samt seiner
+        // Zeigererfassung aus dem Dokument, die Geste waere auf der Stelle tot. sortierungAnwenden()
+        // fasst deshalb nur die Knopfoptik an.
+        if (tabSortierung !== 'manuell') {
+          const sichtbar = Array.from(tabList.children)
+            .map(el => tabs.find(t => t.id === el.dataset.tabId))
+            .filter(Boolean);
+          // Alles oder nichts: laesst sich die sichtbare Reihenfolge nicht vollstaendig
+          // uebernehmen (etwa weil zwischen dem letzten Zeichnen und dem Zug eine Notiz ueber die
+          // Synchronisierung dazukam), dann bleibt auch die Sortierung stehen. Sonst waere sie
+          // hinterher abgeschaltet, die Liste sprunghaft in einer anderen Reihenfolge -- und der
+          // Zug selbst ginge trotzdem verloren, weil der Abgleich weiter unten ebenfalls an der
+          // Laengenpruefung scheitert.
+          if (sichtbar.length !== tabs.length) { tabDragState = null; return; }
+          tabs.length = 0;
+          tabs.push(...sichtbar);
+          tabSortierung = 'manuell';
+          sortierungAnwenden();
+          saveStateToLocalStorage();
+        }
         tabDragState.tabEl.setPointerCapture(e.pointerId);
         tabDragState.tabEl.classList.add('dragging');
+        tabList.classList.add('zieht');
       }
 
       // Moves the actual DOM node being dragged (rather than calling the usual renderTabs() on
       // every move) so the element that just called setPointerCapture() above is never torn out
       // mid-gesture -- renderTabs() rebuilds every tab element from scratch via tabList.innerHTML
       // = '', which would silently end the drag the moment it ran.
-      const otherEls = Array.from(tabList.children).filter(el => el !== tabDragState.tabEl);
+      // Auch auf ein vorhandenes data-tab-id gepruefte: die Schleife misst jedes Kind aus und
+      // wuerde ein fremdes Element (heute gibt es keines, aber die Leermeldung der Suche sass
+      // beinahe hier) selbst zur Ablegezone machen.
+      const otherEls = Array.from(tabList.children).filter(el => el !== tabDragState.tabEl && el.dataset.tabId);
       let insertBeforeEl = null;
       for (const el of otherEls) {
         const rect = el.getBoundingClientRect();
@@ -14629,6 +15753,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!tabDragState || e.pointerId !== tabDragState.pointerId) return;
       if (tabDragState.dragging) {
         tabDragState.tabEl.classList.remove('dragging');
+        tabList.classList.remove('zieht');
         tabDragJustEnded = true;
         // Chromium/Firefox both already suppress the native 'click' after enough pointer movement
         // between down and up, so most of the time nothing ever arrives here to consume the flag
@@ -14694,6 +15819,23 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return ersteZeileAusText(tabInhaltJetzt(tab));
     }
 
+    // Eine Zeile von allem befreien, was Auszeichnung und nicht Inhalt ist. Herausgeloest, weil
+    // der Suchausschnitt (notizAusschnittText()) dieselbe Saeuberung braucht -- sonst staende in
+    // der Leiste "# Einkauf - [ ] Milch" statt "Einkauf Milch".
+    function notizZeileSaeubern(z) {
+      z = z.replace(TAB_ZEILE_MARKE_RE, '');
+      // Akkordmarken eines Liedblatts: "[G]Die Sonne" soll als "Die Sonne" dastehen. Der Ausdruck
+      // trifft nur kurze Klammerinhalte ohne Leerzeichen, eine gewoehnliche Fussnote oder ein
+      // Markdown-Link bleibt davon unberuehrt (Links werden gleich darunter eigens behandelt).
+      return z.replace(/\[[A-Ha-h][#b]?[^\]\s]{0,7}\](?!\()/g, '')
+              .replace(/!\[[^\]]*\]\([^)]*\)/g, '')            // Bilder ganz raus
+              .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')         // Links: nur der Text
+              .replace(/<[^>]+>/g, '')                          // rohes HTML
+              .replace(/[*_`~]/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+    }
+
     function ersteZeileAusText(text) {
       const zeilen = String(text).split('\n');
       for (let roh of zeilen) {
@@ -14703,17 +15845,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (/^\{[^}]*\}$/.test(z)) continue;                   // Liedblatt-Direktive
         if (/^(?:[-*_]\s*){3,}$/.test(z)) continue;             // Trennlinie
         if (/^\|?\s*:?-{2,}/.test(z)) continue;                 // Tabellen-Trennzeile
-        z = z.replace(TAB_ZEILE_MARKE_RE, '');
-        // Akkordmarken eines Liedblatts: "[G]Die Sonne" soll als "Die Sonne" dastehen. Der Ausdruck
-        // trifft nur kurze Klammerinhalte ohne Leerzeichen, eine gewoehnliche Fussnote oder ein
-        // Markdown-Link bleibt davon unberuehrt (Links werden gleich darunter eigens behandelt).
-        z = z.replace(/\[[A-Ha-h][#b]?[^\]\s]{0,7}\](?!\()/g, '');
-        z = z.replace(/!\[[^\]]*\]\([^)]*\)/g, '')            // Bilder ganz raus
-             .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')         // Links: nur der Text
-             .replace(/<[^>]+>/g, '')                          // rohes HTML
-             .replace(/[*_`~]/g, '')
-             .replace(/\s+/g, ' ')
-             .trim();
+        // Dieselbe Saeuberung wie im Suchausschnitt -- eine Kopie davon hier stehen zu lassen
+        // hiesse, dass eine spaeter ergaenzte Auszeichnung nur an einer der beiden Stellen
+        // ankommt und dieselbe Notiz oben etwas anderes zeigt als im Ausschnitt.
+        z = notizZeileSaeubern(z);
         if (z) return z;
       }
       return '';
@@ -14815,6 +15950,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const btn = document.getElementById('tabSidebarErweiternBtn');
       if (panel) panel.classList.toggle('erweitert', tabSidebarErweitert);
       if (btn) btn.classList.toggle('active', tabSidebarErweitert);
+      sortierungAnwenden();
+      applyTagAnsicht();
     }
 
     // Faellt das Fenster unter die Schwelle (oder steigt darueber), muss die Liste neu gebaut
@@ -14826,18 +15963,867 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       else if (vorschauAbfrage.addListener) vorschauAbfrage.addListener(beiWechsel);
     }
 
-    function renderTabs() {
-      tabList.innerHTML = '';
+
+    // --- SORTIERUNG DER NOTIZENLEISTE ----------------------------------------------------------
+    //
+    // Ausdrueckliche Entscheidung: die Sortierung wirkt NUR auf die Anzeige. `tabs` bleibt immer
+    // die vom Nutzer selbst geordnete Reihenfolge, sortiert wird erst beim Zeichnen -- zurueck auf
+    // "Manuell" stellt damit genau die alte Reihenfolge wieder her, ohne dass irgendwo eine
+    // zweite Reihenfolge mitgefuehrt werden muesste. Alles andere in der App (Sicherung, Abgleich,
+    // Durchblaettern) arbeitet unveraendert auf `tabs` weiter und merkt von der Sortierung nichts.
+    const TAB_SORTIERUNGEN = [
+      { id: 'manuell',       feld: null,        vz: 1,  label: 'Manuell (selbst geordnet)' },
+      { id: 'geaendert-ab',  feld: 'geaendert', vz: -1, label: 'Zuletzt geändert zuerst' },
+      { id: 'geaendert-auf', feld: 'geaendert', vz: 1,  label: 'Zuletzt geändert zuletzt' },
+      { id: 'erstellt-ab',   feld: 'erstellt',  vz: -1, label: 'Neueste zuerst' },
+      { id: 'erstellt-auf',  feld: 'erstellt',  vz: 1,  label: 'Älteste zuerst' }
+    ];
+
+    function sortierungEintrag(id) {
+      return TAB_SORTIERUNGEN.find(e => e.id === id) || TAB_SORTIERUNGEN[0];
+    }
+
+    // Die Anzeigereihenfolge. IMMER auf einer Kopie (slice) sortieren: Array.prototype.sort
+    // arbeitet an Ort und Stelle, und ein einziges tabs.sort() haette die manuelle Reihenfolge
+    // unwiederbringlich ueberschrieben.
+    function sortierteTabs() {
+      const e = sortierungEintrag(tabSortierung);
+      if (!e.feld) return tabs.slice();
+      return tabs.slice().sort((a, b) => {
+        const wa = notizZeitstempel(a, e.feld), wb = notizZeitstempel(b, e.feld);
+        // Notizen ohne Zeitstempel (Altbestand) stehen in BEIDEN Richtungen am Ende -- sie nach
+        // vorn zu spuelen, nur weil "unbekannt" als 0 gilt, waere die schlechtere Luege.
+        // Array.prototype.sort ist spezifikationsstabil, untereinander behalten sie damit ihre
+        // manuelle Reihenfolge.
+        if (wa === null && wb === null) return 0;
+        if (wa === null) return 1;
+        if (wb === null) return -1;
+        return (wa - wb) * e.vz;
+      });
+    }
+
+    function toggleSortierMenue(event) {
+      if (event) event.stopPropagation();
+      const menue = document.getElementById('sortierMenue');
+      if (menue.classList.contains('active')) { closeSortierMenue(); return; }
+      renderSortierMenue();
+      const btn = document.getElementById('tabSidebarSortBtn');
+      const rect = btn.getBoundingClientRect();
+      // Von der LINKEN Kante her angeankert: der Knopf sitzt am linken Bildschirmrand, ein von
+      // rechts gerechnetes Menue (wie beim Burger-Menue) liefe dort hinaus. Gedeckelt, damit es
+      // auf einem schmalen Telefon nicht ueber den rechten Rand rutscht.
+      const links = Math.min(rect.left, Math.max(8, window.innerWidth - 228 - 8));
+      menue.style.top = (rect.bottom + 6) + 'px';
+      menue.style.left = links + 'px';
+      menue.style.right = 'auto';
+      menue.classList.add('active');
+    }
+
+    function closeSortierMenue() {
+      const menue = document.getElementById('sortierMenue');
+      if (menue) menue.classList.remove('active');
+    }
+
+    function renderSortierMenue() {
+      const menue = document.getElementById('sortierMenue');
+      menue.innerHTML = '';
+      const kopf = document.createElement('div');
+      kopf.className = 'sortier-kopf';
+      kopf.textContent = 'Reihenfolge der Notizen';
+      menue.appendChild(kopf);
+      TAB_SORTIERUNGEN.forEach(e => {
+        const btn = document.createElement('button');
+        btn.className = 'sortier-eintrag' + (e.id === tabSortierung ? ' gewaehlt' : '');
+        btn.innerHTML = '<svg class="sortier-haken" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12.5L10 17.5L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        const txt = document.createElement('span');
+        txt.textContent = e.label;
+        btn.appendChild(txt);
+        btn.onclick = (ev) => { ev.stopPropagation(); sortierungWaehlen(e.id); };
+        menue.appendChild(btn);
+      });
+    }
+
+    // Die Nutzerhandlung. Getrennt von sortierungAnwenden() nach demselben Muster wie
+    // applyTheme()/changeTheme(): der Anwenden-Teil ist nebenwirkungsfrei und darf beim Laden
+    // laufen, geschrieben wird nur hier.
+    function sortierungWaehlen(id) {
+      tabSortierung = sortierungEintrag(id).id;
+      closeSortierMenue();
+      sortierungAnwenden();
+      renderTabs();
+      saveStateToLocalStorage();
+    }
+
+    // Nur die Knopfoptik. Ruft ausdruecklich NICHT renderTabs() auf: der Zieh-Handler benutzt
+    // diese Funktion mitten in einer laufenden Geste, und renderTabs() setzt tabList.innerHTML
+    // leer -- der gerade gezogene Eintrag waere samt seiner Zeigererfassung aus dem Dokument
+    // gerissen und die Geste tot.
+    function sortierungAnwenden() {
+      const btn = document.getElementById('tabSidebarSortBtn');
+      if (btn) {
+        btn.classList.toggle('active', tabSortierung !== 'manuell');
+        btn.title = 'Notizen sortieren (' + sortierungEintrag(tabSortierung).label + ')';
+      }
+    }
+
+    // --- SUCHE ÜBER ALLE OFFENEN NOTIZEN -------------------------------------------------------
+
+    // Der Text, in dem gesucht wird. Nicht einfach tab.content: bei einer Pinnwand ist das eine
+    // JSON-Zeichenkette, in der Schluessel, Kennungen und Koordinaten stehen -- wer "content"
+    // oder "theme" sucht, traefe damit jede Pinnwand, und die Anhaenge einer Box liegen dort als
+    // vollstaendige data:-URIs mitten drin, also Megabytes Base64 je Tastendruck. Deshalb derselbe
+    // Sonderweg, den ersteInhaltszeile() schon geht: nur die Texte der Kaesten.
+    function notizSuchtext(tab) {
+      if (!tab) return '';
+      if (tab.fileType === 'canvas') {
+        // Das Zerlegen der Szene ist der teure Teil: die Anhaenge der Kaesten liegen als
+        // data:-URIs mitten im JSON, das koennen Megabytes sein -- und notizFilterAnwenden() fragt
+        // bei JEDEM Tastendruck jede Notiz. Deshalb gemerkt und nur verworfen, wenn sich der
+        // Inhalt wirklich geaendert hat. Fuer die gerade offene Pinnwand wird nicht gemerkt: dort
+        // liegt der Text der offenen Box im Textfeld und aendert sich unter der Hand.
+        const offen = tab.id === activeTabId;
+        if (!offen && tab._suchtextQuelle === tab.content) return tab._suchtextCache || '';
+        const daten = (offen && tab.canvasData) ? tab.canvasData : (() => {
+          try { return JSON.parse(tab.content || '{}'); } catch (err) { return null; }
+        })();
+        if (!daten || !Array.isArray(daten.boxes)) return '';
+        // Die gerade offene Box fuehrt ihren Text im Textfeld, nicht im Kasten -- sonst faende
+        // man ausgerechnet das nicht, woran man gerade schreibt.
+        const text = daten.boxes.map(b =>
+          (b.id === canvasEditingBoxId && offen && !editor.disabled) ? editor.value : (b.content || '')
+        ).join('\n\n');
+        if (!offen) { tab._suchtextQuelle = tab.content; tab._suchtextCache = text; }
+        return text;
+      }
+      return tabInhaltJetzt(tab);
+    }
+
+    // Zaehlt die Fundstellen und merkt die erste, ohne je ein Objekt anzulegen -- computeSearchMatches()
+    // der Suchleiste baut eines pro Treffer, was beim ersten getippten Buchstaben ueber einen
+    // groesseren Bestand hunderttausende waeren, fuer eine Anzeige, die nur die Anzahl braucht.
+    function notizTrefferInfo(text, begriff) {
+      if (!begriff) return { anzahl: 0, erster: -1 };
+      const t = String(text).toLowerCase(), b = begriff.toLowerCase();
+      let anzahl = 0, erster = -1, i = t.indexOf(b);
+      while (i !== -1) {
+        if (erster === -1) erster = i;
+        anzahl++;
+        i = t.indexOf(b, i + b.length);
+      }
+      return { anzahl: anzahl, erster: erster };
+    }
+
+    // Alle Anfangsstellen -- nur fuer die EINE gerade offene Notiz gebraucht (Malschicht im
+    // Quelltext), dort ist die Liste unbedenklich klein.
+    function notizTrefferStellen(text, begriff) {
+      const stellen = [];
+      if (!begriff) return stellen;
+      const t = String(text).toLowerCase(), b = begriff.toLowerCase();
+      let i = t.indexOf(b);
+      while (i !== -1) { stellen.push(i); i = t.indexOf(b, i + b.length); }
+      return stellen;
+    }
+
+    // Ein Stueck Text um die erste Fundstelle, mit dem Begriff als <mark>. Als echte Knoten und
+    // nicht als HTML-Zeichenkette: so ist ein Einschleusen von Markup strukturell unmoeglich --
+    // und der Ausschnitt einer HTML-Notiz besteht naturgemaess aus Tags.
+    const NOTIZ_AUSSCHNITT_VOR = 28;
+    const NOTIZ_AUSSCHNITT_LAENGE = 90;
+    // Der Text, aus dem der Ausschnitt geschnitten wird: Zeile fuer Zeile gesaeubert (Ueberschrift
+    // und Listenzeichen weg, siehe notizZeileSaeubern()) und dann zu einer Zeile zusammengezogen.
+    // Anders als ersteZeileAusText() werden Ueberschriften hier NICHT uebersprungen -- die
+    // Fundstelle kann sehr wohl in einer stehen, sie verliert nur ihre Rauten.
+    function notizAusschnittText(text) {
+      return String(text).split('\n')
+        .map(z => notizZeileSaeubern(z.replace(/\u200B/g, '').replace(/^\s*#{1,6}\s+/, '').trim()))
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    function notizAusschnittKnoten(text, begriff, stelle) {
+      const roh = notizAusschnittText(text);
+      // Die Stelle gilt fuer den Originaltext; nach dem Saeubern stimmt sie nicht mehr. Deshalb im
+      // gesaeuberten Text neu suchen -- er ist es auch, der angezeigt wird. Findet sich der Begriff
+      // darin nicht mehr (er bestand aus Auszeichnungszeichen), bleibt der Ausschnitt eben ohne
+      // Hervorhebung stehen, statt zu verschwinden.
+      const info = notizTrefferInfo(roh, begriff);
+      const pos = info.erster >= 0 ? info.erster : Math.max(0, stelle);
+      const von = Math.max(0, pos - NOTIZ_AUSSCHNITT_VOR);
+      const bis = Math.min(roh.length, von + NOTIZ_AUSSCHNITT_LAENGE);
+      const frag = document.createDocumentFragment();
+      const vorher = (von > 0 ? '…' : '') + roh.slice(von, pos);
+      frag.appendChild(document.createTextNode(vorher));
+      if (info.erster >= 0) {
+        const m = document.createElement('mark');
+        m.textContent = roh.substr(pos, begriff.length);
+        frag.appendChild(m);
+      }
+      const rest = roh.slice(pos + (info.erster >= 0 ? begriff.length : 0), bis);
+      frag.appendChild(document.createTextNode(rest + (bis < roh.length ? '…' : '')));
+      return frag;
+    }
+
+    // Denselben Begriff im Namen hervorheben, ebenfalls als Knoten.
+    function notizNameSetzen(nameSpan, name, begriff) {
+      nameSpan.textContent = '';
+      const info = begriff ? notizTrefferInfo(name, begriff) : { erster: -1 };
+      if (info.erster < 0) { nameSpan.textContent = name; return; }
+      nameSpan.appendChild(document.createTextNode(name.slice(0, info.erster)));
+      const m = document.createElement('mark');
+      m.textContent = name.substr(info.erster, begriff.length);
+      nameSpan.appendChild(m);
+      nameSpan.appendChild(document.createTextNode(name.slice(info.erster + begriff.length)));
+    }
+
+    function toggleNotizSuche() {
+      notizSucheOffen = !notizSucheOffen;
+      const zeile = document.getElementById('tabSucheZeile');
+      const btn = document.getElementById('tabSidebarSuchBtn');
+      zeile.classList.toggle('active', notizSucheOffen);
+      btn.classList.toggle('active', notizSucheOffen);
+      if (notizSucheOffen) {
+        document.getElementById('tabSucheFeld').focus();
+      } else {
+        // Das Feld MIT leeren, nicht nur den Zustand: sonst stuende beim naechsten Aufklappen ein
+        // Begriff da, der nichts bewirkt -- und das naechste getippte Zeichen wuerde an ihn
+        // angehaengt, statt eine neue Suche zu beginnen.
+        const feld = document.getElementById('tabSucheFeld');
+        if (feld) feld.value = '';
+        notizSucheSetzen('');
+      }
+    }
+
+    function notizSucheSetzen(wert) {
+      notizSuche = String(wert || '');
+      // Bewusst KEIN renderTabs(): das setzt tabList.innerHTML leer und baut jeden Eintrag neu.
+      // Faellt so ein Neuaufbau zwischen das Druecken und das Loslassen der Maustaste -- und beim
+      // Tippen-und-gleich-Klicken tut er das leicht --, ist das angeklickte Element weg, der
+      // pointerup-Horcher feuert nie und die Notiz oeffnet sich einfach nicht. Genau dieser Fehler
+      // ist im Songbuch schon einmal gemeldet und dort mit demselben Verfahren behoben worden:
+      // Eintraege stehen lassen, nur ein- und ausblenden. Nebenbei bleiben dadurch auch die
+      // Vorschaubilder stehen, statt bei jedem Buchstaben die ganze Notiz neu zu setzen.
+      notizFilterAnwenden();
+      suchMarkierungAktualisieren();
+    }
+
+    // Beendet die Suche ohne den Fokus anzufassen -- fuer die Stellen, an denen die Notizenleiste
+    // gleich ganz verschwindet (Vollbild, Praesentation). Dort waere der Lupenknopf, der einzige
+    // andere Ausschalter, hinter einer ausgeblendeten Leiste nicht mehr erreichbar, und die
+    // Fundstellen blieben unaufloesbar markiert.
+    function notizSucheBeenden() {
+      if (!notizSuche && !notizSucheOffen) return;
+      const feld = document.getElementById('tabSucheFeld');
+      if (feld) feld.value = '';
+      notizSucheOffen = false;
+      const zeile = document.getElementById('tabSucheZeile');
+      const btn = document.getElementById('tabSidebarSuchBtn');
+      if (zeile) zeile.classList.remove('active');
+      if (btn) btn.classList.remove('active');
+      notizSucheSetzen('');
+    }
+
+    function notizSucheLeeren() {
+      const feld = document.getElementById('tabSucheFeld');
+      if (feld) feld.value = '';
+      notizSucheSetzen('');
+      if (feld) feld.focus();
+    }
+
+    // Escape im Suchfeld raeumt stufenweise auf: erst den Begriff, dann das Feld. Ohne
+    // stopPropagation() liefe das Ereignis weiter zum Dokument, dessen Escape-Zweig pauschal alles
+    // schliesst -- die ganze Leiste waere beim ersten Druck weg. Dasselbe Vorgehen wie im
+    // Umbenennen-Feld.
+    function notizSucheTaste(e) {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        e.preventDefault();
+        if (notizSuche) { notizSucheLeeren(); return; }
+        toggleNotizSuche();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.stopPropagation();
+        e.preventDefault();
+        // Enter springt in die erste gefundene Notiz -- der Weg, den man nach dem Tippen ohnehin
+        // gehen will, ohne zur Maus greifen zu muessen.
+        const erster = tabList.querySelector('.tab:not(.gefiltert-weg):not(.renaming)');
+        if (erster) erster.click();
+      }
+    }
+
+    // Blendet aus, was nicht passt, und schreibt Trefferzahl und Ausschnitt in die BESTEHENDEN
+    // Eintraege. Ruehrt die Knoten selbst nicht an (siehe notizSucheSetzen()).
+    function notizFilterAnwenden() {
+      const begriff = notizSuche;
+      tabList.classList.toggle('suche-aktiv', !!begriff);
+      // querySelectorAll('.tab') statt der direkten Kinder: in der Tag-Ansicht sind die Kinder die
+      // Abschnitte, und die Schleife stiege bei jedem von ihnen sofort wieder aus -- die Suche
+      // taete dann gar nichts und meldete trotzdem "keine Notiz enthaelt ...". In der flachen
+      // Ansicht ist es Zeichen fuer Zeichen dieselbe Menge in derselben Reihenfolge wie zuvor.
+      const sichtbareIds = new Set();
+      Array.from(tabList.querySelectorAll('.tab')).forEach(el => {
+        const tab = tabs.find(t => t.id === el.dataset.tabId);
+        if (!tab) return;
+        const nameSpan = el.querySelector('.tab-name');
+        const zeileEl = el.querySelector('.tab-erste-zeile');
+        let plakette = el.querySelector('.tab-treffer');
+
+        if (!begriff) {
+          el.classList.remove('gefiltert-weg');
+          if (plakette) plakette.remove();
+          if (nameSpan) nameSpan.textContent = tab.name + (tab.isModified ? ' *' : '');
+          if (zeileEl) zeileEl.textContent = el.dataset.ersteZeile || '';
+          if (zeileEl && !el.dataset.ersteZeile) zeileEl.remove();
+          sichtbareIds.add(tab.id);
+          return;
+        }
+
+        const text = notizSuchtext(tab);
+        const imText = notizTrefferInfo(text, begriff);
+        const imNamen = notizTrefferInfo(tab.name, begriff);
+        const gesamt = imText.anzahl + imNamen.anzahl;
+        // Ein Eintrag, der gerade umbenannt wird, bleibt IMMER stehen: sonst verschwaende das
+        // Formular samt bereits getipptem Namen unter der Hand, waehrend renamingTabId weiter auf
+        // ihn zeigt.
+        const behalten = gesamt > 0 || tab.id === renamingTabId;
+        el.classList.toggle('gefiltert-weg', !behalten);
+        if (!behalten) return;
+        // Ein Set, keine Zaehlung: in der Tag-Ansicht steht dieselbe Notiz in mehreren
+        // Abschnitten und wuerde sonst mehrfach gezaehlt.
+        sichtbareIds.add(tab.id);
+        // Der Eintrag im Umbenennen-Zustand hat weder Namensfeld noch Zeile zum Auszeichnen (sein
+        // Zweig in renderTabs() kehrt vorher zurueck) -- eine Plakette landete dort als eigene
+        // Zeile unter dem Herkunftsvermerk, weil er eine Spalte ist.
+        if (tab.id === renamingTabId) return;
+
+        if (nameSpan) notizNameSetzen(nameSpan, tab.name + (tab.isModified ? ' *' : ''), begriff);
+        if (gesamt > 0) {
+          if (!plakette) {
+            plakette = document.createElement('span');
+            plakette.className = 'tab-treffer';
+            // Vor das Vorschaubild und das Kreuz, hinter den Text.
+            const vor = el.querySelector('.tab-vorschau') || el.querySelector('.close-btn');
+            el.insertBefore(plakette, vor || null);
+          }
+          plakette.textContent = String(gesamt);
+          plakette.title = gesamt === 1 ? 'Eine Fundstelle' : gesamt + ' Fundstellen';
+        } else if (plakette) {
+          plakette.remove();
+        }
+
+        if (imText.erster >= 0) {
+          let ziel = zeileEl;
+          if (!ziel) {
+            ziel = document.createElement('div');
+            ziel.className = 'tab-erste-zeile';
+            const textEl = el.querySelector('.tab-eintrag-text');
+            if (textEl) textEl.appendChild(ziel); else return;
+          }
+          ziel.textContent = '';
+          ziel.appendChild(notizAusschnittKnoten(text, begriff, imText.erster));
+        } else if (zeileEl) {
+          zeileEl.textContent = el.dataset.ersteZeile || '';
+        }
+      });
+
+      // Abschnitte, in denen nichts uebrig blieb, verschwinden mit -- sonst staende eine
+      // Ueberschrift ohne einen einzigen Eintrag darunter. Eigene Klasse statt des
+      // hidden-Attributs, aus demselben Grund wie bei .tab.gefiltert-weg.
+      Array.from(tabList.querySelectorAll('.tag-abschnitt')).forEach(ab => {
+        const hatTreffer = !!ab.querySelector('.tab:not(.gefiltert-weg)');
+        ab.classList.toggle('gefiltert-weg', !!begriff && !hatTreffer);
+      });
+
+      const leer = document.getElementById('tabSucheLeer');
+      if (leer) {
+        const nichts = !!begriff && sichtbareIds.size === 0;
+        leer.classList.toggle('active', nichts);
+        leer.textContent = nichts ? 'Keine der ' + tabs.length + ' offenen Notizen enthält „' + begriff + '".' : '';
+      }
+    }
+
+    // Sechs Punkte als Anfasser. Kein Sinnbild aus Icons/ -- dafuer gibt es dort keines, und ein
+    // Griffmuster ist ohnehin genau das: ein Muster, kein Sinnbild.
+    const TAB_TAG_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M3 12V4a1 1 0 011-1h8l9 9-9 9-9-9z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>' +
+      '<circle cx="7.5" cy="7.5" r="1.4" fill="currentColor"/></svg>';
+
+    const TAB_GRIFF_SVG = '<svg viewBox="0 0 10 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">' +
+      '<circle cx="3" cy="3" r="1.3"/><circle cx="7" cy="3" r="1.3"/>' +
+      '<circle cx="3" cy="8" r="1.3"/><circle cx="7" cy="8" r="1.3"/>' +
+      '<circle cx="3" cy="13" r="1.3"/><circle cx="7" cy="13" r="1.3"/></svg>';
+
+
+    // --- SCHLAGWOERTER (TAGS) -------------------------------------------------------------------
+    //
+    // Bis zu drei je Notiz. Sie gehoeren zur Notiz und reisen ueber WebDAV mit (wie theme und
+    // contentWidthMode) -- ein Schlagwort beschreibt das Dokument, nicht den Bildschirm. Deshalb
+    // stehen sie auch in tabSyncSnapshot()/remoteTabSnapshot(): ohne das merkte der Dreiwege-
+    // Abgleich eine reine Tag-Aenderung nie und schoebe sie nie hoch.
+    const TAG_MAX = 3;
+    const TAG_OHNE = '\u0000ohne';   // Schluessel des Sammelabschnitts; kann mit keinem echten kollidieren
+
+    // Gross-/Kleinschreibung und Leerraum zusammenfassen: sonst stuenden "Arbeit", "arbeit" und
+    // "Arbeit " als drei Abschnitte nebeneinander. Angezeigt wird trotzdem die getippte
+    // Schreibweise (siehe tagAnzeigeName()).
+    function tagSchluessel(t) {
+      return String(t || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function tagListe(tab) {
+      if (!tab || !Array.isArray(tab.tags)) return [];
+      // Beim Lesen wehrhaft: ein von Hand veraenderter Speicher oder eine andere Fassung koennte
+      // mehr als drei oder leere Eintraege liefern.
+      const raus = [], gesehen = new Set();
+      for (const roh of tab.tags) {
+        const k = tagSchluessel(roh);
+        if (!k || gesehen.has(k)) continue;
+        gesehen.add(k);
+        raus.push(String(roh).trim());
+        if (raus.length >= TAG_MAX) break;
+      }
+      return raus;
+    }
+
+    // Alle vergebenen Schlagwoerter mit Anzahl. Die Anzeigeform ist die des ersten Vorkommens in
+    // der Notizreihenfolge -- damit steht auf beiden Geraeten dasselbe, solange die Notizen
+    // dieselben sind.
+    function alleTags() {
+      const map = new Map();
+      tabs.forEach(tab => tagListe(tab).forEach(t => {
+        const k = tagSchluessel(t);
+        if (!map.has(k)) map.set(k, { schluessel: k, name: t, anzahl: 0 });
+        map.get(k).anzahl++;
+      }));
+      return [...map.values()];
+    }
+
+    function tagAnzeigeName(schluessel) {
+      const e = alleTags().find(t => t.schluessel === schluessel);
+      return e ? e.name : schluessel;
+    }
+
+    // Die Abschnitte der Tag-Ansicht: alphabetisch nach deutscher Sortierung (dasselbe Collator-
+    // Muster, das die Tabellensortierung schon benutzt -- Umlaute landen dort, wo man sie sucht),
+    // und "Ohne Schlagwort" ausdruecklich am Ende, damit der Restehaufen nicht je nach
+    // Anfangsbuchstabe mittendrin steht. Die Notizen innerhalb eines Abschnitts kommen in der
+    // Reihenfolge, in der sie hineingegeben wurden -- also in der, die sortierteTabs() liefert:
+    // die gewaehlte Sortierung wirkt damit von selbst INNERHALB jedes Abschnitts.
+    function tagAbschnitte(liste) {
+      const eimer = new Map();
+      const ohne = [];
+      liste.forEach(tab => {
+        const tg = tagListe(tab);
+        if (!tg.length) { ohne.push(tab); return; }
+        tg.forEach(t => {
+          const k = tagSchluessel(t);
+          if (!eimer.has(k)) eimer.set(k, { schluessel: k, name: t, tabs: [] });
+          eimer.get(k).tabs.push(tab);
+        });
+      });
+      const sammler = new Intl.Collator('de', { numeric: true, sensitivity: 'base' });
+      // Selbst geordnete Schlagwoerter zuerst, in ihrer Reihenfolge; alles, was dort (noch) nicht
+      // steht -- also neu vergebene --, kommt alphabetisch dahinter, statt unsortiert anzuhaengen.
+      const rang = (k) => {
+        const i = tagReihenfolge.indexOf(k);
+        return i === -1 ? Infinity : i;
+      };
+      const raus = [...eimer.values()].sort((a, b) => {
+        const ra = rang(a.schluessel), rb = rang(b.schluessel);
+        if (ra !== rb) return ra - rb;
+        return sammler.compare(a.name, b.name);
+      });
+      if (ohne.length) raus.push({ schluessel: TAG_OHNE, name: 'Ohne Schlagwort', tabs: ohne });
+      return raus;
+    }
+
+    const TAG_FARBEN_ANZAHL = 8;
+
+    function tagFarbe(schluessel) {
+      const n = tagFarben[schluessel];
+      return (typeof n === 'number' && n >= 1 && n <= TAG_FARBEN_ANZAHL) ? n : 0;
+    }
+
+    // Setzt Farbe bzw. Reihenfolge und stempelt den gemeinsamen Zeitstempel -- er entscheidet
+    // beim Abgleich, welcher Stand gewinnt.
+    function tagEinstellungenGeaendert() {
+      tagEinstellungenUpdatedAt = Date.now();
+      saveStateToLocalStorage();
+      scheduleWebdavDebouncedSync();
+    }
+
+    function tagFarbeSetzen(schluessel, nummer) {
+      if (nummer) tagFarben[schluessel] = nummer; else delete tagFarben[schluessel];
+      tagEinstellungenGeaendert();
+      renderTabs();
+    }
+
+    // Die aktuell sichtbare Abschnittsreihenfolge festschreiben. Noetig, bevor etwas verschoben
+    // wird: solange nichts von Hand geordnet wurde, ist die Reihenfolge alphabetisch und steht
+    // nirgends -- ohne dieses Festschreiben haette ein "nach oben" nichts, worauf es wirken kann.
+    function tagReihenfolgeFestschreiben() {
+      const sichtbar = tagAbschnitte(sortierteTabs())
+        .filter(a => a.schluessel !== TAG_OHNE)
+        .map(a => a.schluessel);
+      // Was gerade nicht zu sehen ist (Schlagwort nur auf einer geschlossenen Notiz), bleibt
+      // hinten stehen statt verlorenzugehen.
+      const rest = tagReihenfolge.filter(k => !sichtbar.includes(k));
+      tagReihenfolge = sichtbar.concat(rest);
+    }
+
+    function tagVerschieben(schluessel, richtung) {
+      tagReihenfolgeFestschreiben();
+      const i = tagReihenfolge.indexOf(schluessel);
+      const j = i + richtung;
+      if (i === -1 || j < 0 || j >= tagReihenfolge.length) return;
+      const t = tagReihenfolge[i];
+      tagReihenfolge[i] = tagReihenfolge[j];
+      tagReihenfolge[j] = t;
+      tagEinstellungenGeaendert();
+      renderTabs();
+    }
+
+    const TAG_PFEIL_SVG = '<svg class="tag-abschnitt-pfeil" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M8 10l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    function baueTagAbschnitt(abschnitt, gesehen) {
+      const el = document.createElement('div');
+      el.className = 'tag-abschnitt' + (tagEingeklappt[abschnitt.schluessel] ? ' zu' : '');
+      el.dataset.tagSchluessel = abschnitt.schluessel;
+      const farbe = abschnitt.schluessel === TAG_OHNE ? 0 : tagFarbe(abschnitt.schluessel);
+      if (farbe) {
+        el.dataset.farbe = String(farbe);
+        el.style.setProperty('--tag-farbe', 'var(--tag-' + farbe + ')');
+        el.style.setProperty('--tag-flaeche', 'var(--tag-' + farbe + '-flaeche)');
+      }
+
+      const kopf = document.createElement('button');
+      kopf.type = 'button';
+      kopf.className = 'tag-abschnitt-kopf';
+      kopf.innerHTML = TAG_PFEIL_SVG;
+
+      // Der Sammelabschnitt ist kein Schlagwort -- er laesst sich weder faerben noch verschieben
+      // noch umbenennen, und ein Anfasser daran waere eine Einladung, die ins Leere fuehrt.
+      if (abschnitt.schluessel !== TAG_OHNE) {
+        const griff = document.createElement('span');
+        griff.className = 'tag-abschnitt-griff';
+        griff.innerHTML = TAB_GRIFF_SVG;
+        griff.title = 'Abschnitt verschieben';
+        griff.addEventListener('pointerdown', (e) => tagAbschnittZugStart(e, abschnitt.schluessel, el));
+        griff.addEventListener('pointermove', tagAbschnittZugBewegung);
+        griff.addEventListener('pointerup', tagAbschnittZugEnde);
+        griff.addEventListener('pointercancel', tagAbschnittZugEnde);
+        kopf.appendChild(griff);
+      }
+
+      if (farbe) {
+        const punkt = document.createElement('span');
+        punkt.className = 'tag-punkt';
+        kopf.appendChild(punkt);
+      }
+
+      const name = document.createElement('span');
+      name.className = 'tag-abschnitt-name';
+      name.textContent = abschnitt.name;
+      kopf.appendChild(name);
+      const zahl = document.createElement('span');
+      zahl.className = 'tag-abschnitt-zahl';
+      zahl.textContent = String(abschnitt.tabs.length);
+      kopf.appendChild(zahl);
+      kopf.onclick = (e) => { e.stopPropagation(); tagAbschnittUmschalten(abschnitt.schluessel); };
+      el.appendChild(kopf);
+
+      // Umbenennen/Entfernen eines Schlagworts in ALLEN Notizen auf einmal -- sonst bliebe ein
+      // vertipptes Wort als eigener Abschnitt stehen, bis man jede Notiz einzeln anfasst. Beim
+      // Sammelabschnitt gibt es nichts zu verwalten.
+      if (abschnitt.schluessel !== TAG_OHNE) {
+        const verwalten = document.createElement('button');
+        verwalten.type = 'button';
+        verwalten.className = 'tag-abschnitt-menue';
+        verwalten.innerHTML = '&#8943;';
+        verwalten.title = 'Schlagwort umbenennen oder entfernen';
+        verwalten.onclick = (e) => { e.stopPropagation(); tagMenueOeffnen(abschnitt.schluessel, verwalten); };
+        kopf.appendChild(verwalten);
+      }
+
+      const inhalt = document.createElement('div');
+      inhalt.className = 'tag-abschnitt-inhalt';
+      abschnitt.tabs.forEach(tab => {
+        const erstes = !gesehen.has(tab.id);
+        gesehen.add(tab.id);
+        inhalt.appendChild(baueTabEintrag(tab, erstes));
+      });
+      el.appendChild(inhalt);
+      return el;
+    }
+
+    function tagAbschnittUmschalten(schluessel) {
+      tagEingeklappt[schluessel] = !tagEingeklappt[schluessel];
+      const el = tabList.querySelector('.tag-abschnitt[data-tag-schluessel="' + CSS.escape(schluessel) + '"]');
+      // Nur die Klasse umschalten statt neu zu zeichnen: ein Neuaufbau mitten im Klick ist genau
+      // das, was an anderer Stelle in dieser Datei schon Fehler gemacht hat.
+      if (el) el.classList.toggle('zu', !!tagEingeklappt[schluessel]);
+      saveStateToLocalStorage();
+    }
+
+    // Das Menue eines Abschnitts: umbenennen, faerben, verschieben, ueberall entfernen.
+    // Am <body> und position: fixed, wie das Sortiermenue -- das Panel schneidet ab.
+    let tagMenueSchluessel = null;
+
+    function tagMenueOeffnen(schluessel, knopf) {
+      const menue = document.getElementById('tagMenue');
+      if (tagMenueSchluessel === schluessel && menue.classList.contains('active')) { tagMenueSchliessen(); return; }
+      tagMenueSchluessel = schluessel;
+      renderTagMenue();
+      const r = knopf.getBoundingClientRect();
+      // Von der rechten Kante des Knopfes her, sonst laeuft das Menue aus der schmalen Leiste
+      // heraus; gedeckelt, damit es auf dem Telefon nicht ueber den Rand rutscht.
+      const rechts = Math.min(window.innerWidth - r.right, Math.max(8, window.innerWidth - 214 - 8));
+      menue.style.top = (r.bottom + 6) + 'px';
+      menue.style.left = 'auto';
+      menue.style.right = Math.max(8, rechts) + 'px';
+      menue.classList.add('active');
+      const feld = menue.querySelector('.tag-menue-name');
+      if (feld) { feld.focus(); feld.select(); }
+    }
+
+    function tagMenueSchliessen() {
+      const menue = document.getElementById('tagMenue');
+      if (menue) menue.classList.remove('active');
+      tagMenueSchluessel = null;
+    }
+
+    function renderTagMenue() {
+      const menue = document.getElementById('tagMenue');
+      const schluessel = tagMenueSchluessel;
+      menue.innerHTML = '';
+
+      const feld = document.createElement('input');
+      feld.type = 'text';
+      feld.className = 'tag-menue-name';
+      feld.value = tagAnzeigeName(schluessel);
+      feld.spellcheck = false;
+      feld.onkeydown = (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') { e.preventDefault(); tagUmbenennen(schluessel, feld.value); }
+        else if (e.key === 'Escape') { e.preventDefault(); tagMenueSchliessen(); }
+      };
+      menue.appendChild(feld);
+
+      const farben = document.createElement('div');
+      farben.className = 'tag-menue-farben';
+      const jetzt = tagFarbe(schluessel);
+      for (let i = 0; i <= TAG_FARBEN_ANZAHL; i++) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tag-farbwahl' + (i === 0 ? ' keine' : '') + (i === jetzt ? ' gewaehlt' : '');
+        if (i) b.style.setProperty('--tag-farbe', 'var(--tag-' + i + ')');
+        b.title = i ? 'Farbe ' + i : 'Keine Farbe';
+        b.onclick = (e) => { e.stopPropagation(); tagFarbeSetzen(schluessel, i); renderTagMenue(); };
+        farben.appendChild(b);
+      }
+      menue.appendChild(farben);
+
+      const reihe = tagAbschnitte(sortierteTabs()).filter(a => a.schluessel !== TAG_OHNE).map(a => a.schluessel);
+      const pos = reihe.indexOf(schluessel);
+
+      const hoch = document.createElement('button');
+      hoch.type = 'button';
+      hoch.className = 'tag-menue-zeile';
+      hoch.textContent = '↑  Nach oben';
+      hoch.disabled = pos <= 0;
+      hoch.onclick = (e) => { e.stopPropagation(); tagVerschieben(schluessel, -1); renderTagMenue(); };
+      menue.appendChild(hoch);
+
+      const runter = document.createElement('button');
+      runter.type = 'button';
+      runter.className = 'tag-menue-zeile';
+      runter.textContent = '↓  Nach unten';
+      runter.disabled = pos === -1 || pos >= reihe.length - 1;
+      runter.onclick = (e) => { e.stopPropagation(); tagVerschieben(schluessel, 1); renderTagMenue(); };
+      menue.appendChild(runter);
+
+      const weg = document.createElement('button');
+      weg.type = 'button';
+      weg.className = 'tag-menue-zeile entfernen';
+      weg.textContent = '✕  Aus allen Notizen entfernen';
+      weg.onclick = (e) => { e.stopPropagation(); tagUeberallEntfernen(schluessel); };
+      menue.appendChild(weg);
+    }
+
+    // Umbenennen und Entfernen gehen durch dieselbe Schleife -- der einzige Unterschied ist, ob
+    // ein Ersatzwort da ist. Ohne diesen Weg bliebe ein vertipptes Schlagwort als eigener
+    // Abschnitt stehen, bis man jede Notiz einzeln anfasst.
+    function tagUeberallAendern(schluessel, neu) {
+      let betroffen = 0;
       tabs.forEach(tab => {
+        const tg = tagListe(tab);
+        if (!tg.some(t => tagSchluessel(t) === schluessel)) return;
+        betroffen++;
+        let neueListe;
+        if (!neu) {
+          neueListe = tg.filter(t => tagSchluessel(t) !== schluessel);
+        } else {
+          // Traegt die Notiz das Ziel schon, faellt das umbenannte weg statt doppelt zu stehen.
+          neueListe = [];
+          const drin = new Set();
+          tg.forEach(t => {
+            const ersetzt = tagSchluessel(t) === schluessel ? neu : t;
+            const k = tagSchluessel(ersetzt);
+            if (drin.has(k)) return;
+            drin.add(k);
+            neueListe.push(ersetzt);
+          });
+        }
+        tagsSetzen(tab, neueListe, true);
+      });
+      // Farbe und Platz in der Reihenfolge wandern mit -- sonst verloere ein umbenanntes
+      // Schlagwort beides und staende ploetzlich farblos am Ende.
+      const neuerSchluessel = tagSchluessel(neu);
+      const farbe = tagFarbe(schluessel);
+      const pos = tagReihenfolge.indexOf(schluessel);
+      delete tagFarben[schluessel];
+      if (pos !== -1) tagReihenfolge.splice(pos, 1);
+      if (neuerSchluessel) {
+        if (farbe) tagFarben[neuerSchluessel] = farbe;
+        if (pos !== -1 && !tagReihenfolge.includes(neuerSchluessel)) tagReihenfolge.splice(pos, 0, neuerSchluessel);
+      }
+      delete tagEingeklappt[schluessel];
+      tagEinstellungenGeaendert();
+      tagMenueSchliessen();
+      renderTabs();
+      showToast(neu
+        ? 'Schlagwort in ' + betroffen + (betroffen === 1 ? ' Notiz' : ' Notizen') + ' umbenannt.'
+        : 'Schlagwort aus ' + betroffen + (betroffen === 1 ? ' Notiz' : ' Notizen') + ' entfernt.');
+    }
+
+    function tagUmbenennen(schluessel, eingabe) {
+      const neu = String(eingabe || '').trim();
+      if (!neu) return;                                  // leer heisst hier nicht "loeschen"
+      if (tagSchluessel(neu) === schluessel && neu === tagAnzeigeName(schluessel)) { tagMenueSchliessen(); return; }
+      tagUeberallAendern(schluessel, neu);
+    }
+
+    function tagUeberallEntfernen(schluessel) {
+      const name = tagAnzeigeName(schluessel);
+      const anzahl = tabs.filter(t => tagListe(t).some(x => tagSchluessel(x) === schluessel)).length;
+      if (!confirm('Schlagwort „' + name + '" aus ' + anzahl + (anzahl === 1 ? ' Notiz' : ' Notizen') + ' entfernen?')) return;
+      tagUeberallAendern(schluessel, '');
+    }
+
+    // Die eine Schreibstelle. stillesSetzen unterdrueckt das Neuzeichnen, damit tagVerwalten()
+    // einmal am Ende zeichnet statt je Notiz.
+    function tagsSetzen(tab, liste, stillesSetzen) {
+      if (!tab) return;
+      const raus = [], gesehen = new Set();
+      for (const roh of (liste || [])) {
+        const k = tagSchluessel(roh);
+        if (!k || gesehen.has(k)) continue;
+        gesehen.add(k);
+        raus.push(String(roh).trim());
+        if (raus.length >= TAG_MAX) break;
+      }
+      const vorher = JSON.stringify(tagListe(tab));
+      tab.tags = raus;
+      // Ein Schlagwort ist eine Aenderung am Dokument (es reist ueber den Abgleich mit), also
+      // wird gestempelt -- aber nur, wenn sich wirklich etwas geaendert hat.
+      if (JSON.stringify(raus) !== vorher) notizGeaendertStempeln(tab);
+      if (!stillesSetzen) { renderTabs(); saveStateToLocalStorage(); }
+    }
+
+    // --- Abschnitte von Hand ordnen -------------------------------------------------------------
+    //
+    // Eigener, kleiner Zug-Zustand statt einer Erweiterung von handleTabDragPointerDown: dort geht
+    // es um die Reihenfolge der NOTIZEN in tabs, hier um eine Liste von Schluesseln. Zwei Dinge,
+    // die nur die Geste gemeinsam haben -- sie zusammenzulegen hiesse, beide Faelle in jeder Zeile
+    // mitzudenken. Der Anfasser traegt touch-action: none, damit das Rollen der Liste die Geste
+    // nicht beansprucht (siehe .tag-abschnitt-griff).
+    const TAG_ZUG_SCHWELLE = 6;
+    let tagZugZustand = null;
+
+    function tagAbschnittZugStart(e, schluessel, el) {
+      if (e.button !== 0) return;
+      if (notizSuche) return;                 // gefiltert ist nur ein Teil der Abschnitte zu sehen
+      e.stopPropagation();                    // sonst klappt der Kopf beim Loslassen mit um
+      tagZugZustand = { schluessel, el, pointerId: e.pointerId, startY: e.clientY, zieht: false };
+    }
+
+    function tagAbschnittZugBewegung(e) {
+      if (!tagZugZustand || e.pointerId !== tagZugZustand.pointerId) return;
+      if (!tagZugZustand.zieht) {
+        if (Math.abs(e.clientY - tagZugZustand.startY) < TAG_ZUG_SCHWELLE) return;
+        tagZugZustand.zieht = true;
+        // Die sichtbare Reihenfolge festschreiben, BEVOR verschoben wird -- solange nichts von
+        // Hand geordnet wurde, steht sie nirgends und der Zug haette nichts, worauf er wirkt.
+        tagReihenfolgeFestschreiben();
+        e.target.setPointerCapture(e.pointerId);
+        tagZugZustand.el.classList.add('zieht-gerade');
+        tabList.classList.add('abschnitt-zieht');
+      }
+      // Denselben Weg wie beim Notiz-Zug: den echten Knoten verschieben und die Liste danach
+      // ablesen. Der Sammelabschnitt bleibt aussen vor, er gehoert immer ans Ende.
+      const andere = Array.from(tabList.children).filter(el =>
+        el !== tagZugZustand.el && el.dataset.tagSchluessel && el.dataset.tagSchluessel !== TAG_OHNE);
+      let davor = null;
+      for (const el of andere) {
+        const r = el.getBoundingClientRect();
+        if (e.clientY < r.top + r.height / 2) { davor = el; break; }
+      }
+      if (davor !== tagZugZustand.el.nextSibling) {
+        // insertBefore(x, null) haengt ans Ende -- der Sammelabschnitt muss danach wieder
+        // dahinter, deshalb wird er ausdruecklich als Bezug genommen, wenn es ihn gibt.
+        const ohne = tabList.querySelector('.tag-abschnitt[data-tag-schluessel="' + CSS.escape(TAG_OHNE) + '"]');
+        tabList.insertBefore(tagZugZustand.el, davor || ohne);
+      }
+      tagReihenfolge = Array.from(tabList.children)
+        .map(el => el.dataset.tagSchluessel)
+        .filter(k => k && k !== TAG_OHNE);
+    }
+
+    function tagAbschnittZugEnde(e) {
+      if (!tagZugZustand || e.pointerId !== tagZugZustand.pointerId) return;
+      if (tagZugZustand.zieht) {
+        tagZugZustand.el.classList.remove('zieht-gerade');
+        tabList.classList.remove('abschnitt-zieht');
+        tagEinstellungenGeaendert();
+      }
+      tagZugZustand = null;
+    }
+
+    function toggleTagAnsicht() {
+      tagAnsicht = !tagAnsicht;
+      applyTagAnsicht();
+      renderTabs();
+      saveStateToLocalStorage();
+    }
+
+    // Reine Anwendung, ohne Neuzeichnen -- derselbe Schnitt wie applyTheme()/changeTheme() und
+    // applyTabSidebarErweitert() nebenan, damit das Laden diese Haelfte gefahrlos aufrufen kann.
+    function applyTagAnsicht() {
+      const btn = document.getElementById('tabSidebarTagBtn');
+      if (btn) btn.classList.toggle('active', tagAnsicht);
+      if (tabList) tabList.classList.toggle('tag-ansicht', tagAnsicht);
+    }
+
+    // Baut EINEN Eintrag und gibt ihn zurueck, statt ihn selbst anzuhaengen. Herausgeloest, damit
+    // die Tag-Ansicht dieselben Eintraege in Abschnitte einsortieren kann, ohne einen zweiten
+    // Zeichenweg danebenzustellen -- zwei Wege driften auseinander, das ist in dieser Datei
+    // mehrfach als Fehlerursache belegt.
+    //
+    // istErstesVorkommen: in der Tag-Ansicht steht dieselbe Notiz in mehreren Abschnitten. Das
+    // Umbenennen-Formular darf es aber nur EINMAL geben -- sonst staenden drei Felder mit
+    // demselben Namen da, und ein Klick ins zweite laesst das erste per focusout bestaetigen,
+    // was die Liste neu baut und das gerade angeklickte Feld mitten in der Geste zerstoert.
+    function baueTabEintrag(tab, istErstesVorkommen) {
         const tabEl = document.createElement('div');
         const classes = ['tab'];
         if (tab.id === activeTabId) classes.push('active');
-        if (tab.id === renamingTabId) classes.push('renaming');
+        if (tab.id === renamingTabId && istErstesVorkommen) classes.push('renaming');
         if (isTabSynced(tab)) classes.push('synced');
         tabEl.className = classes.join(' ');
         tabEl.dataset.tabId = tab.id;
 
-        if (tab.id === renamingTabId) {
+        if (tab.id === renamingTabId && istErstesVorkommen) {
           tabEl.appendChild(buildTabRenameForm(tab));
           const herkunftZeile = herkunftText(tab.herkunft);
           if (herkunftZeile) {
@@ -14851,8 +16837,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             herkunftEl.onmousedown = (e) => e.preventDefault();
             tabEl.appendChild(herkunftEl);
           }
-          tabList.appendChild(tabEl);
-          return;
+          return tabEl;
         }
 
         // Woher diese Notiz stammt, als Tooltip am ganzen Eintrag (siehe herkunftText()). Leer
@@ -14861,13 +16846,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         const herkunftHinweis = herkunftText(tab.herkunft);
         if (herkunftHinweis) tabEl.title = herkunftHinweis;
 
-        tabEl.onclick = () => {
+        tabEl.onclick = async () => {
           // A completed drag-reorder still fires a native 'click' right on its own pointerup --
           // without this, dropping a tab in its new position would also immediately switch to
           // whatever tab the pointer happened to end up over.
           if (tabDragJustEnded) { tabDragJustEnded = false; return; }
-          switchTab(tab.id);
+          const gewechselt = switchTab(tab.id);
           closeTabSidebarNachAuswahl();
+          // Nur bei laufender Suche gewartet: switchTab() ist asynchron (es holt die Anhaenge) und
+          // schreibt editor.value erst danach -- ein Sprung sofort danach saesse noch im Quelltext
+          // der VORIGEN Notiz. Ohne Suche bleibt der Ablauf zeitlich genau wie bisher.
+          if (notizSuche) { await gewechselt; zurErstenFundstelle(); }
         };
         tabEl.ondblclick = () => startTabRename(tab.id);
         tabEl.addEventListener('pointerdown', (e) => handleTabDragPointerDown(e, tab, tabEl));
@@ -14875,26 +16864,36 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         tabEl.addEventListener('pointerup', handleTabDragPointerUp);
         tabEl.addEventListener('pointercancel', handleTabDragPointerUp);
 
+        // Der Anfasser zum Umsortieren. Ausdruecklich nur hier, nicht im Umbenennen-Zweig
+        // darueber (der kehrt vorher zurueck): dort ist der Eintrag eine Spalte, ein Anfasser
+        // waere ein Balken ueber dem Namensfeld.
+        const griff = document.createElement('span');
+        griff.className = 'tab-griff';
+        griff.innerHTML = TAB_GRIFF_SVG;
+        griff.title = 'Zum Umsortieren ziehen';
+        tabEl.appendChild(griff);
+
         const nameSpan = document.createElement('span');
         nameSpan.className = 'tab-name';
         nameSpan.textContent = tab.name + (tab.isModified ? ' *' : '');
-        if (!tabSidebarErweitert) {
-          tabEl.appendChild(nameSpan);
-        } else {
-          // Name und erste Zeile untereinander, deshalb ein eigener Kasten -- die Zeile darunter
-          // soll die Hoehe des Eintrags bestimmen, nicht neben dem Namen stehen.
-          const textEl = document.createElement('div');
-          textEl.className = 'tab-eintrag-text';
-          textEl.appendChild(nameSpan);
-          const zeile = ersteInhaltszeile(tab);
-          if (zeile) {
-            const zeileEl = document.createElement('div');
-            zeileEl.className = 'tab-erste-zeile';
-            zeileEl.textContent = zeile;
-            textEl.appendChild(zeileEl);
-          }
-          tabEl.appendChild(textEl);
+        // Der Textkasten steht jetzt IMMER, nicht nur in der erweiterten Ansicht: waehrend einer
+        // Suche braucht auch die einfache Ansicht eine zweite Zeile fuer den Ausschnitt, und
+        // notizFilterAnwenden() aendert die Eintraege nur noch an Ort und Stelle -- es kann also
+        // nicht erst beim Tippen einen anderen Aufbau erzeugen.
+        const textEl = document.createElement('div');
+        textEl.className = 'tab-eintrag-text';
+        textEl.appendChild(nameSpan);
+        const zeile = tabSidebarErweitert ? ersteInhaltszeile(tab) : '';
+        // Am Element gemerkt, damit notizFilterAnwenden() beim Leeren der Suche die urspruengliche
+        // Zeile wiederherstellen kann, ohne sie neu berechnen zu muessen.
+        tabEl.dataset.ersteZeile = zeile;
+        if (zeile) {
+          const zeileEl = document.createElement('div');
+          zeileEl.className = 'tab-erste-zeile';
+          zeileEl.textContent = zeile;
+          textEl.appendChild(zeileEl);
         }
+        tabEl.appendChild(textEl);
 
         // Deliberately separate from the '*' above (tab.isModified, unsaved-vs-file) -- see
         // markTabLocalSaveIssue()'s own comment on why the two are never conflated into one glyph.
@@ -14910,14 +16909,53 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // zwischen Text und Bild gesetzt zerschneidet es den Eintrag.
         if (tabSidebarErweitert && tabVorschauMoeglich()) tabEl.appendChild(tabVorschauKachel(tab));
 
+        // Der Weg zu den Schlagwoertern. Ein eigener Knopf statt einer Geste, und zwar aus einem
+        // handfesten Grund: ein einfacher Klick auf den Eintrag wechselt die Notiz, ein
+        // Doppelklick benennt um -- beides ist vergeben. Und auf einem Touchgeraet ist der
+        // Doppeltipp gar kein Weg, weil closeTabSidebarNachAuswahl() die Leiste schon beim ERSTEN
+        // Tipp schliesst (siehe dort); das Umbenennen-Formular ist dort heute nur erreichbar,
+        // solange die Leiste angeheftet ist. Ein Knopf braucht nur einen Tipp.
+        const tagBtn = document.createElement('button');
+        tagBtn.className = 'tab-tag-btn';
+        tagBtn.innerHTML = TAB_TAG_SVG;
+        tagBtn.title = 'Schlagwörter';
+        tagBtn.onclick = (e) => {
+          // Ohne das liefe tabEl.onclick mit und schloesse auf dem Telefon die Leiste, bevor das
+          // Formular ueberhaupt zu sehen waere.
+          e.stopPropagation();
+          startTabRename(tab.id, true);
+        };
+        tabEl.appendChild(tagBtn);
+
         const closeBtn = document.createElement('button');
         closeBtn.className = 'close-btn';
         closeBtn.innerHTML = '✕';
         closeBtn.onclick = (e) => closeTab(tab.id, e);
         tabEl.appendChild(closeBtn);
 
-        tabList.appendChild(tabEl);
-      });
+        return tabEl;
+    }
+
+    function renderTabs() {
+      // Ein Neuaufbau mitten im Zug (etwa durch einen stillen Abgleich) reisst den gezogenen
+      // Eintrag aus dem Dokument; das folgende pointerup landet dann irgendwo und der Horcher, der
+      // 'zieht' wieder entfernt, feuert womoeglich nie -- die ganze Liste bliebe blass. Hier
+      // aufgeraeumt, wo ohnehin alles neu entsteht.
+      if (!tabDragState) tabList.classList.remove('zieht');
+      tabList.innerHTML = '';
+      tabList.classList.toggle('tag-ansicht', tagAnsicht);
+      // Ueber die ANZEIGEreihenfolge, nicht ueber tabs -- siehe sortierteTabs().
+      const liste = sortierteTabs();
+      if (!tagAnsicht) {
+        liste.forEach(tab => tabList.appendChild(baueTabEintrag(tab, true)));
+      } else {
+        const gesehen = new Set();
+        tagAbschnitte(liste).forEach(abschnitt => {
+          tabList.appendChild(baueTagAbschnitt(abschnitt, gesehen));
+        });
+      }
+      // Eine laufende Suche gilt auch fuer frisch gebaute Eintraege.
+      notizFilterAnwenden();
     }
 
     // --- STUDIO PRO UI REDESIGN: TAB-SEITENLEISTE (Öffnen/Schließen/Anheften) ---
@@ -14967,6 +17005,22 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       applyTabSidebarPinned();
       saveStateToLocalStorage();
     }
+
+    // Klick irgendwo sonst schliesst das Sortiermenue -- dasselbe Muster wie beim Burger-Menue.
+    // Der Knopf selbst und das Menue halten ihr Ereignis mit stopPropagation() zurueck.
+    document.addEventListener('click', (e) => {
+      const menue = document.getElementById('sortierMenue');
+      if (menue && menue.classList.contains('active') && !menue.contains(e.target)) closeSortierMenue();
+    });
+
+    document.getElementById('sortierMenue').addEventListener('click', (e) => e.stopPropagation());
+
+    document.addEventListener('click', (e) => {
+      const menue = document.getElementById('tagMenue');
+      if (menue && menue.classList.contains('active') && !menue.contains(e.target)) tagMenueSchliessen();
+    });
+
+    document.getElementById('tagMenue').addEventListener('click', (e) => e.stopPropagation());
 
     document.getElementById('tabSidebarPanel').addEventListener('mouseleave', closeTabSidebar);
 
@@ -15614,6 +17668,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         closeBlockHandleMenu();
         closeLinkActionMenu();
         closeBurgerMenu();
+        closeSortierMenue();
+        tagMenueSchliessen();
         closeTabSidebar();
         closeWebdavModal();
         if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();
@@ -16646,6 +18702,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       tab.splitRatio = splitRatio;
     }
 
+    // Die Vergroesserung gehoert zur Notiz, wird aber nur auf DIESEM Geraet gemerkt: ein Telefon
+    // braucht eine andere als ein grosser Bildschirm, deshalb steht sie in md_studio_state und in
+    // keiner der WebDAV-Nutzlastfunktionen. Ausdruecklich NICHT wie persistTabViewState() oben am
+    // Simple Modus vorbei: gerade dort war der gemeldete Fehler ("auf ios im modus simple ... beim
+    // erneuten oeffnen immer wieder ein vergroesserter modus"), und eine im Simple Modus gewaehlte
+    // Vergroesserung soll genauso erhalten bleiben wie jede andere.
+    function persistTabZoom() {
+      const tab = getActiveTabReal();
+      if (tab) tab.zoomLevel = zoomLevel;
+    }
+
     // On a canvas tab, showEditor/showPreview describe whatever the user last had on some other
     // tab (see the CSS this bypasses, main.canvas-tab-active:not(.canvas-editing-box)) — the
     // source/preview split has no meaning until a box is actually open, and only opening one
@@ -17054,8 +19121,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // werden."). Clean is now a genuine, one-time default for notes CREATED while the mode is on
       // (see createNewTab()), so it survives leaving Simple Modus like any other chosen theme, and
       // an existing note keeps whatever it already had no matter which mode is active.
-      zoomLevel = 130; // three ZOOM_STEP clicks above the 100 default
-      applyZoomLevel();
+      // Hier stand bis zuletzt ein festes zoomLevel = 130. Gemeldet als Fehler: enterSimpleMode()
+      // laeuft auch bei JEDEM Seitenaufruf, solange der Modus an ist -- auf dem iPhone kam die App
+      // dadurch immer wieder vergroessert hoch und liess sich die eigene Einstellung nicht merken.
+      // Die Vergroesserung gehoert jetzt zur Notiz (siehe persistTabZoom()) und wird auch hier
+      // nicht mehr angefasst.
       // Bug fix (per explicit request): Simple Modus startete bisher im Quelltext -- jetzt
       // stattdessen in der Vorschau, passend dazu, dass die Werkzeugleiste in diesem Modus jetzt
       // AUCH in der Vorschau eingeblendet bleibt (siehe applyPaneVisibility()'s eigenen
@@ -17082,8 +19152,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       applyPaneVisibility();
       splitRatio = 50;
       applySplitRatio();
-      zoomLevel = 100;
-      applyZoomLevel();
+      // Die Vergroesserung bleibt unangetastet -- sie gehoert seit dem gemeldeten iOS-Fehler zur
+      // Notiz (siehe persistTabZoom()) und nicht zur Betriebsart; ein Zuruecksetzen auf 100 beim
+      // Verlassen wuerde genau die gemerkte Einstellung wieder wegwerfen.
       // No theme restore here either — the counterpart to enterSimpleMode() no longer forcing one.
       // The active tab is already showing its own theme (switchTab() applies it unconditionally
       // now), so there is nothing left to put back, and re-applying anything here would be exactly
@@ -17170,15 +19241,34 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       updateBurgerContentWidthSelector();
     }
 
+    // Gehoert zur NOTIZ, nicht zum Geraet: "die einstellung fuer breit und schmal soll sich
+    // generell nur auf die jeweilige notiz beziehen und synchronisiert werden". Anders als die
+    // Vergroesserung (persistTabZoom(), geraetelokal) reist sie deshalb ueber WebDAV mit --
+    // dieselbe Einordnung wie tab.theme: eine Eigenschaft des Dokuments, keine des Bildschirms.
+    // Die globale Variable bleibt als zuletzt gewaehlter Wert bestehen, damit die Anzeige vor dem
+    // ersten Notizwechsel etwas hat, worauf sie zurueckfallen kann.
     function changeContentWidth(mode) {
       contentWidthMode = mode;
       applyContentWidth(mode);
+      const tab = getActiveTabReal();
+      if (tab) tab.contentWidthMode = mode;
       saveStateToLocalStorage();
+    }
+
+    // Die Breite, mit der eine Notiz angezeigt wird. Eine Tabelle ist breit -- eine CSV-Datei
+    // deshalb immer, solange nichts anderes ausdruecklich gewaehlt wurde ("wenn eine csv geoeffnet
+    // wird, soll die darstellung immer auf breit eingestellt werden").
+    function notizInhaltsbreite(tab) {
+      if (!tab) return contentWidthMode;
+      if (tab.contentWidthMode) return tab.contentWidthMode;
+      return tab.fileType === 'csv' ? 'wide' : contentWidthMode;
     }
 
     function updateBurgerContentWidthSelector() {
       const sel = document.getElementById('burgerContentWidthSelector');
-      if (sel) sel.value = contentWidthMode;
+      // notizInhaltsbreite() statt contentWidthMode: bei einer CSV-Notiz ohne eigene Wahl steht
+      // "Breit" auf dem Schirm, und der Schalter soll dasselbe sagen wie die Anzeige.
+      if (sel) sel.value = notizInhaltsbreite(getActiveTabReal());
     }
 
     // Called after inserting an image/photo/drawing/audio recording (see insertImageAsset(),
@@ -17242,7 +19332,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // real transform there. This function now only ever needs to express the box's OWN zoom.
     function applyCanvasBoxZoom(box) {
       const scale = (box.zoomLevel || 100) / 100;
-      editor.style.setProperty('--zoom-scale', scale);
+      // Auf die SPALTE, nicht auf die Textarea: die beiden Malschichten (Syntax und Suche) sind
+      // Geschwister der Textarea, kein Nachwuchs -- ein Wert an ihr erreichte sie nie, und die
+      // Schichten rechneten weiter mit dem globalen Zoom. Bei einem Kasten mit 150 % stuenden
+      // Text und Markierung dann schon in der ersten Zeile verschieden weit, mit wachsendem
+      // Versatz nach unten. An der Spalte erben Textarea und Schichten denselben Wert.
+      document.getElementById('editorPane').style.setProperty('--zoom-scale', scale);
       preview.style.setProperty('--zoom-scale', scale);
     }
 
@@ -17266,6 +19361,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (isCanvasWithoutOpenBoxForZoom()) { canvasZoom(1); return; }
       zoomLevel = Math.min(ZOOM_MAX, zoomLevel + ZOOM_STEP);
       applyZoomLevel();
+      persistTabZoom();
       saveStateToLocalStorage();
     }
 
@@ -17274,6 +19370,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (isCanvasWithoutOpenBoxForZoom()) { canvasZoom(-1); return; }
       zoomLevel = Math.max(ZOOM_MIN, zoomLevel - ZOOM_STEP);
       applyZoomLevel();
+      persistTabZoom();
       saveStateToLocalStorage();
     }
 
@@ -17352,6 +19449,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     function toggleFullscreen() {
       chordProQuellfelderSchliessen();
+      // Im Vollbild blendet CSS die ganze Notizenleiste aus -- der Lupenknopf und das Suchfeld,
+      // die einzigen Ausschalter der Suche, waeren dort nicht mehr erreichbar und die Fundstellen
+      // blieben unaufloesbar markiert. Deshalb hier beendet, bevor es so weit kommt.
+      notizSucheBeenden();
       const supportsRealFullscreen = !!(document.documentElement.requestFullscreen && document.fullscreenEnabled);
       if (!supportsRealFullscreen) {
         // iOS Safari never implemented the Fullscreen API for regular elements (only <video>),
@@ -19730,6 +21831,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     function startPresentation() {
       chordProQuellfelderSchliessen();
+      notizSucheBeenden();   // wie im Vollbild: die Leiste ist hier nicht erreichbar
       // Beide Modi belegen dieselben Tasten (Pfeile, Leertaste, Escape) und scrollen bzw. blaettern
       // denselben Inhalt -- gleichzeitig ergeben sie keinen sinnvollen Zustand.
       if (teleprompterActive) stopTeleprompter();
@@ -24483,9 +26585,193 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       );
     }
 
+
+    // --- FUNDSTELLEN HERVORHEBEN ---------------------------------------------------------------
+    //
+    // Zwei voellig getrennte Wege, weil Textfeld und Vorschau technisch nichts gemeinsam haben:
+    // eine <textarea> laesst sich nicht einfaerben (sie hat keinen anfassbaren Inhalt, nur einen
+    // Wert), und in der Vorschau darf nichts eingefuegt werden.
+
+    const NOTIZ_SUCHE_HIGHLIGHT = 'notizsuche';
+
+    // (a) Quelltext: eine zweite Malschicht hinter dem durchsichtig gemachten Hintergrund der
+    // Textarea. Sie enthaelt denselben Text unsichtbar -- allein damit die Marken an denselben
+    // Stellen umbrechen -- und zeigt nur die Unterlegungen. Nachgemessen stimmen Schicht und
+    // Textarea zeichengenau ueberein (gleiche Schrift, gleiche Polsterung, gleiche scrollHoehe).
+    function quelltextSuchschichtAktualisieren() {
+      const aktiv = !!notizSuche && !editor.disabled;
+      editorSuchOverlay.classList.toggle('active', aktiv);
+      editor.classList.toggle('hat-suchschicht', aktiv);
+      if (!aktiv) {
+        if (editorSuchOverlayCode.innerHTML) editorSuchOverlayCode.innerHTML = '';
+        return;
+      }
+      const text = editor.value;
+      // Derselbe Deckel wie in der Vorschau: beim ersten Buchstaben einer Suche ueber einem langen
+      // Text waeren es sonst Zehntausende <span>, die bei JEDEM weiteren Anschlag neu entstehen.
+      const stellen = notizTrefferStellen(text, notizSuche).slice(0, NOTIZ_SUCHE_MAX_MARKEN);
+      const laenge = notizSuche.length;
+      let html = '', i = 0;
+      for (const stelle of stellen) {
+        // Jedes Stueck EINZELN maskieren und erst dann zusammensetzen: escapeHtmlText() aendert
+        // die Zeichenlaengen, ueber den maskierten Gesamttext waeren die Stellen verschoben. Und
+        // maskiert werden muss hier unbedingt -- in einer Notiz darf beliebiges HTML stehen, bei
+        // fileType 'html' besteht sie daraus, und diese Schicht liegt in der App selbst, nicht im
+        // abgeschotteten Rahmen.
+        html += escapeHtmlText(text.slice(i, stelle)) +
+                '<span class="such-treffer">' + escapeHtmlText(text.substr(stelle, laenge)) + '</span>';
+        i = stelle + laenge;
+      }
+      // Das abschliessende '\n' wie bei der Syntaxschicht: ein Schluss-Umbruch erzeugt im <pre>
+      // keine eigene Zeile, in der Textarea aber sehr wohl -- ohne ihn waere die Schicht eine
+      // Zeilenhoehe kuerzer und die letzten Marken staenden am unteren Anschlag zu hoch.
+      editorSuchOverlayCode.innerHTML = html + escapeHtmlText(text.slice(i)) + '\n';
+      syncEditorHighlightScroll();
+    }
+
+    // (b) Vorschau: die CSS-Highlight-Schnittstelle malt Bereiche, ohne das DOM anzufassen. Das
+    // ist hier nicht Eleganz, sondern Bedingung -- die Vorschau ist beschreibbar und haengt an
+    // einer zeichengenauen Zuordnung zwischen DOM und Quelltext; eingefuegte <span> waeren genau
+    // der Eingriff, den die Vorlesefunktion mit ihren Wortmarken nur mit grossem Aufwand wieder
+    // unschaedlich macht.
+    //
+    // Gesucht wird im GERENDERTEN Text, nicht ueber Quelltextstellen: markiert wird damit, was
+    // man auch liest. Das hat eine bewusst hingenommene Folge -- die Zahl in der Notizenleiste
+    // zaehlt den Quelltext und kann abweichen, wo Auszeichnungszeichen (**, #, |) oder ein
+    // asset:-Verweis nur dort stehen.
+    const NOTIZ_SUCHE_BLOCK_SEL = 'p, h1, h2, h3, h4, h5, h6, li, td, th, pre, blockquote, figcaption, dt, dd, summary, div';
+
+    // Mehr als so viele Fundstellen werden nicht mehr einzeln markiert. Der erste Anschlag einer
+    // Suche ist immer ein einzelner Buchstabe -- ueber einem langen Text sind das schnell
+    // Zehntausende Bereiche, und `new Highlight(...bereiche)` als Argumentliste bricht jenseits
+    // von rund 125.000 mit einem RangeError ab (nachgemessen). Die Zahl ist weit oberhalb dessen,
+    // was man auf einem Bildschirm je sieht, und haelt zugleich den Aufwand im Rahmen.
+    const NOTIZ_SUCHE_MAX_MARKEN = 4000;
+
+    function vorschauSuchBereiche(begriff) {
+      const bereiche = [];
+      if (!begriff || !preview) return bereiche;
+      // Bei einer HTML- oder Pinnwand-Notiz ist #markdownPreview ausgeblendet und traegt noch den
+      // Inhalt der ZULETZT gezeigten Notiz (updatePreview() setzt ihn dort nicht neu). Ohne diese
+      // Abfrage wuerde bei jedem Tastendruck ueber fremdes, unsichtbares DOM gelaufen und darauf
+      // markiert.
+      if (preview.style.display === 'none') return bereiche;
+      const stuecke = [];
+      let text = '', letzterBlock = null;
+      const lauf = document.createTreeWalker(preview, NodeFilter.SHOW_TEXT);
+      let n, letztesEl = null, letztesUebersprungen = false, letzterBlockDesEl = null;
+      while ((n = lauf.nextNode())) {
+        const el = n.parentElement;
+        if (!el) continue;
+        // Aufeinanderfolgende Textknoten haben fast immer dasselbe Elternelement -- closest() ist
+        // eine Suche ueber die ganze Vorfahrenkette und liefe sonst je Knoten zweimal, bei einer
+        // langen Notiz also hunderttausendfach je Anschlag.
+        if (el !== letztesEl) {
+          letztesEl = el;
+          letztesUebersprungen = !!el.closest('button, svg');
+          letzterBlockDesEl = el.closest(NOTIZ_SUCHE_BLOCK_SEL) || preview;
+        }
+        if (letztesUebersprungen) {
+          // Ein uebersprungenes Bedienelement trennt trotzdem: ohne Trennzeichen stiessen die
+          // Texte links und rechts davon aneinander, und ein Treffer koennte sich quer ueber ein
+          // Bild oder eine Akkordzelle ziehen.
+          if (text) { text += '\u0000'; letzterBlock = null; }
+          continue;
+        }
+        const block = letzterBlockDesEl;
+        // Ein Trennzeichen beim Blockwechsel, damit ein Begriff nicht ueber das Ende eines
+        // Absatzes hinweg in den naechsten hinein "gefunden" wird. U+0000 kommt in keiner
+        // Eingabe vor. Es wird VOR dem Merken der Stelle angehaengt, die Zuordnung bleibt also
+        // stimmig.
+        if (letzterBlock !== null && block !== letzterBlock) text += '\u0000';
+        letzterBlock = block;
+        stuecke.push({ node: n, start: text.length, len: n.nodeValue.length });
+        text += n.nodeValue;
+      }
+      if (!stuecke.length) return bereiche;
+
+      // Ueber den zusammengesetzten Text eines Blocks, nicht je Textknoten: sonst faende ein
+      // mehrwortiger Begriff nichts mehr, sobald er eine Auszeichnung kreuzt ("fetter Text" bei
+      // **fetter** Text) -- und ebensowenig, solange die Vorlesefunktion den Text wortweise in
+      // eigene Marken zerlegt hat.
+      const tief = text.toLowerCase(), b = begriff.toLowerCase();
+      let zeiger = 0;
+      const stelleZu = (off) => {
+        while (zeiger < stuecke.length - 1 && off > stuecke[zeiger].start + stuecke[zeiger].len) zeiger++;
+        while (zeiger > 0 && off < stuecke[zeiger].start) zeiger--;
+        const k = stuecke[zeiger];
+        return { node: k.node, offset: Math.max(0, Math.min(k.len, off - k.start)) };
+      };
+      let i = tief.indexOf(b);
+      while (i !== -1 && bereiche.length < NOTIZ_SUCHE_MAX_MARKEN) {
+        const a = stelleZu(i), z = stelleZu(i + b.length);
+        try {
+          const r = document.createRange();
+          r.setStart(a.node, a.offset);
+          r.setEnd(z.node, z.offset);
+          bereiche.push(r);
+        } catch (err) { /* verschobene Stelle: dann eben diese eine nicht */ }
+        i = tief.indexOf(b, i + b.length);
+      }
+      return bereiche;
+    }
+
+    function vorschauSuchMarkierungAktualisieren() {
+      if (typeof CSS === 'undefined' || !CSS.highlights) return;   // vor Safari 17.2
+      // IMMER erst loeschen: ein Highlight haelt seine Bereiche und jeder Bereich seine Knoten --
+      // updatePreview() ersetzt bei jedem Tastendruck den ganzen Inhalt der Vorschau, ohne das
+      // Leeren haenge an jedem Anschlag ein weiterer vollstaendiger Dokumentbaum fest.
+      CSS.highlights.delete(NOTIZ_SUCHE_HIGHLIGHT);
+      if (!notizSuche) return;
+      const bereiche = vorschauSuchBereiche(notizSuche);
+      if (!bereiche.length) return;
+      // Leer anlegen und einzeln zufuegen statt `new Highlight(...bereiche)`: als Argumentliste
+      // gespreizt bricht das jenseits von rund 125.000 Eintraegen mit einem RangeError ab
+      // (nachgemessen). Der Deckel oben haelt uns zwar weit darunter, aber diese Schreibweise
+      // kostet nichts und kann gar nicht erst daran scheitern.
+      const h = new Highlight();
+      for (const r of bereiche) h.add(r);
+      CSS.highlights.set(NOTIZ_SUCHE_HIGHLIGHT, h);
+    }
+
+    function suchMarkierungAktualisieren() {
+      quelltextSuchschichtAktualisieren();
+      vorschauSuchMarkierungAktualisieren();
+    }
+
+    // Nach dem Wechsel in eine gefundene Notiz an die erste Fundstelle.
+    function zurErstenFundstelle() {
+      if (!notizSuche) return;
+      // Im Quelltext nur, wenn er ueberhaupt zu sehen ist: main.editor-hidden blendet die Spalte
+      // per display:none aus, ein Fokus ginge dort ins Leere -- und die gespeicherte Ansicht der
+      // Notiz dafuer umzustellen waere ein Eingriff, um den niemand gebeten hat. In der Vorschau
+      // wird ohnehin gerollt, die Fundstelle ist also auch dann zu sehen.
+      if (showEditor && !editor.disabled) {
+        const stellen = notizTrefferStellen(editor.value, notizSuche);
+        if (stellen.length) {
+          // Auf einem Tastgeraet faehrt mit dem Fokus die Bildschirmtastatur hoch und verdeckt die
+          // halbe Notiz -- dasselbe Muster wie an den Knoepfen ueber einem Bild. Die Auswahl wird
+          // trotzdem gesetzt, und in die Sicht gerollt wird ohnehin ueber die Vorschau.
+          if (!istTastgeraet()) editor.focus();
+          editor.setSelectionRange(stellen[0], stellen[0] + notizSuche.length);
+        }
+      }
+      const bereiche = vorschauSuchBereiche(notizSuche);
+      if (bereiche.length) {
+        const k = bereiche[0].startContainer;
+        const el = k.nodeType === Node.TEXT_NODE ? k.parentElement : k;
+        if (el && el.scrollIntoView) el.scrollIntoView({ block: 'center' });
+      }
+    }
+
     function syncEditorHighlightScroll() {
       editorHighlightOverlay.scrollTop = editor.scrollTop;
       editorHighlightOverlay.scrollLeft = editor.scrollLeft;
+      // Die Suchschicht in DERSELBEN Funktion mitziehen statt in einer zweiten -- die vergisst man
+      // sonst an einem der Aufrufpunkte (der scroll-Horcher des Editors ist nur einer davon,
+      // syncScrollFrom() rollt auch programmatisch).
+      editorSuchOverlay.scrollTop = editor.scrollTop;
+      editorSuchOverlay.scrollLeft = editor.scrollLeft;
     }
 
     // Studio Pro: set only by the preview-typing sync path (see the "preview-pane typing" section
@@ -24679,6 +26965,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // Must run after attachMarkdownTableCellPositions() above — it locates the formula's target
       // cell in the fresh DOM via the same data-start attribute that call just (re)assigned.
       updateFormulaEditState();
+      // Die Fundstellen der Notizsuche neu setzen: die Vorschau wurde eben komplett neu gebaut,
+      // alle vorher gemerkten Bereiche zeigen auf Knoten, die es nicht mehr gibt. Kostet nichts,
+      // solange nichts gesucht wird (beide Funktionen kehren bei leerem Begriff sofort zurueck).
+      suchMarkierungAktualisieren();
     }
 
     // --- CANVAS MODE (a fixed DIN-A4 page of freely placed, individually editable boxes) ---
@@ -24743,7 +27033,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     function syncCanvasContentToTab(tab) {
-      tab.content = JSON.stringify(tab.canvasData);
+      const neu = JSON.stringify(tab.canvasData);
+      // Nur stempeln, wenn die Szene wirklich anders ist. Diese Funktion laeuft auch beim blossen
+      // Anklicken einer Box, bei jedem Loslassen auf der Flaeche und beim Schliessen des Kastens
+      // ohne eine einzige Eingabe -- ohne den Vergleich rutschte eine Pinnwand schon vom Ansehen
+      // an den Anfang der nach Aenderungsdatum sortierten Liste. isModified bleibt absichtlich
+      // unberuehrt: was dieses Kennzeichen bedeutet, ist eine aeltere Festlegung, an der hier
+      // nichts zu aendern ist.
+      if (neu !== tab.content) notizGeaendertStempeln(tab);
+      tab.content = neu;
       tab.isModified = true;
     }
 
@@ -25811,7 +28109,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // fall back to inheriting the app-wide zoom from documentElement again -- otherwise the
       // next plain (non-canvas) document opened would still render at whatever zoom this box
       // happened to be left at.
-      editor.style.removeProperty('--zoom-scale');
+      document.getElementById('editorPane').style.removeProperty('--zoom-scale');
       preview.style.removeProperty('--zoom-scale');
       if (tab) {
         syncCanvasContentToTab(tab);
@@ -26039,6 +28337,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     function markActiveTabModified() {
+      // Ganz vorn und ausdruecklich auf getActiveTabReal(), nicht auf getCurrentTab(): bei einer
+      // offenen Canvas-Box ist activeTab die BOX. Ein Stempel dort landete ueber
+      // syncCanvasContentToTab() als JSON im Notizinhalt und damit in der Sync-Nutzlast -- zwei
+      // Geraete haetten bei identischem Text verschiedenen content und stritten um nichts. Und
+      // der Canvas-Zweig unten kehrt frueh zurueck, am Funktionsende waere keine Pinnwand je
+      // gestempelt worden.
+      notizGeaendertStempeln(getActiveTabReal());
       const activeTab = getCurrentTab();
       // Beim Bearbeiten einer Canvas-Box ist activeTab die BOX, nicht die Notiz -- und eine Box
       // trägt fileType 'markdown', weshalb die Canvas-Ausnahme weiter unten hier nie greift.
@@ -38430,6 +40735,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // now.
         doc.content = doc.content.substring(0, target.start) + markdownRef + doc.content.substring(target.end);
         doc.isModified = true;
+        // doc ist bei einer Canvas-Box die Box; der Stempel gehoert an die Notiz (siehe
+        // notizGeaendertStempeln()) -- in der Box landete er sonst als JSON im Notizinhalt.
+        notizGeaendertStempeln(tab);
         doc.history = doc.history.slice(0, doc.historyIndex + 1);
         doc.history.push(doc.content);
         doc.historyIndex = doc.history.length - 1;

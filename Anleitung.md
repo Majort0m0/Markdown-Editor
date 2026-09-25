@@ -64,13 +64,72 @@ Ein unbenanntes Dokument übernimmt automatisch die erste `#`-Überschrift als D
 - Eine Datei lässt sich auch per **Drag & Drop** direkt ins Browserfenster ziehen, um sie zu öffnen.
 - Alle offenen Tabs werden zusätzlich automatisch im Browser (lokal) gespeichert — beim nächsten Öffnen der App sind alle Notizen unverändert wieder da, auch ohne sie manuell gespeichert zu haben.
 
+### Notizen schließen
+
+Das ✕ am rechten Rand eines Eintrags schließt die Notiz — und fragt dabei **immer** vorher nach. Das ist Absicht: in der Notizenleiste sitzt das ✕ zum Zurücksetzen der Suche dicht über den ✕ der Einträge, und ein Fehlgriff soll keine Notiz kosten. Enthält die Notiz ungespeicherte Änderungen, weist die Rückfrage zusätzlich darauf hin.
+
 ### Tabs umbenennen und Format wechseln
 
 Doppelklick auf einen Tab öffnet ein Umbenennen-Feld mit einem Format-Dropdown (`.md` / `.txt` / `.csv` / `.json` / `.html`). So lässt sich ein Dokument gezielt in ein anderes Dateiformat konvertieren, z. B. um eine Tabelle als CSV weiterzuverarbeiten. `Enter` bestätigt, `Escape` bricht ab. Bei einem Canvas-Dokument (siehe [Abschnitt 11](#11-canvas-modus-freie-notizfläche)) zeigt das Umbenennen-Feld kein Format-Dropdown — eine Canvas-Fläche ist kein Text-Format und lässt sich nicht in eines der anderen umwandeln, nur der Name lässt sich ändern.
 
 ### Tabs neu anordnen
 
-Ein Tab lässt sich per Ziehen (Maus gedrückt halten und bewegen) an eine andere Stelle in der Tableiste verschieben — die neue Reihenfolge bleibt wie gewohnt geräteweit gespeichert.
+Ein Tab lässt sich per Ziehen an eine andere Stelle in der Notizenleiste verschieben — die neue Reihenfolge bleibt wie gewohnt geräteweit gespeichert. Links an jedem Eintrag sitzt dafür ein **Anfasser** aus sechs Punkten; mit der Maus erscheint er, sobald der Zeiger über dem Eintrag steht, auf Tablet und Telefon steht er dauerhaft da. Mit der Maus lässt sich auch der ganze Eintrag greifen, auf einem Touchgerät ist der Anfasser der richtige Griff: ein Wisch über den restlichen Eintrag rollt dort die Liste.
+
+Während des Ziehens wird der Eintrag angehoben — heller Grund, farbiger Rahmen, Schatten — und zwei farbige Linien darüber und darunter zeigen den Platz, an dem er landet. Die übrigen Einträge treten zurück, damit klar ist, worum es gerade geht.
+
+### Notizen sortieren
+
+Der erste Knopf rechts neben der Überschrift „Notizen" öffnet ein Menü mit der Reihenfolge der Liste:
+
+- **Manuell (selbst geordnet)** — die Reihenfolge, die per Ziehen entstanden ist.
+- **Zuletzt geändert zuerst** / **Zuletzt geändert zuletzt**
+- **Neueste zuerst** / **Älteste zuerst** (nach dem Zeitpunkt, an dem die Notiz angelegt wurde)
+
+Die Sortierung ändert **nur die Anzeige**. Die selbst geordnete Reihenfolge bleibt im Hintergrund unangetastet, und „Manuell" stellt sie jederzeit unverändert wieder her — es geht also nichts verloren, wenn man zwischendurch nach Datum schaut. Solange eine Sortierung aktiv ist, zeigt der Knopf das farbig an.
+
+Wird bei aktiver Sortierung ein Eintrag gezogen, schaltet die Leiste von selbst auf „Manuell" zurück und übernimmt die gerade sichtbare Reihenfolge als neue eigene — das Ziehen tut also immer das, wonach es aussieht, ohne Rückfrage und ohne dass der Eintrag hinterher zurückspringt.
+
+Notizen, die vor dieser Funktion angelegt wurden und keinen Zeitpunkt gespeichert haben, stehen in beiden Richtungen am Ende der Liste und behalten untereinander ihre eigene Reihenfolge — eine erfundene Uhrzeit wäre irreführender als ein ehrliches „unbekannt". Als Datum der Änderung zählt jede Bearbeitung des Textes und auch das Umbenennen. Beide Zeitpunkte wandern über die WebDAV-Synchronisierung mit, „zuletzt geändert" bedeutet also auf jedem Gerät dasselbe.
+
+### Schlagwörter (Tags)
+
+Jede Notiz kann bis zu **drei Schlagwörter** bekommen. Der dritte Knopf im Kopf der Notizenleiste (das Etikett) schaltet die **Tag-Ansicht** ein: die Liste wird dann in Abschnitte je Schlagwort gegliedert. Trägt eine Notiz mehrere Schlagwörter, steht sie in mehreren Abschnitten. Jeder Abschnitt zeigt rechts die Anzahl und lässt sich über den Pfeil links ein- und ausklappen; welche Abschnitte zu sind, bleibt gespeichert. Notizen ohne Schlagwort sammeln sich in einem Abschnitt **„Ohne Schlagwort"** ganz unten — sie sind also nie unauffindbar.
+
+**Eintragen:** auf einem Eintrag erscheint links neben dem ✕ ein kleines Etikett-Symbol (mit der Maus beim Daraufzeigen, auf Telefon und Tablet dauerhaft). Ein Klick — auf dem Telefon ein einzelner Tipp — öffnet das Bearbeiten-Feld der Notiz mit den Schlagwörtern darin: vergebene Schlagwörter stehen als kleine Chips mit ✕ zum Entfernen, darunter ein Eingabefeld und die schon anderswo vergebenen Schlagwörter zum Antippen. `Enter` übernimmt, `Escape` bricht ab, ein Klick daneben bestätigt. Dasselbe Feld öffnet weiterhin der Doppelklick — dort lässt sich auch der Name ändern.
+
+Groß- und Kleinschreibung spielt keine Rolle: „Arbeit" und „arbeit" sind dasselbe Schlagwort und landen im selben Abschnitt. Beim vierten Schlagwort sperrt das Eingabefeld mit einem Hinweis — es wird nichts stillschweigend verworfen.
+
+**Farben:** jedes Schlagwort kann eine von acht Farben bekommen. Der farbige Punkt und der Name des Abschnitts nehmen sie an, ebenso die Chips im Bearbeiten-Feld. Ohne gewählte Farbe bleibt der Punkt weg — ein grauer Punkt würde aussehen, als bedeute er etwas.
+
+**Reihenfolge der Abschnitte:** von Haus aus alphabetisch. Sie lässt sich aber selbst festlegen — entweder durch **Ziehen** am Anfasser links im Abschnittskopf, oder über **„Nach oben"/„Nach unten"** im Menü des Abschnitts (auf dem Telefon der verlässlichere Weg). Sobald etwas von Hand verschoben wurde, gilt diese Reihenfolge; neu vergebene Schlagwörter reihen sich alphabetisch dahinter ein, und „Ohne Schlagwort" bleibt immer ganz unten.
+
+**Ein Schlagwort überall ändern:** im Abschnittskopf erscheint rechts ein ⋯. Das Menü dahinter enthält das Namensfeld, die Farbauswahl, „Nach oben"/„Nach unten" und „Aus allen Notizen entfernen". Umbenennen und Entfernen wirken auf *alle* Notizen — sonst bliebe ein Vertipper als eigener Abschnitt stehen, bis man jede Notiz einzeln anfasst. Farbe und Platz in der Reihenfolge wandern beim Umbenennen mit.
+
+Die Schlagwörter gehören zur Notiz und werden über WebDAV **mitsynchronisiert** — ebenso ihre Farben und die selbst gewählte Reihenfolge der Abschnitte (dort gewinnt schlicht der jüngere Stand, ohne Rückfrage). Ob die Tag-Ansicht an ist und welche Abschnitte eingeklappt sind, bleibt dagegen auf dem jeweiligen Gerät.
+
+Zwei Dinge verhalten sich in der Tag-Ansicht anders: Das **Umsortieren per Ziehen ist ausgesetzt** — eine Notiz, die in drei Abschnitten steht, ergibt keine eindeutige Reihenfolge; dafür zurück auf die normale Ansicht schalten. Und die **Suche wirkt weiter**: sie blendet Notizen wie gewohnt aus, klappt dabei alle Abschnitte auf, damit kein Treffer versteckt bleibt, und blendet Abschnitte, in denen nichts übrig bleibt, ganz aus.
+
+### In allen offenen Notizen suchen
+
+Der zweite Knopf (die Lupe) klappt ein Suchfeld über der Liste auf. Was dort eingetippt wird, wirkt sofort:
+
+- Die Liste zeigt **nur noch die Notizen, die den Suchbegriff enthalten** — im Text oder im Namen, Groß- und Kleinschreibung spielt keine Rolle.
+- Rechts an jedem Eintrag steht, **wie viele Fundstellen** die Notiz enthält.
+- Statt der ersten inhaltlichen Zeile steht unter dem Namen ein **Textausschnitt rund um die erste Fundstelle**, mit hervorgehobenem Suchbegriff. Markdown-Zeichen werden dabei abgeräumt, dort steht also `Einkauf Milch Brot mit Milch` und nicht `# Einkauf - [ ] Milch`.
+- In der **geöffneten Notiz sind alle Fundstellen farbig unterlegt**, gleichzeitig im Quelltextfenster und in der Vorschau.
+
+Ein Klick auf einen gefundenen Eintrag öffnet die Notiz und springt zur ersten Fundstelle: im Quelltext wird sie markiert (sofern das Quelltextfenster gerade zu sehen ist), in der Vorschau wird sie ins Bild gerollt. `Enter` im Suchfeld öffnet gleich die erste gefundene Notiz. `Escape` löscht zuerst den Suchbegriff und schließt beim zweiten Druck das Suchfeld.
+
+Breite Tabellen (typisch für CSV-Dateien mit vielen Spalten) bekommen eine dauerhaft sichtbare **waagerechte Rollleiste** unter der Tabelle. Gerollt werden konnte dort schon immer, aber auf Mac und iPhone blendet das System solche Leisten normalerweise aus, bis man rollt — an einer Tabelle, deren rechter Rand einfach abgeschnitten aussieht, war dann nicht zu erkennen, dass es dort weitergeht. Eine Tabelle, die vollständig ins Fenster passt, bekommt weiterhin keine Leiste.
+
+Gesucht wird in allen **geöffneten** Notizen — also in dem, was in der Leiste steht, nicht auf der Festplatte. Bei einer Pinnwand wird der Text der einzelnen Kästen durchsucht, nicht die Datenstruktur dahinter.
+
+Solange gefiltert wird, ist das Umsortieren per Ziehen ausgesetzt: sichtbar ist dann nur ein Teil der Notizen, und eine Teilmenge umzuordnen hätte für die Gesamtreihenfolge keine klare Bedeutung. Der Anfasser wird dafür sichtbar blasser.
+
+Die Suche wird bewusst **nicht gespeichert**: nach einem Neustart steht wieder die vollständige Liste da, statt einer gefilterten, deren Grund man längst vergessen hat.
+
+Zwei Grenzen, die keine Fehler sind: In einer Notiz, die als reines HTML geöffnet ist, und auf einer Pinnwand werden die Fundstellen nur im Quelltext unterlegt — die Vorschau ist dort ein abgeschotteter Rahmen beziehungsweise eine Seite mit frei liegenden Kästen. Und die Trefferzahl zählt den Quelltext; wer nach `**` oder `#` sucht, findet daher Stellen, die in der Vorschau nicht als Text erscheinen.
 
 ## 3. In der Vorschau schreiben (WYSIWYG)
 
@@ -598,7 +657,8 @@ Fragen, Ideen oder Fehler gefunden? [github.com/Majort0m0/Markdown-Editor](https
 
 - **Burger-Menü ☰** (oben rechts) — Betriebsart, Ansicht, Inhaltsbreite, Nebenspalte, Neu, Öffnen, Speichern, Backup, Formatiert kopieren, Rückgängig/Wiederherstellen, Suchen & Ersetzen, Abstände optimieren, Rechtschreibprüfung, ein eigener Abschnitt für Liedblätter (Akkordblatt importieren, Songbook, Fußschalter), Exporte (HTML, Drucken/PDF, E-Mail), WebDAV-Einstellungen, Design und „Über" mit Versionsnummer.
 - **Notizleiste** (Button oben links) — die Liste aller offenen Notizen, untereinander statt als Tableiste. Ein Klick öffnet sie als Overlay; über das Pin-Symbol wird daraus eine feste Seitenspalte, neben der das Notizfenster entsprechend schmaler wird.
-  - **Erweiterte Ansicht** — der Schalter rechts neben der Überschrift „Notizen" klappt jeden Eintrag auf: unter dem Namen steht klein der Anfang der ersten inhaltlichen Zeile, und rechts daneben ein quadratisches Vorschaubild der Notiz.
+  - **Sortieren** und **Suchen** — die beiden ersten Schalter neben der Überschrift „Notizen"; siehe [Abschnitt 2](#2-dokumente-und-tabs).
+  - **Erweiterte Ansicht** — der dritte Schalter rechts neben der Überschrift „Notizen" klappt jeden Eintrag auf: unter dem Namen steht klein der Anfang der ersten inhaltlichen Zeile, und rechts daneben ein quadratisches Vorschaubild der Notiz.
   - Die erste Zeile ist bewusst die erste *inhaltliche*: Überschriften werden übersprungen (der Name steht schon darüber), ebenso Leerzeilen und Trennlinien, und Listenpunkte, Kästchen, Akkorde, Links und Markdown-Zeichen werden abgeräumt — in der Leiste steht also `Milch` und nicht `- [ ] **Milch**`. Bei einer Canvas-Notiz wird der erste Kasten mit Inhalt genommen.
   - Das Vorschaubild ist kein Bildschirmfoto, sondern die Notiz selbst in klein, mit ihrem eigenen Design — eine dunkel eingestellte Notiz bleibt also auch in der Liste dunkel. Es erscheint nur, wenn das Fenster mindestens 900 Pixel breit ist; auf dem Telefon oder in einem schmalen Fenster bleiben Name und erste Zeile, das Bild entfällt. Gezeichnet wird erst, wenn ein Eintrag wirklich ins Blickfeld gerät, damit das Aufklappen auch bei vielen bildlastigen Notizen zügig bleibt.
   - **Canvas- und HTML-Notizen** zeigen statt eines Bildes ein Sinnbild: eine ganze A4-Fläche mit frei platzierten Kästen ergibt auf 52 Pixeln kein erkennbares Bild, und fremdes HTML wird in der App grundsätzlich nur im abgeschotteten Vorschaurahmen dargestellt.
@@ -607,7 +667,8 @@ Fragen, Ideen oder Fehler gefunden? [github.com/Majort0m0/Markdown-Editor](https
   - Auf einem Telefon oder Tablet gibt es keinen Mauszeiger und damit keinen Tooltip — dort steht derselbe Vermerk beim **Umbenennen** unter dem Namensfeld (Doppeltipp auf den Eintrag). Ein Klick oder Tipp auf diesen Text bricht das Umbenennen nicht ab.
   - Ein **Speicherort** lässt sich dagegen nicht anzeigen, und zwar grundsätzlich nicht: Eine Webseite erfährt beim Öffnen einer Datei nur deren Namen, nie ihren Pfad auf der Festplatte — das ist eine Sicherheitsgrenze des Browsers, keine fehlende Funktion. Auch der Speichern-Dialog gibt nur den gewählten Dateinamen zurück. Wo eine heruntergeladene Datei landet, ist eine Einstellung des Browsers („Nachfragen, wo jede Datei gespeichert werden soll"), auf die die App keinen Zugriff hat.
 - **Fußleiste** — links Wörter/Zeichen, mittig die Speicherplatzanzeige, rechts Zoom, Vollbild und Präsentationsmodus.
-- **Inhaltsbreite** — in der Einzel-Vorschau wahlweise „Schmal" (zentriert, etwa DIN-A4-Breite) oder „Breit" (volle Fensterbreite). Auf schmalen Bildschirmen wird ohnehin immer die volle Breite genutzt.
+- **Inhaltsbreite** — in der Einzel-Vorschau wahlweise „Schmal" (zentriert, etwa DIN-A4-Breite) oder „Breit" (volle Fensterbreite). Auf schmalen Bildschirmen wird ohnehin immer die volle Breite genutzt. Die Einstellung gehört zur **einzelnen Notiz**, nicht zum Gerät: jede Notiz behält ihre eigene Breite, und weil sie zum Dokument gehört, wird sie über WebDAV **mitsynchronisiert**. Eine CSV-Datei öffnet von sich aus in „Breit" — eine Tabelle braucht den Platz; wer dort ausdrücklich „Schmal" wählt, behält das auch.
+- **Zoom** — die Zoomstufe wird **pro Notiz** gemerkt, aber **pro Gerät**: ein Telefon braucht eine andere Schriftgröße als ein großer Bildschirm, deshalb wandert dieser Wert bewusst *nicht* mit über die Synchronisierung. Die Betriebsart Simple stellt den Zoom nicht mehr selbst ein — eine dort gewählte Vergrößerung bleibt beim nächsten Öffnen erhalten.
 - **Synchrones Scrollen** — der kleine Knopf oben auf der Trennlinie zwischen Quelltext und Vorschau; nur in der geteilten Ansicht sichtbar.
 
 ## 13. Designs, Ansicht und Fokus-Modi
