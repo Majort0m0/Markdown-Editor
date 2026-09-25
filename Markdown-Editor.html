@@ -16397,7 +16397,16 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // stehen sie auch in tabSyncSnapshot()/remoteTabSnapshot(): ohne das merkte der Dreiwege-
     // Abgleich eine reine Tag-Aenderung nie und schoebe sie nie hoch.
     const TAG_MAX = 3;
-    const TAG_OHNE = '\u0000ohne';   // Schluessel des Sammelabschnitts; kann mit keinem echten kollidieren
+    // Schluessel des Sammelabschnitts. GROSSBUCHSTABEN, und das ist der ganze Trick: tagSchluessel()
+    // schreibt jeden echten Schluessel klein, dieser hier kann also mit keinem kollidieren -- auch
+    // nicht, wenn jemand "Ohne Schlagwort" wirklich als Schlagwort vergibt.
+    //
+    // Hier stand einmal '\u0000ohne'. Das sah sicherer aus, war aber kaputt: der Schluessel landet
+    // als data-tag-schluessel im DOM, und CSS.escape() ersetzt U+0000 laut Spezifikation durch
+    // U+FFFD. Der Selektor suchte damit etwas anderes, als im Attribut stand, fand nichts, und das
+    // Ein- und Ausklappen dieses einen Abschnitts tat sichtbar gar nichts (der gemerkte Zustand
+    // kippte, nur die Klasse wurde nie gesetzt). Gemeldet genau so.
+    const TAG_OHNE = 'OHNE_SCHLAGWORT';
 
     // Gross-/Kleinschreibung und Leerraum zusammenfassen: sonst stuenden "Arbeit", "arbeit" und
     // "Arbeit " als drei Abschnitte nebeneinander. Angezeigt wird trotzdem die getippte
