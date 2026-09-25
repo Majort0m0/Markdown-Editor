@@ -3154,7 +3154,19 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       max-width: 100%;
     }
 
+    /* Die Form ist eine SPALTE: obere Zeile Name + Format, darunter die Schlagwoerter. Sie war
+       einmal eine Zeile -- der spaeter ergaenzte Schlagwortbereich stand damit als drittes Element
+       daneben und nahm mit seiner vollen Breite dem Namensfeld (flex: 1; min-width: 0) den ganzen
+       Platz weg, bis davon ein paar Pixel uebrig waren. Gemeldet mit Bild. */
     .tab-rename-form {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 5px;
+      width: 100%;
+    }
+
+    .tab-rename-kopfzeile {
       display: flex;
       align-items: center;
       gap: 4px;
@@ -3175,7 +3187,11 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     .tab-rename-input {
       flex: 1;
-      min-width: 0;
+      /* Nicht min-width: 0: das erlaubt dem Feld, auf nichts zusammenzufallen, sobald daneben
+         etwas Platz beansprucht. Eine Untergrenze, unter der sich nichts mehr tippen laesst,
+         ist hier das Richtige -- die Format-Auswahl daneben ist schmal genug, dass es in der
+         240px-Leiste aufgeht (gemessen: Feld 112px, Auswahl 66px). */
+      min-width: 90px;
     }
 
     /* Gelb hinterlegt, damit er ins Auge springt (per Wunsch). Weicher Ton statt kräftigem Gelb:
@@ -15560,8 +15576,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         commit();
       });
 
-      form.appendChild(input);
-      if (select) form.appendChild(select);
+      // Name und Format in eine eigene Zeile; der Schlagwortbereich kommt darunter. Ohne diese
+      // Huelle staende er als drittes Element DANEBEN und drueckte das Namensfeld zusammen.
+      const kopfzeile = document.createElement('div');
+      kopfzeile.className = 'tab-rename-kopfzeile';
+      kopfzeile.appendChild(input);
+      if (select) kopfzeile.appendChild(select);
+      form.appendChild(kopfzeile);
 
       // --- Schlagwoerter ------------------------------------------------------------------------
       // Alles hier sind echte KINDER der Form und stehen im Fluss. Beides ist Pflicht: der
