@@ -13868,8 +13868,19 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       t.showEditor = rt.showEditor !== undefined ? rt.showEditor : true;
       t.showPreview = rt.showPreview !== undefined ? rt.showPreview : true;
       t.splitRatio = rt.splitRatio !== undefined ? rt.splitRatio : 50;
-      t.contentWidthMode = rt.contentWidthMode || null;
-      t.tags = Array.isArray(rt.tags) ? rt.tags.slice(0, 3) : [];
+      // FEHLENDES FELD HEISST "KEINE MEINUNG", NICHT "LEER". Gemeldet als "beim webdav sync werden
+      // mir die Tags alle wieder geloescht" und genau so nachgestellt: laeuft auf einem zweiten
+      // Geraet noch eine Fassung, die Schlagwoerter gar nicht kennt, schreibt sie beim Abgleich
+      // ihre Nutzlast OHNE das Feld zurueck. Dieses Geraet las das fehlende Feld dann als
+      // ausdrueckliche Leermeldung und loeschte die Schlagwoerter -- lautlos, weil das ein stilles
+      // Abholen ist (lokal unveraendert) und gar kein Konflikt entsteht.
+      //
+      // Deshalb wird nur uebernommen, was der Fernstand auch wirklich mitbringt. Dasselbe gilt
+      // fuer die Inhaltsbreite; erstelltAm/geaendertAm sind aus demselben Grund schon so gebaut.
+      // Ein Feld, das neuer ist als der aelteste Mitspieler, darf niemals durch blosse Abwesenheit
+      // Daten vernichten -- wer hier ein Feld ergaenzt, hat dieselbe Frage zu beantworten.
+      if (rt.contentWidthMode !== undefined) t.contentWidthMode = rt.contentWidthMode || null;
+      if (Array.isArray(rt.tags)) t.tags = rt.tags.slice(0, 3);
       t.isModified = false;
       t.history = [t.content];
       t.historyIndex = 0;
@@ -14272,7 +14283,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           pushedSnapshotById.set(syncId, localSnap);
         } else if (!localChanged) {
           applyRemoteTabToLocal(t, rt);
-          resultTabsById.set(syncId, rt);
+          // Die ZUSAMMENGEFUEHRTE Notiz hochschreiben, nicht den rohen Fernstand: hat der ein Feld
+          // nicht mitgebracht, das hier erhalten blieb (siehe applyRemoteTabToLocal), bekommt der
+          // Server es damit zurueck, statt dass beide Seiten es sich gegenseitig wegnehmen. Bei
+          // einem gewoehnlichen Abholen ist beides derselbe Inhalt, dort aendert sich nichts.
+          resultTabsById.set(syncId, tabToSyncPayload(t));
         } else if (remoteSnap === localSnap) {
           resultTabsById.set(syncId, tabToSyncPayload(t));
           pushedSnapshotById.set(syncId, localSnap);
