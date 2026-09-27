@@ -92,6 +92,22 @@ Wird bei aktiver Sortierung ein Eintrag gezogen, schaltet die Leiste von selbst 
 
 Notizen, die vor dieser Funktion angelegt wurden und keinen Zeitpunkt gespeichert haben, stehen in beiden Richtungen am Ende der Liste und behalten untereinander ihre eigene Reihenfolge — eine erfundene Uhrzeit wäre irreführender als ein ehrliches „unbekannt". Als Datum der Änderung zählt jede Bearbeitung des Textes und auch das Umbenennen. Beide Zeitpunkte wandern über die WebDAV-Synchronisierung mit, „zuletzt geändert" bedeutet also auf jedem Gerät dasselbe.
 
+### Verweise auf andere Notizen (Wikilinks)
+
+Zwei eckige Klammern auf, Name, zwei zu: `[[Projektplan]]`. Angezeigt wird nur der Name, und ein Klick darauf öffnet die Notiz.
+
+**Beim Tippen:** sobald `[[` steht, ergänzt sich `]]` von selbst und eine Liste der offenen Notizen klappt auf, die sich mit jedem weiteren Zeichen filtert. Pfeiltasten wählen aus, `Enter` übernimmt, `Escape` schließt die Liste. Passt kein Vorschlag, gilt einfach das Getippte.
+
+**Namen:** die Dateiendung spielt keine Rolle (`[[Einkauf]]` findet „Einkauf.md"), Groß- und Kleinschreibung ebenso wenig. Heißen mehrere offene Notizen gleich — was leicht passiert, weil sich Notizen nach ihrer ersten Überschrift benennen —, fragt ein kleines Menü, welche gemeint ist; dort steht zu jeder die erste Inhaltszeile, damit sie zu unterscheiden sind.
+
+**Anderer Anzeigetext:** `[[Rezepte|meine Sammlung]]` zeigt „meine Sammlung" und führt zu „Rezepte". Wird der angezeigte Text eines solchen Verweises geändert, bleibt das Ziel; bei einem einfachen Verweis ist der sichtbare Text *das* Ziel — wer ihn ändert, ändert damit, wohin der Verweis führt.
+
+**Noch nicht vorhandene Notizen** sind gedämpft und gestrichelt unterstrichen, damit man sie erkennt, ohne zu klicken. Ein Klick fragt, ob die Notiz angelegt werden soll; sie bekommt den Namen als Überschrift und im Herkunftsvermerk steht, aus welcher Notiz der Verweis kam. Sobald eine passende Notiz geöffnet ist, wird der Verweis von selbst lebendig.
+
+**Vor und zurück:** die beiden Pfeile oben links in der Kopfzeile führen durch die zuletzt besuchten Notizen — nicht nur durch Verweis-Sprünge, sondern durch jeden Notizwechsel. Eine inzwischen geschlossene Notiz wird dabei übersprungen. Der Verlauf gilt für die laufende Sitzung und wird nicht gespeichert.
+
+Verweise gelten in gewöhnlichen Notizen und in Canvas-Kästen. In **Liedblättern** nicht: dort sind eckige Klammern die Akkordschreibweise, `[[G]]` wäre ein Akkord und kein Verweis. In CSV-, JSON-, TXT- und HTML-Dateien bleiben sie ebenfalls wörtlicher Text. In Exporten, beim Drucken, in der Präsentation und beim formatierten Kopieren erscheint nur noch der Name als schlichter Text — dort ließe sich ohnehin nichts anklicken.
+
 ### Schlagwörter (Tags)
 
 Jede Notiz kann bis zu **drei Schlagwörter** bekommen. Der dritte Knopf im Kopf der Notizenleiste (das Etikett) schaltet die **Tag-Ansicht** ein: die Liste wird dann in Abschnitte je Schlagwort gegliedert. Trägt eine Notiz mehrere Schlagwörter, steht sie in mehreren Abschnitten. Jeder Abschnitt zeigt rechts die Anzahl und lässt sich über den Pfeil links ein- und ausklappen; welche Abschnitte zu sind, bleibt gespeichert. Notizen ohne Schlagwort sammeln sich in einem Abschnitt **„Ohne Schlagwort"** ganz unten — sie sind also nie unauffindbar.

@@ -2745,6 +2745,46 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       display: none;
     }
 
+    /* --- Wikilinks --------------------------------------------------------------------------
+       Ein <span>, kein <a> (siehe die Erweiterung): so faellt er weder in den Link-Zweig des
+       Klickempfaengers noch in previewLinksInOwner(). Die Farbe kommt aus der NOTIZpalette
+       (--preview-link), nicht aus der Oberflaeche -- er steht im Notizinhalt. */
+    .markdown-body .wikilink {
+      color: var(--preview-link);
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+    }
+
+    .markdown-body .wikilink:hover {
+      border-bottom-color: var(--preview-link);
+    }
+
+    /* Nicht gefunden: gedaempft und gestrichelt, damit man es sieht, ohne zu klicken. Bewusst
+       kein Rot -- es ist kein Fehler, sondern eine Notiz, die (noch) nicht offen ist. */
+    .markdown-body .wikilink-unbekannt {
+      color: var(--preview-text);
+      opacity: 0.65;
+      border-bottom: 1px dashed var(--preview-border);
+    }
+
+    .wikilink-auswahl-text { flex: 1; min-width: 0; overflow: hidden; }
+
+    .wikilink-auswahl-zeile {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-top: 1px;
+    }
+
+    #wikilinkAuswahl .sortier-eintrag { align-items: flex-start; }
+
+    .markdown-body .wikilink-unbekannt:hover {
+      opacity: 0.85;
+      border-bottom-color: var(--preview-text);
+    }
+
     /* --- Schlagwoerter -------------------------------------------------------------------------
        Der Etikett-Knopf am Eintrag. Wie .alt-text-btn ueber einem Bild: mit der Maus erst beim
        Zeigen darauf, ohne Mauszeiger dauerhaft -- dort gibt es kein Zeigen, und er ist der
@@ -10161,6 +10201,12 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
          schon links davon. -->
     <div class="header-left">
       <button id="tabSidebarToggleBtn" class="icon-btn" onclick="toggleTabSidebar()" title="Notizen anzeigen/ausblenden"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><line x1="9" y1="4" x2="9" y2="20" stroke="currentColor" stroke-width="1.5"/></svg></button>
+      <!-- Vor/Zurueck durch die zuletzt besuchten Notizen (siehe verlaufNotieren()). Direkt nach
+           dem Notizleisten-Knopf, weil beides dasselbe meint: sich zwischen Notizen bewegen.
+           Beide sind ausgegraut, solange es in der Richtung nichts gibt. -->
+      <button id="verlaufZurueckBtn" class="icon-btn simple-hide" onclick="verlaufGehen(-1)" title="Zur vorigen Notiz zurück" disabled><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <button id="verlaufVorBtn" class="icon-btn simple-hide" onclick="verlaufGehen(1)" title="Zur nächsten Notiz vor" disabled><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
       <!-- Quelltext/Vorschau: prominent, orange-accented view toggles right after the title -->
       <div class="view-toggle-group">
         <div class="action-divider"></div>
@@ -10890,6 +10936,13 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
   <!-- Menue eines Schlagwort-Abschnitts (umbenennen, faerben, verschieben, ueberall entfernen).
        Wie das Sortiermenue hier und nicht im Panel: das schneidet ab (overflow: hidden). -->
   <div class="tag-menue" id="tagMenue"></div>
+
+  <!-- Auswahl, wenn mehrere offene Notizen denselben Namen tragen (siehe wikilinkAuswahlOeffnen). -->
+  <div class="sortier-menue" id="wikilinkAuswahl"></div>
+
+  <!-- Vorschlagsliste beim Tippen eines Wikilinks. Erbt Karte, Rahmen, Schatten und die
+       Zeilenoptik von .slash-menu -- hier steht nur, dass es eine eigene Liste ist. -->
+  <div class="slash-menu" id="wikilinkMenu"></div>
 
   <div class="app-body-row" id="appBodyRow">
     <div class="tab-sidebar-panel" id="tabSidebarPanel">
@@ -15087,6 +15140,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         case 'vorlage': satz = h.quelle ? 'Aus der Vorlage „' + h.quelle + '" erstellt' : 'Aus einer Vorlage erstellt'; break;
         case 'pdf':     satz = h.quelle ? 'Aus dem PDF „' + h.quelle + '" erstellt' : 'Aus einem PDF erstellt'; break;
         case 'import':  satz = 'Aus einem fremden Akkordblatt importiert'; break;
+        case 'wikilink': satz = h.quelle ? 'Über einen Verweis aus „' + h.quelle + '" angelegt' : 'Über einen Verweis angelegt'; break;
         case 'neu':     satz = 'Hier neu angelegt'; break;
         default: return '';
       }
@@ -15298,6 +15352,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       setCanvasAddMode(false);
 
       activeTabId = id;
+      verlaufNotieren(id);   // siehe verlaufNotieren(): die einzige Stelle, an der sich activeTabId aendert
 
       if (targetTab) {
         enableEditorUI();
@@ -17067,6 +17122,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     document.getElementById('tagMenue').addEventListener('click', (e) => e.stopPropagation());
 
+    document.addEventListener('click', (e) => {
+      const m = document.getElementById('wikilinkAuswahl');
+      if (m && m.classList.contains('active') && !m.contains(e.target)) wikilinkAuswahlSchliessen();
+    });
+
+    document.getElementById('wikilinkAuswahl').addEventListener('click', (e) => e.stopPropagation());
+
     document.getElementById('tabSidebarPanel').addEventListener('mouseleave', closeTabSidebar);
 
     // Gemeldet für iOS: "wenn aus dem linken Menü neue Notiz oder eine bestehende Notiz ausgewählt
@@ -17715,6 +17777,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         closeBurgerMenu();
         closeSortierMenue();
         tagMenueSchliessen();
+        wikilinkAuswahlSchliessen();
+        wikiMenuSchliessen();
         closeTabSidebar();
         closeWebdavModal();
         if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();
@@ -26825,6 +26889,213 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // contentEditable. See updatePreview()'s own comment at each of the two places this matters.
     let previewIsAuthoring = false;
 
+
+    // --- WIKILINKS [[Notizname]] ----------------------------------------------------------------
+    //
+    // Ein Verweis auf eine andere offene Notiz. Der Weg dorthin ist eine marked-INLINE-ERWEITERUNG,
+    // und das ist keine Geschmacksfrage: die beiden naheliegenden Abkuerzungen (im fertigen HTML
+    // ersetzen oder renderer.text ueberschreiben) lassen den Tokenbaum unveraendert, aus dem
+    // buildTextCharMaps() die Zeichenzuordnung baut -- gemessen laeuft die Karte damit je Verweis
+    // um genau 4 Zeichen gegen das DOM auseinander (11 Quellzeichen gegen 7 sichtbare). Genau diese
+    // Art Abweichung hat in dieser Datei schon drei unabhaengig aussehende Fehler erzeugt.
+    //
+    // Der eigene Token traegt dagegen .tokens mit dem Anzeigetext und laeuft damit durch denselben
+    // generischen Zweig von collectInlineCharMap(), den 'strong' schon geht:
+    //     strong    raw="**fett**"        tokens:[text "fett"]
+    //     wikilink  raw="[[Projektplan]]" tokens:[text "Projektplan"]
+    // Nachgemessen an den echten Kartenfunktionen: in 10 von 10 Vergleichspaaren zeichengenau,
+    // und an 5 wikilink-freien Proben ist die Karte byteweise identisch wie ohne die Erweiterung.
+    //
+    // KEIN <a>. Zwei Gruende, beide belegt: der Klickempfaenger der Vorschau faengt jedes <a> ab
+    // und oeffnet das Link-Menue (Oeffnen/Bearbeiten/Adresse kopieren/Link entfernen), und
+    // previewLinksInOwner()/findLinkSourceRange() zaehlen die <a> eines Blocks durch und ordnen
+    // sie den [Text](Adresse)-Treffern im Rohtext zu -- ein Wikilink hat dort kein Gegenstueck,
+    // die Zuordnung verschiebt sich um eins, und "Bearbeiten" schriebe auf den FALSCHEN Link.
+    // Ein <span> faellt durch beide Stellen hindurch.
+    const WIKILINK_RE = /^\[\[([^\[\]\n|]+?)(?:\|([^\[\]\n]*))?\]\]/;
+
+    // Vergleichsform eines Notiznamens: ohne Endung, kleingeschrieben, Leerraum zusammengezogen.
+    // Beides ausdruecklich so gewuenscht -- ohne das Abtrennen der Endung passt praktisch nie
+    // etwas, weil jede Notiz intern "Einkauf.md" heisst.
+    function wikilinkSchluessel(name) {
+      return splitTabNameExt(String(name || '').trim()).base.trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    // Alle offenen Notizen, die auf diesen Namen passen. Mehrere sind der NORMALFALL, nicht die
+    // Ausnahme: updateTabNameFromFirstHeading() benennt jede Notiz nach ihrer ersten Ueberschrift,
+    // zwei Notizen mit "# Rezepte" heissen also beide "Rezepte.md", und eine Eindeutigkeitspruefung
+    // gibt es nirgends.
+    function wikilinkTreffer(ziel) {
+      const k = wikilinkSchluessel(ziel);
+      if (!k) return [];
+      return tabs.filter(t => wikilinkSchluessel(t.name) === k);
+    }
+
+    // Beim Rendern gesetzt. Aendert sich, sobald Notizen auf- oder zugehen -- updatePreview() baut
+    // die Vorschau ohnehin bei jeder Aenderung neu, und switchTab() ruft es auf, ein Verweis wird
+    // also von selbst lebendig, sobald die passende Notiz offen ist.
+    function wikilinkHtml(ziel, anzeige) {
+      const gefunden = wikilinkTreffer(ziel).length;
+      const klassen = 'wikilink' + (gefunden ? '' : ' wikilink-unbekannt');
+      const titel = gefunden
+        ? (gefunden > 1 ? gefunden + ' Notizen heißen so – zum Auswählen anklicken' : 'Notiz öffnen: ' + ziel)
+        : 'Notiz „' + ziel + '" ist nicht geöffnet – zum Anlegen anklicken';
+      // Die Form mit eigenem Anzeigetext wird ausdruecklich gekennzeichnet, statt sie beim
+      // Zurueckschreiben aus "Text ungleich Ziel" zu erraten: wer in einen EINFACHEN Verweis
+      // hineintippt, meint damit ein anderes Ziel -- ihn stillschweigend in eine Alias-Form mit
+      // unsichtbar gewordenem alten Ziel zu verwandeln, waere das Gegenteil des Erwarteten.
+      const alias = wikilinkSchluessel(ziel) !== wikilinkSchluessel(anzeige) ? ' data-wiki-alias="1"' : '';
+      return '<span class="' + klassen + '" data-wiki="' + escapeHtmlAttrText(ziel) + '"' + alias +
+             ' title="' + escapeHtmlAttrText(titel) + '">' + escapeHtmlText(anzeige) + '</span>';
+    }
+
+    marked.use({ extensions: [{
+      name: 'wikilink',
+      level: 'inline',
+      // Ohne start() durchsucht marked den Rest des Absatzes nicht nach dem naechsten Vorkommen.
+      start(src) { const i = src.indexOf('[['); return i === -1 ? undefined : i; },
+      tokenizer(src) {
+        const t = WIKILINK_RE.exec(src);
+        if (!t) return;
+        const ziel = t[1].trim();
+        // Ein Name aus lauter Leerraum ergaebe ein nullbreites, nicht anklickbares Loch im Text.
+        if (!ziel) return;
+        const anzeige = (t[2] !== undefined && t[2].trim()) ? t[2].trim() : ziel;
+        return {
+          type: 'wikilink', raw: t[0], ziel: ziel, text: anzeige,
+          // DAS ist der Grund, warum die Zeichenzuordnung stimmt -- siehe oben.
+          tokens: [{ type: 'text', raw: anzeige, text: anzeige }]
+        };
+      },
+      renderer(tok) {
+        // In Ausgaben ohne App (Export, Druck, Praesentation, "Formatiert kopieren", Vorschaubild)
+        // waere ein Verweis tot. Dann schlichter Text: ein gefaerbter, nicht klickbarer Link waere
+        // irrefuehrender als gar keiner.
+        if (suppressDrawingControls) return escapeHtmlText(tok.text);
+        return wikilinkHtml(tok.ziel, tok.text);
+      }
+    }] });
+
+
+    // --- Einem Wikilink folgen ------------------------------------------------------------------
+
+    async function wikilinkFolgen(ziel, el) {
+      const treffer = wikilinkTreffer(ziel);
+      if (treffer.length === 1) { await wikilinkSpringen(treffer[0].id); return; }
+      if (treffer.length > 1) { wikilinkAuswahlOeffnen(treffer, el); return; }
+      // Nicht gefunden: nachfragen, nicht einfach anlegen -- ein Fehlklick soll keine Notiz
+      // erzeugen.
+      if (!confirm('Keine geöffnete Notiz heißt „' + ziel + '".\n\nSoll eine neue Notiz mit diesem Namen angelegt werden?')) return;
+      const quelle = getActiveTabReal();
+      // Ueber createNewTab, wie jede andere Notiz auch -- das ist die ausdrueckliche Hausregel.
+      // Der Name bekommt die Endung, damit die neue Notiz aussieht wie alle anderen, und
+      // isDefaultName ist dadurch false: die Umbenennung nach der ersten Ueberschrift greift
+      // nicht mehr und der Name, auf den der Verweis zeigt, bleibt stehen.
+      await createNewTab(ziel + '.md', '# ' + ziel + '\n\n', null, null,
+                         herkunftNotieren('wikilink', quelle ? quelle.name : null));
+      showToast('Notiz „' + ziel + '" angelegt.');
+    }
+
+    // Mehrere Notizen heissen gleich -- ein kleines Menue statt stillschweigend die erste zu
+    // nehmen. Am <body> und position: fixed, wie die uebrigen Menues dieser Datei.
+    function wikilinkAuswahlOeffnen(treffer, el) {
+      const menue = document.getElementById('wikilinkAuswahl');
+      menue.innerHTML = '';
+      const kopf = document.createElement('div');
+      kopf.className = 'sortier-kopf';
+      kopf.textContent = treffer.length + ' Notizen heißen so';
+      menue.appendChild(kopf);
+      treffer.forEach(t => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sortier-eintrag';
+        const txt = document.createElement('span');
+        txt.className = 'wikilink-auswahl-text';
+        const zeile1 = document.createElement('div');
+        zeile1.textContent = t.name + (t.isModified ? ' *' : '');
+        txt.appendChild(zeile1);
+        // Beide heissen ja gleich -- ohne eine zweite Zeile waere die Auswahl nicht zu treffen.
+        // Dieselbe erste Inhaltszeile, die auch die Notizenleiste zeigt.
+        const zeile2Text = ersteInhaltszeile(t);
+        if (zeile2Text) {
+          const zeile2 = document.createElement('div');
+          zeile2.className = 'wikilink-auswahl-zeile';
+          zeile2.textContent = zeile2Text;
+          txt.appendChild(zeile2);
+        }
+        b.appendChild(txt);
+        b.onclick = (ev) => { ev.stopPropagation(); wikilinkAuswahlSchliessen(); wikilinkSpringen(t.id); };
+        menue.appendChild(b);
+      });
+      const r = el.getBoundingClientRect();
+      menue.style.top = (r.bottom + 6) + 'px';
+      menue.style.left = Math.min(r.left, Math.max(8, window.innerWidth - 248)) + 'px';
+      menue.classList.add('active');
+    }
+
+    function wikilinkAuswahlSchliessen() {
+      const m = document.getElementById('wikilinkAuswahl');
+      if (m) m.classList.remove('active');
+    }
+
+    function wikilinkSpringen(tabId) {
+      return switchTab(tabId);
+    }
+
+    // --- VERLAUF BESUCHTER NOTIZEN (vor/zurueck) --------------------------------------------------
+    //
+    // Es gab bisher keinen. tab.history ist der TEXTverlauf einer Notiz (Rueckgaengig),
+    // vortragSetlist die Position in einer Setliste. Gestapelt wird in switchTab(), und zwar an
+    // der einzigen Stelle im ganzen Skript, an der activeTabId geschrieben wird -- es gibt also
+    // keinen zweiten Weg, der den Verlauf umgehen koennte.
+    //
+    // Geraetelokal und NICHT gespeichert: ein Verlauf ueber einen Neustart hinweg zeigt auf einen
+    // Weg, an den sich niemand mehr erinnert. Jeder Notizwechsel zaehlt (ausdruecklich so
+    // gewuenscht), nicht nur Spruenge ueber einen Verweis.
+    let notizVerlauf = [];
+    let notizVerlaufIndex = -1;
+    // Solange ein Vor/Zurueck-Schritt laeuft, darf switchTab() nicht stapeln -- sonst loeschte
+    // jeder Zurueck-Schritt den Vorwaertsteil und man kaeme nie wieder nach vorn.
+    let verlaufSprungLaeuft = false;
+
+    function verlaufNotieren(tabId) {
+      if (verlaufSprungLaeuft) return;
+      if (notizVerlauf[notizVerlaufIndex] === tabId) return;   // derselbe Wechsel zweimal
+      notizVerlauf = notizVerlauf.slice(0, notizVerlaufIndex + 1);
+      notizVerlauf.push(tabId);
+      // Gedeckelt, damit der Stapel in einer langen Sitzung nicht unbegrenzt waechst.
+      if (notizVerlauf.length > 100) notizVerlauf.shift();
+      notizVerlaufIndex = notizVerlauf.length - 1;
+      updateVerlaufKnoepfe();
+    }
+
+    // Eine inzwischen geschlossene Notiz wird uebersprungen, nicht wieder geoeffnet (so
+    // entschieden) -- sie steht ja nicht mehr in tabs.
+    function verlaufNaechsterIndex(richtung) {
+      let i = notizVerlaufIndex + richtung;
+      while (i >= 0 && i < notizVerlauf.length) {
+        if (tabs.some(t => t.id === notizVerlauf[i])) return i;
+        i += richtung;
+      }
+      return -1;
+    }
+
+    async function verlaufGehen(richtung) {
+      const i = verlaufNaechsterIndex(richtung);
+      if (i === -1) return;
+      verlaufSprungLaeuft = true;
+      notizVerlaufIndex = i;
+      try { await switchTab(notizVerlauf[i]); }
+      finally { verlaufSprungLaeuft = false; updateVerlaufKnoepfe(); }
+    }
+
+    function updateVerlaufKnoepfe() {
+      const z = document.getElementById('verlaufZurueckBtn');
+      const v = document.getElementById('verlaufVorBtn');
+      if (z) z.disabled = verlaufNaechsterIndex(-1) === -1;
+      if (v) v.disabled = verlaufNaechsterIndex(1) === -1;
+    }
+
     function updatePreview() {
       if (!activeTabId) return;
       // preview.innerHTML is about to be fully replaced below, which would leave any active
@@ -30435,6 +30706,139 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // previewStructureDesynced wuerde die Eingabe im ganzen Dokument einfrieren. Ein Nullbreiten-
     // Leerzeichen ist genau der Platzhalter, den handlePreviewEnter() fuer leere Absaetze ohnehin
     // schon setzt -- und trySlashMenuTrigger() erkennt daran seinen eigenen "leerer Block"-Zweig.
+
+    // --- Tippen eines Wikilinks: Klammerpaar und Vorschlagsliste --------------------------------
+    //
+    // Bewusst NICHT ueber AUTO_PAIR_RULES: die Regeln dort fuehren durch die Live-Markierung
+    // (renderLiveMarkersHtml, md-live-*), die nur Auszeichnungspaare wie ** und ~~ kennt. Ein
+    // Klammerpaar dort einzureihen hiesse, diesen ganzen Apparat um eine vierte Art zu erweitern --
+    // gemessen laeuft dabei die Zeichenkarte gegen das DOM auseinander. Der Weg hier ist der
+    // einfachere und greift nicht in die Live-Markierung ein: Text einfuegen, echten Neuaufbau
+    // erzwingen, Schreibmarke setzen -- dasselbe, was trySlashMenuTriggerAfterInput() auch tut.
+    let wikiMenuState = null;   // { startSrc } -- Quelltextstelle direkt hinter '[['
+
+    function wikiMenuSchliessen() {
+      if (!wikiMenuState) return;
+      wikiMenuState = null;
+      const m = document.getElementById('wikilinkMenu');
+      if (m) m.classList.remove('active');
+    }
+
+    // Das zweite '[' vervollstaendigt zu '[[]]'. Erst mit einem nicht-leeren Namen entsteht
+    // ueberhaupt ein Wikilink-Token, '[[]]' bleibt also sichtbarer Text -- genau richtig, solange
+    // noch getippt wird.
+    function tryWikilinkAutoPair(owner, cursorSrc, insertedChar) {
+      if (insertedChar !== '[') return false;
+      if (editor.value[cursorSrc - 1] !== '[') return false;
+      if (!owner || owner.tagName === 'PRE' || owner.tagName === 'SUMMARY') return false;
+      // In einer Tabellenzelle laeuft die Positionsrechnung ueber ein eigenes System (data-start),
+      // nicht ueber die Zeichenkarte -- dort nicht eingreifen.
+      if (findTableCellOwnerElement(window.getSelection().anchorNode)) return false;
+      editor.value = editor.value.slice(0, cursorSrc) + '[]]' + editor.value.slice(cursorSrc);
+      // Schreibmarke zwischen '[[' und ']]'
+      finishPreviewStructuralEdit(cursorSrc + 1);
+      wikiMenuState = { startSrc: cursorSrc + 1 };
+      wikiMenuAktualisieren();
+      return true;
+    }
+
+    // Der schon getippte Name. Bewusst NICHT ueber die Schreibmarke bestimmt: sobald der Name
+    // nicht mehr leer ist, ist '[[Name]]' ein gueltiger Token und wird als Insel gerendert -- die
+    // vier Klammerzeichen verschwinden damit aus der Anzeige, und eine Schreibmarke am Ende der
+    // Insel bildet nicht mehr auf "hinter dem Namen" ab, sondern auf das Blockende (der
+    // dokumentierte Rueckfall, wenn eine DOM-Stelle keine eigene Quelltextstelle hat). Gemessen:
+    // der Filter las dadurch "Proj]]" statt "Proj" und schloss sich selbst.
+    //
+    // Stattdessen die gemerkte Anfangsstelle und das naechste ']]' -- beides steht im Quelltext
+    // und ist von der Darstellung unabhaengig.
+    function wikiMenuFilter() {
+      if (!wikiMenuState) return null;
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return null;
+      const owner = findSourceOwnerElement(sel.getRangeAt(0).startContainer);
+      if (!owner) return null;
+      const bStart = Number(owner.dataset.srcStart), bEnd = Number(owner.dataset.srcEnd);
+      if (!Number.isFinite(bStart) || !Number.isFinite(bEnd)) return null;
+      const start = wikiMenuState.startSrc;
+      // Die Schreibmarke muss noch in demselben Block stehen, und dort, wo sie einmal begonnen
+      // hat, muss weiterhin '[[' stehen -- sonst ist die Eingabe vorbei (geloescht, woanders
+      // weitergeschrieben, rueckgaengig gemacht).
+      if (start < bStart || start > bEnd + 1) return null;
+      if (editor.value.slice(start - 2, start) !== '[[') return null;
+      const zu = editor.value.indexOf(']]', start);
+      if (zu === -1 || zu > bEnd) return null;
+      const text = editor.value.slice(start, zu);
+      if (/[\n\[\]]/.test(text)) return null;
+      return { text: text, start: start, ende: zu };
+    }
+
+    function wikiMenuAktualisieren() {
+      if (!wikiMenuState) return;
+      const stand = wikiMenuFilter();
+      if (stand === null) { wikiMenuSchliessen(); return; }
+      const menue = document.getElementById('wikilinkMenu');
+      const suche = stand.text.trim().toLowerCase();
+      const aktiv = getActiveTabReal();
+      const treffer = tabs
+        .filter(t => t !== aktiv)                                  // auf sich selbst zu verweisen ergibt nichts
+        .map(t => ({ tab: t, name: splitTabNameExt(t.name).base }))
+        .filter(e => !suche || e.name.toLowerCase().includes(suche))
+        .slice(0, 8);
+      menue.innerHTML = '';
+      if (!treffer.length) {
+        const leer = document.createElement('div');
+        leer.className = 'slash-menu-empty';
+        leer.textContent = suche ? 'Keine offene Notiz passt – Enter legt sie an' : 'Notiznamen tippen …';
+        menue.appendChild(leer);
+      } else {
+        treffer.forEach((e, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'slash-menu-item' + (i === 0 ? ' selected' : '');
+          const t = document.createElement('span');
+          t.textContent = e.name;
+          b.appendChild(t);
+          b.onmousedown = (ev) => ev.preventDefault();             // Auswahl in der Vorschau behalten
+          b.onclick = (ev) => { ev.stopPropagation(); wikiMenuUebernehmen(e.name); };
+          menue.appendChild(b);
+        });
+      }
+      // Position: die Schreibmarke steht immer mitten im Text, ein zusammengefallener Bereich hat
+      // dort ein echtes Rechteck -- anders als im leeren Block, fuer den das Schraegstrich-Menue
+      // eigens den Block ausmisst.
+      const sel = window.getSelection();
+      const r = sel.getRangeAt(0).getBoundingClientRect();
+      menue.style.top = ((r.bottom || r.top) + 6) + 'px';
+      menue.style.left = Math.min(r.left, Math.max(8, window.innerWidth - 248)) + 'px';
+      menue.classList.add('active');
+    }
+
+    // Den getippten Rest durch den gewaehlten Namen ersetzen und hinter ']]' springen.
+    function wikiMenuUebernehmen(name) {
+      const stand = wikiMenuFilter();
+      if (!stand) { wikiMenuSchliessen(); return; }
+      editor.value = editor.value.slice(0, stand.start) + name + editor.value.slice(stand.ende);
+      wikiMenuSchliessen();
+      // Hinter das schliessende ']]' -- dort geht es weiter im Satz.
+      finishPreviewStructuralEdit(stand.start + name.length + 2);
+    }
+
+    function wikiMenuAuswahl(richtung) {
+      const menue = document.getElementById('wikilinkMenu');
+      const items = [...menue.querySelectorAll('.slash-menu-item')];
+      if (!items.length) return;
+      let i = items.findIndex(e => e.classList.contains('selected'));
+      i = (i + richtung + items.length) % items.length;
+      items.forEach(e => e.classList.remove('selected'));
+      items[i].classList.add('selected');
+      items[i].scrollIntoView({ block: 'nearest' });
+    }
+
+    function wikiMenuGewaehlterName() {
+      const el = document.querySelector('#wikilinkMenu .slash-menu-item.selected');
+      return el ? el.textContent : null;
+    }
+
     function trySlashMenuTriggerAfterInput(inputType) {
       if (slashMenuState || previewStructureDesynced || !wysiwygEnabled || editor.disabled) return;
       const tab = getCurrentTab();
@@ -32209,7 +32613,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // does its own explicit editor.value splice + e.preventDefault() rather than letting native
       // DOM insertion happen — the exact same "bypass native insertion" property this branch relies
       // on, just reached via a different path for these specific characters.
-      const isAutoPairTriggerChar = e.data && AUTO_PAIR_RULES.some((r) => r.char === e.data);
+      // '[' gehoert aus demselben Grund dazu wie die drei Auszeichnungszeichen, auch wenn es
+      // nicht in AUTO_PAIR_RULES steht (siehe tryWikilinkAutoPair): sonst schluckt dieser Zweig
+      // die Klammer, bevor sie den Kuerzeln darunter je begegnet -- genau der Fehler, den der
+      // Kommentar darueber fuer '**' beschreibt.
+      const isAutoPairTriggerChar = e.data && (e.data === '[' || AUTO_PAIR_RULES.some((r) => r.char === e.data));
       if (pendingBoundaryCursorSrc != null && range.collapsed && e.inputType === 'insertText' && e.data &&
           !isAutoPairTriggerChar &&
           domPositionToSource(range.startContainer, range.startOffset) === pendingBoundaryCursorSrc) {
@@ -32442,6 +32850,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             previewFormatBoundaryCursorSrc = pendingRedundantMarker.srcPos;
             return;
           }
+          if (tryWikilinkAutoPair(anchorOwner, cursorSrc, e.data)) { e.preventDefault(); return; }
           if (tryTypeThroughAdjacentMarker(range, e.data)) { e.preventDefault(); return; }
           if (tryMarkdownInlineShortcut(anchorOwner, cursorSrc, e.data)) { e.preventDefault(); return; }
           if (tryMarkdownAutoPairShortcut(anchorOwner, cursorSrc, e.data)) { e.preventDefault(); return; }
@@ -32562,6 +32971,24 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // listener's own Enter case is a defensive fallback for a keydown that somehow doesn't
     // produce a beforeinput. Gated on slashMenuState first thing so this never interferes with
     // anything when the menu isn't open.
+    // Vor dem Schraegstrich-Horcher registriert, damit Enter hier ankommt, bevor es als
+    // Zeilenumbruch oder als Verlassen einer Formatzone gedeutet wird.
+    preview.addEventListener('keydown', (e) => {
+      if (!wikiMenuState) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); wikiMenuAuswahl(1); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); wikiMenuAuswahl(-1); return; }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); wikiMenuSchliessen(); return; }
+      if (e.key === 'Enter') {
+        e.preventDefault(); e.stopPropagation();
+        // Kein Vorschlag getroffen: der getippte Name gilt, die Notiz gibt es dann eben noch
+        // nicht -- ein Klick auf den fertigen Verweis legt sie an.
+        const stand = wikiMenuFilter();
+        const name = wikiMenuGewaehlterName() || (stand && stand.text.trim());
+        if (name) wikiMenuUebernehmen(name); else wikiMenuSchliessen();
+        return;
+      }
+    });
+
     preview.addEventListener('keydown', (e) => {
       if (!slashMenuState) return;
       if (e.key === 'ArrowDown') { e.preventDefault(); slashMenuMoveSelection(1); return; }
@@ -33711,6 +34138,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       applyLiveMarkersAtSelection();
       // Muss nach syncPreviewEditToSource() stehen: der Nachweg prueft den Quelltext, nicht das
       // DOM, und der ist erst danach auf dem Stand des gerade getippten Zeichens.
+      if (wikiMenuState) wikiMenuAktualisieren();
       trySlashMenuTriggerAfterInput(e && e.inputType);
     });
     preview.addEventListener('compositionstart', () => { previewComposing = true; });
@@ -41922,6 +42350,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // hat keine eigene Entsprechung im Quelltext und soll schlicht oeffnen.
       // Akkordfeld anklicken -> Akkord erklingt. Vor der Linkprüfung, weil ein Akkord auch in
       // einer Zeile mit Link stehen kann; der Knopf ist das genauere Ziel.
+      // Wikilink zuerst: ein <span data-wiki> faellt zwar nicht in den <a>-Zweig weiter unten,
+      // aber der Wort-Klick am Ende der Funktion wuerde sonst in den Quelltext springen.
+      const wikiEl = e.target.closest('.wikilink[data-wiki]');
+      if (wikiEl && preview.contains(wikiEl)) {
+        e.preventDefault();
+        wikilinkFolgen(wikiEl.getAttribute('data-wiki'), wikiEl);
+        return;
+      }
+
       const akkordEl = e.target.closest('.cp-ak-akkord[data-cp-akkord]');
       if (akkordEl) {
         e.preventDefault();
@@ -42027,6 +42464,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         }
       }
 
+      // Ein Verweis in einer Tabellenzelle gehoert dem Verweis, nicht der Zellauswahl -- sonst
+      // faengt der Zeigergriff ihn ab und der Klick wird zusaetzlich umgeleitet (setPointerCapture,
+      // siehe die Kommentare weiter unten). Derselbe fruehe Ausstieg, den der Fuellanfasser hat.
+      if (e.target.closest('.wikilink[data-wiki]')) return;
       const cell = e.target.closest('td[data-start], th[data-start]');
       if (!cell || editor.disabled) return;
       e.preventDefault();
@@ -44164,6 +44605,29 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       filter: (node) => node.nodeName === 'AUDIO' && node.classList.contains('audio-asset-player'),
       replacement: (content, node) => '![' + (node.getAttribute('aria-label') || '') + '](' + (node.getAttribute('data-md-href') || '') + ')',
     });
+    // Ohne diese Regel waere ein Wikilink nach dem naechsten Tastendruck spurlos weg:
+    // serializeBlockToMarkdown() laeuft bei JEDEM Anschlag ueber den bearbeiteten Block, ein
+    // <span> trifft keine Turndown-Regel, und fuer unbekannte Elemente gibt Turndown nur den
+    // Inhalt zurueck -- aus '[[Einkauf]]' wuerde 'Einkauf'. Gemessen mit dem echten Turndown-Build.
+    //
+    // Der SICHTBARE Text gewinnt ueber das Attribut: die Vorschau ist beschreibbar, und wer in
+    // einen Verweis hineintippt, aendert damit sein Ziel -- aus dem Attribut zurueckgebaut waere
+    // das Getippte nach dem naechsten Anschlag wieder weg. Nur bei der Form mit eigenem
+    // Anzeigetext ([[Ziel|Anzeige]]) bleibt das Ziel am Attribut und der Inhalt ist die Anzeige.
+    turndownService.addRule('studioProWikilink', {
+      filter: (node) => node.nodeName === 'SPAN' && node.classList && node.classList.contains('wikilink'),
+      replacement: (content, node) => {
+        const ziel = (node.getAttribute('data-wiki') || '').trim();
+        const text = String(content || '').trim();
+        if (!ziel && !text) return '';
+        if (!text) return '[[' + ziel + ']]';
+        // Nur eine ausdrueckliche Alias-Form behaelt ihr Ziel. Bei einem einfachen Verweis IST der
+        // sichtbare Text das Ziel -- wird er bearbeitet, zeigt der Verweis danach woandershin.
+        if (!ziel || !node.hasAttribute('data-wiki-alias')) return '[[' + text + ']]';
+        return '[[' + ziel + '|' + text + ']]';
+      }
+    });
+
     turndownService.addRule('studioProVideoEmbed', {
       filter: (node) => (node.nodeName === 'SPAN' || node.nodeName === 'DIV') && node.classList.contains('video-embed-wrapper'),
       replacement: (content, node) => '![' + (node.getAttribute('data-md-alt') || 'Video') + '](' + (node.getAttribute('data-md-href') || '') + ')',
@@ -44291,7 +44755,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Eigene Insel: unangetastet lassen, samt Attributen und Inhalt -- genau daraus bauen die
     // studioPro*-Regeln die Original-Markdown-Referenz wieder auf. Dieselben Formen wie dort, nur
     // ohne die Regeln umzuschreiben; kommt eine Inselart dazu, gehoert sie auch hierher.
+    // Wikilink ist die fuenfte Inselart -- der Kommentar in dieser Funktion verlangt ausdruecklich,
+    // dass eine neue hierher gehoert, sonst verliert eine Kopie aus der eigenen Vorschau ihr
+    // data-wiki (die Positivliste laesst an einem Element nur wenige Attribute durch).
     function istEigeneEinfuegeInsel(el) {
+      if (el && el.classList && el.classList.contains('wikilink')) return true;
       const klassen = el.classList;
       if (klassen.contains('image-wrapper') || klassen.contains('video-embed-wrapper')) return true;
       if (el.nodeName === 'AUDIO' && klassen.contains('audio-asset-player')) return true;
