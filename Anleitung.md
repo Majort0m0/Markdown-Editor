@@ -96,7 +96,9 @@ Notizen, die vor dieser Funktion angelegt wurden und keinen Zeitpunkt gespeicher
 
 Zwei eckige Klammern auf, Name, zwei zu: `[[Projektplan]]`. Angezeigt wird nur der Name, und ein Klick darauf öffnet die Notiz.
 
-**Beim Tippen:** sobald `[[` steht, ergänzt sich `]]` von selbst und eine Liste der offenen Notizen klappt auf, die sich mit jedem weiteren Zeichen filtert. Pfeiltasten wählen aus, `Enter` übernimmt, `Escape` schließt die Liste. Passt kein Vorschlag, gilt einfach das Getippte.
+**Beim Tippen:** sobald `[[` steht, ergänzt sich `]]` von selbst und eine Liste der offenen Notizen klappt auf, die sich mit jedem weiteren Zeichen filtert. Pfeiltasten wählen aus, `Enter` übernimmt, `Escape` schließt die Liste. Passt kein Vorschlag, meldet die Liste „Keine offene Notiz – Enter übernimmt den Namen": `Enter` schließt den Verweis dann mit dem Getippten ab, und es geht hinter dem Verweis ganz gewöhnlich im Satz weiter. Angelegt wird eine fehlende Notiz erst beim Klick auf den fertigen Verweis — beim Schreiben soll `Enter` nicht die Notiz wechseln.
+
+**Auf vier Wegen einzufügen:** durch Tippen von `[[`, über den Knopf in der Formatleiste neben dem Link-Knopf, über das Schrägstrich-Menü (`/`, Eintrag „Verweis auf Notiz") und — wenn Text markiert ist — über den Knopf im Menü, das an der Markierung aufklappt. Markierter Text wird dabei **verlinkt, nicht ersetzt**: aus „Projektplan" wird `[[Projektplan]]`, und wählt man in der Liste eine anders benannte Notiz, bleibt der markierte Text sichtbar und die gewählte Notiz wird das Ziel. Im Quelltextfenster wird der Verweis nur eingefügt; die Vorschlagsliste gibt es dort nicht, der Name wird von Hand zu Ende getippt.
 
 **Namen:** die Dateiendung spielt keine Rolle (`[[Einkauf]]` findet „Einkauf.md"), Groß- und Kleinschreibung ebenso wenig. Heißen mehrere offene Notizen gleich — was leicht passiert, weil sich Notizen nach ihrer ersten Überschrift benennen —, fragt ein kleines Menü, welche gemeint ist; dort steht zu jeder die erste Inhaltszeile, damit sie zu unterscheiden sind.
 
