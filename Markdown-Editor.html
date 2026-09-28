@@ -2806,6 +2806,142 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       margin-top: 1px;
     }
 
+    /* --- Kalender ------------------------------------------------------------------------------
+       Beide Klassen im Selektor, und das ist keine Geschmacksfrage: .modal-card mit seinem
+       max-width: 440px steht WEITER UNTEN in derselben Datei und gewaenne bei gleicher
+       Spezifitaet. Dieselbe Falle, die .import-karte und .griff-ed-karte schon dokumentieren. */
+    .modal-card.kalender-karte {
+      max-width: min(460px, 94vw);
+      width: 100%;
+    }
+
+    .kalender-leiste {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 4px 10px;
+    }
+
+    .kalender-titel {
+      flex: 1;
+      text-align: center;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--text-main);
+    }
+
+    .kalender-heute-btn {
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+
+    .kalender-heute-btn:hover { background: var(--bg-hover); }
+
+    .kalender-gitter {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+    }
+
+    .kalender-wochentag {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      padding-bottom: 2px;
+    }
+
+    .kalender-leer { visibility: hidden; }
+
+    /* Quadratisch ueber aspect-ratio statt fester Hoehe: so bleibt das Raster auf einem schmalen
+       Telefon in sich stimmig, statt dass die Zellen flach werden. */
+    .kalender-tag {
+      position: relative;
+      aspect-ratio: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .kalender-tag:hover { background: var(--bg-hover); }
+
+    /* Ein Tag MIT Notiz ist der Link -- deshalb in der Akzentfarbe und kraeftiger, wie jeder
+       andere Verweis in dieser App auch. */
+    .kalender-tag.hat-notiz {
+      background: var(--bg-active);
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .kalender-tag.hat-notiz:hover { background: var(--bg-active-strong); }
+
+    /* Heute ist ein Ring, keine Fuellung: sonst waere nicht mehr zu unterscheiden, ob ein Tag
+       heute ist oder eine Notiz hat -- und beides zugleich kommt staendig vor. */
+    .kalender-tag.heute {
+      border-color: var(--accent);
+      font-weight: 700;
+    }
+
+    .kalender-punkt {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Platzhalter in derselben Groesse, damit die Zahlen aller Tage auf einer Linie stehen und
+       nicht je nach Punkt um zwei Pixel wandern. */
+    .kalender-tag:not(.hat-notiz)::after {
+      content: '';
+      width: 5px;
+      height: 5px;
+    }
+
+    .kalender-fuss {
+      margin-top: 12px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    /* Der Eintrag in der Notizenleiste. Sieht aus wie eine Notizzeile, ist aber bewusst keine
+       (siehe baueKalenderEintrag): ohne die Klasse .tab bleibt er fuer Volltextsuche und Zug
+       unsichtbar. */
+    .kalender-eintrag {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 6px 8px;
+      border: none;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-main);
+      font-size: 0.82rem;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .kalender-eintrag:hover { background: var(--bg-hover); }
+
+    .kalender-eintrag svg { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-muted); }
+
+    /* Waehrend gesucht wird, ist der Kalender kein Treffer und hat in einer gefilterten Liste
+       nichts verloren -- sonst stuende er als einziger Eintrag ueber einem leeren Abschnitt. */
+    .tab-list.suche-aktiv .kalender-eintrag { display: none; }
+
     #wikilinkAuswahl .sortier-eintrag { align-items: flex-start; }
 
     .markdown-body .wikilink-unbekannt:hover {
@@ -10331,6 +10467,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     <div class="burger-menu-divider"></div>
 
+    <button class="slash-menu-item" onclick="kalenderOeffnen()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Kalender</span></button>
     <button class="slash-menu-item" onclick="openTemplateModal()"><svg viewBox="0 0 512 512" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><title>new-indicator</title><g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g id="scheduler" fill="currentColor" transform="translate(85.333333, 85.333333)"><path d="M170.666667,1.42108547e-14 C264.923264,-3.10380131e-15 341.333333,76.4100694 341.333333,170.666667 C341.333333,264.923264 264.923264,341.333333 170.666667,341.333333 C76.4100694,341.333333 2.57539587e-14,264.923264 1.42108547e-14,170.666667 C2.6677507e-15,76.4100694 76.4100694,3.15255107e-14 170.666667,1.42108547e-14 Z M170.666667,42.6666667 C99.9742187,42.6666667 42.6666667,99.9742187 42.6666667,170.666667 C42.6666667,241.359115 99.9742187,298.666667 170.666667,298.666667 C241.359115,298.666667 298.666667,241.359115 298.666667,170.666667 C298.666667,99.9742187 241.359115,42.6666667 170.666667,42.6666667 Z M192,85.3333333 L191.999333,149.333333 L256,149.333333 L256,192 L191.999333,191.999333 L192,256 L149.333333,256 L149.333333,191.999333 L85.3333333,192 L85.3333333,149.333333 L149.333333,149.333333 L149.333333,85.3333333 L192,85.3333333 Z" id="Combined-Shape"></path></g></g></svg><span>Neu</span></button>
     <label class="slash-menu-item" for="fileInput"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M1 5C1 3.34315 2.34315 2 4 2H8.55848C9.84977 2 10.9962 2.82629 11.4045 4.05132L11.7208 5H20C21.1046 5 22 5.89543 22 7V9.00961C23.1475 9.12163 23.9808 10.196 23.7695 11.3578L22.1332 20.3578C21.9603 21.3087 21.132 22 20.1654 22H3C1.89543 22 1 21.1046 1 20V5ZM20 9V7H11.7208C10.8599 7 10.0956 6.44914 9.82339 5.63246L9.50716 4.68377C9.37105 4.27543 8.98891 4 8.55848 4H4C3.44772 4 3 4.44772 3 5V12.2709L3.35429 10.588C3.54913 9.66249 4.36562 9 5.31139 9H20ZM3.36634 20C3.41777 19.9109 3.4562 19.8122 3.47855 19.706L5.31139 11L21 11H21.8018L20.1654 20L3.36634 20Z" fill="currentColor"/></svg><span>Öffnen</span></label>
     <button id="saveBtn" class="slash-menu-item" onclick="saveCurrentFile()"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg><span>Speichern</span></button>
@@ -11526,6 +11663,26 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
   </div>
 
   <!-- Template Picker (opens when creating a new document) -->
+  <!-- Kalender. Eigenes Fenster statt eines Aufklappers in der Notizenleiste: die ist 240px breit,
+       sieben Spalten ergaeben dort rund 30px je Tag. Bauart wie die uebrigen Fenster dieser Datei
+       (Overlay + Karte, Schliessen ueber Kreuz, Klick daneben und Escape). -->
+  <div class="modal-overlay" id="kalenderModal" onclick="if (event.target === this) kalenderSchliessen()">
+    <div class="modal-card kalender-karte">
+      <div class="modal-header">
+        <h2>Kalender</h2>
+        <button class="icon-btn" onclick="kalenderSchliessen()" title="Schließen">✕</button>
+      </div>
+      <div class="kalender-leiste">
+        <button type="button" class="icon-btn" onclick="kalenderMonatWechseln(-1)" title="Voriger Monat">‹</button>
+        <span class="kalender-titel" id="kalenderTitel"></span>
+        <button type="button" class="icon-btn" onclick="kalenderMonatWechseln(1)" title="Nächster Monat">›</button>
+        <button type="button" class="kalender-heute-btn" onclick="kalenderHeute()">Heute</button>
+      </div>
+      <div class="kalender-gitter" id="kalenderGitter"></div>
+      <div class="kalender-fuss" id="kalenderFuss"></div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="templateModal" onclick="if (event.target === this) closeTemplateModal()">
     <div class="modal-card template-modal-card">
       <div class="modal-header">
@@ -15172,6 +15329,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         case 'pdf':     satz = h.quelle ? 'Aus dem PDF „' + h.quelle + '" erstellt' : 'Aus einem PDF erstellt'; break;
         case 'import':  satz = 'Aus einem fremden Akkordblatt importiert'; break;
         case 'wikilink': satz = h.quelle ? 'Über einen Verweis aus „' + h.quelle + '" angelegt' : 'Über einen Verweis angelegt'; break;
+        case 'kalender': satz = h.quelle ? 'Über den Kalender für den ' + h.quelle + ' angelegt' : 'Über den Kalender angelegt'; break;
         case 'neu':     satz = 'Hier neu angelegt'; break;
         default: return '';
       }
@@ -15313,6 +15471,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // tab needs a real cross-session-unique identity from the moment it's created, not just
       // once it's actually synced.
       ensureSyncId(newTab);
+      // Heisst die Notiz 'jjjj-mm-tt', bekommt sie das Schlagwort "Daily" -- siehe dort. Hier und
+      // nicht im Objektliteral darueber, weil dailyTagVergeben() den fertigen Namen braucht.
+      dailyTagVergeben(newTab);
       // Any images extracted above still need to actually land in IndexedDB, not just in memory.
       Object.keys(assets).forEach(assetId => persistAssetToIndexedDb(newTab, assetId));
       tabs.push(newTab);
@@ -15609,6 +15770,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       tab.name = neuerName;
       tab.fileType = option.fileType;
       tab.isDefaultName = false;
+      // Wer eine Notiz auf 'jjjj-mm-tt' umbenennt, meint eine Tagesnotiz -- dasselbe wie beim
+      // Anlegen. Entfernt wird das Schlagwort beim Wegbenennen ausdruecklich NICHT: es koennte
+      // von Hand vergeben sein, und stillschweigend fremde Schlagwoerter zu loeschen waere das
+      // Gegenteil dessen, was das automatische Vergeben soll.
+      dailyTagVergeben(tab);
 
       // Converting *to* CSV needs a fresh delimiter guess — the tab was never treated as CSV
       // before, so there's no previously-detected one to fall back on. Mirrors createNewTab's own
@@ -16578,8 +16744,194 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         if (ra !== rb) return ra - rb;
         return sammler.compare(a.name, b.name);
       });
+      // "Daily" steht immer ganz oben -- ausdruecklich so gewuenscht. Wie der Sammelabschnitt
+      // unten ist er damit von der selbst gewaehlten Reihenfolge ausgenommen; beides sind
+      // automatische Abschnitte, keine von Hand vergebenen Schlagwoerter.
+      const di = raus.findIndex(a => a.schluessel === DAILY_SCHLUESSEL);
+      if (di > 0) raus.unshift(raus.splice(di, 1)[0]);
       if (ohne.length) raus.push({ schluessel: TAG_OHNE, name: 'Ohne Schlagwort', tabs: ohne });
       return raus;
+    }
+
+    // --- TAGESNOTIZEN UND KALENDER --------------------------------------------------------------
+    //
+    // Eine Notiz, die 'jjjj-mm-tt' heisst, bekommt das Schlagwort "Daily" von selbst. Der Abschnitt
+    // steht immer ganz oben in der Notizenleiste und traegt als ersten Eintrag den Kalender.
+    //
+    // Vergeben wird das Schlagwort ausdruecklich nur beim ANLEGEN und OEFFNEN, nicht rueckwirkend
+    // beim Laden: Schlagwoerter reisen ueber WebDAV mit, ein nachtraegliches Durchtaggen des
+    // ganzen Bestands waere eine grosse, stille Aenderung, die beim naechsten Abgleich auf jedes
+    // Geraet ginge. Von Hand vergebene "Daily"-Schlagwoerter wirken unveraendert weiter.
+    const DAILY_TAG = 'Daily';
+    const DAILY_SCHLUESSEL = tagSchluessel(DAILY_TAG);
+    const DAILY_NAME_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+    function dailyDatumAusName(name) {
+      const basis = splitTabNameExt(String(name || '')).base.trim();
+      const m = DAILY_NAME_RE.exec(basis);
+      if (!m) return null;
+      const j = Number(m[1]), mo = Number(m[2]) - 1, t = Number(m[3]);
+      const d = new Date(j, mo, t);
+      // '2026-02-31' passt auf das Schema, ist aber kein Datum -- Date rollt es stillschweigend in
+      // den Maerz weiter, und der Kalender zeigte die Notiz dann an einem Tag, der nicht in ihrem
+      // Namen steht. Deshalb die Gegenprobe.
+      if (d.getFullYear() !== j || d.getMonth() !== mo || d.getDate() !== t) return null;
+      return { jahr: j, monat: mo, tag: t, schluessel: basis };
+    }
+
+    function dailySchluessel(jahr, monat, tag) {
+      const p = (n) => String(n).padStart(2, '0');
+      return jahr + '-' + p(monat + 1) + '-' + p(tag);
+    }
+
+    // Die offene Tagesnotiz zu einem Datum, oder null. Mehrere Notizen koennen denselben Namen
+    // tragen (eine Eindeutigkeitspruefung gibt es nirgends) -- dann gilt die erste, wie beim
+    // Notizverweis auch.
+    function dailyNotizZu(schluessel) {
+      return tabs.find(t => {
+        const d = dailyDatumAusName(t.name);
+        return d && d.schluessel === schluessel;
+      }) || null;
+    }
+
+    // Vergibt das Schlagwort, wenn der Name passt. Gibt zurueck, ob sich etwas geaendert hat.
+    function dailyTagVergeben(tab) {
+      if (!tab || !dailyDatumAusName(tab.name)) return false;
+      const vorhanden = tagListe(tab);
+      if (vorhanden.some(t => tagSchluessel(t) === DAILY_SCHLUESSEL)) return false;
+      // TAG_MAX gilt auch hier: drei sind drei. Lieber nichts tun, als eines der von Hand
+      // vergebenen zu verdraengen -- das waere eine stille Aenderung an etwas, das jemand selbst
+      // gesetzt hat, und genau dafuer gibt es die Grenze.
+      if (vorhanden.length >= TAG_MAX) return false;
+      tab.tags = vorhanden.concat([DAILY_TAG]);
+      return true;
+    }
+
+    const KALENDER_WOCHENTAGE = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+    const KALENDER_MONATE = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
+                             'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+    let kalenderJahr = null, kalenderMonat = null;
+
+    function kalenderOeffnen() {
+      closeBurgerMenu();
+      const heute = new Date();
+      // Beim Oeffnen immer der laufende Monat -- ein Kalender, der dort stehenbleibt, wo man ihn
+      // zuletzt verlassen hat, beantwortet beim naechsten Oeffnen die falsche Frage.
+      kalenderJahr = heute.getFullYear();
+      kalenderMonat = heute.getMonth();
+      document.getElementById('kalenderModal').classList.add('active');
+      kalenderZeichnen();
+    }
+
+    function kalenderSchliessen() {
+      document.getElementById('kalenderModal').classList.remove('active');
+    }
+
+    function kalenderMonatWechseln(richtung) {
+      kalenderMonat += richtung;
+      if (kalenderMonat < 0) { kalenderMonat = 11; kalenderJahr--; }
+      else if (kalenderMonat > 11) { kalenderMonat = 0; kalenderJahr++; }
+      kalenderZeichnen();
+    }
+
+    function kalenderHeute() {
+      const h = new Date();
+      kalenderJahr = h.getFullYear();
+      kalenderMonat = h.getMonth();
+      kalenderZeichnen();
+    }
+
+    function kalenderZeichnen() {
+      const gitter = document.getElementById('kalenderGitter');
+      document.getElementById('kalenderTitel').textContent = KALENDER_MONATE[kalenderMonat] + ' ' + kalenderJahr;
+      gitter.innerHTML = '';
+
+      KALENDER_WOCHENTAGE.forEach(w => {
+        const k = document.createElement('div');
+        k.className = 'kalender-wochentag';
+        k.textContent = w;
+        gitter.appendChild(k);
+      });
+
+      // Montag als erster Tag der Woche: getDay() zaehlt ab Sonntag, '+6 % 7' dreht das um.
+      const ersterWochentag = (new Date(kalenderJahr, kalenderMonat, 1).getDay() + 6) % 7;
+      // Tag 0 des Folgemonats ist der letzte des laufenden -- so braucht es keine Schaltjahrregel.
+      const tageImMonat = new Date(kalenderJahr, kalenderMonat + 1, 0).getDate();
+      const heute = new Date();
+      const heuteSchluessel = dailySchluessel(heute.getFullYear(), heute.getMonth(), heute.getDate());
+
+      for (let i = 0; i < ersterWochentag; i++) {
+        const leer = document.createElement('div');
+        leer.className = 'kalender-leer';
+        gitter.appendChild(leer);
+      }
+
+      let mitNotiz = 0;
+      for (let tag = 1; tag <= tageImMonat; tag++) {
+        const schluessel = dailySchluessel(kalenderJahr, kalenderMonat, tag);
+        const notiz = dailyNotizZu(schluessel);
+        if (notiz) mitNotiz++;
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'kalender-tag' + (notiz ? ' hat-notiz' : '') + (schluessel === heuteSchluessel ? ' heute' : '');
+        const zahl = document.createElement('span');
+        zahl.className = 'kalender-zahl';
+        zahl.textContent = String(tag);
+        b.appendChild(zahl);
+        if (notiz) {
+          const punkt = document.createElement('span');
+          punkt.className = 'kalender-punkt';
+          b.appendChild(punkt);
+        }
+        b.title = notiz ? 'Notiz „' + notiz.name + '" öffnen' : 'Für diesen Tag gibt es keine geöffnete Notiz';
+        b.onclick = () => kalenderTagKlick(schluessel);
+        gitter.appendChild(b);
+      }
+
+      // Der Kalender kennt nur GEOEFFNETE Notizen -- eine, die auf der Platte liegt, aber gerade
+      // nicht offen ist, sieht fuer ihn aus wie ein leerer Tag. Das gehoert dahin, wo es auffaellt.
+      document.getElementById('kalenderFuss').textContent = mitNotiz === 1
+        ? '1 geöffnete Tagesnotiz in diesem Monat'
+        : mitNotiz + ' geöffnete Tagesnotizen in diesem Monat';
+    }
+
+    function kalenderDatumLang(schluessel) {
+      const d = dailyDatumAusName(schluessel);
+      if (!d) return schluessel;
+      try {
+        return new Date(d.jahr, d.monat, d.tag)
+          .toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      } catch (err) { return schluessel; }
+    }
+
+    async function kalenderTagKlick(schluessel) {
+      const notiz = dailyNotizZu(schluessel);
+      if (notiz) { kalenderSchliessen(); await switchTab(notiz.id); return; }
+      if (!confirm('Für ' + kalenderDatumLang(schluessel) + ' gibt es keine geöffnete Notiz.\n\nSoll eine angelegt werden?')) return;
+      kalenderSchliessen();
+      // Ueberschrift als ausgeschriebenes Datum, Dateiname in der ISO-Form: der Name traegt das
+      // Schema (daran haengt der Kalender), die Ueberschrift ist zum Lesen da. isDefaultName ist
+      // false, weil ein Name uebergeben wird -- die Umbenennung nach der ersten Ueberschrift
+      // greift also nicht und der Name bleibt stehen.
+      await createNewTab(schluessel + '.md', '# ' + kalenderDatumLang(schluessel) + '\n\n', null, null,
+                         herkunftNotieren('kalender', schluessel));
+      showToast('Tagesnotiz „' + schluessel + '" angelegt.');
+    }
+
+    // Der Kalendereintrag in der Notizenleiste. Bewusst OHNE die Klasse '.tab': die Volltextsuche
+    // laeuft ueber tabList.querySelectorAll('.tab') und der Zug ueber dieselben Elemente -- eine
+    // Zeile, die keine Notiz ist, hat in beiden nichts zu suchen.
+    function baueKalenderEintrag() {
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'kalender-eintrag';
+      el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+        '<rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/>' +
+        '<path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>' +
+        '<span>Kalender</span>';
+      el.title = 'Monatsansicht der Tagesnotizen öffnen';
+      el.onclick = (e) => { e.stopPropagation(); kalenderOeffnen(); };
+      return el;
     }
 
     const TAG_FARBEN_ANZAHL = 8;
@@ -16608,7 +16960,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // nirgends -- ohne dieses Festschreiben haette ein "nach oben" nichts, worauf es wirken kann.
     function tagReihenfolgeFestschreiben() {
       const sichtbar = tagAbschnitte(sortierteTabs())
-        .filter(a => a.schluessel !== TAG_OHNE)
+        .filter(a => a.schluessel !== TAG_OHNE && a.schluessel !== DAILY_SCHLUESSEL)
         .map(a => a.schluessel);
       // Was gerade nicht zu sehen ist (Schlagwort nur auf einer geschlossenen Notiz), bleibt
       // hinten stehen statt verlorenzugehen.
@@ -16649,7 +17001,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
       // Der Sammelabschnitt ist kein Schlagwort -- er laesst sich weder faerben noch verschieben
       // noch umbenennen, und ein Anfasser daran waere eine Einladung, die ins Leere fuehrt.
-      if (abschnitt.schluessel !== TAG_OHNE) {
+      // Der Sammelabschnitt und "Daily" sind automatische Abschnitte -- weder faerben noch
+      // verschieben noch umbenennen; ein Anfasser daran waere eine Einladung, die ins Leere
+      // fuehrt, und ein umbenanntes "Daily" bekaeme von der naechsten Tagesnotiz sofort wieder
+      // einen zweiten Abschnitt danebengestellt.
+      if (abschnitt.schluessel !== TAG_OHNE && abschnitt.schluessel !== DAILY_SCHLUESSEL) {
         const griff = document.createElement('span');
         griff.className = 'tag-abschnitt-griff';
         griff.innerHTML = TAB_GRIFF_SVG;
@@ -16681,7 +17037,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // Umbenennen/Entfernen eines Schlagworts in ALLEN Notizen auf einmal -- sonst bliebe ein
       // vertipptes Wort als eigener Abschnitt stehen, bis man jede Notiz einzeln anfasst. Beim
       // Sammelabschnitt gibt es nichts zu verwalten.
-      if (abschnitt.schluessel !== TAG_OHNE) {
+      if (abschnitt.schluessel !== TAG_OHNE && abschnitt.schluessel !== DAILY_SCHLUESSEL) {
         const verwalten = document.createElement('button');
         verwalten.type = 'button';
         verwalten.className = 'tag-abschnitt-menue';
@@ -16693,6 +17049,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
       const inhalt = document.createElement('div');
       inhalt.className = 'tag-abschnitt-inhalt';
+      // Der Kalender steht als erster Eintrag im Daily-Abschnitt.
+      if (abschnitt.schluessel === DAILY_SCHLUESSEL) inhalt.appendChild(baueKalenderEintrag());
       abschnitt.tabs.forEach(tab => {
         const erstes = !gesehen.has(tab.id);
         gesehen.add(tab.id);
@@ -17825,6 +18183,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         wikilinkAuswahlSchliessen();
         wikiMenuSchliessen();
         ankerMenuSchliessen();
+        kalenderSchliessen();
         closeTabSidebar();
         closeWebdavModal();
         if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();

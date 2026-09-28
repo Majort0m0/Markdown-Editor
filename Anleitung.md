@@ -110,6 +110,20 @@ Zwei eckige Klammern auf, Name, zwei zu: `[[Projektplan]]`. Angezeigt wird nur d
 
 Verweise gelten in gewöhnlichen Notizen und in Canvas-Kästen. In **Liedblättern** nicht: dort sind eckige Klammern die Akkordschreibweise, `[[G]]` wäre ein Akkord und kein Verweis. In CSV-, JSON-, TXT- und HTML-Dateien bleiben sie ebenfalls wörtlicher Text. In Exporten, beim Drucken, in der Präsentation und beim formatierten Kopieren erscheint nur noch der Name als schlichter Text — dort ließe sich ohnehin nichts anklicken.
 
+### Tagesnotizen und Kalender
+
+Eine Notiz, die nach dem Schema **`jjjj-mm-tt`** benannt ist (also `2026-09-28.md`), bekommt das Schlagwort **„Daily"** von selbst — beim Anlegen und beim Öffnen. Von Hand vergebene „Daily"-Schlagwörter bleiben unverändert gültig; bestehende Notizen werden nicht nachträglich angefasst.
+
+Der Abschnitt **Daily** steht in der Tag-Ansicht der Notizenleiste immer ganz oben, und sein erster Eintrag ist der **Kalender**. Dieser Abschnitt lässt sich nicht verschieben oder umbenennen — er wird automatisch geführt, so wie „Ohne Schlagwort" ganz unten.
+
+**Die Monatsansicht** öffnet ein eigenes Fenster: Pfeile für den Monat, „Heute" springt zurück in den laufenden, der heutige Tag ist mit einem Ring umrandet. Tage, für die eine Tagesnotiz **geöffnet** ist, sind farbig und tragen einen Punkt — ein Klick öffnet die Notiz. Ein Klick auf einen Tag ohne Notiz fragt, ob eine angelegt werden soll; sie heißt dann `jjjj-mm-tt.md` und bekommt das ausgeschriebene Datum als Überschrift.
+
+**Wichtig zu wissen:** der Kalender sieht nur *geöffnete* Notizen. Eine Tagesnotiz, die auf der Festplatte liegt, aber gerade nicht offen ist, erscheint als leerer Tag — genau wie bei den Verweisen auf andere Notizen. Unter dem Raster steht deshalb, wie viele geöffnete Tagesnotizen der Monat hat.
+
+Erreichbar ist der Kalender über den Eintrag in der Notizenleiste **und** über das Burger-Menü — so auch dann, wenn die Tag-Ansicht gerade aus ist.
+
+Hat eine Notiz bereits drei Schlagwörter, wird „Daily" nicht vergeben: drei sind die Grenze, und ein selbst gesetztes Schlagwort soll dafür nicht verdrängt werden.
+
 ### Sprünge zu Überschriften (`@`)
 
 Ein **Klammeraffe** bietet die Überschriften an, und die Auswahl wird zu einem Verweis, der an die Stelle springt. So lassen sich eigene Inhaltsverzeichnisse bauen — auch nur über einen Teil der Notiz, in beliebiger Reihenfolge, mit eigenen Worten.
