@@ -797,6 +797,8 @@ Der ☁️-Button färbt sich **hellgrün**, sobald mindestens eine Synchronisie
 
 **Zugangsdaten auf ein anderes Gerät übertragen:** „📄 Konfigurationsdatei öffnen" in den WebDAV-Einstellungen erstellt eine vorausgefüllte Notiz mit der Server-URL (Benutzername/Passwort bewusst leer gelassen). Diese Notiz auf dem zweiten Gerät öffnen, Zugangsdaten ergänzen — die App erkennt das Format automatisch und übernimmt die Einstellungen direkt, ohne das Einstellungsfenster manuell öffnen zu müssen.
 
+Die Konfigurationsdatei wird dabei **nicht als Notiz geöffnet**: die Zugangsdaten wandern in die Einstellungen, ein Hinweis bestätigt das, und die gerade offene Notiz bleibt offen. Das ist Absicht — als Notiz würde die Datei mitsynchronisiert und das Kennwort im Klartext auf jedes weitere Gerät tragen. Wer eine solche Notiz noch aus früheren Fassungen offen hat, schließt sie am besten einmal von Hand.
+
 ## 18. Export und Teilen
 
 - **Als eigenständige HTML-Datei exportieren** — erzeugt eine einzelne, komplett unabhängige HTML-Datei mit dem aktuellen Design, die sich in jedem Browser ohne diese App öffnen lässt (inklusive funktionierendem Vorlesemodus und Inhaltsverzeichnis). Enthält das Dokument Folientrennlinien (`---`), fragt die App zusätzlich, ob stattdessen als **eBook-Widget** exportiert werden soll — eine eigenständige, klickbare Diaschau-Datei mit denselben Übergängen wie der Präsentationsmodus.

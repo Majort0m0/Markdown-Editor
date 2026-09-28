@@ -14144,7 +14144,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       };
       saveWebdavConfig();
       scheduleWebdavAutosyncTimer();
-      showToast('WebDAV-Zugangsdaten übernommen');
+      showToast('WebDAV-Zugangsdaten übernommen. Die Konfigurationsdatei wird nicht als Notiz geöffnet.');
     }
 
     function webdavRequest(method, options) {
@@ -15167,9 +15167,23 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // A document matching the "Markdown Studio WebDAV Config" template is a credential
       // import, not a note — opening/pasting it wires up sync instead of just displaying text.
       // CSV/JSON files can't meaningfully match this markdown-shaped template anyway.
+      //
+      // Es entsteht dabei ausdruecklich KEINE Notiz. Frueher blieb das Dokument offen stehen,
+      // damit sichtbar ist, was uebernommen wurde -- gemeldet als Fehler: es nahm damit wie jede
+      // andere Notiz am Abgleich teil und trug das Klartext-Kennwort auf jedes weitere Geraet.
+      // Gar nicht erst anzulegen ist dabei deutlich sicherer als anlegen und wieder schliessen:
+      // so kommt das Kennwort nie in tabs/localStorage/IndexedDB, es bekommt keine syncId, und
+      // das 10s-Fenster der gebremsten Synchronisierung (scheduleWebdavDebouncedSync, ausgeloest
+      // von saveStateToLocalStorage) kann es gar nicht erst erwischen. Ein Grabstein waere sonst
+      // noetig und zugleich sinnlos -- die Notiz war nie auf dem Server.
       const webdavConfigFromDoc = fileType === 'markdown' ? parseWebdavConfigDoc(rawContent) : null;
       if (webdavConfigFromDoc) {
         importWebdavConfig(webdavConfigFromDoc);
+        // Nur fuer den Randfall, dass die Konfigurationsdatei das einzige Dokument gewesen waere
+        // (etwa ?url= auf eine solche Datei): ohne das bliebe die Oberflaeche in keinem
+        // definierten Zustand. Im Normalfall bleibt schlicht die bisherige Notiz offen.
+        if (tabs.length === 0) setEmptyState();
+        return;
       }
 
       // Normalize any pre-existing inline base64 images (e.g. from a .md file saved
