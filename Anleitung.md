@@ -110,6 +110,24 @@ Zwei eckige Klammern auf, Name, zwei zu: `[[Projektplan]]`. Angezeigt wird nur d
 
 Verweise gelten in gewöhnlichen Notizen und in Canvas-Kästen. In **Liedblättern** nicht: dort sind eckige Klammern die Akkordschreibweise, `[[G]]` wäre ein Akkord und kein Verweis. In CSV-, JSON-, TXT- und HTML-Dateien bleiben sie ebenfalls wörtlicher Text. In Exporten, beim Drucken, in der Präsentation und beim formatierten Kopieren erscheint nur noch der Name als schlichter Text — dort ließe sich ohnehin nichts anklicken.
 
+### Sprünge zu Überschriften (`@`)
+
+Ein **Klammeraffe** bietet die Überschriften an, und die Auswahl wird zu einem Verweis, der an die Stelle springt. So lassen sich eigene Inhaltsverzeichnisse bauen — auch nur über einen Teil der Notiz, in beliebiger Reihenfolge, mit eigenen Worten.
+
+**In derselben Notiz:** `@` tippen, die Liste klappt auf, mit jedem weiteren Zeichen filtert sie. Pfeiltasten wählen, `Enter` übernimmt, `Escape` schließt. Im Quelltext entsteht ein gewöhnlicher Markdown-Link (`[Zeitplan](#zeitplan)`) — das ist wichtig: dieser Sprung **funktioniert auch in der exportierten HTML-Datei, im eBook-Widget und im gedruckten PDF**, ganz ohne die App.
+
+**In eine andere Notiz:** einen Verweis beginnen und ihn mit `@` erweitern — `[[Projektplan@` — dann zeigt die Liste die Überschriften der Notiz *Projektplan*. Angezeigt wird danach `Projektplan › Zeitplan`; ein Klick öffnet die Notiz **und** springt dort an die Stelle. Dafür muss die Zielnotiz geöffnet sein, sonst sind ihre Überschriften unbekannt.
+
+**Das `@` ist kein Störenfried.** Außerhalb eines Verweises klappt die Liste nur auf, wenn vor dem `@` ein Leerzeichen oder ein Zeilenanfang steht — in einer Mailadresse wie `name@beispiel.de` passiert also nichts. Und wer die Liste einfach ignoriert und weiterschreibt, behält genau den Text, den er getippt hat.
+
+**Gleichnamige Überschriften** sind kein Problem: heißen zwei Abschnitte „Notizen", bekommen sie unterscheidbare Sprungmarken, und die Liste zeigt sie über ihre Einrückung als Kapitel oder Unterabschnitt.
+
+**Wenn es das Sprungziel nicht gibt** — etwa weil die Überschrift später umbenannt wurde — ist der Verweis gedämpft und gestrichelt dargestellt, so wie ein Verweis auf eine nicht geöffnete Notiz. Ein Klick darauf öffnet ein kleines Menü mit drei Auswegen: zum Anfang der Notiz springen, eine andere Überschrift wählen (der Verweis wird dann umgebogen), oder die fehlende Überschrift anlegen. Soll sie in einer *anderen* Notiz entstehen, wird vorher gefragt. Und tippt man `@` in einer Notiz, die noch gar keine Überschriften hat, sagt die Liste das — `Enter` legt die getippte Überschrift dann am Ende an.
+
+Nach jedem Sprung leuchtet die Überschrift kurz auf, damit zu sehen ist, wo man gelandet ist.
+
+In Liedblättern gibt es das nicht: dort sind eckige Klammern die Akkordschreibweise. In CSV-, JSON-, TXT- und HTML-Dateien bleibt alles wörtlicher Text.
+
 ### Schlagwörter (Tags)
 
 Jede Notiz kann bis zu **drei Schlagwörter** bekommen. Der dritte Knopf im Kopf der Notizenleiste (das Etikett) schaltet die **Tag-Ansicht** ein: die Liste wird dann in Abschnitte je Schlagwort gegliedert. Trägt eine Notiz mehrere Schlagwörter, steht sie in mehreren Abschnitten. Jeder Abschnitt zeigt rechts die Anzahl und lässt sich über den Pfeil links ein- und ausklappen; welche Abschnitte zu sind, bleibt gespeichert. Notizen ohne Schlagwort sammeln sich in einem Abschnitt **„Ohne Schlagwort"** ganz unten — sie sind also nie unauffindbar.

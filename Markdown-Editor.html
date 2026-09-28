@@ -2767,6 +2767,34 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       border-bottom: 1px dashed var(--preview-border);
     }
 
+    /* Ein Sprungziel, das es nicht (mehr) gibt -- dieselbe Sprache wie ein Verweis auf eine nicht
+       geoeffnete Notiz: gedaempft und gestrichelt, kein Rot. Es ist kein Fehler, sondern eine
+       Ueberschrift, die umbenannt oder noch nicht geschrieben wurde. */
+    .markdown-body a.anker-tot,
+    .markdown-body .wikilink.anker-tot {
+      color: var(--preview-text);
+      opacity: 0.65;
+      text-decoration: none;
+      border-bottom: 1px dashed var(--preview-border);
+    }
+
+    .markdown-body a.anker-tot:hover,
+    .markdown-body .wikilink.anker-tot:hover {
+      opacity: 0.85;
+      border-bottom-color: var(--preview-text);
+    }
+
+    /* Nach dem Sprung kurz aufleuchten. Ohne das ist nicht zu sehen, wo man gelandet ist -- gerade
+       dann nicht, wenn die Ueberschrift oben am Rand steht und der Text darunter gleich aussieht.
+       color-mix gegen transparent, damit es der Akzent des jeweiligen Designs ist und auf hellem
+       wie dunklem Grund sitzt -- dieselbe Ueberlegung wie beim Refrain eines Liedblatts. */
+    .markdown-body .anker-treffer {
+      background: color-mix(in srgb, var(--preview-link) 18%, transparent);
+      border-radius: 4px;
+      box-shadow: 0 0 0 4px color-mix(in srgb, var(--preview-link) 18%, transparent);
+      transition: background .4s ease, box-shadow .4s ease;
+    }
+
     .wikilink-auswahl-text { flex: 1; min-width: 0; overflow: hidden; }
 
     .wikilink-auswahl-zeile {
@@ -10945,6 +10973,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
   <!-- Vorschlagsliste beim Tippen eines Wikilinks. Erbt Karte, Rahmen, Schatten und die
        Zeilenoptik von .slash-menu -- hier steht nur, dass es eine eigene Liste ist. -->
   <div class="slash-menu" id="wikilinkMenu"></div>
+  <div class="slash-menu" id="ankerMenu"></div>
 
   <div class="app-body-row" id="appBodyRow">
     <div class="tab-sidebar-panel" id="tabSidebarPanel">
@@ -17795,6 +17824,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         tagMenueSchliessen();
         wikilinkAuswahlSchliessen();
         wikiMenuSchliessen();
+        ankerMenuSchliessen();
         closeTabSidebar();
         closeWebdavModal();
         if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();
@@ -26950,18 +26980,32 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // Beim Rendern gesetzt. Aendert sich, sobald Notizen auf- oder zugehen -- updatePreview() baut
     // die Vorschau ohnehin bei jeder Aenderung neu, und switchTab() ruft es auf, ein Verweis wird
     // also von selbst lebendig, sobald die passende Notiz offen ist.
-    function wikilinkHtml(ziel, anzeige) {
-      const gefunden = wikilinkTreffer(ziel).length;
-      const klassen = 'wikilink' + (gefunden ? '' : ' wikilink-unbekannt');
-      const titel = gefunden
-        ? (gefunden > 1 ? gefunden + ' Notizen heißen so – zum Auswählen anklicken' : 'Notiz öffnen: ' + ziel)
-        : 'Notiz „' + ziel + '" ist nicht geöffnet – zum Anlegen anklicken';
+    function wikilinkHtml(ziel, anzeige, anker) {
+      const treffer = wikilinkTreffer(ziel);
+      const gefunden = treffer.length;
+      // Ein Sprungziel laesst sich nur pruefen, wenn die Zielnotiz offen und eindeutig ist. Sonst
+      // gilt es als in Ordnung: "nicht pruefbar" ist etwas anderes als "zeigt ins Leere", und eine
+      // Warnung, die nur daran liegt, dass eine Notiz gerade zu ist, waere irrefuehrend.
+      const ankerTot = !!anker && gefunden === 1 &&
+        !ankerZieleDerNotiz(treffer[0]).some(z => ankerVergleich(z.text) === ankerVergleich(anker));
+      const klassen = 'wikilink' + (gefunden ? '' : ' wikilink-unbekannt') + (ankerTot ? ' anker-tot' : '');
+      const titel = !gefunden
+        ? 'Notiz „' + ziel + '" ist nicht geöffnet – zum Anlegen anklicken'
+        : gefunden > 1
+          ? gefunden + ' Notizen heißen so – zum Auswählen anklicken'
+          : ankerTot
+            ? 'In „' + ziel + '" gibt es „' + anker + '" nicht (mehr) – zum Reparieren anklicken'
+            : (anker ? 'Zu „' + anker + '" in „' + ziel + '" springen' : 'Notiz öffnen: ' + ziel);
       // Die Form mit eigenem Anzeigetext wird ausdruecklich gekennzeichnet, statt sie beim
       // Zurueckschreiben aus "Text ungleich Ziel" zu erraten: wer in einen EINFACHEN Verweis
       // hineintippt, meint damit ein anderes Ziel -- ihn stillschweigend in eine Alias-Form mit
       // unsichtbar gewordenem alten Ziel zu verwandeln, waere das Gegenteil des Erwarteten.
-      const alias = wikilinkSchluessel(ziel) !== wikilinkSchluessel(anzeige) ? ' data-wiki-alias="1"' : '';
-      return '<span class="' + klassen + '" data-wiki="' + escapeHtmlAttrText(ziel) + '"' + alias +
+      // Mit Sprungziel gilt IMMER das Attribut, nie der sichtbare Text: angezeigt wird
+      // 'Notiz > Ueberschrift', daraus laesst sich beim Zurueckschreiben kein Ziel mehr ablesen.
+      // Dieselbe Ueberlegung wie bei der Alias-Form, nur zwingend statt wahlweise.
+      const alias = (anker || wikilinkSchluessel(ziel) !== wikilinkSchluessel(anzeige)) ? ' data-wiki-alias="1"' : '';
+      const ankerAttr = anker ? ' data-anker="' + escapeHtmlAttrText(anker) + '"' : '';
+      return '<span class="' + klassen + '" data-wiki="' + escapeHtmlAttrText(ziel) + '"' + alias + ankerAttr +
              ' title="' + escapeHtmlAttrText(titel) + '">' + escapeHtmlText(anzeige) + '</span>';
     }
 
@@ -26973,12 +27017,26 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       tokenizer(src) {
         const t = WIKILINK_RE.exec(src);
         if (!t) return;
-        const ziel = t[1].trim();
+        // '@' trennt Notiz und Sprungziel: '[[Projektplan@Zeitplan]]'. Bewusst '@' und nicht '#',
+        // obwohl '#' anderswo das Anker-Zeichen ist -- ein Notizname darf ein '#' enthalten ('C#'),
+        // ein '@' kommt darin nicht vor, und getippt wird ohnehin '@'.
+        const roh = t[1].trim();
+        const at = roh.indexOf('@');
+        const ziel = (at === -1 ? roh : roh.slice(0, at)).trim();
+        const anker = at === -1 ? '' : roh.slice(at + 1).trim();
         // Ein Name aus lauter Leerraum ergaebe ein nullbreites, nicht anklickbares Loch im Text.
+        // Das gilt auch fuer '[[@Ueberschrift]]': innerhalb DERSELBEN Notiz entsteht ein
+        // gewoehnlicher Markdown-Link, diese Form erzeugt die App also nie -- getippt bleibt sie
+        // schlichter Text, statt eine dritte Bedeutung einzufuehren.
         if (!ziel) return;
-        const anzeige = (t[2] !== undefined && t[2].trim()) ? t[2].trim() : ziel;
+        // Ohne eigenen Anzeigetext und MIT Sprungziel wird beides gezeigt. '>' statt '@', weil es
+        // sich als Weg liest; der Quelltext behaelt sein '@'. Laenge und Aussehen duerfen vom
+        // Rohtext abweichen -- der Token traegt den Anzeigetext in .tokens, genau wie 'strong' mit
+        // '**fett**' -> 'fett'.
+        const eigen = (t[2] !== undefined && t[2].trim()) ? t[2].trim() : '';
+        const anzeige = eigen || (anker ? ziel + ' › ' + anker : ziel);
         return {
-          type: 'wikilink', raw: t[0], ziel: ziel, text: anzeige,
+          type: 'wikilink', raw: t[0], ziel: ziel, anker: anker, text: anzeige,
           // DAS ist der Grund, warum die Zeichenzuordnung stimmt -- siehe oben.
           tokens: [{ type: 'text', raw: anzeige, text: anzeige }]
         };
@@ -26988,17 +27046,605 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         // waere ein Verweis tot. Dann schlichter Text: ein gefaerbter, nicht klickbarer Link waere
         // irrefuehrender als gar keiner.
         if (suppressDrawingControls) return escapeHtmlText(tok.text);
-        return wikilinkHtml(tok.ziel, tok.text);
+        return wikilinkHtml(tok.ziel, tok.text, tok.anker);
       }
     }] });
 
 
+    // --- SPRUNGZIELE AUF UEBERSCHRIFTEN ("@") ---------------------------------------------------
+    //
+    // Getippt wird ein '@', angeboten werden die Ueberschriften: die der eigenen Notiz, oder -- wenn
+    // das '@' in einem Notizverweis steht -- die der Zielnotiz.
+    //
+    // In DERSELBEN Notiz entsteht dabei ein GEWOEHNLICHER Markdown-Link auf eine Anker-ID
+    // ('[Abschnitt](#abschnitt)'), ausdruecklich keine eigene Insel. Zwei Gruende, beide
+    // ausschlaggebend: der Sprung ueberlebt HTML-Export, eBook-Widget und Druck, waehrend eine
+    // Insel dort ueber suppressDrawingControls auf schlichten Text zurueckfaellt -- ein selbst
+    // gebautes Inhaltsverzeichnis spraenge also ausgerechnet im ausgegebenen Dokument nicht mehr;
+    // und marked kennt den link-Token laengst, die Zeichenkarte der Vorschau muss dafuer nicht
+    // angefasst werden (anders als bei den Wikilinks, wo genau das die ganze Arbeit war).
+    //
+    // Auf eine ANDERE Notiz bleibt es eine Wikilink-Insel ('[[Projektplan@Abschnitt]]'): ausserhalb
+    // der App gibt es die Zielnotiz gar nicht, dort ist also nichts, wohin gesprungen werden
+    // koennte.
+
+    // Rohen Ueberschriftentext zu dem, was auf dem Bildschirm steht: Auszeichnung weg, Verweise auf
+    // ihren sichtbaren Text, Bilder ganz raus.
+    function ankerBeschriftung(roh) {
+      return String(roh || '')
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+        .replace(/\[\[([^\[\]\n|]+?)(?:\|([^\[\]\n]*))?\]\]/g, (m, z, a) => (a && a.trim()) || z)
+        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/[*_~`]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // Die Anker-ID. \p{L}/\p{N} statt [a-z0-9], damit Umlaute stehenbleiben: 'Überblick' wird
+    // 'überblick' und nicht 'berblick'. Ein URL-Fragment darf das, der Browser kodiert selbst.
+    function ankerSchluessel(text) {
+      return String(text || '').toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^\p{L}\p{N}_-]/gu, '')
+        .replace(/-{2,}/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+
+    // Zwei gleichnamige Ueberschriften sind keine Seltenheit ('## Notizen' in mehreren Kapiteln),
+    // und zwei gleiche id-Attribute waeren beide unbrauchbar -- querySelector faende immer nur die
+    // erste. Der Zaehler laeuft je Renderdurchgang.
+    let ankerZaehler = new Map();
+    function ankerIdVergeben(roh) {
+      const basis = ankerSchluessel(ankerBeschriftung(roh)) || 'abschnitt';
+      const n = (ankerZaehler.get(basis) || 0) + 1;
+      ankerZaehler.set(basis, n);
+      return n === 1 ? basis : basis + '-' + n;
+    }
+
+    // Zurueckgesetzt ueber marked's eigenen preprocess-Hook statt an jeder der sechs Stellen, die
+    // marked.parse() aufrufen (Vorschau, Praesentation, beide Exporte, Canvas-Kasten, Vorschaubild)
+    // -- genau die Art Liste, bei der in dieser Datei schon mehrfach eine Stelle vergessen wurde.
+    // ACHTUNG: dieser Hook feuert nachgemessen AUCH bei marked.parseInline(). Die App ruft das
+    // nirgends auf; wer es einfuehrt, muss den Zaehler hier davor schuetzen, sonst beginnt die
+    // Nummerierung mitten im Dokument von vorn und jede zweite gleichnamige Ueberschrift bekommt
+    // eine ID, auf die kein bestehender Verweis mehr zeigt.
+    marked.use({ hooks: { preprocess(md) { ankerZaehler = new Map(); return md; } } });
+
+    // Ueberschriften bekommen eine ID. Bildet marked's eigenen heading-Renderer nach, den er hier
+    // ERSETZT (nicht erweitert) -- bei einem marked-Wechsel gegen dessen Fassung pruefen, wie bei
+    // code/image/listitem/tablecell auch.
+    hljsRenderer.heading = function(token) {
+      return '<h' + token.depth + ' id="' + escapeHtmlAttrText(ankerIdVergeben(token.text)) + '">' +
+             this.parser.parseInline(token.tokens) + '</h' + token.depth + '>\n';
+    };
+
+    // Die Sprungziele der AKTUELLEN Notiz werden aus der gerenderten Vorschau gelesen, nicht ein
+    // zweites Mal aus dem Quelltext abgeleitet. Das ist der Grund, warum eine eingefuegte Adresse
+    // gar nicht von der Ueberschrift abweichen KANN: es ist dieselbe ID, die der Renderer soeben
+    // vergeben hat. Dieselbe Ueberlegung wie bei updateTocPanel(), das ebenfalls die echten
+    // Elemente nimmt, statt Anker nachzubauen.
+    function ankerZieleDerVorschau() {
+      return Array.from(preview.querySelectorAll('h1[id],h2[id],h3[id],h4[id],h5[id],h6[id]'))
+        .map(h => ({ ebene: Number(h.tagName.slice(1)), text: h.textContent.trim(), id: h.id }))
+        .filter(z => z.text);
+    }
+
+    // Fuer eine FREMDE Notiz gibt es kein gerendertes DOM. Gebraucht wird dort aber auch keine ID:
+    // gespeichert wird '[[Notiz@Ueberschrift]]' mit dem TEXT, und beim Sprung wird die Ueberschrift
+    // in der dann gerenderten Zielnotiz ueber ihren Text gesucht. Der Anker-Schluessel muss hier
+    // also gar nicht zu dem passen, was der Renderer spaeter vergibt -- die eine Stelle, an der
+    // zwei Rechenwege sonst auseinanderlaufen koennten, gibt es damit nicht.
+    function ankerZieleAusText(text) {
+      const ziele = [];
+      const lauf = (toks) => {
+        (toks || []).forEach(t => {
+          if (!t) return;
+          if (t.type === 'heading') {
+            const b = ankerBeschriftung(t.text);
+            if (b) ziele.push({ ebene: t.depth, text: b, id: null });
+            return;
+          }
+          // Eine Ueberschrift kann in einem Zitat oder einem Listenpunkt stehen -- der Renderer
+          // gibt ihr dort genauso eine ID, also gehoert sie auch hierher.
+          if (t.items) lauf(t.items);
+          else if (t.tokens && (t.type === 'blockquote' || t.type === 'list_item')) lauf(t.tokens);
+        });
+      };
+      try { lauf(marked.lexer(String(text || ''))); } catch (err) { /* unlesbar: dann eben keine */ }
+      return ziele;
+    }
+
+    // Die Ziele EINER NOTIZ, immer aus ihrem Text -- ausdruecklich auch fuer die gerade offene,
+    // obwohl deren Vorschau danebenliegt. Zwei Gruende: wikilinkHtml() ruft das WAEHREND des
+    // Renderns auf, die Vorschau zeigt dann noch den vorigen Stand (bei einem Verweis der Notiz
+    // auf sich selbst waere die Pruefung also um einen Tastendruck alt); und so gilt fuer jede
+    // Notiz derselbe Weg, statt je nach "ist sie gerade offen" ein anderer.
+    //
+    // Der Zwischenspeicher ist nicht Feinschliff: wikilinkHtml() laeuft je Verweis und Render,
+    // also bei JEDEM Tastendruck, und ohne ihn liefe marked.lexer() dabei jedes Mal ueber den
+    // gesamten Text der Zielnotiz. Geschluessel auf den Inhalt selbst -- fuer eine nicht aktive
+    // Notiz ist das immer dasselbe String-Objekt, der Vergleich also nicht teurer als ein Zeiger.
+    const ankerZielSpeicher = new Map();
+    function ankerZieleDerNotiz(tab) {
+      if (!tab) return [];
+      const inhalt = tabInhaltJetzt(tab);
+      const gemerkt = ankerZielSpeicher.get(tab.id);
+      if (gemerkt && gemerkt.quelle === inhalt) return gemerkt.ziele;
+      const ziele = ankerZieleAusText(inhalt);
+      ankerZielSpeicher.set(tab.id, { quelle: inhalt, ziele: ziele });
+      return ziele;
+    }
+
+    function ankerVergleich(text) {
+      return String(text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+
+    // Erst ueber die ID (derselbe Renderdurchgang), sonst ueber den Text: der Sprung aus einer
+    // anderen Notiz kennt nur den Text, und nach einer Umbenennung stimmt eine alte ID nicht mehr,
+    // der Text aber oft noch.
+    function ankerElementFinden(wert) {
+      const w = String(wert || '').trim();
+      if (!w) return null;
+      let el = null;
+      try { el = preview.querySelector('#' + CSS.escape(w)); } catch (err) { el = null; }
+      if (el && /^H[1-6]$/.test(el.tagName)) return el;
+      const v = ankerVergleich(w);
+      return Array.from(preview.querySelectorAll('h1,h2,h3,h4,h5,h6'))
+               .find(h => ankerVergleich(h.textContent) === v) || null;
+    }
+
+    function ankerSpringen(wert) {
+      const el = ankerElementFinden(wert);
+      if (!el) return false;
+      // Ohne 'smooth', und das ist keine Geschmacksfrage: die beiden Fenster laufen im Gleichlauf
+      // (syncScrollFrom), jedes weiche Scrollen loest dabei laufend scroll-Ereignisse aus, die
+      // ihrerseits editor.scrollTop und damit wieder previewPane.scrollTop setzen -- und jeder
+      // Schreibzugriff auf scrollTop bricht eine laufende Animation ab. Gemessen: mit 'smooth'
+      // stand die Vorschau nach dem Klick bei 2 statt bei 2174, ohne springt sie richtig.
+      el.scrollIntoView({ block: 'start' });
+      // Ohne kurzes Aufleuchten ist nach dem Sprung nicht zu sehen, wo man gelandet ist -- gerade
+      // dann nicht, wenn die Ueberschrift oben am Rand steht.
+      el.classList.add('anker-treffer');
+      setTimeout(() => el.classList.remove('anker-treffer'), 1600);
+      return true;
+    }
+
+    // Zeigt ein '#...'-Link ins Leere, wird er gekennzeichnet -- dieselbe Sprache wie ein Verweis
+    // auf eine nicht geoeffnete Notiz. Bewusst NACH dem Rendern am fertigen DOM geprueft und nicht
+    // im Renderer: dort ist beim Rendern eines Links noch gar nicht bekannt, welche Ueberschriften
+    // weiter unten noch kommen. Nur Attribute werden angefasst, kein Text -- die Zeichenkarte der
+    // Vorschau bleibt davon unberuehrt (nachgemessen).
+    function ankerTotmarkierungAktualisieren() {
+      preview.querySelectorAll('a[href^="#"]').forEach(a => {
+        let ziel = (a.getAttribute('href') || '').slice(1);
+        try { ziel = decodeURIComponent(ziel); } catch (err) { /* roh lassen */ }
+        const el = ziel ? ankerElementFinden(ziel) : null;
+        a.classList.toggle('anker-tot', !el);
+        // Ein hier gesetztes title-Attribut ist KEINE Zierde, sondern eine Falle: Turndowns
+        // inlineLink-Regel schreibt es als Markdown-Titel zurueck, und
+        // serializeBlockToMarkdown() laeuft bei jedem Tastendruck -- gemessen wurde aus
+        // '[Material](#material)' nach dem naechsten Anschlag
+        // '[Material](#material "Zu „Material" springen")'. Deshalb zwei Vorkehrungen: einen
+        // Titel, der aus dem Quelltext stammt, nicht ueberschreiben, und den eigenen als solchen
+        // kennzeichnen, damit studioProAnkerLink ihn beim Zurueckschreiben weglaesst.
+        if (a.hasAttribute('title') && a.getAttribute('data-anker-titel') !== '1') return;
+        a.setAttribute('data-anker-titel', '1');
+        // Im Hinweis steht die UEBERSCHRIFT, nicht der Anker -- '#zeitplan-2' sagt niemandem etwas.
+        a.title = el
+          ? 'Zu „' + el.textContent.trim() + '" springen'
+          : 'Sprungziel „' + ziel + '" gibt es hier nicht (mehr) – zum Reparieren anklicken';
+      });
+    }
+
+    // --- Das '@'-Menue ---------------------------------------------------------------------------
+    //
+    // Anders als '[[' fuegt '@' NICHTS ein: das Zeichen tippt der Nutzer selbst und steht danach
+    // gewoehnlich im Text. Wird kein Vorschlag genommen, bleibt genau das stehen, was getippt wurde
+    // -- anders als beim Schraegstrich-Menue, dessen '/' spurlos verschwindet. Hier ist das richtig
+    // herum: ein '@' mitten im Satz ist weit oefter gewollt als ein '/' am Blockanfang.
+    let ankerMenuState = null;   // { atSrc, modus: 'notiz' | 'verweis', tab }
+
+    function ankerMenuSchliessen() {
+      if (!ankerMenuState) return;
+      ankerMenuState = null;
+      const m = document.getElementById('ankerMenu');
+      if (m) { m.classList.remove('active'); m.innerHTML = ''; }
+    }
+
+    // Steht das '@' an dieser Stelle INNERHALB eines '[[...]]'? Dann meint es das Sprungziel der
+    // dort genannten Notiz, nicht der eigenen.
+    function ankerVerweisUmStelle(at) {
+      const text = editor.value;
+      const auf = text.lastIndexOf('[[', at);
+      if (auf === -1) return null;
+      const zu = text.indexOf(']]', auf);
+      if (zu === -1 || zu < at) return null;
+      const innen = text.slice(auf + 2, zu);
+      if (/[\n\[\]]/.test(innen)) return null;
+      const ziel = innen.split('@')[0].split('|')[0].trim();
+      if (!ziel) return null;
+      const treffer = wikilinkTreffer(ziel);
+      return { ziel: ziel, tab: treffer.length === 1 ? treffer[0] : null, mehrdeutig: treffer.length > 1 };
+    }
+
+    // Ein '@' steht sehr oft in einer Mailadresse. Ausserhalb eines Verweises loest es deshalb nur
+    // aus, wenn davor ein Leerzeichen, ein Zeilenanfang oder eine oeffnende Klammer steht -- bei
+    // 'thomas@example.org' steht dort ein Buchstabe und es passiert nichts. INNERHALB von '[[...]]'
+    // zaehlt das '@' dagegen immer: dort ist die Absicht erklaert.
+    function ankerMenuTriggerNachEingabe(zeichen) {
+      if (ankerMenuState || wikiMenuState || slashMenuState) return;
+      if (zeichen !== '@') return;
+      const tab = getActiveTabReal();
+      if (!tab || tab.fileType !== 'markdown' || editor.disabled) return;
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return;
+      const r = sel.getRangeAt(0);
+      if (!preview.contains(r.startContainer)) return;
+
+      // Steht die Schreibmarke IN einer Verweis-Insel, wird die Stelle des '@' aus dem Quelltext
+      // des Verweises geholt und NICHT aus der Schreibmarke. Der Grund ist der in dieser Datei
+      // mehrfach dokumentierte: eine Schreibmarke am Ende einer Insel bildet nicht auf "dahinter"
+      // ab, sondern auf das BLOCKENDE -- nachgemessen lieferte domPositionToSource() fuer
+      // '[[Projektplan@]]' die 31 statt der 29, und der Auslöser sah dort ein ']' statt des '@'.
+      const insel = r.startContainer.parentElement
+        ? r.startContainer.parentElement.closest('.wikilink[data-wiki]') : null;
+      let at;
+      if (insel && preview.contains(insel)) {
+        const q = ankerWikilinkQuellstelle(insel);
+        if (!q) return;
+        const innenStart = q.start + 2;
+        const rel = editor.value.slice(innenStart, q.ende - 2).lastIndexOf('@');
+        if (rel === -1) return;
+        at = innenStart + rel;
+      } else {
+        const pos = domPositionToSource(r.startContainer, r.startOffset);
+        if (pos == null) return;
+        at = pos - 1;
+      }
+      if (editor.value[at] !== '@') return;
+
+      const verweis = ankerVerweisUmStelle(at);
+      if (verweis) {
+        if (verweis.mehrdeutig) { showToast('Mehrere offene Notizen heißen „' + verweis.ziel + '" – Sprungziele sind erst eindeutig, wenn es eine ist.'); return; }
+        if (!verweis.tab) { showToast('Notiz „' + verweis.ziel + '" ist nicht geöffnet – ihre Überschriften sind unbekannt.'); return; }
+        ankerMenuState = { atSrc: at, modus: 'verweis', tab: verweis.tab };
+      } else {
+        const davor = at === 0 ? '' : editor.value[at - 1];
+        if (davor && !/[\s(\[ ]/.test(davor)) return;
+        ankerMenuState = { atSrc: at, modus: 'notiz', tab: tab };
+      }
+      ankerMenuAktualisieren();
+    }
+
+    // Der getippte Filter. Wie beim Wikilink-Menue ueber die gemerkte Anfangsstelle im QUELLTEXT
+    // und nicht ueber die Schreibmarke im DOM -- aus demselben Grund, der dort dokumentiert ist.
+    function ankerMenuFilter() {
+      if (!ankerMenuState) return null;
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return null;
+      const r = sel.getRangeAt(0);
+      const owner = findSourceOwnerElement(r.startContainer);
+      if (!owner) return null;
+      const bStart = Number(owner.dataset.srcStart), bEnd = Number(owner.dataset.srcEnd);
+      if (!Number.isFinite(bStart) || !Number.isFinite(bEnd)) return null;
+      const at = ankerMenuState.atSrc;
+      if (at < bStart || at > bEnd + 1) return null;
+      if (editor.value[at] !== '@') return null;
+
+      let ende;
+      if (ankerMenuState.modus === 'verweis') {
+        const zu = editor.value.indexOf(']]', at);
+        if (zu === -1 || zu > bEnd) return null;
+        ende = zu;
+      } else {
+        const pos = domPositionToSource(r.startContainer, r.startOffset);
+        if (pos == null || pos < at + 1) return null;
+        ende = pos;
+      }
+      const text = editor.value.slice(at + 1, ende);
+      if (/[\n\[\]]/.test(text)) return null;
+      // Ein sehr langer "Filter" ist in Wahrheit weitergeschriebener Fliesstext -- dann war das '@'
+      // keine Absicht, und das Menue hat sich zu verabschieden.
+      if (text.length > 60) return null;
+      return { text: text, atSrc: at, ende: ende };
+    }
+
+    function ankerMenuAktualisieren() {
+      if (!ankerMenuState) return;
+      const stand = ankerMenuFilter();
+      if (stand === null) { ankerMenuSchliessen(); return; }
+      const menue = document.getElementById('ankerMenu');
+      const suche = ankerVergleich(stand.text);
+      // In der eigenen Notiz aus der VORSCHAU (dort stehen die echten IDs), in einer fremden aus
+      // ihrem Text -- siehe die beiden Funktionen oben.
+      const alle = ankerMenuState.modus === 'verweis'
+        ? ankerZieleDerNotiz(ankerMenuState.tab)
+        : ankerZieleDerVorschau();
+      const treffer = alle.filter(z => !suche || ankerVergleich(z.text).indexOf(suche) !== -1).slice(0, 8);
+
+      menue.innerHTML = '';
+      if (!treffer.length) {
+        const leer = document.createElement('div');
+        leer.className = 'slash-menu-empty';
+        leer.textContent = !stand.text.trim()
+          ? (ankerMenuState.modus === 'verweis'
+              ? 'Notiz „' + ankerMenuState.tab.name + '" hat keine Überschriften'
+              : 'Diese Notiz hat noch keine Überschriften')
+          : 'Keine Überschrift passt – Enter legt sie an';
+        menue.appendChild(leer);
+      } else {
+        treffer.forEach((z, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'slash-menu-item' + (i === 0 ? ' selected' : '');
+          const t = document.createElement('span');
+          // Die Ebene als Einrueckung: in einem langen Dokument ist sonst nicht zu erkennen, was
+          // Kapitel und was Unterabschnitt ist.
+          t.textContent = (z.ebene > 1 ? '  '.repeat(Math.min(z.ebene - 1, 4)) : '') + z.text;
+          b.appendChild(t);
+          b.onmousedown = (ev) => ev.preventDefault();
+          b.onclick = (ev) => { ev.stopPropagation(); ankerMenuUebernehmen(z); };
+          menue.appendChild(b);
+        });
+      }
+      const rect = window.getSelection().getRangeAt(0).getBoundingClientRect();
+      menue.style.top = ((rect.bottom || rect.top) + 6) + 'px';
+      menue.style.left = Math.min(rect.left, Math.max(8, window.innerWidth - 268)) + 'px';
+      menue.classList.add('active');
+    }
+
+    function ankerMenuAuswahl(richtung) {
+      const menue = document.getElementById('ankerMenu');
+      const eintraege = Array.from(menue.querySelectorAll('.slash-menu-item'));
+      if (!eintraege.length) return;
+      let i = eintraege.findIndex(el => el.classList.contains('selected'));
+      i = (i + richtung + eintraege.length) % eintraege.length;
+      eintraege.forEach(el => el.classList.remove('selected'));
+      eintraege[i].classList.add('selected');
+      eintraege[i].scrollIntoView({ block: 'nearest' });
+    }
+
+    function ankerMenuGewaehlt() {
+      const el = document.querySelector('#ankerMenu .slash-menu-item.selected');
+      if (!el) return null;
+      const txt = el.textContent.replace(/ /g, '').trim();
+      const alle = ankerMenuState && ankerMenuState.modus === 'verweis'
+        ? ankerZieleDerNotiz(ankerMenuState.tab)
+        : ankerZieleDerVorschau();
+      return alle.find(z => z.text === txt) || null;
+    }
+
+    // Eckige Klammern im Ueberschriftentext wuerden den Markdown-Link zerreissen.
+    function ankerLinkTextSchuetzen(text) {
+      return String(text || '').replace(/([\[\]])/g, '\\$1');
+    }
+
+    function ankerMenuUebernehmen(z) {
+      const stand = ankerMenuFilter();
+      if (!stand || !z) { ankerMenuSchliessen(); return; }
+      let ersatz, marke;
+      if (ankerMenuState.modus === 'verweis') {
+        // Im Verweis wird nur der Teil hinter dem '@' gesetzt; das ']]' bleibt stehen.
+        ersatz = '@' + z.text;
+        marke = stand.atSrc + ersatz.length + 2;   // hinter das ']]'
+      } else {
+        ersatz = '[' + ankerLinkTextSchuetzen(z.text) + '](#' + (z.id || ankerSchluessel(z.text)) + ')';
+        marke = stand.atSrc + ersatz.length;
+      }
+      editor.value = editor.value.slice(0, stand.atSrc) + ersatz + editor.value.slice(stand.ende);
+      ankerMenuSchliessen();
+      finishPreviewStructuralEdit(marke);
+      // Ohne das waechst alles Weitere IN den gerade entstandenen Link hinein -- derselbe Fall wie
+      // beim Wikilink, siehe caretHinterWikilinkRuecken().
+      caretHinterWikilinkRuecken();
+    }
+
+    // Enter ohne Treffer: die getippte Ueberschrift anlegen. In der eigenen Notiz am Ende
+    // anfuegen und darauf verweisen; in einer fremden Notiz nur nach Rueckfrage -- das ist eine
+    // Aenderung an einem Dokument, das gerade niemand ansieht.
+    function ankerMenuNeueUeberschrift() {
+      const stand = ankerMenuFilter();
+      if (!stand) { ankerMenuSchliessen(); return; }
+      const name = stand.text.trim();
+      if (!name) { ankerMenuSchliessen(); return; }
+
+      if (ankerMenuState.modus === 'verweis') {
+        const ziel = ankerMenuState.tab;
+        if (!confirm('In „' + ziel.name + '" gibt es keine Überschrift „' + name + '".\n\nSoll sie dort am Ende angelegt werden?')) { ankerMenuSchliessen(); return; }
+        ankerUeberschriftAnhaengen(ziel, name);
+        // Der Verweis speichert den TEXT, nicht eine ID -- er passt damit sofort.
+        ankerMenuUebernehmen({ text: name, ebene: 2, id: null });
+        showToast('Überschrift „' + name + '" in „' + ziel.name + '" angelegt.');
+        return;
+      }
+
+      // Eigene Notiz, und die Reihenfolge ist nicht beliebig: erst anhaengen und neu rendern, denn
+      // die ID vergibt der Renderer -- erst danach steht fest, worauf der Verweis zeigen muss.
+      // Angehaengt wird ausschliesslich HINTER dem bisherigen Text, damit die gemerkten Stellen
+      // (stand.atSrc/stand.ende) gueltig bleiben.
+      const stelle = stand.atSrc, ende = stand.ende;
+      ankerMenuSchliessen();
+      const basis = editor.value;
+      editor.value = basis + (basis.endsWith('\n') ? '' : '\n') + '\n## ' + name + '\n';
+      updatePreview();
+      const neuZiel = ankerZieleDerVorschau().reverse()
+        .find(z => ankerVergleich(z.text) === ankerVergleich(name));
+      const ersatz = '[' + ankerLinkTextSchuetzen(name) + '](#' + (neuZiel ? neuZiel.id : ankerSchluessel(name)) + ')';
+      editor.value = editor.value.slice(0, stelle) + ersatz + editor.value.slice(ende);
+      recordHistory();
+      finishPreviewStructuralEdit(stelle + ersatz.length);
+      caretHinterWikilinkRuecken();
+      showToast('Überschrift „' + name + '" am Ende der Notiz angelegt.');
+    }
+
+    // Haengt '## Name' an eine Notiz an. recordHistory() arbeitet immer auf der AKTIVEN Notiz, der
+    // Schritt wird fuer eine andere hier also von Hand nachgebildet -- dieselbe Stelle und dieselbe
+    // Ueberlegung wie bei insertAudioAsset(), wenn eine Aufnahme in einer inzwischen verlassenen
+    // Notiz landet.
+    function ankerUeberschriftAnhaengen(tab, name) {
+      const alt = tabInhaltJetzt(tab);
+      const neu = alt + (alt.endsWith('\n') || !alt ? '' : '\n') + '\n## ' + name + '\n';
+      if (tab === getActiveTabReal()) {
+        editor.value = neu;
+        recordHistory();
+        markActiveTabModified();
+        updatePreview();
+      } else {
+        tab.content = neu;
+        tab.history = (tab.history || []).slice(0, (typeof tab.historyIndex === 'number' ? tab.historyIndex : -1) + 1);
+        tab.history.push(neu);
+        if (tab.history.length > 80) tab.history.shift();
+        tab.historyIndex = tab.history.length - 1;
+        tab.isModified = true;
+        notizGeaendertStempeln(tab);
+      }
+      saveStateToLocalStorage();
+      renderTabs();
+    }
+
+    // --- Wenn das Sprungziel ins Leere zeigt ----------------------------------------------------
+    //
+    // Weder stillschweigend nichts tun noch blind an den Anfang springen: ein kleines Menue mit den
+    // drei Auswegen, die es tatsaechlich gibt. Benutzt dasselbe Element wie die Auswahl bei
+    // mehreren gleichnamigen Notizen -- es ist ein allgemeiner, positionierter Menuekasten, und
+    // zwei davon koennen ohnehin nie gleichzeitig offen sein.
+    function ankerReparaturOeffnen(el, lage) {
+      const menue = document.getElementById('wikilinkAuswahl');
+      menue.innerHTML = '';
+      const kopf = document.createElement('div');
+      kopf.className = 'sortier-kopf';
+      kopf.textContent = 'Sprungziel „' + lage.anker + '" gibt es nicht';
+      menue.appendChild(kopf);
+
+      const eintrag = (zeile1, zeile2, tun) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'sortier-eintrag';
+        const w = document.createElement('span');
+        w.className = 'wikilink-auswahl-text';
+        const z1 = document.createElement('div');
+        z1.textContent = zeile1;
+        w.appendChild(z1);
+        if (zeile2) {
+          const z2 = document.createElement('div');
+          z2.className = 'wikilink-auswahl-zeile';
+          z2.textContent = zeile2;
+          w.appendChild(z2);
+        }
+        b.appendChild(w);
+        b.onmousedown = (ev) => ev.preventDefault();
+        b.onclick = (ev) => { ev.stopPropagation(); wikilinkAuswahlSchliessen(); tun(); };
+        menue.appendChild(b);
+      };
+
+      eintrag(lage.anfangText, null, lage.anfang);
+      lage.ziele.slice(0, 6).forEach(z => eintrag('↳ ' + z.text, 'stattdessen hierhin verweisen', () => lage.waehlen(z)));
+      eintrag('Überschrift „' + (lage.anlegenName || lage.anker) + '" anlegen', lage.anlegenHinweis, lage.anlegen);
+
+      const r = el.getBoundingClientRect();
+      menue.style.top = (r.bottom + 6) + 'px';
+      menue.style.left = Math.min(r.left, Math.max(8, window.innerWidth - 268)) + 'px';
+      menue.classList.add('active');
+    }
+
+    // Die Quelltextstelle eines Wikilinks. Ueber "der N-te gerenderte Verweis ist der N-te im
+    // Rohtext" -- dieselbe Entsprechung, auf der in dieser Datei schon die Aufgabenkaestchen und
+    // die Bild-Knoepfe beruhen. Verweise mit leerem Ziel ergeben keine Insel und werden darum
+    // uebersprungen, sonst verschoebe sich die Zaehlung.
+    function ankerWikilinkQuellstelle(el) {
+      const alle = Array.from(preview.querySelectorAll('.wikilink[data-wiki]'));
+      const idx = alle.indexOf(el);
+      if (idx === -1) return null;
+      const re = /\[\[([^\[\]\n|]+?)(?:\|([^\[\]\n]*))?\]\]/g;
+      let m, n = 0;
+      while ((m = re.exec(editor.value)) !== null) {
+        const roh = m[1].trim();
+        if (!roh.split('@')[0].trim()) continue;
+        if (n === idx) return { start: m.index, ende: m.index + m[0].length, roh: roh, anzeige: m[2] };
+        n++;
+      }
+      return null;
+    }
+
+    // Einen '#...'-Link auf eine andere Ueberschrift umbiegen.
+    function ankerLinkUmbiegen(a, neueId) {
+      const q = findLinkSourceRange(a);
+      if (!q) { showToast('Diese Stelle lässt sich im Quelltext nicht eindeutig zuordnen.'); return; }
+      const ersatz = '[' + q.text + '](#' + neueId + ')';
+      editor.value = editor.value.slice(0, q.start) + ersatz + editor.value.slice(q.end);
+      recordHistory();
+      finishPreviewStructuralEdit(q.start + ersatz.length);
+    }
+
+    // Das Sprungziel eines Wikilinks austauschen.
+    function ankerVerweisUmbiegen(el, neuerAnker) {
+      const q = ankerWikilinkQuellstelle(el);
+      if (!q) { showToast('Dieser Verweis lässt sich im Quelltext nicht eindeutig zuordnen.'); return; }
+      const ziel = q.roh.split('@')[0].trim();
+      const innen = ziel + (neuerAnker ? '@' + neuerAnker : '');
+      const ersatz = '[[' + innen + (q.anzeige !== undefined ? '|' + q.anzeige : '') + ']]';
+      editor.value = editor.value.slice(0, q.start) + ersatz + editor.value.slice(q.ende);
+      recordHistory();
+      finishPreviewStructuralEdit(q.start + ersatz.length);
+    }
+
+    // Klick auf einen '#...'-Link in der Vorschau.
+    function ankerLinkKlick(a) {
+      let wert = (a.getAttribute('href') || '').slice(1);
+      try { wert = decodeURIComponent(wert); } catch (err) { /* roh lassen */ }
+      if (ankerSpringen(wert)) return;
+      // Die neue Ueberschrift heisst wie der SICHTBARE Text des Links, nicht wie sein Anker: aus
+      // '[Alter Name](#alter-name)' wird '## Alter Name' und nicht '## alter-name'. Der Anker ist
+      // eine kleingeschriebene, mit Bindestrichen zusammengezogene Form -- als Ueberschrift im
+      // Dokument saehe sie aus wie ein Versehen.
+      const name = (a.textContent || '').trim() || wert;
+      ankerReparaturOeffnen(a, {
+        anker: wert,
+        ziele: ankerZieleDerVorschau(),
+        anfangText: 'Zum Anfang der Notiz springen',
+        anfang: () => { previewPane.scrollTop = 0; },   // kein 'smooth', siehe ankerSpringen()
+        waehlen: (z) => ankerLinkUmbiegen(a, z.id),
+        anlegenName: name,
+        anlegenHinweis: 'wird am Ende dieser Notiz eingefügt',
+        anlegen: () => {
+          const basis = editor.value;
+          editor.value = basis + (basis.endsWith('\n') ? '' : '\n') + '\n## ' + name + '\n';
+          updatePreview();
+          const neuZiel = ankerZieleDerVorschau().reverse()
+            .find(z => ankerVergleich(z.text) === ankerVergleich(name));
+          if (neuZiel) ankerLinkUmbiegen(a, neuZiel.id);
+          recordHistory();
+          showToast('Überschrift „' + name + '" am Ende der Notiz angelegt.');
+        }
+      });
+    }
+
+    // Klick auf einen Wikilink, dessen Sprungziel es in der Zielnotiz nicht (mehr) gibt.
+    function ankerVerweisKlick(el, ziel, anker) {
+      const treffer = wikilinkTreffer(ziel);
+      const tab = treffer.length === 1 ? treffer[0] : null;
+      if (!tab) { wikilinkFolgen(ziel, el); return; }
+      ankerReparaturOeffnen(el, {
+        anker: anker,
+        ziele: ankerZieleDerNotiz(tab),
+        anfangText: 'Notiz „' + tab.name + '" öffnen',
+        anfang: () => wikilinkSpringen(tab.id),
+        waehlen: (z) => ankerVerweisUmbiegen(el, z.text),
+        anlegenHinweis: 'wird am Ende von „' + tab.name + '" eingefügt',
+        anlegen: () => {
+          if (!confirm('Soll „' + anker + '" am Ende von „' + tab.name + '" als Überschrift angelegt werden?')) return;
+          ankerUeberschriftAnhaengen(tab, anker);
+          showToast('Überschrift „' + anker + '" in „' + tab.name + '" angelegt.');
+        }
+      });
+    }
+
     // --- Einem Wikilink folgen ------------------------------------------------------------------
 
-    async function wikilinkFolgen(ziel, el) {
+    async function wikilinkFolgen(ziel, el, anker) {
       const treffer = wikilinkTreffer(ziel);
-      if (treffer.length === 1) { await wikilinkSpringen(treffer[0].id); return; }
-      if (treffer.length > 1) { wikilinkAuswahlOeffnen(treffer, el); return; }
+      if (treffer.length === 1) { await wikilinkSpringen(treffer[0].id, anker); return; }
+      if (treffer.length > 1) { wikilinkAuswahlOeffnen(treffer, el, anker); return; }
       // Nicht gefunden: nachfragen, nicht einfach anlegen -- ein Fehlklick soll keine Notiz
       // erzeugen.
       if (!confirm('Keine geöffnete Notiz heißt „' + ziel + '".\n\nSoll eine neue Notiz mit diesem Namen angelegt werden?')) return;
@@ -27014,7 +27660,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
     // Mehrere Notizen heissen gleich -- ein kleines Menue statt stillschweigend die erste zu
     // nehmen. Am <body> und position: fixed, wie die uebrigen Menues dieser Datei.
-    function wikilinkAuswahlOeffnen(treffer, el) {
+    function wikilinkAuswahlOeffnen(treffer, el, anker) {
       const menue = document.getElementById('wikilinkAuswahl');
       menue.innerHTML = '';
       const kopf = document.createElement('div');
@@ -27040,7 +27686,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           txt.appendChild(zeile2);
         }
         b.appendChild(txt);
-        b.onclick = (ev) => { ev.stopPropagation(); wikilinkAuswahlSchliessen(); wikilinkSpringen(t.id); };
+        b.onclick = (ev) => { ev.stopPropagation(); wikilinkAuswahlSchliessen(); wikilinkSpringen(t.id, anker); };
         menue.appendChild(b);
       });
       const r = el.getBoundingClientRect();
@@ -27054,8 +27700,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (m) m.classList.remove('active');
     }
 
-    function wikilinkSpringen(tabId) {
-      return switchTab(tabId);
+    async function wikilinkSpringen(tabId, anker) {
+      await switchTab(tabId);
+      if (!anker) return;
+      // Die Vorschau der Zielnotiz steht erst nach dem Rendern -- vorher gibt es die Ueberschrift
+      // im DOM gar nicht. setTimeout statt requestAnimationFrame, weil rAF in einem Fenster im
+      // Hintergrund gar nicht laeuft.
+      await new Promise(r => setTimeout(r, 0));
+      if (!ankerSpringen(anker)) showToast('In dieser Notiz gibt es „' + anker + '" nicht (mehr).');
     }
 
     // --- VERLAUF BESUCHTER NOTIZEN (vor/zurueck) --------------------------------------------------
@@ -27265,6 +27917,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             // Nur nach echtem Neuzeichnen: beim Tippen ist der DOM der des Browsers (der das
             // Zeichen selbst schon schützt), und .data neu zu setzen würde dort den Cursor versetzen.
             if (!previewIsAuthoring) schuetzeSchlussLeerzeichenInVorschau();
+            // Erst jetzt steht fest, welche Ueberschriften es gibt -- siehe
+            // ankerTotmarkierungAktualisieren(). Setzt ausschliesslich Attribute, keinen Text.
+            ankerTotmarkierungAktualisieren();
             updatePreviewRepairBanner();
           } else {
             textCharMaps = [];
@@ -30913,7 +31568,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!sel || sel.rangeCount === 0) return;
       const start = sel.getRangeAt(0).startContainer;
       const el = start.nodeType === Node.TEXT_NODE ? start.parentElement : start;
-      const span = el && el.closest ? el.closest('.wikilink') : null;
+      // Auch fuer einen '#...'-Link: dort ist der Fall derselbe -- die Schreibmarke stuende am Ende
+      // eines Inline-Elements und alles Weitere wuechse hinein.
+      const span = el && el.closest ? el.closest('.wikilink, a[href^="#"]') : null;
       if (!span || !preview.contains(span)) return;
       // Eine Schreibmarke, die bloss "hinter" dem Element steht, genuegt NICHT: Chrome zieht das
       // naechste getippte Zeichen trotzdem in das Element hinein -- nachgemessen landete
@@ -33087,6 +33744,22 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // anything when the menu isn't open.
     // Vor dem Schraegstrich-Horcher registriert, damit Enter hier ankommt, bevor es als
     // Zeilenumbruch oder als Verlassen einer Formatzone gedeutet wird.
+    // Vor dem Wikilink-Horcher registriert, aus demselben Grund, aus dem der vor dem
+    // Schraegstrich-Menue steht: Enter muss hier ankommen, bevor es als Zeilenumbruch gilt.
+    preview.addEventListener('keydown', (e) => {
+      if (!ankerMenuState) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); ankerMenuAuswahl(1); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); ankerMenuAuswahl(-1); return; }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); ankerMenuSchliessen(); return; }
+      if (e.key === 'Enter') {
+        e.preventDefault(); e.stopPropagation();
+        const gewaehlt = ankerMenuGewaehlt();
+        if (gewaehlt) ankerMenuUebernehmen(gewaehlt);
+        else ankerMenuNeueUeberschrift();
+        return;
+      }
+    });
+
     preview.addEventListener('keydown', (e) => {
       if (!wikiMenuState) return;
       if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); wikiMenuAuswahl(1); return; }
@@ -34253,6 +34926,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // Muss nach syncPreviewEditToSource() stehen: der Nachweg prueft den Quelltext, nicht das
       // DOM, und der ist erst danach auf dem Stand des gerade getippten Zeichens.
       if (wikiMenuState) wikiMenuAktualisieren();
+      // Dasselbe Nacheinander wie beim Wikilink-Menue: erst den Quelltext nachziehen, dann pruefen.
+      if (ankerMenuState) ankerMenuAktualisieren();
+      else ankerMenuTriggerNachEingabe(e && e.data);
       trySlashMenuTriggerAfterInput(e && e.inputType);
     });
     preview.addEventListener('compositionstart', () => { previewComposing = true; });
@@ -39985,8 +40661,37 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         '    if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") { e.preventDefault(); if (markdownTts) markdownTts.stop(); next(); }\n' +
         '    else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { e.preventDefault(); if (markdownTts) markdownTts.stop(); prev(); }\n' +
         '  });\n' +
+        // Ein '#...'-Link zeigt auf eine Ueberschrift, die hier auf einer ANDEREN Seite liegen kann
+        // -- der Browser kann das von sich aus nicht, die uebrigen Seiten sind versteckt. Also die
+        // Seite bestimmen, dorthin blaettern und erst danach im sichtbaren Bereich scrollen.
+        // Gesucht wird ueber hs[j].id und nicht per Selektor: eine Ueberschrift kann als ID alles
+        // Moegliche tragen (Umlaute, Satzzeichen), was in einem Selektor erst maskiert werden
+        // muesste. Die versteckten Seiten tragen dieselben IDs doppelt, deshalb wird zum Scrollen
+        // ausdruecklich nur in "#stage" gesucht.
+        '  function ankerSeite(id) {\n' +
+        '    const seiten = document.querySelectorAll(".slide-item");\n' +
+        '    for (let i = 0; i < seiten.length; i++) {\n' +
+        '      const hs = seiten[i].querySelectorAll("h1,h2,h3,h4,h5,h6");\n' +
+        '      for (let j = 0; j < hs.length; j++) if (hs[j].id === id) return i;\n' +
+        '    }\n' +
+        '    return -1;\n' +
+        '  }\n' +
         '  document.getElementById("overlay").addEventListener("click", function (e) {\n' +
         '    if (e.target.closest("audio, video")) return;\n' +
+        '    const a = e.target.closest("a");\n' +
+        '    if (a && (a.getAttribute("href") || "").charAt(0) === "#") {\n' +
+        '      e.preventDefault();\n' +
+        '      if (markdownTts) markdownTts.stop();\n' +
+        '      let id = a.getAttribute("href").slice(1);\n' +
+        '      try { id = decodeURIComponent(id); } catch (err) {}\n' +
+        '      const seite = ankerSeite(id);\n' +
+        '      if (seite >= 0 && seite !== idx) goTo(seite, seite > idx ? 1 : -1, true);\n' +
+        '      setTimeout(function () {\n' +
+        '        const hs = document.getElementById("stage").querySelectorAll("h1,h2,h3,h4,h5,h6");\n' +
+        '        for (let j = 0; j < hs.length; j++) if (hs[j].id === id) { hs[j].scrollIntoView({ block: "start" }); return; }\n' +
+        '      }, 0);\n' +
+        '      return;\n' +
+        '    }\n' +
         '    if (markdownTts) markdownTts.stop();\n' +
         '    const rect = document.getElementById("overlay").getBoundingClientRect();\n' +
         '    if (e.clientX - rect.left < rect.width / 2) prev(); else next();\n' +
@@ -42481,7 +43186,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       const wikiEl = e.target.closest('.wikilink[data-wiki]');
       if (wikiEl && preview.contains(wikiEl)) {
         e.preventDefault();
-        wikilinkFolgen(wikiEl.getAttribute('data-wiki'), wikiEl);
+        const wZiel = wikiEl.getAttribute('data-wiki');
+        const wAnker = wikiEl.getAttribute('data-anker') || '';
+        // Zeigt das Sprungziel ins Leere, wird erst gefragt -- statt die Notiz zu oeffnen und den
+        // Nutzer dort ratlos am Anfang abzusetzen.
+        if (wAnker && wikiEl.classList.contains('anker-tot')) { ankerVerweisKlick(wikiEl, wZiel, wAnker); return; }
+        wikilinkFolgen(wZiel, wikiEl, wAnker);
         return;
       }
 
@@ -42497,6 +43207,9 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         e.preventDefault();
         // Mit Cmd/Strg direkt oeffnen, ohne Umweg ueber das Menue -- die gewohnte Geste fuer
         // "in neuem Tab oeffnen" soll auch hier funktionieren.
+        // Ein '#...'-Link ist ein Sprung im eigenen Dokument, kein Ziel zum Oeffnen: dafuer waere
+        // das Link-Menue (Oeffnen/Adresse kopieren) sinnlos. Zum Bearbeiten bleibt der Quelltext.
+        if ((linkEl.getAttribute('href') || '').startsWith('#')) { ankerLinkKlick(linkEl); return; }
         if (e.metaKey || e.ctrlKey) { openLinkTarget(linkEl); return; }
         openLinkActionMenu(linkEl);
         return;
@@ -44744,14 +45457,30 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       filter: (node) => node.nodeName === 'SPAN' && node.classList && node.classList.contains('wikilink'),
       replacement: (content, node) => {
         const ziel = (node.getAttribute('data-wiki') || '').trim();
+        const anker = (node.getAttribute('data-anker') || '').trim();
         const text = String(content || '').trim();
         if (!ziel && !text) return '';
-        if (!text) return '[[' + ziel + ']]';
+        // Ziel plus Sprungziel ist das, was im Quelltext zwischen den Klammern steht.
+        const innen = ziel + (anker ? '@' + anker : '');
+        if (!text) return '[[' + innen + ']]';
         // Nur eine ausdrueckliche Alias-Form behaelt ihr Ziel. Bei einem einfachen Verweis IST der
         // sichtbare Text das Ziel -- wird er bearbeitet, zeigt der Verweis danach woandershin.
         if (!ziel || !node.hasAttribute('data-wiki-alias')) return '[[' + text + ']]';
-        return '[[' + ziel + '|' + text + ']]';
+        // Mit Sprungziel steht 'Notiz > Ueberschrift' im Text; das ist kein eigener Anzeigetext,
+        // sondern die Darstellung von beidem -- sonst schriebe jeder Tastendruck daraus ein
+        // '[[Notiz@Anker|Notiz › Anker]]' und der Verweis waechse bei jedem Anschlag weiter.
+        if (anker && text === ziel + ' › ' + anker) return '[[' + innen + ']]';
+        return '[[' + innen + '|' + text + ']]';
       }
+    });
+
+    // Gegenstueck zu ankerTotmarkierungAktualisieren(): der dort gesetzte Hinweis gehoert auf den
+    // Bildschirm, nicht in den Quelltext. Nur ein selbst gesetzter Titel (data-anker-titel) wird
+    // weggelassen -- ein '[Text](#ziel "echter Titel")' aus dem Dokument bleibt unangetastet.
+    turndownService.addRule('studioProAnkerLink', {
+      filter: (node) => node.nodeName === 'A' && node.getAttribute('data-anker-titel') === '1' &&
+                        (node.getAttribute('href') || '').charAt(0) === '#',
+      replacement: (content, node) => '[' + String(content || '') + '](' + node.getAttribute('href') + ')',
     });
 
     turndownService.addRule('studioProVideoEmbed', {
@@ -45243,8 +45972,11 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // ist, holt trailingWsNormalized unten es zurueck; sobald ein Wort folgt, ist es nicht mehr
       // "trailing" und bliebe als echtes U+00A0 im Quelltext stehen ("[[Idee]]<NBSP>weiter").
       // editor.value ist Markdown-QUELLTEXT, kein Browser-Artefakt -- dieselbe Ueberlegung wie
-      // dort, nur fuer die eine Stelle, an der dieser Platzhalter entstehen kann.
-      const inner = (stripped.trim() === '' ? raw : stripped).replace(/\]\]\u00A0/g, ']] ');
+      // dort, nur fuer die Stellen, an denen dieser Platzhalter entstehen kann. Seit es Sprungziele
+      // gibt, ist das nicht mehr nur ']]': caretHinterWikilinkRuecken() setzt die Marke auch hinter
+      // einen '[Text](#anker)'-Link, und dort endet der Rohtext auf ')'. Ein geschuetztes
+      // Leerzeichen direkt hinter einer schliessenden Klammer am Blockende ist dasselbe Artefakt.
+      const inner = (stripped.trim() === '' ? raw : stripped).replace(/(\]\]|\))\u00A0/g, '$1 ');
 
       // Bug fix: the 'newlines' trimMode above only stops htmlToMarkdownNoEscape's OWN wrapper
       // from trimming a real trailing space back out — it doesn't touch Turndown itself, which
