@@ -2806,6 +2806,44 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       margin-top: 1px;
     }
 
+    .modal-card.restore-karte { max-width: min(460px, 94vw); width: 100%; }
+
+    .restore-hinweis {
+      margin: 0 0 14px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+    }
+
+    .restore-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .restore-btn {
+      flex: 1 1 160px;
+      text-align: center;
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .restore-btn:hover { background: var(--bg-hover); }
+
+    .restore-bericht {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: var(--text-muted);
+      min-height: 1.2em;
+    }
+
+    /* Eigene Farbe statt einer Variablen, wie .drawing-status daneben: Fehlerrot ist keine
+       Flaechen- oder Textrolle, sondern eine Bedeutung -- es bekommt deshalb unten im Block der
+       Dunkelmodus-Ausnahmen seinen eigenen Wert. */
+    .restore-bericht.fehler { color: #d1242f; }
+
     /* --- Kalender ------------------------------------------------------------------------------
        Beide Klassen im Selektor, und das ist keine Geschmacksfrage: .modal-card mit seinem
        max-width: 440px steht WEITER UNTEN in derselben Datei und gewaenne bei gleicher
@@ -10194,6 +10232,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     /* Bedeutungsfarben: Warnung, Fehler, verbunden. */
     :root.app-dark .tab .tab-local-save-warning { color: #e8a33d; }
     :root.app-dark .drawing-status { color: #ff7b72; }
+    :root.app-dark .restore-bericht.fehler { color: #ff7b72; }
 
     :root.app-dark #webdavSyncBtn.connected {
       background-color: #16311f;
@@ -10472,6 +10511,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     <label class="slash-menu-item" for="fileInput"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M1 5C1 3.34315 2.34315 2 4 2H8.55848C9.84977 2 10.9962 2.82629 11.4045 4.05132L11.7208 5H20C21.1046 5 22 5.89543 22 7V9.00961C23.1475 9.12163 23.9808 10.196 23.7695 11.3578L22.1332 20.3578C21.9603 21.3087 21.132 22 20.1654 22H3C1.89543 22 1 21.1046 1 20V5ZM20 9V7H11.7208C10.8599 7 10.0956 6.44914 9.82339 5.63246L9.50716 4.68377C9.37105 4.27543 8.98891 4 8.55848 4H4C3.44772 4 3 4.44772 3 5V12.2709L3.35429 10.588C3.54913 9.66249 4.36562 9 5.31139 9H20ZM3.36634 20C3.41777 19.9109 3.4562 19.8122 3.47855 19.706L5.31139 11L21 11H21.8018L20.1654 20L3.36634 20Z" fill="currentColor"/></svg><span>Öffnen</span></label>
     <button id="saveBtn" class="slash-menu-item" onclick="saveCurrentFile()"><svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="m 8 0 c -0.550781 0 -1 0.449219 -1 1 v 8.585938 l -1.292969 -1.292969 c -0.1875 -0.1875 -0.441406 -0.292969 -0.707031 -0.292969 s -0.519531 0.105469 -0.707031 0.292969 c -0.390625 0.390625 -0.390625 1.023437 0 1.414062 l 3 3 c 0.390625 0.390625 1.023437 0.390625 1.414062 0 l 3 -3 c 0.390625 -0.390625 0.390625 -1.023437 0 -1.414062 s -1.023437 -0.390625 -1.414062 0 l -1.292969 1.292969 v -8.585938 c 0 -0.550781 -0.449219 -1 -1 -1 z m -7 14 v 2 h 14 v -2 z m 0 0" fill="currentColor"/></svg><span>Speichern</span></button>
     <button id="backupBtn" class="slash-menu-item" onclick="createBackupArchive()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7.5C3 6.11929 5.68629 5 9 5H15C18.3137 5 21 6.11929 21 7.5V16.5C21 17.8807 18.3137 19 15 19H9C5.68629 19 3 17.8807 3 16.5V7.5Z" stroke="currentColor" stroke-width="1.5"/><path d="M3 8.5C3 9.88071 5.68629 11 9 11H15C18.3137 11 21 9.88071 21 8.5" stroke="currentColor" stroke-width="1.5"/><path d="M3 12.5C3 13.8807 5.68629 15 9 15H15C18.3137 15 21 13.8807 21 12.5" stroke="currentColor" stroke-width="1.5"/></svg><span>Backup</span></button>
+    <button id="restoreBtn" class="slash-menu-item" onclick="restoreOeffnen()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12a8 8 0 1 0 2.3-5.6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 4v4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Backup einlesen</span></button>
     <button id="copyFormattedBtn" class="slash-menu-item" onclick="copyFormattedToClipboard()"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Copy"><path id="Vector" d="M9 9V6.2002C9 5.08009 9 4.51962 9.21799 4.0918C9.40973 3.71547 9.71547 3.40973 10.0918 3.21799C10.5196 3 11.0801 3 12.2002 3H17.8002C18.9203 3 19.4801 3 19.9079 3.21799C20.2842 3.40973 20.5905 3.71547 20.7822 4.0918C21.0002 4.51962 21.0002 5.07967 21.0002 6.19978V11.7998C21.0002 12.9199 21.0002 13.48 20.7822 13.9078C20.5905 14.2841 20.2839 14.5905 19.9076 14.7822C19.4802 15 18.921 15 17.8031 15H15M9 9H6.2002C5.08009 9 4.51962 9 4.0918 9.21799C3.71547 9.40973 3.40973 9.71547 3.21799 10.0918C3 10.5196 3 11.0801 3 12.2002V17.8002C3 18.9203 3 19.4801 3.21799 19.9079C3.40973 20.2842 3.71547 20.5905 4.0918 20.7822C4.5192 21 5.07899 21 6.19691 21H11.8036C12.9215 21 13.4805 21 13.9079 20.7822C14.2842 20.5905 14.5905 20.2839 14.7822 19.9076C15 19.4802 15 18.921 15 17.8031V15M9 9H11.8002C12.9203 9 13.4801 9 13.9079 9.21799C14.2842 9.40973 14.5905 9.71547 14.7822 10.0918C15 10.5192 15 11.079 15 12.1969L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg><span>Formatiert kopieren</span></button>
 
     <div class="burger-menu-divider"></div>
@@ -11663,6 +11703,33 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
   </div>
 
   <!-- Template Picker (opens when creating a new document) -->
+  <!-- Wiederherstellen. Zwei Wege in einem Fenster statt zweier Menueeintraege: so steht der
+       Hinweis, was mit gleichnamigen Notizen geschieht, VOR der Dateiauswahl und nicht erst im
+       Nachhinein als Meldung. Die beiden <label for> loesen versteckte Eingabefelder aus -- dieselbe
+       Bauart wie "Oeffnen" im Burger-Menue. -->
+  <div class="modal-overlay" id="restoreModal" onclick="if (event.target === this) restoreSchliessen()">
+    <div class="modal-card restore-karte">
+      <div class="modal-header">
+        <h2>Backup einlesen</h2>
+        <button class="icon-btn" onclick="restoreSchliessen()" title="Schließen">✕</button>
+      </div>
+      <p class="restore-hinweis">Notizen aus einem Backup-Archiv oder aus einem Ordner einlesen.
+        Sie kommen als zusätzliche Notizen dazu; ist eine Notiz gleichen Namens schon geöffnet,
+        wird sie übersprungen. Nichts wird überschrieben und nichts geschlossen.</p>
+      <div class="restore-knoepfe">
+        <label class="restore-btn" for="restoreZipInput">ZIP-Archiv wählen …</label>
+        <label class="restore-btn" for="restoreOrdnerInput">Ordner wählen …</label>
+      </div>
+      <div class="restore-bericht" id="restoreBericht"></div>
+    </div>
+  </div>
+  <input type="file" id="restoreZipInput" accept=".zip,application/zip" style="display:none"
+         onchange="restoreAusZip(this.files[0]); this.value = '';">
+  <!-- webkitdirectory liefert den gesamten Baum samt Unterordnern; gefiltert wird in JS, weil
+       'accept' hier von keinem Browser ausgewertet wird. -->
+  <input type="file" id="restoreOrdnerInput" webkitdirectory multiple style="display:none"
+         onchange="restoreAusOrdner(this.files); this.value = '';">
+
   <!-- Kalender. Eigenes Fenster statt eines Aufklappers in der Notizenleiste: die ist 240px breit,
        sieben Spalten ergaeben dort rund 30px je Tag. Bauart wie die uebrigen Fenster dieser Datei
        (Overlay + Karte, Schliessen ueber Kreuz, Klick daneben und Escape). -->
@@ -15330,6 +15397,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         case 'import':  satz = 'Aus einem fremden Akkordblatt importiert'; break;
         case 'wikilink': satz = h.quelle ? 'Über einen Verweis aus „' + h.quelle + '" angelegt' : 'Über einen Verweis angelegt'; break;
         case 'kalender': satz = h.quelle ? 'Über den Kalender für den ' + h.quelle + ' angelegt' : 'Über den Kalender angelegt'; break;
+        case 'sicherung': satz = h.quelle ? 'Aus der Sicherung „' + h.quelle + '" eingelesen' : 'Aus einer Sicherung eingelesen'; break;
         case 'neu':     satz = 'Hier neu angelegt'; break;
         default: return '';
       }
@@ -17049,8 +17117,6 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
 
       const inhalt = document.createElement('div');
       inhalt.className = 'tag-abschnitt-inhalt';
-      // Der Kalender steht als erster Eintrag im Daily-Abschnitt.
-      if (abschnitt.schluessel === DAILY_SCHLUESSEL) inhalt.appendChild(baueKalenderEintrag());
       abschnitt.tabs.forEach(tab => {
         const erstes = !gesehen.has(tab.id);
         gesehen.add(tab.id);
@@ -17454,6 +17520,10 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       } else {
         const gesehen = new Set();
         tagAbschnitte(liste).forEach(abschnitt => {
+          // Der Kalender steht UEBER dem Daily-Abschnitt, nicht darin: sonst waere er weg, sobald
+          // der Abschnitt zugeklappt ist -- und zugeklappt ist er genau dann, wenn viele
+          // Tagesnotizen offen sind, also wenn man ihn am ehesten braucht.
+          if (abschnitt.schluessel === DAILY_SCHLUESSEL) tabList.appendChild(baueKalenderEintrag());
           tabList.appendChild(baueTagAbschnitt(abschnitt, gesehen));
         });
       }
@@ -18184,6 +18254,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         wikiMenuSchliessen();
         ankerMenuSchliessen();
         kalenderSchliessen();
+        restoreSchliessen();
         closeTabSidebar();
         closeWebdavModal();
         if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();
@@ -40148,6 +40219,221 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // bereinigt, mit garantiert passender Endung. Doppelte Namen (zwei offene "Notiz.md") bekommen
     // eine Nummer angehängt — ein ZIP darf denselben Pfad zwar mehrfach enthalten, aber Entpacker
     // gehen damit unterschiedlich um, und eine überschriebene Notiz wäre stiller Datenverlust.
+    // --- WIEDERHERSTELLEN -----------------------------------------------------------------------
+    //
+    // Die Gegenrichtung zum Backup: ein ZIP-Archiv oder ein Ordner voller Notizen wird wieder
+    // eingelesen. Der Weg ist derselbe wie beim Oeffnen einer Datei -- das Archiv enthaelt genau
+    // das, was "Speichern" schreiben wuerde (Platzhalter raus, Bilder und Ton als echte Daten
+    // eingebettet), also holt createNewTab() ueber extractInlineImagesToAssets() die Anhaenge von
+    // selbst wieder in die Asset-Ablage. Es braucht dafuer keinen eigenen Einlesepfad.
+    //
+    // Eingelesen wird DAZU, nicht darueber: eine Notiz, die unter demselben Namen schon offen ist,
+    // wird uebersprungen. So entschieden, und es ist die einzige Variante, bei der ein Fehlgriff
+    // nichts kostet -- weder wird etwas ueberschrieben noch geschlossen.
+
+    // Endungen, die als Notiz gelten. Bewusst eine Positivliste statt getFileTypeFromName(), das
+    // fuer alles Unbekannte 'markdown' liefert: ein Ordner enthaelt ohne weiteres auch Bilder,
+    // .DS_Store oder PDFs, und die haben als Notiz nichts verloren.
+    const WIEDERHERSTELLEN_ENDUNGEN = ['md', 'markdown', 'txt', 'csv', 'json', 'html', 'htm',
+                                       'canvas', 'pro', 'chopro', 'cho', 'chordpro', 'crd'];
+
+    // Die Begleitdatei im Archiv. Sie traegt, was in den Notizdateien selbst nicht stehen kann --
+    // Schlagwoerter, Design, Inhaltsbreite. Die Markdown-Dateien bleiben dadurch unveraendert:
+    // das Archiv ist weiterhin ein gewoehnlicher Ordner voller Notizen, den jedes andere Programm
+    // lesen kann. Aeltere Archive und einfache Ordner haben sie nicht und gehen trotzdem, dann
+    // eben ohne diese Angaben.
+    const BACKUP_BEGLEITDATEI = 'markdown-studio-backup.json';
+
+    // Die Endung wird hier selbst gelesen und NICHT ueber splitTabNameExt() geholt: dessen
+    // Rueckfall liefert fuer alles ohne erkennbare Endung 'md', und sein Muster kennt nur
+    // Buchstaben und Ziffern. '.DS_Store' hat damit die Endung 'md' und landete als Notiz im
+    // Bestand -- beim ersten Ordnertest sofort aufgefallen. Ein fuehrender Punkt schliesst
+    // ausserdem alle uebrigen versteckten Dateien aus.
+    function istNotizDatei(name) {
+      const n = String(name || '');
+      if (n.charAt(0) === '.') return false;
+      const m = /\.([A-Za-z0-9]+)$/.exec(n);
+      return !!m && WIEDERHERSTELLEN_ENDUNGEN.indexOf(m[1].toLowerCase()) !== -1;
+    }
+
+    // --- ZIP lesen ------------------------------------------------------------------------------
+    //
+    // Gegenstueck zu buildZipArchive(). Gelesen wird ueber das ZENTRALVERZEICHNIS am Ende und nicht
+    // durch Vorwaertslaufen ueber die lokalen Header: nur dort stehen die Groessen zuverlaessig,
+    // ein Schreiber darf sie im lokalen Header auf 0 setzen und in einen Data Descriptor hinter
+    // die Daten legen (Flag-Bit 3). Ueber das Verzeichnis ist das egal.
+    async function leseZipArchiv(datei) {
+      const puffer = await datei.arrayBuffer();
+      const sicht = new DataView(puffer);
+      const bytes = new Uint8Array(puffer);
+      if (bytes.length < 22) throw new Error('Datei ist zu klein für ein ZIP-Archiv.');
+
+      // Das Endverzeichnis steht ganz hinten, kann aber einen bis zu 65535 Byte langen Kommentar
+      // hinter sich haben -- deshalb rueckwaerts suchen statt fest auf die letzten 22 Byte zu tippen.
+      let eocd = -1;
+      const grenze = Math.max(0, bytes.length - 22 - 65535);
+      for (let i = bytes.length - 22; i >= grenze; i--) {
+        if (sicht.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+      }
+      if (eocd === -1) throw new Error('Kein ZIP-Archiv: das Endverzeichnis fehlt.');
+
+      const anzahl = sicht.getUint16(eocd + 10, true);
+      let zeiger = sicht.getUint32(eocd + 16, true);
+      const dekoder = new TextDecoder('utf-8');
+      const eintraege = [];
+
+      for (let i = 0; i < anzahl; i++) {
+        if (zeiger + 46 > bytes.length || sicht.getUint32(zeiger, true) !== 0x02014b50) {
+          throw new Error('Das Zentralverzeichnis des Archivs ist beschädigt.');
+        }
+        const methode = sicht.getUint16(zeiger + 10, true);
+        const komprimiert = sicht.getUint32(zeiger + 20, true);
+        const nameLaenge = sicht.getUint16(zeiger + 28, true);
+        const extraLaenge = sicht.getUint16(zeiger + 30, true);
+        const kommentarLaenge = sicht.getUint16(zeiger + 32, true);
+        const lokal = sicht.getUint32(zeiger + 42, true);
+        const name = dekoder.decode(bytes.subarray(zeiger + 46, zeiger + 46 + nameLaenge));
+        zeiger += 46 + nameLaenge + extraLaenge + kommentarLaenge;
+
+        if (name.endsWith('/')) continue;                       // Ordnereintrag
+        if (name.indexOf('__MACOSX/') === 0) continue;          // Beiwerk von macOS
+        if (lokal + 30 > bytes.length) throw new Error('Das Archiv verweist auf eine Stelle außerhalb der Datei.');
+        // Der lokale Header hat EIGENE Laengen fuer Name und Extrafeld; sie duerfen von denen im
+        // Zentralverzeichnis abweichen, und genau daran scheitert ein naiver Leser.
+        const lNameLaenge = sicht.getUint16(lokal + 26, true);
+        const lExtraLaenge = sicht.getUint16(lokal + 28, true);
+        const start = lokal + 30 + lNameLaenge + lExtraLaenge;
+        eintraege.push({ name: name, methode: methode, daten: bytes.subarray(start, start + komprimiert) });
+      }
+      return eintraege;
+    }
+
+    async function zipEintragText(eintrag) {
+      if (eintrag.methode === 0) return new TextDecoder('utf-8').decode(eintrag.daten);
+      if (eintrag.methode !== 8) throw new Error('Unbekanntes Packverfahren (' + eintrag.methode + ') in „' + eintrag.name + '".');
+      // Spiegelbild von deflateForZip(): Verfahren 8 im ZIP IST deflate-raw.
+      if (typeof DecompressionStream !== 'function') {
+        throw new Error('Dieser Browser kann gepackte Archive nicht entpacken. Das Archiv lässt sich entpackt als Ordner einlesen.');
+      }
+      const strom = new Blob([eintrag.daten]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      return await new Response(strom).text();
+    }
+
+    // --- Einlesen -------------------------------------------------------------------------------
+
+    // dateien: [{ name, text }]. begleit: Abbildung Dateiname -> { name, tags, theme, ... } oder null.
+    async function notizenEinlesen(dateien, begleit, quelle) {
+      const vorhanden = new Set(tabs.map(t => String(t.name || '').toLowerCase()));
+      let eingelesen = 0, uebersprungen = 0;
+      for (const d of dateien) {
+        if (vorhanden.has(d.name.toLowerCase())) { uebersprungen++; continue; }
+        vorhanden.add(d.name.toLowerCase());
+        await createNewTab(d.name, d.text, null, null, herkunftNotieren('sicherung', quelle));
+        const neu = tabs[tabs.length - 1];
+        const meta = begleit ? begleit[d.name] : null;
+        if (neu && meta) {
+          // tagListe() raeumt selbst auf (hoechstens drei, keine leeren, keine doppelten) -- ein
+          // von Hand veraendertes Archiv kann hier also nichts kaputtmachen. Ein schon vergebenes
+          // "Daily" (createNewTab hat es ueber den Namen gesetzt) bleibt dabei erhalten.
+          if (Array.isArray(meta.tags)) {
+            neu.tags = tagListe({ tags: tagListe(neu).concat(meta.tags) });
+          }
+          if (typeof meta.theme === 'string' && meta.theme) neu.theme = meta.theme;
+          if (meta.contentWidthMode === 'narrow' || meta.contentWidthMode === 'wide') {
+            neu.contentWidthMode = meta.contentWidthMode;
+          }
+        }
+        eingelesen++;
+      }
+      renderTabs();
+      saveStateToLocalStorage();
+      return { eingelesen: eingelesen, uebersprungen: uebersprungen };
+    }
+
+    function restoreBerichtSetzen(text, fehler) {
+      const el = document.getElementById('restoreBericht');
+      el.textContent = text;
+      el.classList.toggle('fehler', !!fehler);
+    }
+
+    function restoreOeffnen() {
+      closeBurgerMenu();
+      restoreBerichtSetzen('');
+      document.getElementById('restoreModal').classList.add('active');
+    }
+
+    function restoreSchliessen() {
+      document.getElementById('restoreModal').classList.remove('active');
+    }
+
+    function restoreErgebnisMelden(ergebnis, quelle) {
+      const teile = [ergebnis.eingelesen + (ergebnis.eingelesen === 1 ? ' Notiz eingelesen' : ' Notizen eingelesen')];
+      if (ergebnis.uebersprungen) {
+        teile.push(ergebnis.uebersprungen + (ergebnis.uebersprungen === 1 ? ' übersprungen (gleicher Name schon geöffnet)'
+                                                                          : ' übersprungen (gleiche Namen schon geöffnet)'));
+      }
+      restoreBerichtSetzen('Aus „' + quelle + '": ' + teile.join(', ') + '.');
+      showToast(teile.join(', ') + '.');
+    }
+
+    async function restoreAusZip(datei) {
+      if (!datei) return;
+      restoreBerichtSetzen('„' + datei.name + '" wird gelesen …');
+      try {
+        const eintraege = await leseZipArchiv(datei);
+        let begleit = null;
+        const dateien = [];
+        for (const e of eintraege) {
+          // Unterordner im Archiv: nur der Dateiname zaehlt, die Notizen liegen in dieser App flach.
+          const kurz = e.name.split('/').pop();
+          if (kurz === BACKUP_BEGLEITDATEI) {
+            try {
+              const roh = JSON.parse(await zipEintragText(e));
+              begleit = {};
+              (roh.notizen || []).forEach(n => { if (n && n.datei) begleit[n.datei] = n; });
+            } catch (err) { begleit = null; }   // unlesbare Begleitdatei: dann eben ohne
+            continue;
+          }
+          if (!istNotizDatei(kurz)) continue;
+          dateien.push({ name: kurz, text: await zipEintragText(e) });
+        }
+        if (!dateien.length) { restoreBerichtSetzen('In „' + datei.name + '" sind keine Notizen enthalten.', true); return; }
+        restoreErgebnisMelden(await notizenEinlesen(dateien, begleit, datei.name), datei.name);
+      } catch (err) {
+        console.error('Wiederherstellen fehlgeschlagen:', err);
+        restoreBerichtSetzen('Fehlgeschlagen: ' + (err && err.message ? err.message : 'unbekannter Fehler'), true);
+      }
+    }
+
+    async function restoreAusOrdner(dateiListe) {
+      const alle = Array.from(dateiListe || []);
+      if (!alle.length) return;
+      // webkitRelativePath beginnt mit dem gewaehlten Ordner -- der ist der Name fuer den Bericht.
+      const ordner = (alle[0].webkitRelativePath || '').split('/')[0] || 'Ordner';
+      restoreBerichtSetzen('„' + ordner + '" wird gelesen …');
+      try {
+        let begleit = null;
+        const dateien = [];
+        for (const f of alle) {
+          if (f.name === BACKUP_BEGLEITDATEI) {
+            try {
+              const roh = JSON.parse(await f.text());
+              begleit = {};
+              (roh.notizen || []).forEach(n => { if (n && n.datei) begleit[n.datei] = n; });
+            } catch (err) { begleit = null; }
+            continue;
+          }
+          if (!istNotizDatei(f.name)) continue;
+          dateien.push({ name: f.name, text: await f.text() });
+        }
+        if (!dateien.length) { restoreBerichtSetzen('In „' + ordner + '" sind keine Notizen enthalten.', true); return; }
+        restoreErgebnisMelden(await notizenEinlesen(dateien, begleit, ordner), ordner);
+      } catch (err) {
+        console.error('Wiederherstellen fehlgeschlagen:', err);
+        restoreBerichtSetzen('Fehlgeschlagen: ' + (err && err.message ? err.message : 'unbekannter Fehler'), true);
+      }
+    }
+
     function backupEntryName(tab, index, vergeben) {
       const meta = getSaveFileTypeMeta(tab);
       const ext = meta.extensions[0];
@@ -40179,7 +40465,13 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (active) active.content = editor.value;
 
       try {
+        // Steht hier oben, weil die Begleitdatei unten ihren Zeitstempel braucht -- als const
+        // weiter unten läge sie beim Bauen der Einträge noch in der temporalen Totzone.
+        const now = new Date();
         const vergeben = new Set();
+        // Der Name der Begleitdatei wird vorab belegt, damit eine Notiz, die zufällig genauso
+        // heißt, von backupEntryName() eine Nummer bekommt, statt sie zu überschreiben.
+        vergeben.add(BACKUP_BEGLEITDATEI.toLowerCase());
         const entries = tabs.map((tab, i) => ({
           name: backupEntryName(tab, i, vergeben),
           // Exakt derselbe Inhalt, den "Speichern" schreiben würde: Platzhalter entfernt und
@@ -40187,7 +40479,25 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           // Archiv für sich allein vollständig ist.
           text: inlineAssetsIntoContent(stripInternalPlaceholders(tab.content || ''), tab.assets),
         }));
-        const now = new Date();
+        // Was in einer Notizdatei selbst nicht stehen kann: Schlagwörter, Design, Inhaltsbreite.
+        // Als eigene Datei daneben, damit die Notizen unverändert bleiben -- das Archiv ist
+        // weiterhin ein gewöhnlicher Ordner voller Notizen. Ältere Archive haben sie nicht und
+        // lassen sich trotzdem einlesen, dann eben ohne diese Angaben.
+        entries.push({
+          name: BACKUP_BEGLEITDATEI,
+          text: JSON.stringify({
+            app: 'Markdown Studio Pro',
+            version: 1,
+            erstellt: now.toISOString(),
+            notizen: tabs.map((tab, i) => ({
+              datei: entries[i].name,
+              name: tab.name,
+              tags: tagListe(tab),
+              theme: tab.theme || null,
+              contentWidthMode: tab.contentWidthMode || null,
+            })),
+          }, null, 2),
+        });
         const blob = await buildZipArchive(entries, now);
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -40197,7 +40507,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         link.click();
         link.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-        showToast(entries.length + (entries.length === 1 ? ' Notiz' : ' Notizen') + ' als ZIP gesichert.');
+        showToast(tabs.length + (tabs.length === 1 ? ' Notiz' : ' Notizen') + ' als ZIP gesichert.');
       } catch (err) {
         console.error('Backup fehlgeschlagen:', err);
         showToast('Backup fehlgeschlagen: ' + (err && err.message ? err.message : 'unbekannter Fehler'));

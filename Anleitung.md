@@ -114,7 +114,7 @@ Verweise gelten in gewöhnlichen Notizen und in Canvas-Kästen. In **Liedblätte
 
 Eine Notiz, die nach dem Schema **`jjjj-mm-tt`** benannt ist (also `2026-09-28.md`), bekommt das Schlagwort **„Daily"** von selbst — beim Anlegen und beim Öffnen. Von Hand vergebene „Daily"-Schlagwörter bleiben unverändert gültig; bestehende Notizen werden nicht nachträglich angefasst.
 
-Der Abschnitt **Daily** steht in der Tag-Ansicht der Notizenleiste immer ganz oben, und sein erster Eintrag ist der **Kalender**. Dieser Abschnitt lässt sich nicht verschieben oder umbenennen — er wird automatisch geführt, so wie „Ohne Schlagwort" ganz unten.
+Der Abschnitt **Daily** steht in der Tag-Ansicht der Notizenleiste immer ganz oben, und direkt **über** ihm steht der **Kalender** — dadurch bleibt er auch erreichbar, wenn der Abschnitt zugeklappt ist. Dieser Abschnitt lässt sich nicht verschieben oder umbenennen — er wird automatisch geführt, so wie „Ohne Schlagwort" ganz unten.
 
 **Die Monatsansicht** öffnet ein eigenes Fenster: Pfeile für den Monat, „Heute" springt zurück in den laufenden, der heutige Tag ist mit einem Ring umrandet. Tage, für die eine Tagesnotiz **geöffnet** ist, sind farbig und tragen einen Punkt — ein Klick öffnet die Notiz. Ein Klick auf einen Tag ohne Notiz fragt, ob eine angelegt werden soll; sie heißt dann `jjjj-mm-tt.md` und bekommt das ausgeschriebene Datum als Überschrift.
 
@@ -123,6 +123,18 @@ Der Abschnitt **Daily** steht in der Tag-Ansicht der Notizenleiste immer ganz ob
 Erreichbar ist der Kalender über den Eintrag in der Notizenleiste **und** über das Burger-Menü — so auch dann, wenn die Tag-Ansicht gerade aus ist.
 
 Hat eine Notiz bereits drei Schlagwörter, wird „Daily" nicht vergeben: drei sind die Grenze, und ein selbst gesetztes Schlagwort soll dafür nicht verdrängt werden.
+
+### Backup einlesen (Wiederherstellen)
+
+Das Gegenstück zum Backup: **„Backup einlesen"** im Burger-Menü, direkt unter „Backup". Zwei Wege stehen zur Wahl — ein **ZIP-Archiv** (auch ein altes, aus einer früheren Fassung) oder ein **Ordner** mit Notizdateien, die gar nicht gepackt sind. Unterordner werden mitgelesen; die Notizen liegen danach flach nebeneinander.
+
+**Eingelesen wird dazu, nicht darüber.** Die Notizen kommen als zusätzliche dazu; ist eine Notiz gleichen Namens schon geöffnet, wird sie übersprungen. Nichts wird überschrieben und nichts geschlossen. Nach dem Einlesen steht im Fenster, wie viele Notizen gelesen und wie viele übersprungen wurden.
+
+Eingebettete Bilder und Tonaufnahmen kommen vollständig zurück und liegen danach wieder als Anhänge der Notiz vor, nicht als riesige Textzeile im Quelltext. Aus dem Ordner werden nur echte Notizdateien gelesen (`.md`, `.txt`, `.csv`, `.json`, `.html`, `.canvas`, `.pro` und die übrigen Liedblatt-Endungen) — Bilder, PDFs und versteckte Dateien wie `.DS_Store` bleiben liegen.
+
+**Neu gesicherte Archive enthalten zusätzlich eine kleine Begleitdatei** (`markdown-studio-backup.json`) mit Schlagwörtern, Design und Inhaltsbreite je Notiz. Beim Einlesen werden diese Angaben wiederhergestellt. Die Notizdateien selbst bleiben davon unberührt — das Archiv ist weiterhin ein gewöhnlicher Ordner voller Markdown-Dateien. Ältere Archive und selbst zusammengestellte Ordner lassen sich genauso einlesen, dann eben ohne diese Angaben; Tagesnotizen bekommen ihr „Daily" ohnehin über den Dateinamen zurück.
+
+Nicht im Archiv stehen geräteeigene Einstellungen wie die Zoomstufe. Und: eine eingelesene Notiz ist für die Synchronisierung ein **neues** Dokument — wer mit WebDAV arbeitet und ein vollständiges Backup einliest, schiebt damit neue Notizen hoch, nicht die alten wieder zurück.
 
 ### Sprünge zu Überschriften (`@`)
 
