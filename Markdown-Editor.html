@@ -17002,6 +17002,169 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       return el;
     }
 
+    // --- TASKFORCE: offene Aufgaben aus früheren Tagesnotizen holen ------------------------------
+    //
+    // Nur in einer Tagesnotiz. Gesammelt wird aus allen GEÖFFNETEN Tagesnotizen, die vor der
+    // aktuellen liegen; was dort als Checkbox offen steht, wird an der Schreibstelle als Liste
+    // eingefügt, jede Aufgabe mit einem Verweis auf ihre Herkunftsnotiz.
+    //
+    // KOPIERT, nicht verschoben: die alten Notizen bleiben das, was an jenem Tag dort stand, und
+    // ein Fehlgriff kostet nur einen Rückgängig-Schritt in der aktuellen Notiz. Ein Verschieben
+    // würde mit einem einzigen Befehl in mehreren anderen Notizen gleichzeitig schreiben, und
+    // Rückgängig gilt immer nur für eine Notiz.
+    //
+    // Weil kopiert wird, ist das Zusammenfassen gleichlautender Aufgaben nicht Feinschliff, sondern
+    // Voraussetzung: eine am Montag offene Aufgabe steht nach einem Durchlauf am Dienstag in BEIDEN
+    // Notizen, und am Mittwoch käme sie sonst doppelt an. Ebenso wird übersprungen, was in der
+    // aktuellen Notiz schon steht -- sonst verdoppelte ein zweiter Aufruf alles.
+
+    const TASKFORCE_AUFGABE_RE = /^([ \t]*)([-*+])[ \t]+\[([ xX])\][ \t]?(.*)$/;
+    // Der Herkunftsverweis, den ein früherer Durchlauf selbst angehängt hat. Er muss beim erneuten
+    // Einsammeln abgeschnitten werden -- sonst wüchse die Zeile mit jedem Tag um einen weiteren
+    // Verweis, und der Vergleich zweier Fassungen derselben Aufgabe schlüge fehl.
+    const TASKFORCE_HERKUNFT_RE = /\s*\(\[\[([^\[\]|]+?)\]\]\)\s*$/;
+
+    // Vergleichsform einer Aufgabe. Bewusst nur Kleinschreibung und zusammengezogener Leerraum:
+    // Auszeichnung mit abzuschneiden wäre verlockend, hieße aber, dass "**Milch**" und "Milch" als
+    // dieselbe Aufgabe gelten -- und wer eine Aufgabe fett setzt, meint damit in aller Regel etwas.
+    function taskforceSchluessel(text) {
+      return String(text || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    }
+
+    function taskforceTextOhneHerkunft(roh) {
+      const h = TASKFORCE_HERKUNFT_RE.exec(roh);
+      return { text: (h ? roh.slice(0, h.index) : roh).trim(), herkunft: h ? h[1].trim() : null };
+    }
+
+    // Checkbox-Zeilen einer Notiz als Vergleichsschlüssel. `nurErledigte` grenzt auf die
+    // abgehakten ein -- siehe taskforceSammeln() für den Grund.
+    function taskforceSchluesselAusText(text, nurErledigte) {
+      const raus = new Set();
+      let imCode = false;
+      String(text || '').split('\n').forEach(z => {
+        if (/^[ \t]*(```|~~~)/.test(z)) { imCode = !imCode; return; }
+        if (imCode) return;
+        const m = TASKFORCE_AUFGABE_RE.exec(z);
+        if (!m) return;
+        if (nurErledigte && m[3] === ' ') return;
+        const t = taskforceTextOhneHerkunft(m[4].trim()).text;
+        if (t) raus.add(taskforceSchluessel(t));
+      });
+      return raus;
+    }
+
+    // Die OFFENEN Aufgaben einer Notiz, jede mit ihren eingerückten Unterpunkten.
+    function taskforceOffeneAufgaben(text) {
+      const zeilen = String(text || '').split('\n');
+      const raus = [];
+      let imCode = false;
+      let bis = -1;
+      for (let i = 0; i < zeilen.length; i++) {
+        const z = zeilen[i];
+        if (/^[ \t]*(```|~~~)/.test(z)) { imCode = !imCode; continue; }
+        if (imCode || i <= bis) continue;
+        const m = TASKFORCE_AUFGABE_RE.exec(z);
+        if (!m || m[3] !== ' ') continue;          // keine Checkbox oder schon erledigt
+        const einzug = m[1].length;
+        // Eingerückte Folgezeilen gehören zur Aufgabe: Unterpunkte und Fortsetzungen. Eine
+        // Aufgabe mit Unterpunkten ist EINE Aufgabe -- deshalb wandern sie mit, und deshalb
+        // werden sie unten nicht noch einmal für sich gesammelt.
+        const unter = [];
+        let j = i + 1;
+        for (; j < zeilen.length; j++) {
+          const n = zeilen[j];
+          if (!n.trim()) break;
+          const nEinzug = n.length - n.replace(/^[ \t]*/, '').length;
+          if (nEinzug <= einzug) break;
+          unter.push(n.slice(einzug));             // auf Nullebene zurückrücken
+        }
+        bis = j - 1;
+        const { text: reiner, herkunft } = taskforceTextOhneHerkunft(m[4].trim());
+        if (!reiner) continue;                     // leere Checkbox: nichts zu übernehmen
+        const hd = herkunft ? dailyDatumAusName(herkunft) : null;
+        raus.push({
+          text: reiner,
+          unter: unter,
+          // Steht schon ein Verweis dran, ist DAS der Ursprung -- die Notiz, in der die Aufgabe
+          // gerade gefunden wurde, hat sie selbst nur übernommen.
+          urquelle: hd ? hd.schluessel : null,
+          schluessel: taskforceSchluessel(reiner),
+        });
+      }
+      return raus;
+    }
+
+    function taskforceMoeglich() {
+      const tab = getActiveTabReal();
+      return !!(tab && tab.fileType === 'markdown' && dailyDatumAusName(tab.name) && !editor.disabled);
+    }
+
+    function taskforceSammeln(aktuell) {
+      const heute = dailyDatumAusName(aktuell.name);
+      if (!heute) return [];
+      const fruehere = tabs
+        .map(t => ({ tab: t, d: dailyDatumAusName(t.name) }))
+        .filter(x => x.d && x.tab.fileType === 'markdown' && x.d.schluessel < heute.schluessel)
+        .sort((a, b) => (a.d.schluessel < b.d.schluessel ? -1 : 1));
+
+      const schonDa = taskforceSchluesselAusText(tabInhaltJetzt(aktuell), false);
+
+      // Eine Aufgabe, die an einem SPAETEREN Tag abgehakt wurde, ist erledigt -- auch wenn sie in
+      // ihrer Ursprungsnotiz noch offen dasteht. Ohne das käme sie jeden Tag aufs Neue zurück:
+      // genau der Preis des Kopierens, der beim ersten Durchlauf sofort auffiel (heute abgehakt,
+      // morgen wieder da). Geprüft wird je Quelldatum und nicht gegen eine globale Menge, denn
+      // eine am Montag erledigte und am Dienstag neu eröffnete Aufgabe ist wieder offen.
+      const erledigtAm = tabs
+        .map(t => ({ t: t, d: dailyDatumAusName(t.name) }))
+        .filter(x => x.d && x.t.fileType === 'markdown')
+        .map(x => ({ datum: x.d.schluessel, keys: taskforceSchluesselAusText(tabInhaltJetzt(x.t), true) }));
+      const spaeterErledigt = (schluessel, quelldatum) =>
+        erledigtAm.some(n => n.datum > quelldatum && n.keys.has(schluessel));
+
+      const gesehen = new Map();
+      fruehere.forEach(x => {
+        taskforceOffeneAufgaben(tabInhaltJetzt(x.tab)).forEach(a => {
+          if (schonDa.has(a.schluessel) || gesehen.has(a.schluessel)) return;
+          if (spaeterErledigt(a.schluessel, x.d.schluessel)) return;
+          // Die Liste ist aufsteigend sortiert, der erste Fund ist also der älteste -- und genau
+          // der ist der Ursprung, wenn kein Verweis etwas anderes sagt.
+          gesehen.set(a.schluessel, Object.assign({}, a, { quelle: a.urquelle || x.d.schluessel }));
+        });
+      });
+      return Array.from(gesehen.values());
+    }
+
+    function taskforceMarkdown(aufgaben) {
+      return aufgaben.map(a => {
+        const kopf = '- [ ] ' + a.text + ' ([[' + a.quelle + ']])';
+        return a.unter.length ? [kopf].concat(a.unter).join('\n') : kopf;
+      }).join('\n');
+    }
+
+    function taskforceEinfuegen() {
+      const tab = getActiveTabReal();
+      if (!taskforceMoeglich()) { showToast('Taskforce gibt es nur in einer Tagesnotiz.'); return; }
+      const aufgaben = taskforceSammeln(tab);
+      if (!aufgaben.length) { showToast('Keine offenen Aufgaben aus früheren Tagesnotizen.'); return; }
+      const block = taskforceMarkdown(aufgaben);
+      // Ersetzt den Bereich, den das Slash- bzw. Anfasser-Menü hinterlassen hat -- bei einer leeren
+      // Zeile ist das deren eigener (möglicherweise nur aus dem Nullbreiten-Platzhalter
+      // bestehender) Bereich.
+      const start = Math.min(editor.selectionStart, editor.selectionEnd);
+      const ende = Math.max(editor.selectionStart, editor.selectionEnd);
+      editor.value = editor.value.slice(0, start) + block + editor.value.slice(ende);
+      recordHistory();
+      finishPreviewStructuralEdit(start + block.length);
+      showToast(aufgaben.length === 1 ? 'Eine offene Aufgabe übernommen.'
+                                      : aufgaben.length + ' offene Aufgaben übernommen.');
+    }
+
+    const TASKFORCE_SVG = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+      '<rect x="3" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/>' +
+      '<path d="M5 7.5l1.4 1.4L8.5 6.3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M13 7.5h8M13 13h8M13 18h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
+      '<path d="M4 15l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
     const TAG_FARBEN_ANZAHL = 8;
 
     function tagFarbe(schluessel) {
@@ -31460,6 +31623,14 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // openClipartModal()/toggleAudioRecording()/triggerPdfFileInsert(), the last one a thin new
     // wrapper around the file-picker <input> that already funnels PDFs into handlePdfFile() -- see
     // its own comment) -- no entry gets a second, parallel implementation.
+    // Ein Eintrag mit 'verfuegbar' erscheint nur, wenn die Funktion true liefert -- bisher brauchte
+    // das keiner, Taskforce gilt aber ausschliesslich in einer Tagesnotiz. Ihn ueberall zu zeigen
+    // und erst beim Klick abzulehnen waere die schlechtere Wahl: ein Menuepunkt, der meistens nur
+    // eine Absage ausspuckt, ist kein Menuepunkt.
+    function slashMenuEintraege() {
+      return SLASH_MENU_ITEMS.filter(it => !it.verfuegbar || it.verfuegbar());
+    }
+
     const SLASH_MENU_ITEMS = [
       // Bug fix: reported directly — "Zeile darunter einfügen" (deferred creation, see
       // openBlockFormatMenu()/deferredCreateBlockAdjacent()'s own comments) opens THIS menu to let
@@ -31480,6 +31651,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       { id: 'italic', label: 'Kursiv', keywords: 'kursiv italic i', icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><path d="M8 19H10M10 19H12M10 19L14 5M12 5H14M14 5H16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg>', run: () => applyPreviewFormat('italic') },
       { id: 'strike', label: 'Durchgestrichen', keywords: 'durchgestrichen strike strikethrough', icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="Edit / Strikethrough"><path id="Vector" d="M12.0005 12.0001C12.8959 12.0001 13.7749 12.1925 14.5457 12.5571C14.8939 12.7218 15.2146 12.9192 15.5009 13.1437C15.8484 13.4162 16.1457 13.729 16.3822 14.0732C16.8136 14.7009 17.0263 15.4096 16.9982 16.1256C16.97 16.8416 16.702 17.5385 16.2222 18.1433C15.7424 18.7481 15.0684 19.2386 14.2705 19.5638C13.4727 19.889 12.5802 20.0373 11.6865 19.9923C10.7928 19.9473 9.93104 19.7108 9.19043 19.3082C8.44982 18.9055 7.85782 18.3514 7.47656 17.7032M12.0005 12.0001H4M12.0005 12.0001H20M16.5243 6.29718C16.143 5.649 15.5512 5.09462 14.8105 4.69197C14.0699 4.28932 13.2076 4.05287 12.314 4.00789C11.4203 3.96291 10.5278 4.11091 9.72998 4.43613C8.93213 4.76135 8.25812 5.25205 7.77832 5.85689C7.29852 6.46173 7.03057 7.15885 7.00244 7.87485C6.9942 8.08463 7.00669 8.29345 7.03924 8.50014" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg>', run: () => applyPreviewFormat('strike') },
       { id: 'code', label: 'Code', keywords: 'code inline monospace', icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9 8L5 11.6923L9 16M15 8L19 11.6923L15 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>', run: () => applyPreviewFormat('code') },
+      { id: 'taskforce', label: 'Taskforce: offene Aufgaben holen', keywords: 'taskforce aufgaben tasks offen uebertragen übertragen daily tagesnotiz checkbox', icon: TASKFORCE_SVG, verfuegbar: () => taskforceMoeglich(), run: () => taskforceEinfuegen() },
       { id: 'wikilink', label: 'Verweis auf Notiz', keywords: 'verweis wikilink notiz link querverweis [[', icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 5v14M8 5v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20 5v14M16 5v14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M11 15l2-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>', run: () => wikilinkEinfuegen() },
       { id: 'ul', label: 'Aufzählung', keywords: 'liste bullet ul aufzählung', icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><path d="M9 17H19M9 12H19M9 7H19M5.00195 17V17.002L5 17.002V17H5.00195ZM5.00195 12V12.002L5 12.002V12H5.00195ZM5.00195 7V7.002L5 7.00195V7H5.00195Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg>', run: () => applyPreviewFormat('ul') },
       { id: 'ol', label: 'Nummerierte Liste', keywords: 'liste ol nummeriert', icon: '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g><path d="M10 17H20M4 15.6853V15.5C4 14.6716 4.67157 14 5.5 14H5.54054C6.34658 14 7.00021 14.6534 7.00021 15.4595C7.00021 15.8103 6.8862 16.1519 6.67568 16.4326L4 20.0002L7 20M10 12H20M10 7H20M4 5L6 4V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g></svg>', run: () => applyPreviewFormat('ol') },
@@ -31583,7 +31755,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // implementations (block-level vs. list-item-level insertion needs different splicing).
     function openSlashMenu(anchorRect, srcStart, srcEnd, deferredCreate) {
       if (!deferredCreate && (!Number.isFinite(srcStart) || !Number.isFinite(srcEnd))) return;
-      slashMenuState = { srcStart, srcEnd, filter: '', selectedIndex: 0, filtered: SLASH_MENU_ITEMS, deferredCreate: deferredCreate || null };
+      slashMenuState = { srcStart, srcEnd, filter: '', selectedIndex: 0, filtered: slashMenuEintraege(), deferredCreate: deferredCreate || null };
       const rect = anchorRect;
       const menu = document.getElementById('slashMenu');
       menu.classList.add('active');
@@ -31617,8 +31789,8 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (!slashMenuState) return;
       const needle = slashMenuState.filter.trim().toLowerCase();
       const filtered = needle
-        ? SLASH_MENU_ITEMS.filter(it => (it.label + ' ' + it.keywords).toLowerCase().includes(needle))
-        : SLASH_MENU_ITEMS;
+        ? slashMenuEintraege().filter(it => (it.label + ' ' + it.keywords).toLowerCase().includes(needle))
+        : slashMenuEintraege();
       slashMenuState.filtered = filtered;
       if (slashMenuState.selectedIndex >= filtered.length) slashMenuState.selectedIndex = Math.max(0, filtered.length - 1);
       const menu = document.getElementById('slashMenu');
@@ -33278,6 +33450,17 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       // BLOCK_TURN_INTO_TYPES because it is not a "turn into" type at all: it never converts
       // anything, it swaps this menu's contents for the action menu. `divider` gives it a
       // separating rule so it doesn't read as one more format option.
+      // Nur in einer Tagesnotiz, siehe taskforceMoeglich(). Steht vor "Weitere Aktionen" und
+      // bekommt wie dieses einen Trennstrich: es ist keine "Umwandeln in"-Art, sondern fuegt etwas
+      // ein.
+      if (taskforceMoeglich()) {
+        blockHandleMenuActions.push({
+          label: 'Taskforce: offene Aufgaben holen',
+          divider: true,
+          icon: TASKFORCE_SVG,
+          run: () => { restoreSlashMenuSelection(target.srcStart, target.srcEnd); taskforceEinfuegen(); },
+        });
+      }
       blockHandleMenuActions.push({
         label: 'Weitere Aktionen …',
         divider: true,

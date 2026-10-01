@@ -124,6 +124,22 @@ Erreichbar ist der Kalender über den Eintrag in der Notizenleiste **und** über
 
 Hat eine Notiz bereits drei Schlagwörter, wird „Daily" nicht vergeben: drei sind die Grenze, und ein selbst gesetztes Schlagwort soll dafür nicht verdrängt werden.
 
+### Taskforce: offene Aufgaben mitnehmen
+
+In einer **Tagesnotiz** holt *Taskforce* alles herein, was in früheren Tagesnotizen noch offen ist. Gedacht für den Morgen: Notiz des Tages aufmachen, Taskforce, und alles Liegengebliebene steht als Checkbox-Liste da.
+
+**Auslösen:** in einer leeren Zeile `/` tippen und „Taskforce" wählen — oder über den Anfasser links neben einem Absatz, dort steht derselbe Eintrag. Außerhalb einer Tagesnotiz wird er gar nicht erst angeboten.
+
+**Was gesammelt wird:** jede Checkbox in einer geöffneten Tagesnotiz mit **früherem** Datum, die nicht abgehakt ist. Unterpunkte kommen mit, denn eine Aufgabe mit Unterpunkten ist eine Aufgabe. Hinter jeder Zeile steht ein Verweis auf die Notiz, aus der sie stammt — ein Klick führt dorthin, und man sieht, wie lange etwas schon liegt.
+
+**Die alten Notizen werden nicht verändert.** Sie bleiben das, was an jenem Tag dort stand. Damit daraus kein Wildwuchs wird, gilt:
+
+- Gleichlautende Aufgaben erscheinen nur **einmal**, mit dem ältesten Datum als Herkunft.
+- Was in der heutigen Notiz schon steht — abgehakt oder nicht —, kommt nicht noch einmal dazu. Ein zweiter Aufruf verdoppelt also nichts.
+- **Hakst du eine Aufgabe heute ab, ist sie weg** — auch morgen. Sie steht in der alten Notiz zwar weiter offen, gilt aber als erledigt, weil ein späterer Tag das so sagt. Schreibst du sie später wieder als offene Checkbox hin, kommt sie wieder mit.
+
+Gibt es nichts zu holen, sagt das eine kurze Meldung und in der Notiz ändert sich nichts. Gesammelt wird nur aus **geöffneten** Notizen — wie beim Kalender und bei den Notizverweisen auch.
+
 ### Backup einlesen (Wiederherstellen)
 
 Das Gegenstück zum Backup: **„Backup einlesen"** im Burger-Menü, direkt unter „Backup". Zwei Wege stehen zur Wahl — ein **ZIP-Archiv** (auch ein altes, aus einer früheren Fassung) oder ein **Ordner** mit Notizdateien, die gar nicht gepackt sind. Unterordner werden mitgelesen; die Notizen liegen danach flach nebeneinander.
