@@ -132,6 +132,8 @@ Ein Klick auf einen Link in der Vorschau öffnet sein Menü; dort steht jetzt **
 
 **Bearbeiten:** mit der Maus auf die Karte zeigen (auf Telefon und Tablet dauerhaft sichtbar) und **„Bearbeiten"** anklicken. Dort lassen sich Adresse, Titel und Kurzbeschreibung eintragen und ein Bild setzen — entweder als Adresse eines Bildes im Netz oder über **„Bild wählen …"** aus einer Datei. Ein so gewähltes Bild wird zum Anhang der Notiz: es reist mit, funktioniert offline und geht nicht verloren, wenn die fremde Seite es austauscht. **„Seite erneut lesen"** versucht den automatischen Abruf noch einmal, etwa wenn beim ersten Mal kein Internet da war.
 
+**Entfernen** geht auf zwei Wegen: über den Anfasser links neben der Karte — sein Menü hat „Löschen", dazu Verschieben, Duplizieren und „Karte bearbeiten" — oder über **„Karte entfernen"** im Bearbeiten-Fenster. Beide fragen vorher bzw. lassen sich mit einem Rückgängig-Schritt zurücknehmen.
+
 **Im Quelltext** steht die Karte als eingezäunter Block mit der Kennzeichnung `karte`. Das ist Absicht: ein anderes Programm zeigt davon einen gewöhnlichen Code-Block statt kaputtes Markup, und die Angaben lassen sich zur Not auch dort von Hand ändern.
 
 **Beim Exportieren und Drucken** bleibt die Karte erhalten; dort ist der Titel der anklickbare Link. Steht der eingebettete Link allein in seinem Absatz, ersetzt die Karte ihn; steht er mitten in einem Satz, bleibt der Satz stehen und die Karte kommt darunter.

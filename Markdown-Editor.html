@@ -2961,6 +2961,11 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     .karte-edit-btn:hover { background: var(--bg-hover); }
 
+    /* Eigene Farbe wie .drawing-status: Rot ist hier eine Bedeutung, keine Flächenrolle -- der
+       Dunkelmodus-Wert steht unten im Ausnahmeblock. */
+    .karte-edit-btn.gefahr { color: #d1242f; }
+    .karte-edit-btn.gefahr:hover { background: color-mix(in srgb, #d1242f 10%, transparent); }
+
     .karte-edit-btn.primaer { background: var(--accent); border-color: var(--accent); color: #fff; }
     .karte-edit-btn.primaer:hover { background: var(--accent-hover); }
 
@@ -10391,6 +10396,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
     :root.app-dark .tab .tab-local-save-warning { color: #e8a33d; }
     :root.app-dark .drawing-status { color: #ff7b72; }
     :root.app-dark .restore-bericht.fehler { color: #ff7b72; }
+    :root.app-dark .karte-edit-btn.gefahr { color: #ff7b72; }
 
     :root.app-dark #webdavSyncBtn.connected {
       background-color: #16311f;
@@ -11893,6 +11899,7 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       </div>
       <div class="karte-edit-fuss">
         <button type="button" class="karte-edit-btn" onclick="karteEditErneutLesen()">Seite erneut lesen</button>
+        <button type="button" class="karte-edit-btn gefahr" onclick="karteEditEntfernen()">Karte entfernen</button>
         <span class="karte-edit-raum"></span>
         <button type="button" class="karte-edit-btn" onclick="karteEditSchliessen()">Abbrechen</button>
         <button type="button" class="karte-edit-btn primaer" onclick="karteEditSpeichern()">Übernehmen</button>
@@ -17637,6 +17644,27 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       recordHistory();
       finishPreviewStructuralEdit(b.start + karte.length);
       showToast('Karte geändert.');
+    }
+
+    // Entfernt die Karte samt ihrer eigenen Leerzeile. Über den Quelltextbereich und nicht über
+    // deleteBlock(index): hier ist die Karte bereits über ihren Block im Quelltext bestimmt, ein
+    // zweites Mal über den DOM-Index zu gehen wäre eine Zuordnung mehr, die auseinanderlaufen kann.
+    function karteEditEntfernen() {
+      if (karteEditIndex === null) return;
+      const b = linkKarteBloecke(editor.value)[karteEditIndex];
+      if (!b) { showToast('Diese Karte lässt sich im Quelltext nicht mehr zuordnen.'); karteEditSchliessen(); return; }
+      if (!confirm('Diese Karte aus der Notiz entfernen?')) return;
+      karteEditSchliessen();
+      // Mit entfernt werden die Zeilenumbrüche DAHINTER, nicht die davor: der Abstand vor der Karte
+      // ist derselbe, der danach den vorigen vom nächsten Absatz trennt. Andersherum (oder nur
+      // einen Umbruch) blieb an der Nahtstelle eine Leerzeile zu viel stehen -- nachgemessen
+      // "Davor.\n\n\nDanach." statt "Davor.\n\nDanach.".
+      let ende = b.ende;
+      while (editor.value[ende] === '\n') ende++;
+      editor.value = editor.value.slice(0, b.start) + editor.value.slice(ende);
+      recordHistory();
+      finishPreviewStructuralEdit(Math.min(b.start, editor.value.length));
+      showToast('Karte entfernt.');
     }
 
     // Noch einmal versuchen, die Seite zu lesen -- etwa, wenn beim ersten Mal kein Netz da war.
@@ -33891,6 +33919,27 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     }
 
     function openBlockFormatMenu(kind, blockIndex, itemIndex) {
+      // Eine Link-Karte lässt sich nicht "umwandeln in" -- und computeBlockFormatTarget() kann sie
+      // gar nicht auflösen, weil sie bewusst keine data-src-start trägt (sie ist kein Textblock,
+      // siehe linkKarteIstKarte). Gemeldet als fehlender Weg zum Entfernen, und nachgemessen war
+      // es schlimmer: der Anfasser erschien, sein Menü blieb aber leer. Sie bekommt deshalb das
+      // ohnehin vorhandene AKTIONSmenü (einfügen/verschieben/duplizieren/löschen), davor den
+      // Weg zum Bearbeiten.
+      const kartenEl = kind !== 'item' ? preview.children[blockIndex] : null;
+      if (kartenEl && kartenEl.classList && kartenEl.classList.contains('link-karte')) {
+        openBlockHandleMenu(blockIndex);
+        const kartenMenu = document.getElementById('blockHandleMenu');
+        blockHandleMenuActions.unshift({
+          label: 'Karte bearbeiten',
+          run: () => karteEditOeffnen(Number(kartenEl.dataset.karteIndex)),
+        });
+        blockHandleMenuSelectedIndex = 0;
+        renderBlockHandleMenuButtons(kartenMenu);
+        // Nach dem Einhängen ist das Menü eine Zeile höher -- sonst stünde es um diese Zeile falsch.
+        placeBlockHandleMenu(kartenMenu, document.getElementById('blockHandle').getBoundingClientRect(), mainContainer.getBoundingClientRect());
+        return;
+      }
+
       const target = computeBlockFormatTarget(kind, blockIndex, itemIndex);
       if (!target) return;
       const menu = document.getElementById('blockHandleMenu');
@@ -39318,7 +39367,12 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       heading: new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']),
       list: new Set(['UL', 'OL']),
       blockquote: new Set(['BLOCKQUOTE']),
-      code: new Set(['PRE']),
+      // Eine Link-Karte ist ein code-Token, rendert aber als <div class="link-karte"> -- siehe
+      // linkKarteIstKarte(). Ohne das DIV hier bricht die Schleife unten beim ersten Kartenblock
+      // ab, und ab dort bekommt KEIN Block mehr seine data-block-start -- der Block-Anfasser ist
+      // damit für den gesamten Rest der Notiz weg, nicht nur an der Karte. Genau so gemeldet und
+      // nachgemessen: H1 und erster Absatz gestempelt, Karte und alles danach nicht.
+      code: new Set(['PRE', 'DIV']),
       table: new Set(['TABLE']),
       hr: new Set(['HR']),
     };
