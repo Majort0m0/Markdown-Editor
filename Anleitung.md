@@ -124,6 +124,18 @@ Erreichbar ist der Kalender über den Eintrag in der Notizenleiste **und** über
 
 Hat eine Notiz bereits drei Schlagwörter, wird „Daily" nicht vergeben: drei sind die Grenze, und ein selbst gesetztes Schlagwort soll dafür nicht verdrängt werden.
 
+### Links als Karte einbetten
+
+Ein Klick auf einen Link in der Vorschau öffnet sein Menü; dort steht jetzt **„Als Karte einbetten"**. Aus dem Link wird dann eine Karte mit Titel, Kurzbeschreibung, Vorschaubild und Domain — eine Zeile hoch, wie man es aus Notion kennt. Ein Klick auf die Karte öffnet die Seite.
+
+**Was dabei automatisch kommt, hängt von der Seite ab.** Die App versucht, Titel, Beschreibung und Vorschaubild selbst zu lesen. Das erlauben aber die wenigsten Seiten: von fünf nachgemessenen ließ sich genau eine lesen (tagesschau.de; Wikipedia, GitHub, MDN und ARASAAC nicht). Klappt es nicht, entsteht die Karte trotzdem — mit dem Linktext als Titel, der Domain und ihrem Favicon. Eine Meldung sagt, dass der Rest von Hand zu ergänzen ist. Das ist keine Fehlfunktion, sondern eine Grenze des Browsers: Webseiten erlauben fremden Seiten üblicherweise nicht, sie auszulesen.
+
+**Bearbeiten:** mit der Maus auf die Karte zeigen (auf Telefon und Tablet dauerhaft sichtbar) und **„Bearbeiten"** anklicken. Dort lassen sich Adresse, Titel und Kurzbeschreibung eintragen und ein Bild setzen — entweder als Adresse eines Bildes im Netz oder über **„Bild wählen …"** aus einer Datei. Ein so gewähltes Bild wird zum Anhang der Notiz: es reist mit, funktioniert offline und geht nicht verloren, wenn die fremde Seite es austauscht. **„Seite erneut lesen"** versucht den automatischen Abruf noch einmal, etwa wenn beim ersten Mal kein Internet da war.
+
+**Im Quelltext** steht die Karte als eingezäunter Block mit der Kennzeichnung `karte`. Das ist Absicht: ein anderes Programm zeigt davon einen gewöhnlichen Code-Block statt kaputtes Markup, und die Angaben lassen sich zur Not auch dort von Hand ändern.
+
+**Beim Exportieren und Drucken** bleibt die Karte erhalten; dort ist der Titel der anklickbare Link. Steht der eingebettete Link allein in seinem Absatz, ersetzt die Karte ihn; steht er mitten in einem Satz, bleibt der Satz stehen und die Karte kommt darunter.
+
 ### Taskforce: offene Aufgaben mitnehmen
 
 In einer **Tagesnotiz** holt *Taskforce* alles herein, was in früheren Tagesnotizen noch offen ist. Gedacht für den Morgen: Notiz des Tages aufmachen, Taskforce, und alles Liegengebliebene steht als Checkbox-Liste da.

@@ -2806,6 +2806,164 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
       margin-top: 1px;
     }
 
+    /* --- Link-Karte ----------------------------------------------------------------------------
+       Schmale Zeile statt großer Kachel: so stört sie den Lesefluss kaum, auch wenn mehrere Links
+       untereinander stehen, und sieht ohne Bild immer noch vollständig aus. Nur --preview-*-
+       Variablen, damit sie in jedem Notizdesign und in beiden Exporten richtig sitzt (Chrome-
+       Variablen würden hier durchschlagen, siehe den Dunkelmodus-Abschnitt). */
+    .markdown-body .link-karte {
+      display: flex;
+      align-items: stretch;
+      gap: 12px;
+      position: relative;
+      margin: 1em 0;
+      padding: 12px 14px;
+      border: 1px solid var(--preview-border);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--preview-link) 4%, transparent);
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .markdown-body .link-karte:hover { border-color: var(--preview-link); }
+
+    .markdown-body .link-karte-text { flex: 1; min-width: 0; }
+
+    .markdown-body .link-karte-titel {
+      font-weight: 600;
+      color: var(--preview-text);
+      text-decoration: none;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Zwei Zeilen und dann Schluss -- eine Kurzbeschreibung aus dem Netz ist oft ein ganzer Absatz,
+       und die Karte soll eine Zeile hoch bleiben. */
+    .markdown-body .link-karte-beschreibung {
+      margin-top: 2px;
+      font-size: 0.85em;
+      color: var(--preview-text);
+      opacity: 0.75;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .markdown-body .link-karte-domain {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 6px;
+      font-size: 0.78em;
+      color: var(--preview-link);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .markdown-body .link-karte-favicon { width: 14px; height: 14px; flex-shrink: 0; border-radius: 3px; }
+
+    .markdown-body .link-karte-bild {
+      flex: 0 0 auto;
+      width: 120px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: var(--preview-code-bg);
+    }
+
+    .markdown-body .link-karte-bild img {
+      width: 100%;
+      height: 100%;
+      min-height: 64px;
+      object-fit: cover;
+      display: block;
+      margin: 0;
+    }
+
+    .markdown-body .link-karte-bearbeiten {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      opacity: 0;
+      border: 1px solid var(--preview-border);
+      background: var(--bg-surface);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.72rem;
+      cursor: pointer;
+    }
+
+    .markdown-body .link-karte:hover .link-karte-bearbeiten { opacity: 1; }
+    /* Ohne Mauszeiger gibt es kein Zeigen -- dort dauerhaft sichtbar, wie beim Etikett-Knopf der
+       Notizenleiste und den Knöpfen über einem Bild. */
+    @media (hover: none) { .markdown-body .link-karte-bearbeiten { opacity: 1; } }
+
+    /* Auf dem Telefon klappt das Bild unter den Text, sonst bliebe für beides zu wenig Breite. */
+    @media (max-width: 640px) {
+      .markdown-body .link-karte { flex-direction: column-reverse; }
+      .markdown-body .link-karte-bild { width: 100%; max-height: 140px; }
+    }
+
+    .modal-card.karte-edit-karte { max-width: min(520px, 94vw); width: 100%; }
+
+    .karte-edit-feld { margin-bottom: 12px; }
+
+    .karte-edit-feld label {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .karte-edit-feld input,
+    .karte-edit-feld textarea {
+      width: 100%;
+      box-sizing: border-box;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      background: var(--bg-surface);
+      color: var(--text-main);
+      padding: 6px 8px;
+      font-size: 0.85rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .karte-edit-bildzeile { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+
+    .karte-edit-bildvorschau { margin-left: auto; }
+
+    .karte-edit-bildvorschau img {
+      width: 96px;
+      height: 54px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      display: block;
+    }
+
+    .karte-edit-fuss { display: flex; align-items: center; gap: 8px; margin-top: 16px; }
+
+    .karte-edit-raum { flex: 1; }
+
+    .karte-edit-btn {
+      border: 1px solid var(--border-color);
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .karte-edit-btn:hover { background: var(--bg-hover); }
+
+    .karte-edit-btn.primaer { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .karte-edit-btn.primaer:hover { background: var(--accent-hover); }
+
     .modal-card.restore-karte { max-width: min(460px, 94vw); width: 100%; }
 
     .restore-hinweis {
@@ -11703,6 +11861,45 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
   </div>
 
   <!-- Template Picker (opens when creating a new document) -->
+  <!-- Link-Karte bearbeiten. Nötig, weil die meisten Seiten ihre Angaben nicht herausgeben
+       (gemessen: eine von fünf) -- ohne diesen Weg bliebe die Karte dort eine leere Hülle. -->
+  <div class="modal-overlay" id="karteEditModal" onclick="if (event.target === this) karteEditSchliessen()">
+    <div class="modal-card karte-edit-karte">
+      <div class="modal-header">
+        <h2>Karte bearbeiten</h2>
+        <button class="icon-btn" onclick="karteEditSchliessen()" title="Schließen">✕</button>
+      </div>
+      <div class="karte-edit-feld">
+        <label for="karteEditUrl">Adresse</label>
+        <input type="text" id="karteEditUrl" spellcheck="false">
+      </div>
+      <div class="karte-edit-feld">
+        <label for="karteEditTitel">Titel</label>
+        <input type="text" id="karteEditTitel">
+      </div>
+      <div class="karte-edit-feld">
+        <label for="karteEditText">Kurzbeschreibung</label>
+        <textarea id="karteEditText" rows="3"></textarea>
+      </div>
+      <div class="karte-edit-feld">
+        <label for="karteEditBild">Bild</label>
+        <input type="text" id="karteEditBild" spellcheck="false" placeholder="Adresse eines Bildes – oder unten eines wählen"
+               oninput="karteEditVorschau()">
+        <div class="karte-edit-bildzeile">
+          <button type="button" class="karte-edit-btn" onclick="karteEditBildWaehlen()">Bild wählen …</button>
+          <button type="button" class="karte-edit-btn" onclick="document.getElementById('karteEditBild').value=''; karteEditVorschau()">Bild entfernen</button>
+          <div class="karte-edit-bildvorschau" id="karteEditBildVorschau"></div>
+        </div>
+      </div>
+      <div class="karte-edit-fuss">
+        <button type="button" class="karte-edit-btn" onclick="karteEditErneutLesen()">Seite erneut lesen</button>
+        <span class="karte-edit-raum"></span>
+        <button type="button" class="karte-edit-btn" onclick="karteEditSchliessen()">Abbrechen</button>
+        <button type="button" class="karte-edit-btn primaer" onclick="karteEditSpeichern()">Übernehmen</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Wiederherstellen. Zwei Wege in einem Fenster statt zweier Menueeintraege: so steht der
        Hinweis, was mit gleichnamigen Notizen geschieht, VOR der Dateiauswahl und nicht erst im
        Nachhinein als Meldung. Die beiden <label for> loesen versteckte Eingabefelder aus -- dieselbe
@@ -12330,6 +12527,10 @@ PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImVuIj4KICA8aGVhZD4KICAgIDxtZXRhIGNoYXJzZXQ9
 
     const hljsRenderer = new marked.Renderer();
     hljsRenderer.code = function({ text, lang }) {
+      // Eine Link-Karte steht als eingezäunter Block mit dieser Sprache da -- siehe linkKarteHtml().
+      // Trägt er kein brauchbares JSON, fällt er hier durch und rendert als gewöhnlicher
+      // Code-Block weiter: lieber sichtbar das, was dasteht, als eine kaputte Karte.
+      if (linkKarteIstKarte(lang, text)) return linkKarteHtml(text);
       const language = lang && hljs.getLanguage(lang) ? lang : null;
       const highlighted = language ? hljs.highlight(text, { language }).value : hljs.highlightAuto(text).value;
       const langClass = language ? ' language-' + language : '';
@@ -17165,6 +17366,293 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       '<path d="M13 7.5h8M13 13h8M13 18h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
       '<path d="M4 15l3 3-3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+    // --- LINK-KARTEN (Embedding) ----------------------------------------------------------------
+    //
+    // Ein Link lässt sich über sein Menü in eine Karte verwandeln: Titel, Kurzbeschreibung,
+    // Vorschaubild und Domain, als schmale Zeile.
+    //
+    // DIE AUTOMATIK KANN NUR MANCHMAL GREIFEN, und das ist keine Nachlässigkeit, sondern gemessen:
+    // um Titel und Bild zu finden, muss die Seite gelesen werden, und das verbietet CORS fast
+    // überall. Von fünf echten Seiten aus dieser App heraus ließ sich genau eine lesen
+    // (tagesschau.de ja; Wikipedia, GitHub, MDN, ARASAAC nein). Ein <img> von fremder Domain lädt
+    // dagegen ohne weiteres -- ein Bild ANZEIGEN geht also, es FINDEN ist das Problem. Deshalb:
+    // Versuch, und was nicht kommt, wird von Hand eingetragen. Ein fremder Metadaten-Dienst wäre
+    // die Alternative, hieße aber, jede eingebettete Adresse an ein fremdes Unternehmen zu schicken
+    // und erstmals von einem Dienst abzuhängen -- gegen die Hausregel dieser Datei.
+    //
+    // Die Karte steht als eingezäunter Block mit der Sprache 'karte' im Quelltext, darin JSON. Drei
+    // Gründe: ein anderes Programm zeigt ihn als gewöhnlichen Code-Block statt als kaputtes Markup;
+    // Turndown und die Zeichenkarte der Vorschau behandeln Code-Blöcke längst richtig, es musste
+    // also nichts an der Positionszuordnung angefasst werden; und der Inhalt lässt sich zur Not von
+    // Hand lesen und ändern.
+    const LINK_KARTE_SPRACHE = 'karte';
+    let linkKarteZaehler = 0;
+
+    function linkKarteDomain(url) {
+      try { return new URL(url).hostname.replace(/^www\./, ''); } catch (err) { return ''; }
+    }
+
+    // Backticks würden den Zaun von innen schließen. JSON maskiert sie nicht, also hier.
+    function linkKarteSicher(text) {
+      return String(text == null ? '' : text).replace(/`/g, '‘').replace(/\s+/g, ' ').trim();
+    }
+
+    function linkKarteBlockText(daten) {
+      const rein = {
+        url: String(daten.url || ''),
+        titel: linkKarteSicher(daten.titel),
+        text: linkKarteSicher(daten.text),
+        bild: String(daten.bild || ''),
+      };
+      return '```' + LINK_KARTE_SPRACHE + '\n' + JSON.stringify(rein, null, 2) + '\n```';
+    }
+
+    // Die eingezäunten Karten-Blöcke im Quelltext, in Reihenfolge. Zeilenweise und nicht über einen
+    // mehrzeiligen Ausdruck: ein Zaun ist eine Zeilenangelegenheit, und der Beschreibungstext darf
+    // alles Mögliche enthalten.
+    function linkKarteBloecke(text) {
+      const zeilen = String(text || '').split('\n');
+      const raus = [];
+      let start = -1, inhaltStart = 0, pos = 0;
+      for (let i = 0; i < zeilen.length; i++) {
+        const z = zeilen[i];
+        const roh = z.trim();
+        if (start === -1) {
+          if (roh === '```' + LINK_KARTE_SPRACHE) { start = pos; inhaltStart = pos + z.length + 1; }
+        } else if (roh === '```') {
+          raus.push({ start: start, ende: pos + z.length, inhalt: text.slice(inhaltStart, Math.max(inhaltStart, pos - 1)) });
+          start = -1;
+        }
+        pos += z.length + 1;
+      }
+      return raus;
+    }
+
+    // DIE eine Bedingung, an der sowohl der Renderer als auch die Zeichenkarte hängen. Sie müssen
+    // zwingend dasselbe sagen: rendert der Block als Karte, darf die Zeichenkarte keinen Eintrag
+    // dafür haben (es gibt dann kein <pre> im DOM), und umgekehrt. Genau das war der erste Fehler
+    // hier -- gemessen 3 Blöcke gegen 4 Karteneinträge, previewStructureDesynced true und
+    // selfTestPositionMapping bei 87 Beanstandungen.
+    function linkKarteIstKarte(lang, text) {
+      return lang === LINK_KARTE_SPRACHE && linkKarteDaten(text) !== null;
+    }
+
+    function linkKarteDaten(text) {
+      try {
+        const d = JSON.parse(String(text || ''));
+        return (d && typeof d === 'object' && d.url) ? d : null;
+      } catch (err) { return null; }
+    }
+
+    // Wird aus hljsRenderer.code() gerufen. Gibt null zurück, wenn der Block kein gültiges JSON
+    // trägt -- dann rendert er als gewöhnlicher Code-Block weiter, statt als kaputte Karte.
+    function linkKarteHtml(inhalt) {
+      const d = linkKarteDaten(inhalt);
+      if (!d) return null;
+      const index = linkKarteZaehler++;
+      const domain = d.domain || linkKarteDomain(d.url);
+      const titel = d.titel || domain || d.url;
+      // asset:-Verweise auflösen wie überall sonst -- ein von Hand gewähltes Bild liegt als Anhang
+      // der Notiz vor und reist damit mit, ein automatisch gefundenes bleibt eine fremde Adresse.
+      let bild = d.bild || '';
+      if (bild.indexOf('asset:') === 0) {
+        const tab = nebenspalteRenderTab || getCurrentTab();
+        bild = (tab && tab.assets && tab.assets[bild.slice('asset:'.length)]) || '';
+      }
+      const teile = [];
+      teile.push('<div class="link-karte" data-karte-index="' + index + '" data-karte-url="' + escapeHtmlAttrText(d.url) + '">');
+      teile.push('<div class="link-karte-text">');
+      teile.push('<div class="link-karte-titel">' + escapeHtmlText(titel) + '</div>');
+      if (d.text) teile.push('<div class="link-karte-beschreibung">' + escapeHtmlText(d.text) + '</div>');
+      // Das Favicon kommt ohne CORS aus (gemessen) und ist das einzige Bild, das sich ohne Lesen
+      // der Seite sicher ableiten lässt. Schlägt es fehl, verschwindet es lautlos -- eine
+      // kaputte Bildikone neben der Domain wäre schlechter als gar keine.
+      const fav = domain ? '<img class="link-karte-favicon" src="https://' + escapeHtmlAttrText(domain) +
+                           '/favicon.ico" alt="" onerror="this.style.display=\'none\'">' : '';
+      teile.push('<div class="link-karte-domain">' + fav + escapeHtmlText(domain || d.url) + '</div>');
+      teile.push('</div>');
+      if (bild) teile.push('<div class="link-karte-bild"><img src="' + escapeHtmlAttrText(bild) + '" alt="" onerror="this.parentNode.style.display=\'none\'"></div>');
+      // In Ausgaben ohne App gibt es nichts zu bearbeiten -- und keinen Klickempfänger, der die
+      // Adresse öffnen könnte. Dort ist der Titel selbst der Link.
+      if (!suppressDrawingControls) {
+        teile.push('<button type="button" class="link-karte-bearbeiten" title="Karte bearbeiten">Bearbeiten</button>');
+      }
+      teile.push('</div>');
+      let html = teile.join('');
+      if (suppressDrawingControls) {
+        html = html.replace('<div class="link-karte-titel">', '<a class="link-karte-titel" href="' + escapeHtmlAttrText(d.url) + '" target="_blank" rel="noopener noreferrer">')
+                   .replace('</div><div class="link-karte-beschreibung">', '</a><div class="link-karte-beschreibung">');
+        // Hat die Karte keine Beschreibung, steht hinter dem Titel die Domain-Zeile.
+        html = html.replace('</div><div class="link-karte-domain">', '</a><div class="link-karte-domain">');
+      }
+      return html;
+    }
+
+    // --- Die Seite selbst lesen -----------------------------------------------------------------
+
+    function linkKarteAbsolut(adresse, basis) {
+      if (!adresse) return '';
+      try { return new URL(adresse, basis).href; } catch (err) { return ''; }
+    }
+
+    // Liefert, was zu holen war -- und bei verweigertem Zugriff schlicht nichts. DOMParser führt
+    // keine Skripte aus und lädt nichts nach; gelesen werden ausschliesslich Attribute.
+    async function linkKarteAbrufen(url) {
+      const steuer = new AbortController();
+      const uhr = setTimeout(() => steuer.abort(), 6000);
+      try {
+        const antwort = await fetch(url, { signal: steuer.signal, redirect: 'follow' });
+        if (!antwort.ok) return null;
+        const html = await antwort.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const meta = (auswahl) => {
+          const el = doc.querySelector(auswahl);
+          return el ? (el.getAttribute('content') || '').trim() : '';
+        };
+        return {
+          titel: meta('meta[property="og:title"]') || meta('meta[name="twitter:title"]') ||
+                 (doc.querySelector('title') ? doc.querySelector('title').textContent.trim() : ''),
+          text: meta('meta[property="og:description"]') || meta('meta[name="description"]') ||
+                meta('meta[name="twitter:description"]'),
+          bild: linkKarteAbsolut(meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]'), url),
+        };
+      } catch (err) {
+        return null;   // CORS, offline, Zeitüberschreitung -- alles derselbe Fall: nichts zu holen
+      } finally {
+        clearTimeout(uhr);
+      }
+    }
+
+    // --- Aus einem Link eine Karte machen -------------------------------------------------------
+
+    // Steht der Link allein in seinem Absatz, wird dieser ERSETZT -- dann war der Absatz ohnehin
+    // nur der Link. Steht er mitten im Satz, bleibt der Satz unangetastet und die Karte kommt als
+    // eigener Block dahinter: einen Satz zu zerschneiden, um einen Zaun hineinzusetzen, ergäbe
+    // kaputtes Markdown.
+    async function linkAlsKarteEinbetten() {
+      if (!linkActionState) return;
+      const quelle = linkActionState.quelle;
+      const adresse = (quelle && quelle.href) || (linkActionState.el.getAttribute('href') || '');
+      const linktext = (quelle && quelle.text) || linkActionState.el.textContent || '';
+      closeLinkActionMenu();
+      if (!adresse || !/^https?:/i.test(adresse)) { showToast('Nur http- und https-Adressen lassen sich einbetten.'); return; }
+      if (editor.disabled) return;
+
+      const bloecke = buildBlockSourceMap(editor.value);
+      const block = quelle ? bloecke.find(b => quelle.start >= b.srcStart && quelle.end <= b.srcEnd) : null;
+      const nurDerLink = !!(block && quelle &&
+        editor.value.slice(block.srcStart, block.srcEnd).trim() === editor.value.slice(quelle.start, quelle.end).trim());
+
+      showToast('Seite wird gelesen …');
+      const geholt = await linkKarteAbrufen(adresse);
+      const daten = {
+        url: adresse,
+        titel: (geholt && geholt.titel) || linktext.trim() || linkKarteDomain(adresse),
+        text: (geholt && geholt.text) || '',
+        bild: (geholt && geholt.bild) || '',
+      };
+      const karte = linkKarteBlockText(daten);
+
+      if (nurDerLink) {
+        editor.value = editor.value.slice(0, block.srcStart) + karte + editor.value.slice(block.srcEnd);
+        recordHistory();
+        finishPreviewStructuralEdit(block.srcStart + karte.length);
+      } else {
+        const ende = block ? block.srcEnd : editor.value.length;
+        const einschub = '\n\n' + karte;
+        editor.value = editor.value.slice(0, ende) + einschub + editor.value.slice(ende);
+        recordHistory();
+        finishPreviewStructuralEdit(ende + einschub.length);
+      }
+      showToast(geholt ? 'Karte eingefügt.' : 'Karte eingefügt – die Seite gab nichts her, Titel und Bild lassen sich über „Bearbeiten“ ergänzen.');
+    }
+
+    // --- Karte bearbeiten -----------------------------------------------------------------------
+
+    let karteEditIndex = null;
+
+    function karteEditOeffnen(index) {
+      const bloecke = linkKarteBloecke(editor.value);
+      const b = bloecke[index];
+      if (!b) { showToast('Diese Karte lässt sich im Quelltext nicht zuordnen.'); return; }
+      const d = linkKarteDaten(b.inhalt) || { url: '' };
+      karteEditIndex = index;
+      document.getElementById('karteEditUrl').value = d.url || '';
+      document.getElementById('karteEditTitel').value = d.titel || '';
+      document.getElementById('karteEditText').value = d.text || '';
+      document.getElementById('karteEditBild').value = d.bild || '';
+      document.getElementById('karteEditModal').classList.add('active');
+      karteEditVorschau();
+    }
+
+    function karteEditSchliessen() {
+      karteEditIndex = null;
+      document.getElementById('karteEditModal').classList.remove('active');
+    }
+
+    function karteEditVorschau() {
+      const bild = document.getElementById('karteEditBild').value.trim();
+      const ziel = document.getElementById('karteEditBildVorschau');
+      let src = bild;
+      if (src.indexOf('asset:') === 0) {
+        const tab = getCurrentTab();
+        src = (tab && tab.assets && tab.assets[src.slice('asset:'.length)]) || '';
+      }
+      ziel.innerHTML = src ? '<img src="' + escapeHtmlAttrText(src) + '" alt="">' : '';
+    }
+
+    // Nutzt denselben Weg wie jedes andere Bild in dieser App: Auswahldialog, Verkleinern,
+    // Asset-Ablage. Das Bild reist damit mit der Notiz mit und funktioniert offline -- anders als
+    // eine fremde Adresse, die morgen ins Leere zeigen kann.
+    async function karteEditBildWaehlen() {
+      const eingabe = document.createElement('input');
+      eingabe.type = 'file';
+      eingabe.accept = 'image/*';
+      eingabe.onchange = async () => {
+        const datei = eingabe.files && eingabe.files[0];
+        if (!datei) return;
+        const wahl = await requestImageInsertChoice(datei);
+        if (!wahl) return;
+        const assetId = registerImageAsset(getCurrentTab(), wahl.dataUrl);
+        document.getElementById('karteEditBild').value = 'asset:' + assetId;
+        karteEditVorschau();
+      };
+      eingabe.click();
+    }
+
+    function karteEditSpeichern() {
+      if (karteEditIndex === null) return;
+      const bloecke = linkKarteBloecke(editor.value);
+      const b = bloecke[karteEditIndex];
+      if (!b) { showToast('Diese Karte lässt sich im Quelltext nicht mehr zuordnen.'); karteEditSchliessen(); return; }
+      const karte = linkKarteBlockText({
+        url: document.getElementById('karteEditUrl').value.trim(),
+        titel: document.getElementById('karteEditTitel').value,
+        text: document.getElementById('karteEditText').value,
+        bild: document.getElementById('karteEditBild').value.trim(),
+      });
+      const index = karteEditIndex;
+      karteEditSchliessen();
+      editor.value = editor.value.slice(0, b.start) + karte + editor.value.slice(b.ende);
+      recordHistory();
+      finishPreviewStructuralEdit(b.start + karte.length);
+      showToast('Karte geändert.');
+    }
+
+    // Noch einmal versuchen, die Seite zu lesen -- etwa, wenn beim ersten Mal kein Netz da war.
+    async function karteEditErneutLesen() {
+      const url = document.getElementById('karteEditUrl').value.trim();
+      if (!/^https?:/i.test(url)) { showToast('Nur http- und https-Adressen lassen sich lesen.'); return; }
+      showToast('Seite wird gelesen …');
+      const g = await linkKarteAbrufen(url);
+      if (!g) { showToast('Die Seite gibt ihre Angaben nicht heraus (das ist bei den meisten so).'); return; }
+      if (g.titel) document.getElementById('karteEditTitel').value = g.titel;
+      if (g.text) document.getElementById('karteEditText').value = g.text;
+      if (g.bild) document.getElementById('karteEditBild').value = g.bild;
+      karteEditVorschau();
+      showToast('Angaben übernommen.');
+    }
+
     const TAG_FARBEN_ANZAHL = 8;
 
     function tagFarbe(schluessel) {
@@ -18418,6 +18906,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
         ankerMenuSchliessen();
         kalenderSchliessen();
         restoreSchliessen();
+        karteEditSchliessen();
         closeTabSidebar();
         closeWebdavModal();
         if (document.getElementById('webdavConflictModal').classList.contains('active')) closeWebdavConflictModal();
@@ -27701,7 +28190,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
     // nirgends auf; wer es einfuehrt, muss den Zaehler hier davor schuetzen, sonst beginnt die
     // Nummerierung mitten im Dokument von vorn und jede zweite gleichnamige Ueberschrift bekommt
     // eine ID, auf die kein bestehender Verweis mehr zeigt.
-    marked.use({ hooks: { preprocess(md) { ankerZaehler = new Map(); return md; } } });
+    marked.use({ hooks: { preprocess(md) { ankerZaehler = new Map(); linkKarteZaehler = 0; return md; } } });
 
     // Ueberschriften bekommen eine ID. Bildet marked's eigenen heading-Renderer nach, den er hier
     // ERSETZT (nicht erweitert) -- bei einem marked-Wechsel gegen dessen Fassung pruefen, wie bei
@@ -38574,6 +39063,15 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
             pos = collectListItemCharMap(item, view, pos, blocks);
           }
           cursorRef.pos = Math.max(rawStart + listRaw.length, pos);
+        } else if (tok.type === 'code' && linkKarteIstKarte(tok.lang, tok.text)) {
+          // Eine Link-Karte ist KEIN editierbares Blatt: sie rendert als <div class="link-karte">
+          // und nicht als <pre>, taucht also in findWordBlockElements() gar nicht auf. Ein Eintrag
+          // hier hiesse ein Eintrag mehr als Elemente -- genau der Fall, den
+          // previewStructureDesynced abfängt. Die Schreibmarke wird nur über den Quelltext bewegt,
+          // und tok.raw muss trotzdem übersprungen werden, sonst verschieben sich alle folgenden
+          // Blöcke.
+          const kartenStart = view.text.indexOf(tok.raw, cursorRef.pos);
+          if (kartenStart !== -1) cursorRef.pos = kartenStart + tok.raw.length;
         } else if (tok.type === 'code') {
           // Studio Pro: makes a fenced code block a genuine, directly-editable leaf in the WYSIWYG
           // preview -- see WORD_BLOCK_SELECTOR's own comment for the other half of this (the DOM
@@ -43809,6 +44307,7 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
           '<div class="link-action-url" title="' + escapeHtmlAttrText(anzeigeAdresse) + '">' + escapeHtmlText(anzeigeAdresse) + '</div>' +
           '<button type="button" class="slash-menu-item" onmousedown="event.preventDefault()" onclick="linkActionOpen()"><span>Öffnen</span></button>' +
           '<button type="button" class="slash-menu-item"' + gesperrt + ' onmousedown="event.preventDefault()" onclick="' + (bearbeitbar ? 'startLinkEdit()' : '') + '"><span>Bearbeiten</span></button>' +
+          '<button type="button" class="slash-menu-item"' + gesperrt + ' onmousedown="event.preventDefault()" onclick="' + (bearbeitbar ? 'linkAlsKarteEinbetten()' : '') + '"><span>Als Karte einbetten</span></button>' +
           '<button type="button" class="slash-menu-item" onmousedown="event.preventDefault()" onclick="linkActionCopyHref()"><span>Adresse kopieren</span></button>' +
           '<button type="button" class="slash-menu-item"' + gesperrtEntfernen + ' onmousedown="event.preventDefault()" onclick="' + (entfernbar ? 'removeLinkKeepText()' : '') + '"><span>Link entfernen</span></button>';
       }
@@ -44051,6 +44550,27 @@ And [Am]who but my [E7]lady Green-[Am]sleeves.
       if (akkordEl) {
         e.preventDefault();
         chordProAkkordSpielen(akkordEl.getAttribute('data-cp-akkord'), akkordEl);
+        return;
+      }
+
+      // Vor dem <a>-Zweig: der Bearbeiten-Knopf sitzt IN der Karte, und ein Klick sonstwo auf der
+      // Karte soll die Seite öffnen statt das Link-Menü zu zeigen.
+      const karteBtn = e.target.closest('.link-karte-bearbeiten');
+      if (karteBtn && preview.contains(karteBtn)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const karte = karteBtn.closest('.link-karte');
+        karteEditOeffnen(Number(karte && karte.dataset.karteIndex));
+        return;
+      }
+      const karteEl = e.target.closest('.link-karte');
+      if (karteEl && preview.contains(karteEl)) {
+        e.preventDefault();
+        const ziel = karteEl.getAttribute('data-karte-url');
+        if (ziel) {
+          const fenster = window.open(ziel, '_blank', 'noopener,noreferrer');
+          if (!fenster) showToast('Der Browser hat das neue Fenster blockiert.');
+        }
         return;
       }
 
